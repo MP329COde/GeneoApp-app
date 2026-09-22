@@ -102,3 +102,11 @@ Une couche de recherche, de preuves et de qualité des données fiable, orienté
   - Limite connue : uniquement les notes de type PERSON sont exposées côté écran (l'API et le service gèrent
     aussi FAMILY/EVENT/SOURCE/CITATION/PLACE/TREE/SEARCH, mais aucun écran ne les couvre encore). La
     détection de doublons dispose d'un écran (issue 09) mais sans assistant de fusion.
+- 2026-09-22 (suite) : `SourceService` (création de source, citation avec page/confiance, liste des citations
+  par entité) était exposé côté IPC (`SOURCES_*`, déjà présent) mais absent de `geneoapp-client.js` et de tout
+  écran. Corrigé : namespace `sources` ajouté au client (HTTP + IPC), nouvel onglet « Sources » sur la fiche
+  personne sélectionnée — création d'une source et citation immédiate (titre, auteur, page, niveau de
+  confiance), liste des sources citées avec leur titre résolu. Testé (`App.test.jsx`, couverture IPC déjà
+  existante). Limite connue : pas de réutilisation d'une source déjà créée (chaque citation crée une nouvelle
+  source ; l'API n'exposant pas de liste globale des sources existantes, un sélecteur de réutilisation
+  nécessiterait un nouvel endpoint), pas d'édition/suppression de citation depuis l'écran.

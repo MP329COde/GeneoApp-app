@@ -55,6 +55,12 @@ const media = vi.hoisted(() => ({
   listForEntity: vi.fn(),
   remove: vi.fn(),
 }));
+const sources = vi.hoisted(() => ({
+  create: vi.fn(),
+  get: vi.fn(),
+  addCitation: vi.fn(),
+  listCitationsForEntity: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -71,6 +77,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     ai,
     notes,
     media,
+    sources,
   }),
 }));
 
@@ -615,5 +622,57 @@ describe('App', () => {
     );
     await waitFor(() => expect(screen.getByText('acte.txt')).toBeInTheDocument());
     expect(screen.getByText('UNAVAILABLE')).toBeInTheDocument();
+  });
+
+  it('crée une source et la cite pour une personne, avec niveau de confiance réel', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    sources.listCitationsForEntity
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 1, source_id: 7, page: 'p.42', confidence: 'HIGH' }]);
+    sources.create.mockResolvedValue({ id: 7, title: 'Registre paroissial 1815' });
+    sources.get.mockResolvedValue({ id: 7, title: 'Registre paroissial 1815' });
+    sources.addCitation.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    await waitFor(() => expect(sources.listCitationsForEntity).toHaveBeenCalledWith('PERSON', 1));
+    await waitFor(() => expect(screen.getByText(/Aucune source citée/)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Titre de la source'), {
+      target: { value: 'Registre paroissial 1815' },
+    });
+    fireEvent.change(screen.getByLabelText('Page / référence (optionnel)'), {
+      target: { value: 'p.42' },
+    });
+    fireEvent.change(screen.getByLabelText('Niveau de confiance'), {
+      target: { value: 'HIGH' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter et citer la source' }));
+
+    await waitFor(() =>
+      expect(sources.create).toHaveBeenCalledWith({
+        title: 'Registre paroissial 1815',
+        author: null,
+      }),
+    );
+    await waitFor(() =>
+      expect(sources.addCitation).toHaveBeenCalledWith({
+        sourceId: 7,
+        entityType: 'PERSON',
+        entityId: 1,
+        page: 'p.42',
+        confidence: 'HIGH',
+      }),
+    );
+    await waitFor(() => expect(screen.getByText(/Registre paroissial 1815/)).toBeInTheDocument());
   });
 });

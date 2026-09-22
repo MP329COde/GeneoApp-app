@@ -311,6 +311,126 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
   );
 }
 
+function SourcesPanel({ selected }) {
+  const [citations, setCitations] = useState(null);
+  const [sourcesById, setSourcesById] = useState({});
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [page, setPage] = useState('');
+  const [confidence, setConfidence] = useState('MEDIUM');
+  const [sourcesError, setSourcesError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadCitations = useCallback(async () => {
+    if (!selected) return;
+    try {
+      const list = await client.sources.listCitationsForEntity('PERSON', selected.id);
+      setCitations(list);
+      const missingIds = [...new Set(list.map((citation) => citation.source_id))];
+      const fetched = await Promise.all(
+        missingIds.map((id) => client.sources.get(id).then((source) => [id, source])),
+      );
+      setSourcesById(Object.fromEntries(fetched));
+    } catch (loadError) {
+      setSourcesError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setCitations(null);
+    loadCitations();
+  }, [loadCitations]);
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir et citer des sources.</p>;
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    setSourcesError(null);
+    try {
+      const source = await client.sources.create({
+        title: title.trim(),
+        author: author.trim() || null,
+      });
+      await client.sources.addCitation({
+        sourceId: source.id,
+        entityType: 'PERSON',
+        entityId: selected.id,
+        page: page.trim() || null,
+        confidence,
+      });
+      setTitle('');
+      setAuthor('');
+      setPage('');
+      await loadCitations();
+    } catch (createError) {
+      setSourcesError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Sources citées pour {personLabel(selected)}</h3>
+      {sourcesError ? (
+        <p role="alert" className="notice notice--error">
+          {sourcesError}
+        </p>
+      ) : null}
+
+      <form className="create-person-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Titre de la source</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label>
+          <span>Auteur (optionnel)</span>
+          <input value={author} onChange={(event) => setAuthor(event.target.value)} />
+        </label>
+        <label>
+          <span>Page / référence (optionnel)</span>
+          <input value={page} onChange={(event) => setPage(event.target.value)} />
+        </label>
+        <label>
+          <span>Niveau de confiance</span>
+          <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
+            {['LOW', 'MEDIUM', 'HIGH'].map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Ajouter et citer la source
+        </Button>
+      </form>
+
+      {citations === null ? (
+        <p role="status">Chargement…</p>
+      ) : citations.length === 0 ? (
+        <p className="notice">Aucune source citée pour cette personne.</p>
+      ) : (
+        <ul className="search-results">
+          {citations.map((citation) => (
+            <li key={citation.id}>
+              <Badge tone="neutral">{citation.confidence}</Badge>{' '}
+              <strong>
+                {sourcesById[citation.source_id]?.title ?? `Source #${citation.source_id}`}
+              </strong>
+              {citation.page ? ` — ${citation.page}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const NOTE_CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 
 function NotesPanel({ selected }) {
@@ -1321,6 +1441,13 @@ function App() {
                 Médias
               </button>
               <button
+                className={view === 'sources' ? 'is-active' : ''}
+                onClick={() => setView('sources')}
+                type="button"
+              >
+                Sources
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -1363,6 +1490,8 @@ function App() {
               <NotesPanel selected={selected} />
             ) : view === 'media' ? (
               <MediaPanel selected={selected} />
+            ) : view === 'sources' ? (
+              <SourcesPanel selected={selected} />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}
