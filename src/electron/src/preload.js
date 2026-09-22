@@ -91,6 +91,30 @@ const api = {
     import: (gedcom, performedBy) => invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy }),
     export: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT, options),
   },
+
+  accounts: {
+    create: (data, performedBy) => invoke(IPC_CHANNELS.ACCOUNTS_CREATE, { data, performedBy }),
+    list: () => invoke(IPC_CHANNELS.ACCOUNTS_LIST),
+    login: (name, pin) => invoke(IPC_CHANNELS.ACCOUNTS_LOGIN, { name, pin }),
+    logout: (token) => invoke(IPC_CHANNELS.ACCOUNTS_LOGOUT, { token }),
+  },
+
+  backups: {
+    create: (data, token, performedBy) =>
+      invoke(IPC_CHANNELS.BACKUPS_CREATE, { data, token, performedBy }),
+    list: () => invoke(IPC_CHANNELS.BACKUPS_LIST),
+    verify: (filename) => invoke(IPC_CHANNELS.BACKUPS_VERIFY, { filename }),
+    restore: (filename, kind, token, performedBy) =>
+      invoke(IPC_CHANNELS.BACKUPS_RESTORE, { filename, kind, token, performedBy }),
+  },
+
+  trash: {
+    list: () => invoke(IPC_CHANNELS.TRASH_LIST),
+    restore: (table, id, token, performedBy) =>
+      invoke(IPC_CHANNELS.TRASH_RESTORE, { table, id, token, performedBy }),
+    purge: (table, id, token, performedBy) =>
+      invoke(IPC_CHANNELS.TRASH_PURGE, { table, id, token, performedBy }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

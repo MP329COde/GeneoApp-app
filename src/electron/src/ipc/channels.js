@@ -48,4 +48,18 @@ export const IPC_CHANNELS = Object.freeze({
   GEDCOM_PREVIEW: 'geneoapp:gedcom:preview',
   GEDCOM_IMPORT: 'geneoapp:gedcom:import',
   GEDCOM_EXPORT: 'geneoapp:gedcom:export',
+
+  ACCOUNTS_CREATE: 'geneoapp:accounts:create',
+  ACCOUNTS_LIST: 'geneoapp:accounts:list',
+  ACCOUNTS_LOGIN: 'geneoapp:accounts:login',
+  ACCOUNTS_LOGOUT: 'geneoapp:accounts:logout',
+
+  BACKUPS_CREATE: 'geneoapp:backups:create',
+  BACKUPS_LIST: 'geneoapp:backups:list',
+  BACKUPS_VERIFY: 'geneoapp:backups:verify',
+  BACKUPS_RESTORE: 'geneoapp:backups:restore',
+
+  TRASH_LIST: 'geneoapp:trash:list',
+  TRASH_RESTORE: 'geneoapp:trash:restore',
+  TRASH_PURGE: 'geneoapp:trash:purge',
 });

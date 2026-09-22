@@ -46,8 +46,21 @@ function wrap(handler) {
  * dans le processus principal Electron).
  */
 export function buildIpcHandlers(services) {
-  const { persons, places, events, unions, parentages, sources, audit, graph, search, gedcom } =
-    services;
+  const {
+    persons,
+    places,
+    events,
+    unions,
+    parentages,
+    sources,
+    audit,
+    graph,
+    search,
+    gedcom,
+    accounts,
+    backups,
+    trash,
+  } = services;
 
   return {
     [IPC_CHANNELS.PERSONS_CREATE]: wrap(({ data, performedBy }) =>
@@ -152,5 +165,42 @@ export function buildIpcHandlers(services) {
     [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(({ format, personIds, ancestorsOf, descendantsOf } = {}) =>
       gedcom.export({ format, personIds, ancestorsOf, descendantsOf }),
     ),
+
+    [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, performedBy }) =>
+      accounts.create(data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.ACCOUNTS_LIST]: wrap(() => accounts.list()),
+    [IPC_CHANNELS.ACCOUNTS_LOGIN]: wrap(({ name, pin }) => accounts.login({ name, pin })),
+    [IPC_CHANNELS.ACCOUNTS_LOGOUT]: wrap(({ token }) => {
+      accounts.logout(token);
+      return { loggedOut: true };
+    }),
+
+    // Les opérations sensibles (sauvegarde/restauration, purge de corbeille)
+    // exigent un jeton de session valide dans le payload, comme côté HTTP
+    // (en-tête x-geneoapp-session) : requireSession lève si absent/expiré.
+    [IPC_CHANNELS.BACKUPS_CREATE]: wrap(({ data, token, performedBy }) => {
+      accounts.requireSession(token);
+      return backups.create(data, { performedBy: actorOf(performedBy) });
+    }),
+    [IPC_CHANNELS.BACKUPS_LIST]: wrap(() => backups.list()),
+    [IPC_CHANNELS.BACKUPS_VERIFY]: wrap(({ filename }) => backups.verify(filename)),
+    [IPC_CHANNELS.BACKUPS_RESTORE]: wrap(({ filename, kind, token, performedBy }) => {
+      accounts.requireSession(token);
+      return kind === 'sqlite'
+        ? backups.restoreFile(filename)
+        : backups.restoreLogical(filename, { performedBy: actorOf(performedBy) });
+    }),
+
+    [IPC_CHANNELS.TRASH_LIST]: wrap(() => trash.list()),
+    [IPC_CHANNELS.TRASH_RESTORE]: wrap(({ table, id, token, performedBy }) => {
+      accounts.requireSession(token);
+      return trash.restore(table, id, { performedBy: actorOf(performedBy) });
+    }),
+    [IPC_CHANNELS.TRASH_PURGE]: wrap(({ table, id, token, performedBy }) => {
+      accounts.requireSession(token);
+      trash.purge(table, id, { performedBy: actorOf(performedBy) });
+      return { purged: true };
+    }),
   };
 }

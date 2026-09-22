@@ -173,3 +173,42 @@ test('GEDCOM_PREVIEW puis GEDCOM_IMPORT/GEDCOM_EXPORT exposent le pipeline GEDCO
   assert.equal(exported.ok, true);
   assert.match(exported.data.gedcom, /0 @I1@ INDI/);
 });
+
+test('ACCOUNTS_LOGIN puis BACKUPS_CREATE/TRASH_PURGE exigent un jeton de session valide', async () => {
+  const handlers = createHandlers();
+
+  await handlers[IPC_CHANNELS.ACCOUNTS_CREATE]({ data: { name: 'Alice' } });
+  const login = await handlers[IPC_CHANNELS.ACCOUNTS_LOGIN]({ name: 'Alice' });
+  assert.equal(login.ok, true);
+  const { token } = login.data;
+
+  const withoutToken = await handlers[IPC_CHANNELS.BACKUPS_CREATE]({ data: { kind: 'json' } });
+  assert.equal(withoutToken.ok, false);
+  assert.equal(withoutToken.error.status, 401);
+
+  const backup = await handlers[IPC_CHANNELS.BACKUPS_CREATE]({
+    data: { kind: 'json' },
+    token,
+  });
+  assert.equal(backup.ok, true);
+  assert.ok(backup.data.filename);
+
+  const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  await handlers[IPC_CHANNELS.PERSONS_REMOVE]({ id: person.data.id });
+
+  const purgeWithoutToken = await handlers[IPC_CHANNELS.TRASH_PURGE]({
+    table: 'persons',
+    id: person.data.id,
+  });
+  assert.equal(purgeWithoutToken.ok, false);
+  assert.equal(purgeWithoutToken.error.status, 401);
+
+  const purge = await handlers[IPC_CHANNELS.TRASH_PURGE]({
+    table: 'persons',
+    id: person.data.id,
+    token,
+  });
+  assert.equal(purge.ok, true);
+});
