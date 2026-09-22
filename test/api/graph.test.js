@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { startTestServer, requestJson } from './helpers.js';
 
-async function createPerson(baseUrl, givenNames) {
+async function createPerson(baseUrl, givenNames, sex) {
   const response = await requestJson(baseUrl, '/api/persons', {
     method: 'POST',
-    body: { givenNames, familyName: 'Dupont' },
+    body: { givenNames, familyName: 'Dupont', ...(sex ? { sex } : {}) },
   });
   return response.body.id;
 }
@@ -110,6 +110,7 @@ test('le graphe calcule le chemin, les ancêtres communs et la relation', async 
     assert.equal(relationship.body.distance, 4);
     assert.equal(relationship.body.path[0].personId, personA);
     assert.equal(relationship.body.path.at(-1).personId, personB);
+    assert.equal(relationship.body.label, 'cousin germain ou cousine germaine');
   } finally {
     await server.close();
   }
@@ -176,6 +177,54 @@ test('le graphe détecte une incohérence de chronologie', async () => {
     assert.deepEqual(timeline.body, [
       { personId: person, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' },
     ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test('le graphe nomme le degré de parenté en français (fratrie, oncle/tante, neveu/nièce)', async () => {
+  const server = await startTestServer();
+  try {
+    const grandParent = await createPerson(server.baseUrl, 'Aïeul');
+    const parent = await createPerson(server.baseUrl, 'Parent', 'F');
+    const auntOrUncle = await createPerson(server.baseUrl, 'Fratrie du parent', 'M');
+    const child = await createPerson(server.baseUrl, 'Enfant', 'F');
+    const nieceOrNephew = await createPerson(server.baseUrl, 'Neveu', 'M');
+    await addParentage(server.baseUrl, parent, grandParent);
+    await addParentage(server.baseUrl, auntOrUncle, grandParent);
+    await addParentage(server.baseUrl, child, parent);
+    await addParentage(server.baseUrl, nieceOrNephew, auntOrUncle);
+
+    const siblingRelationship = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${parent}&personB=${auntOrUncle}`,
+    );
+    assert.equal(siblingRelationship.body.relationship, 'COLLATERAL');
+    assert.equal(siblingRelationship.body.label, 'frère');
+
+    const uncleRelationship = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${child}&personB=${auntOrUncle}`,
+    );
+    assert.equal(uncleRelationship.body.label, 'oncle');
+
+    const nephewRelationship = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${auntOrUncle}&personB=${child}`,
+    );
+    assert.equal(nephewRelationship.body.label, 'nièce');
+
+    const cousinsRelationship = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${child}&personB=${nieceOrNephew}`,
+    );
+    assert.equal(cousinsRelationship.body.label, 'cousin germain');
+
+    const ancestorRelationship = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${child}&personB=${grandParent}`,
+    );
+    assert.equal(ancestorRelationship.body.label, 'grand-parent');
   } finally {
     await server.close();
   }

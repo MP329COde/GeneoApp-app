@@ -179,24 +179,74 @@ export class GenealogyGraphService {
     return 'UNKNOWN';
   }
 
+  // Nomme en français le degré de parenté collatérale de personB vis-à-vis de
+  // personA, à partir du nombre de générations remontées (up, jusqu'à
+  // l'ancêtre commun) puis redescendues (down). Ne couvre que les cas
+  // canoniques (aucune alliance/SPOUSE dans le chemin) : au-delà des degrés
+  // usuels, renvoie une étiquette honnête et générique plutôt que d'inventer
+  // un terme incertain.
+  collateralLabel(up, down, sex) {
+    const isFeminine = sex === 'F';
+    const isMasculine = sex === 'M';
+    const pick = (masculine, feminine, neutral) => {
+      if (isMasculine) return masculine;
+      if (isFeminine) return feminine;
+      return neutral ?? `${masculine} ou ${feminine}`;
+    };
+    const [younger, older] = up <= down ? [up, down] : [down, up];
+    const personBIsOlderBranch = down < up;
+
+    if (younger === 1 && older === 1) return pick('frère', 'sœur');
+    if (younger === 1 && older === 2) {
+      return personBIsOlderBranch ? pick('oncle', 'tante') : pick('neveu', 'nièce');
+    }
+    if (younger === 1 && older === 3) {
+      return personBIsOlderBranch
+        ? pick('grand-oncle', 'grand-tante')
+        : pick('petit-neveu', 'petite-nièce');
+    }
+    if (younger === 2 && older === 2) return pick('cousin germain', 'cousine germaine');
+    if (younger === 2 && older === 3) {
+      return pick('cousin issu de germain', 'cousine issue de germaine');
+    }
+    return pick(
+      `cousin éloigné (${up}×${down})`,
+      `cousine éloignée (${up}×${down})`,
+      `cousin(e) éloigné(e) (${up}×${down})`,
+    );
+  }
+
   findRelationship(personA, personB) {
     const path = this.findPath(personA, personB);
-    if (path.length === 0) return { relationship: null, distance: null, path, branch: null };
+    if (path.length === 0)
+      return { relationship: null, distance: null, path, branch: null, label: null };
     const edges = path.slice(1).map((step) => step.via);
     let relationship = 'CONNECTED';
     let branch = null;
-    if (edges.length === 1 && edges[0] === 'SPOUSE') relationship = 'SPOUSE';
-    else if (edges.every((edge) => edge === 'PARENT')) {
+    let label = null;
+    if (edges.length === 1 && edges[0] === 'SPOUSE') {
+      relationship = 'SPOUSE';
+      label = 'conjoint(e)';
+    } else if (edges.every((edge) => edge === 'PARENT')) {
       relationship = `ANCESTOR_${edges.length}`;
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+      label = edges.length === 1 ? 'parent' : edges.length === 2 ? 'grand-parent' : null;
     } else if (edges.every((edge) => edge === 'CHILD')) {
       relationship = `DESCENDANT_${edges.length}`;
       branch = this.branchOf(this.getParentRole(path[1].personId, personA));
+      label = edges.length === 1 ? 'enfant' : edges.length === 2 ? 'petit-enfant' : null;
     } else if (edges.includes('PARENT') && edges.includes('CHILD')) {
       relationship = 'COLLATERAL';
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+      let up = 0;
+      while (up < edges.length && edges[up] === 'PARENT') up += 1;
+      const canonical = edges.slice(up).every((edge) => edge === 'CHILD');
+      if (canonical) {
+        const down = edges.length - up;
+        label = this.collateralLabel(up, down, this.getPerson(personB).sex);
+      }
     }
-    return { relationship, distance: edges.length, path, branch };
+    return { relationship, distance: edges.length, path, branch, label };
   }
 
   detectCycles() {

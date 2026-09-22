@@ -107,6 +107,12 @@ Un moteur de relations généalogiques fiable, calculable et testable, base indi
   du `parent_role` (`FATHER`/`MOTHER`/`PARENT`) de la première étape du chemin, pour les relations `ANCESTOR_*`,
   `DESCENDANT_*` et `COLLATERAL`. Limite connue : pour une relation `COLLATERAL` dont le chemin le plus court
   commence par une étape descendante (ex. calculée depuis un neveu vers sa tante en remontant d’abord par un
-  autre rameau), la branche peut être mal orientée — cas non couvert par les tests actuels. Le degré de parenté
-  nommé (« cousin germain », « oncle », etc.) reste à implémenter, nécessaire avant les vues radiale/éventail de
-  la Phase I.
+  autre rameau), la branche peut être mal orientée — cas non couvert par les tests actuels.
+- 2026-09-22 (suite) : `findRelationship` renvoie désormais un champ `label` nommant le degré de parenté en
+  français (`GenealogyGraphService#collateralLabel`), genré selon le `sex` de personB quand connu (`M`/`F`),
+  sinon les deux formes (« frère ou sœur »). Couvre : conjoint(e), parent/grand-parent, enfant/petit-enfant,
+  fratrie, oncle/tante, neveu/nièce, grand-oncle/grand-tante, petit-neveu/petite-nièce, cousin germain, cousin
+  issu de germain. Au-delà de ces degrés usuels, ou si le chemin le plus court n'est pas la forme canonique
+  montée-puis-descente, renvoie une étiquette générique honnête plutôt que d'inventer un terme incertain.
+  Testé (`test/api/graph.test.js`, nouveau cas couvrant fratrie/oncle/neveu/cousin germain/grand-parent avec
+  les deux genres). Utile pour préparer les vues radiale/éventail de la Phase I.
