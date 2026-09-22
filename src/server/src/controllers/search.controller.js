@@ -10,5 +10,9 @@ export function createSearchController(services) {
       });
       response.json(results);
     },
+
+    duplicates(request, response) {
+      response.json(search.potentialDuplicates({ limit: Number(request.query.limit) || 100 }));
+    },
   };
 }

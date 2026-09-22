@@ -1,4 +1,5 @@
 import { withTransaction, recordAudit } from './base-repository.js';
+import { indexDocument } from './search-index.js';
 
 const UPDATABLE_FIELDS = ['givenNames', 'familyName', 'birthFamilyName', 'sex', 'notes'];
 
@@ -38,6 +39,13 @@ export class PersonRepository {
         operation: 'INSERT',
         changes: { givenNames, familyName, birthFamilyName, sex, notes },
         performedBy,
+      });
+
+      indexDocument(this.database, {
+        entityType: 'PERSON',
+        entityId: id,
+        title: `${givenNames} ${familyName}`,
+        body: [birthFamilyName, notes].filter(Boolean).join(' — '),
       });
 
       return this.findById(id);
@@ -86,7 +94,15 @@ export class PersonRepository {
         performedBy,
       });
 
-      return this.findById(id);
+      const updated = this.findById(id);
+      indexDocument(this.database, {
+        entityType: 'PERSON',
+        entityId: id,
+        title: `${updated.given_names} ${updated.family_name}`,
+        body: [updated.birth_family_name, updated.notes].filter(Boolean).join(' — '),
+      });
+
+      return updated;
     });
   }
 

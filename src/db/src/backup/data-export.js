@@ -13,6 +13,7 @@ export const EXPORTABLE_TABLES = [
   'union_partners',
   'parentages',
   'media',
+  'notes',
   'search_index',
   'local_accounts',
   'audit_log',

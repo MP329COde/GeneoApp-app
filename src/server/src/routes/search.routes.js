@@ -5,6 +5,7 @@ export function searchRoutes(services) {
   const controller = createSearchController(services);
   const router = Router();
 
+  router.get('/duplicates', controller.duplicates);
   router.get('/', controller.search);
 
   return router;

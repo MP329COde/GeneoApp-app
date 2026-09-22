@@ -31,7 +31,7 @@ const LINK_TYPES = ['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'STEP', 'UNKNOWN'];
 const ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE'];
 const CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 const MEDIA_ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE'];
-const SEARCH_ENTITY_TYPES = ['SOURCE', 'MEDIA'];
+const SEARCH_ENTITY_TYPES = ['PERSON', 'PLACE', 'EVENT', 'SOURCE', 'MEDIA'];
 
 export function assertId(value, label = 'id') {
   if (!Number.isInteger(value) || value <= 0) {
