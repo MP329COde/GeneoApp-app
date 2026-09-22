@@ -314,14 +314,20 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
 const RESEARCH_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'ABANDONED'];
 const RESEARCH_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
-function NotebookPanel() {
+function NotebookPanel({ persons, onNavigate }) {
   const [entries, setEntries] = useState(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('TODO');
   const [priority, setPriority] = useState('MEDIUM');
+  const [personId, setPersonId] = useState('');
   const [notebookError, setNotebookError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  const personLabelById = (id) => {
+    const person = persons.find((candidate) => candidate.id === id);
+    return person ? personLabel(person) : `Personne #${id}`;
+  };
 
   const loadEntries = useCallback(async () => {
     try {
@@ -346,9 +352,11 @@ function NotebookPanel() {
         content: content.trim(),
         status,
         priority,
+        personId: personId ? Number(personId) : null,
       });
       setTitle('');
       setContent('');
+      setPersonId('');
       await loadEntries();
     } catch (createError) {
       setNotebookError(createError.message);
@@ -395,6 +403,17 @@ function NotebookPanel() {
             ))}
           </select>
         </label>
+        <label>
+          <span>Personne liée (optionnel)</span>
+          <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
+            <option value="">— Aucune —</option>
+            {persons.map((person) => (
+              <option key={person.id} value={person.id}>
+                {personLabel(person)}
+              </option>
+            ))}
+          </select>
+        </label>
         <Button type="submit" size="sm" disabled={busy}>
           Ajouter une piste de recherche
         </Button>
@@ -411,6 +430,21 @@ function NotebookPanel() {
               <Badge tone="neutral">{entry.status}</Badge>{' '}
               <Badge tone="neutral">{entry.priority}</Badge> <strong>{entry.title}</strong> —{' '}
               {entry.content}
+              {entry.person_id ? (
+                <>
+                  {' '}
+                  (
+                  <button
+                    type="button"
+                    className="person-card"
+                    style={{ display: 'inline', padding: 0, border: 0 }}
+                    onClick={() => onNavigate(entry.person_id)}
+                  >
+                    {personLabelById(entry.person_id)}
+                  </button>
+                  )
+                </>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -1071,7 +1105,13 @@ function App() {
             ) : view === 'families' ? (
               <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
             ) : view === 'notebook' ? (
-              <NotebookPanel />
+              <NotebookPanel
+                persons={persons}
+                onNavigate={(id) => {
+                  setSelectedId(id);
+                  setView('tree');
+                }}
+              />
             ) : view === 'statistics' ? (
               <StatisticsPanel />
             ) : view === 'ai' ? (

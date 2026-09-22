@@ -95,7 +95,9 @@ Un système documentaire, visuel et de recherche généalogique fiable, adapté 
   - `geneoapp-client.js` : namespace `research` (HTTP + IPC).
   - `App.jsx` : nouvel onglet « Carnet » listant les pistes de recherche réelles (titre, statut, priorité,
     note) avec formulaire de création. Testé (`App.test.jsx`).
-  - Limite connue : uniquement création/liste, pas encore de modification de statut ni de rattachement à une
-    personne ou une preuve depuis l'écran (l'API le permettrait via `personId`, mais le formulaire ne
-    l'expose pas encore) — OCR, reconnaissance de personnes dans un média et gestion des documents/médias
-    restent hors périmètre de cette passe et non implémentés côté serveur non plus.
+  - Limite connue : uniquement création/liste, pas de modification de statut depuis l'écran.
+- 2026-09-22 (suite) : le rattachement d'une piste de recherche à une personne (`personId`, déjà accepté par
+  `ResearchService#create`) est désormais exposé dans le formulaire du Carnet (sélecteur optionnel) et affiché
+  dans la liste avec un lien de navigation direct vers la fiche de la personne. Testé (`App.test.jsx`). Reste
+  hors périmètre : modification de statut depuis l'écran, rattachement à une preuve, OCR, reconnaissance de
+  personnes dans un média et gestion des documents/médias (non implémentés côté serveur non plus).

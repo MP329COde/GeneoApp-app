@@ -406,9 +406,59 @@ describe('App', () => {
         content: 'Registre paroissial 1850',
         status: 'TODO',
         priority: 'MEDIUM',
+        personId: null,
       }),
     );
     await waitFor(() => expect(screen.getByText(/Registre paroissial 1850/)).toBeInTheDocument());
+  });
+
+  it('rattache une piste de recherche à une personne existante et permet d’y naviguer', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    research.list.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 1,
+        title: 'Vérifier acte',
+        content: 'Mairie de Nantes',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        person_id: 1,
+      },
+    ]);
+    research.create.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Vérifier acte' } });
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Mairie de Nantes' } });
+    fireEvent.change(screen.getByLabelText('Personne liée (optionnel)'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une piste de recherche' }));
+
+    await waitFor(() =>
+      expect(research.create).toHaveBeenCalledWith({
+        title: 'Vérifier acte',
+        content: 'Mairie de Nantes',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        personId: 1,
+      }),
+    );
+
+    const navigateButtons = screen.getAllByRole('button', { name: 'Jean Dupont' });
+    fireEvent.click(navigateButtons[navigateButtons.length - 1]);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Arbre' })).toHaveClass('is-active'),
+    );
   });
 
   it('affiche les statistiques réelles via le client API', async () => {
