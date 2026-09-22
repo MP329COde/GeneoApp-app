@@ -12,9 +12,13 @@ const graph = vi.hoisted(() => ({
 const search = vi.hoisted(() => ({
   query: vi.fn(),
 }));
+const gedcom = vi.hoisted(() => ({
+  preview: vi.fn(),
+  import: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
-  createGeneoAppClient: () => ({ persons, graph, search }),
+  createGeneoAppClient: () => ({ persons, graph, search, gedcom }),
 }));
 
 const { default: App } = await import('./App.jsx');
@@ -101,5 +105,58 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByText(/Registre paroissial de Sainte-Anne 1815/)).toBeInTheDocument(),
     );
+  });
+
+  it('affiche l’aperçu GEDCOM et bloque l’import tant qu’il est invalide (pas de rollback silencieux)', async () => {
+    persons.list.mockResolvedValue([]);
+    gedcom.preview.mockResolvedValue({
+      valid: false,
+      errors: [{ message: 'Version GEDCOM non supportée' }],
+      mapping: { persons: 0, unions: 0, events: 0 },
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
+    fireEvent.change(screen.getByLabelText('Contenu GEDCOM'), {
+      target: { value: '0 HEAD\n0 TRLR' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Aperçu' }));
+
+    await waitFor(() => expect(screen.getByText(/GEDCOM invalide/)).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Importer' })).toBeDisabled();
+    expect(gedcom.import).not.toHaveBeenCalled();
+  });
+
+  it('importe un GEDCOM valide via le client API puis recharge les personnes réelles', async () => {
+    persons.list
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 9, given_names: 'Ada', family_name: 'Lovelace' }]);
+    gedcom.preview.mockResolvedValue({
+      valid: true,
+      mapping: { persons: 1, unions: 0, events: 0 },
+    });
+    gedcom.import.mockResolvedValue({ imported: true, ids: { persons: [9] } });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
+    fireEvent.change(screen.getByLabelText('Contenu GEDCOM'), {
+      target: { value: '0 HEAD\n0 @I1@ INDI\n0 TRLR' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Aperçu' }));
+    await waitFor(() => expect(screen.getByText(/Aperçu valide/)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Importer' }));
+
+    await waitFor(() => expect(gedcom.import).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(/Import réussi/)).toBeInTheDocument());
+    await waitFor(() => expect(persons.list).toHaveBeenCalledTimes(2));
   });
 });

@@ -85,6 +85,12 @@ const api = {
     query: (q, entityTypes) => invoke(IPC_CHANNELS.SEARCH_QUERY, { q, entityTypes }),
     duplicates: (limit) => invoke(IPC_CHANNELS.SEARCH_DUPLICATES, { limit }),
   },
+
+  gedcom: {
+    preview: (gedcom) => invoke(IPC_CHANNELS.GEDCOM_PREVIEW, { gedcom }),
+    import: (gedcom, performedBy) => invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy }),
+    export: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT, options),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

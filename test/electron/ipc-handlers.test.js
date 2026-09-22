@@ -147,3 +147,29 @@ test('SEARCH_QUERY expose la recherche locale au renderer', async () => {
   assert.equal(response.data.length, 1);
   assert.equal(response.data[0].entity_type, 'SOURCE');
 });
+
+test('GEDCOM_PREVIEW puis GEDCOM_IMPORT/GEDCOM_EXPORT exposent le pipeline GEDCOM au renderer', async () => {
+  const handlers = createHandlers();
+  const gedcom = [
+    '0 HEAD',
+    '1 GEDC',
+    '2 VERS 5.5.1',
+    '0 @I1@ INDI',
+    '1 NAME Ada /Lovelace/',
+    '1 SEX F',
+    '0 TRLR',
+  ].join('\n');
+
+  const preview = await handlers[IPC_CHANNELS.GEDCOM_PREVIEW]({ gedcom });
+  assert.equal(preview.ok, true);
+  assert.equal(preview.data.valid, true);
+  assert.equal(preview.data.mapping.persons, 1);
+
+  const imported = await handlers[IPC_CHANNELS.GEDCOM_IMPORT]({ gedcom });
+  assert.equal(imported.ok, true);
+  assert.equal(imported.data.imported, true);
+
+  const exported = await handlers[IPC_CHANNELS.GEDCOM_EXPORT]({ format: '7' });
+  assert.equal(exported.ok, true);
+  assert.match(exported.data.gedcom, /0 @I1@ INDI/);
+});

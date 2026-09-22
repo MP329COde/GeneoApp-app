@@ -46,7 +46,8 @@ function wrap(handler) {
  * dans le processus principal Electron).
  */
 export function buildIpcHandlers(services) {
-  const { persons, places, events, unions, parentages, sources, audit, graph, search } = services;
+  const { persons, places, events, unions, parentages, sources, audit, graph, search, gedcom } =
+    services;
 
   return {
     [IPC_CHANNELS.PERSONS_CREATE]: wrap(({ data, performedBy }) =>
@@ -142,6 +143,14 @@ export function buildIpcHandlers(services) {
     ),
     [IPC_CHANNELS.SEARCH_DUPLICATES]: wrap(({ limit } = {}) =>
       search.potentialDuplicates({ limit }),
+    ),
+
+    [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),
+    [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>
+      gedcom.import(input, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(({ format, personIds, ancestorsOf, descendantsOf } = {}) =>
+      gedcom.export({ format, personIds, ancestorsOf, descendantsOf }),
     ),
   };
 }

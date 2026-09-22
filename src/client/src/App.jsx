@@ -103,6 +103,101 @@ function SearchPanel() {
   );
 }
 
+function GedcomPanel({ onImported }) {
+  const [content, setContent] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [report, setReport] = useState(null);
+  const [gedcomError, setGedcomError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setContent(await file.text());
+    setPreview(null);
+    setReport(null);
+  };
+
+  const handlePreview = async () => {
+    setGedcomError(null);
+    setBusy(true);
+    try {
+      setPreview(await client.gedcom.preview(content));
+      setReport(null);
+    } catch (previewError) {
+      setGedcomError(previewError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleImport = async () => {
+    setGedcomError(null);
+    setBusy(true);
+    try {
+      const result = await client.gedcom.import(content);
+      setReport(result);
+      if (result.imported) await onImported();
+    } catch (importError) {
+      setGedcomError(importError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="gedcom-panel">
+      <label className="gedcom-panel__file">
+        <span>Fichier GEDCOM (.ged)</span>
+        <input type="file" accept=".ged" onChange={handleFile} />
+      </label>
+      <textarea
+        aria-label="Contenu GEDCOM"
+        value={content}
+        onChange={(event) => {
+          setContent(event.target.value);
+          setPreview(null);
+          setReport(null);
+        }}
+        rows={8}
+      />
+      <div className="gedcom-panel__actions">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={handlePreview}
+          disabled={busy || !content}
+        >
+          Aperçu
+        </Button>
+        <Button type="button" size="sm" onClick={handleImport} disabled={busy || !preview?.valid}>
+          Importer
+        </Button>
+      </div>
+      {gedcomError ? (
+        <p role="alert" className="notice notice--error">
+          {gedcomError}
+        </p>
+      ) : null}
+      {preview ? (
+        <p className="notice" role="status">
+          {preview.valid
+            ? `Aperçu valide : ${preview.mapping.persons} personne(s), ${preview.mapping.unions} union(s), ${preview.mapping.events} événement(s).`
+            : `GEDCOM invalide : ${preview.errors?.map((issue) => issue.message).join(', ') || 'voir le rapport'}`}
+        </p>
+      ) : null}
+      {report ? (
+        <p className="notice" role="status">
+          {report.imported
+            ? 'Import réussi et transactionnel.'
+            : 'Import refusé : aucune donnée écrite (rollback).'}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function App() {
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -243,11 +338,20 @@ function App() {
               >
                 Recherche
               </button>
+              <button
+                className={view === 'gedcom' ? 'is-active' : ''}
+                onClick={() => setView('gedcom')}
+                type="button"
+              >
+                GEDCOM
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
             {view === 'search' ? (
               <SearchPanel />
+            ) : view === 'gedcom' ? (
+              <GedcomPanel onImported={loadPersons} />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (

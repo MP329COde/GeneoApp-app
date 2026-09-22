@@ -56,6 +56,11 @@ function createHttpClient() {
         ),
       duplicates: (limit) => fetchJson(`/api/search/duplicates?limit=${limit ?? 100}`),
     },
+    gedcom: {
+      preview: (gedcom) => fetchJson('/api/gedcom/preview', { method: 'POST', body: { gedcom } }),
+      import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
+      export: (options) => fetchJson('/api/gedcom/export', { method: 'POST', body: options }),
+    },
   };
 }
 
@@ -75,6 +80,11 @@ function createIpcClient(bridge) {
     search: {
       query: (q, entityTypes) => bridge.search.query(q, entityTypes),
       duplicates: (limit) => bridge.search.duplicates(limit),
+    },
+    gedcom: {
+      preview: (gedcom) => bridge.gedcom.preview(gedcom),
+      import: (gedcom) => bridge.gedcom.import(gedcom),
+      export: (options) => bridge.gedcom.export(options),
     },
   };
 }
