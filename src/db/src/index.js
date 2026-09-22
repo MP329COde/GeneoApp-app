@@ -2,6 +2,7 @@ export { openDatabase } from './database.js';
 export { runMigrations } from './migrate.js';
 export { PersonRepository } from './repositories/person-repository.js';
 export { NoteRepository } from './repositories/note-repository.js';
+export { ResearchRepository } from './repositories/research-repository.js';
 export { PlaceRepository } from './repositories/place-repository.js';
 export { EventRepository } from './repositories/event-repository.js';
 export { UnionRepository } from './repositories/union-repository.js';

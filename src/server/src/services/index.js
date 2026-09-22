@@ -13,6 +13,7 @@ import {
   AccountRepository,
   TrashRepository,
   NoteRepository,
+  ResearchRepository,
 } from '../../../db/src/index.js';
 import { PersonService } from './person.service.js';
 import { PlaceService } from './place.service.js';
@@ -32,6 +33,7 @@ import { MediaStorage } from '../media/storage.js';
 import { OcrService } from '../ocr/service.js';
 import { GenealogyGraphService } from './genealogy-graph.service.js';
 import { NoteService } from './note.service.js';
+import { ResearchService } from './research.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
 const DEFAULT_BACKUP_DIR =
@@ -69,5 +71,6 @@ export function createServices(
     backups: new BackupService(database, { backupDir }),
     graph: new GenealogyGraphService(database),
     notes: new NoteService(new NoteRepository(database)),
+    research: new ResearchService(new ResearchRepository(database)),
   };
 }

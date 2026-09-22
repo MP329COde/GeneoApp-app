@@ -13,6 +13,8 @@ import { accountRoutes } from './account.routes.js';
 import { trashRoutes } from './trash.routes.js';
 import { backupRoutes } from './backup.routes.js';
 import { graphRoutes } from './graph.routes.js';
+import { noteRoutes } from './note.routes.js';
+import { researchRoutes } from './research.routes.js';
 
 export function apiRoutes(services) {
   const router = Router();
@@ -31,6 +33,8 @@ export function apiRoutes(services) {
   router.use('/trash', trashRoutes(services));
   router.use('/backups', backupRoutes(services));
   router.use('/graph', graphRoutes(services));
+  router.use('/notes', noteRoutes(services));
+  router.use('/notebook', researchRoutes(services));
 
   return router;
 }
