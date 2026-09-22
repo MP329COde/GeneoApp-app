@@ -20,9 +20,11 @@ Les dix premières issues du plan de développement sont livrées et validées (
   (`src/client/src/api/geneoapp-client.js` : IPC Electron en production, `fetch` via le proxy Vite en
   développement) — aucune donnée fictive. Écrans construits : personnes/arbre/relations, recherche, GEDCOM
   (import avec aperçu obligatoire, export), sauvegardes/corbeille (protégées par session locale), détection de
-  doublons, familles (unions), carnet de recherche (avec rattachement optionnel à une personne),
-  statistiques, IA locale. Restent des versions simplifiées : pas de vue carte/chronologie graphique/radiale,
-  pas d'assistant de fusion de doublons ;
+  doublons, familles (unions et liens parent/enfant), événements (saisie manuelle sans passer par GEDCOM),
+  sources et citations, notes (confiance et contradictions), médias (upload/téléchargement/statut OCR),
+  journal d'audit, carnet de recherche (avec rattachement optionnel à une personne), statistiques, IA locale.
+  Les 17 services backend sont tous exposés via IPC et consommés par au moins un écran. Restent des versions
+  simplifiées : pas de vue carte/chronologie graphique/radiale, pas d'assistant de fusion de doublons ;
 - `src/server` : serveur Express local exposant les routes métier (personnes, familles, unions, parentages,
   événements, lieux, sources, médias, GEDCOM, recherche, comptes, sauvegardes, corbeille, audit) ;
 - `src/db` : modèle de données SQLite, migrations et dépôts (repositories) ;
