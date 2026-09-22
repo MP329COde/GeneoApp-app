@@ -163,16 +163,40 @@ export class GenealogyGraphService {
       }));
   }
 
+  getParentRole(childId, parentId) {
+    const row = this.database
+      .prepare(
+        `SELECT parent_role FROM parentages
+         WHERE child_id = ? AND parent_id = ? AND deleted_at IS NULL`,
+      )
+      .get(childId, parentId);
+    return row?.parent_role ?? null;
+  }
+
+  branchOf(role) {
+    if (role === 'FATHER') return 'PATERNAL';
+    if (role === 'MOTHER') return 'MATERNAL';
+    return 'UNKNOWN';
+  }
+
   findRelationship(personA, personB) {
     const path = this.findPath(personA, personB);
-    if (path.length === 0) return { relationship: null, distance: null, path };
+    if (path.length === 0) return { relationship: null, distance: null, path, branch: null };
     const edges = path.slice(1).map((step) => step.via);
     let relationship = 'CONNECTED';
+    let branch = null;
     if (edges.length === 1 && edges[0] === 'SPOUSE') relationship = 'SPOUSE';
-    else if (edges.every((edge) => edge === 'PARENT')) relationship = `ANCESTOR_${edges.length}`;
-    else if (edges.every((edge) => edge === 'CHILD')) relationship = `DESCENDANT_${edges.length}`;
-    else if (edges.includes('PARENT') && edges.includes('CHILD')) relationship = 'COLLATERAL';
-    return { relationship, distance: edges.length, path };
+    else if (edges.every((edge) => edge === 'PARENT')) {
+      relationship = `ANCESTOR_${edges.length}`;
+      branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+    } else if (edges.every((edge) => edge === 'CHILD')) {
+      relationship = `DESCENDANT_${edges.length}`;
+      branch = this.branchOf(this.getParentRole(path[1].personId, personA));
+    } else if (edges.includes('PARENT') && edges.includes('CHILD')) {
+      relationship = 'COLLATERAL';
+      branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+    }
+    return { relationship, distance: edges.length, path, branch };
   }
 
   detectCycles() {

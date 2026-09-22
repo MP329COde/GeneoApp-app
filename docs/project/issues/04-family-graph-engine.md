@@ -101,7 +101,12 @@ Un moteur de relations généalogiques fiable, calculable et testable, base indi
 
 - 2026-09-22 : `getAncestors`/`getDescendants` acceptaient une profondeur illimitée uniquement ; ajout d’un
   paramètre `depth` optionnel (query string `?depth=`), validé côté service (`GenealogyGraphService.traverse`)
-  et testé (`test/api/graph.test.js`). `findRelationship` ne calcule pas encore explicitement la branche
-  (paternelle/maternelle) ni le degré de parenté nommé (ex. « cousin germain ») ; reste une dette technique à
-  traiter avant la Phase I (vues radiale/éventail qui en dépendent). `detectPotentialDuplicates()` n’est pas
-  implémenté dans ce service : la déduplication vit dans le module de recherche (issue 06).
+  et testé (`test/api/graph.test.js`). `detectPotentialDuplicates()` n’est pas implémenté dans ce service : la
+  déduplication vit dans le module de recherche (issue 06).
+- 2026-09-22 : `findRelationship` calcule désormais un champ `branch` (`PATERNAL`/`MATERNAL`/`UNKNOWN`) à partir
+  du `parent_role` (`FATHER`/`MOTHER`/`PARENT`) de la première étape du chemin, pour les relations `ANCESTOR_*`,
+  `DESCENDANT_*` et `COLLATERAL`. Limite connue : pour une relation `COLLATERAL` dont le chemin le plus court
+  commence par une étape descendante (ex. calculée depuis un neveu vers sa tante en remontant d’abord par un
+  autre rameau), la branche peut être mal orientée — cas non couvert par les tests actuels. Le degré de parenté
+  nommé (« cousin germain », « oncle », etc.) reste à implémenter, nécessaire avant les vues radiale/éventail de
+  la Phase I.

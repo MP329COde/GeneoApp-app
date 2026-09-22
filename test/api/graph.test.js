@@ -10,10 +10,10 @@ async function createPerson(baseUrl, givenNames) {
   return response.body.id;
 }
 
-async function addParentage(baseUrl, childId, parentId) {
+async function addParentage(baseUrl, childId, parentId, parentRole) {
   const response = await requestJson(baseUrl, '/api/parentages', {
     method: 'POST',
-    body: { childId, parentId },
+    body: { childId, parentId, ...(parentRole ? { parentRole } : {}) },
   });
   assert.equal(response.status, 201);
 }
@@ -110,6 +110,40 @@ test('le graphe calcule le chemin, les ancêtres communs et la relation', async 
     assert.equal(relationship.body.distance, 4);
     assert.equal(relationship.body.path[0].personId, personA);
     assert.equal(relationship.body.path.at(-1).personId, personB);
+  } finally {
+    await server.close();
+  }
+});
+
+test('le graphe distingue la branche paternelle de la branche maternelle', async () => {
+  const server = await startTestServer();
+  try {
+    const father = await createPerson(server.baseUrl, 'Père');
+    const mother = await createPerson(server.baseUrl, 'Mère');
+    const child = await createPerson(server.baseUrl, 'Enfant');
+    await addParentage(server.baseUrl, child, father, 'FATHER');
+    await addParentage(server.baseUrl, child, mother, 'MOTHER');
+
+    const paternal = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${child}&personB=${father}`,
+    );
+    assert.equal(paternal.body.relationship, 'ANCESTOR_1');
+    assert.equal(paternal.body.branch, 'PATERNAL');
+
+    const maternal = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${child}&personB=${mother}`,
+    );
+    assert.equal(maternal.body.relationship, 'ANCESTOR_1');
+    assert.equal(maternal.body.branch, 'MATERNAL');
+
+    const reverse = await requestJson(
+      server.baseUrl,
+      `/api/graph/relationship?personA=${father}&personB=${child}`,
+    );
+    assert.equal(reverse.body.relationship, 'DESCENDANT_1');
+    assert.equal(reverse.body.branch, 'PATERNAL');
   } finally {
     await server.close();
   }
