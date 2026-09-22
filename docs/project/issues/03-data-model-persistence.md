@@ -84,5 +84,12 @@ Un modèle de données généalogique cohérent, solide et extensible, prêt à 
   étendre une contrainte `CHECK` en SQLite) ajoutant `OCCUPATION, RESIDENCE, EMIGRATION, IMMIGRATION, CENSUS,
   MILITARY, GRADUATION, WILL, PROBATE, RELIGIOUS_EVENT, NATURALIZATION`, idempotente et testée
   (`test/db/event-repository.test.js`). Le mapping GEDCOM de ces nouveaux types vers les tags standard
-  (`OCCU/RESI/EMIG/IMMI/CENS/NATU/WILL/PROB/EDUC/RELI`) est fait (voir issue 05) ; seul `MILITARY` reste sans
-  tag GEDCOM 5.5.1 standard direct et n’est donc pas mappé à l’import/export.
+  (`OCCU/RESI/EMIG/IMMI/CENS/NATU/WILL/PROB/EDUC/RELI`) est fait (voir issue 05) ; `MILITARY`, sans tag 5.5.1
+  standard direct, est désormais mappé via le tag générique `EVEN`/`TYPE Military` (voir issue 05, suivi
+  post-livraison).
+- 2026-09-22 (suite) : audit constatant que `EventService` et `PlaceService` avaient leurs canaux IPC
+  (`EVENTS_*`, `PLACES_*`) mais étaient absents de `geneoapp-client.js` et de tout écran — sans import GEDCOM,
+  il n'existait donc aucun moyen de saisir manuellement un événement (naissance, décès, etc.) ou un lieu.
+  Corrigé : namespaces `events` et `places` ajoutés au client (HTTP + IPC) ; nouvel onglet « Événements » sur
+  la fiche personne sélectionnée — création d'un événement (type, date en texte libre, précision de date, lieu
+  existant ou nouveau lieu créé à la volée), liste des événements réels, suppression. Testé (`App.test.jsx`).

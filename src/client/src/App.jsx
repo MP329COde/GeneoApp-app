@@ -519,6 +519,190 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
   );
 }
 
+const EVENT_TYPES = [
+  'BIRTH',
+  'DEATH',
+  'MARRIAGE',
+  'DIVORCE',
+  'BAPTISM',
+  'BURIAL',
+  'ADOPTION',
+  'OCCUPATION',
+  'RESIDENCE',
+  'EMIGRATION',
+  'IMMIGRATION',
+  'CENSUS',
+  'MILITARY',
+  'GRADUATION',
+  'WILL',
+  'PROBATE',
+  'RELIGIOUS_EVENT',
+  'NATURALIZATION',
+  'OTHER',
+];
+const DATE_PRECISIONS = ['EXACT', 'ABOUT', 'BEFORE', 'AFTER', 'BETWEEN', 'UNKNOWN'];
+
+function EventsPanel({ selected }) {
+  const [events, setEvents] = useState(null);
+  const [places, setPlaces] = useState([]);
+  const [type, setType] = useState('BIRTH');
+  const [dateText, setDateText] = useState('');
+  const [datePrecision, setDatePrecision] = useState('EXACT');
+  const [placeId, setPlaceId] = useState('');
+  const [newPlaceName, setNewPlaceName] = useState('');
+  const [eventsError, setEventsError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadEvents = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setEvents(await client.events.listForPerson(selected.id));
+    } catch (loadError) {
+      setEventsError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setEvents(null);
+    loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
+    client.places
+      .list()
+      .then(setPlaces)
+      .catch((loadError) => setEventsError(loadError.message));
+  }, []);
+
+  const placeLabelById = (id) => places.find((place) => place.id === id)?.name ?? `Lieu #${id}`;
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir et ajouter des événements.</p>;
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setEventsError(null);
+    try {
+      let resolvedPlaceId = placeId ? Number(placeId) : null;
+      if (newPlaceName.trim()) {
+        const place = await client.places.create({ name: newPlaceName.trim() });
+        resolvedPlaceId = place.id;
+        setPlaces((current) => [...current, place]);
+      }
+      await client.events.create({
+        type,
+        dateText: dateText.trim() || null,
+        datePrecision,
+        placeId: resolvedPlaceId,
+        participants: [{ personId: selected.id, role: 'PRINCIPAL' }],
+      });
+      setDateText('');
+      setNewPlaceName('');
+      setPlaceId('');
+      await loadEvents();
+    } catch (createError) {
+      setEventsError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    setBusy(true);
+    setEventsError(null);
+    try {
+      await client.events.remove(id);
+      await loadEvents();
+    } catch (removeError) {
+      setEventsError(removeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Événements de {personLabel(selected)}</h3>
+      {eventsError ? (
+        <p role="alert" className="notice notice--error">
+          {eventsError}
+        </p>
+      ) : null}
+
+      <form className="create-person-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Type</span>
+          <select value={type} onChange={(event) => setType(event.target.value)}>
+            {EVENT_TYPES.map((eventType) => (
+              <option key={eventType} value={eventType}>
+                {eventType}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Date (texte libre)</span>
+          <input value={dateText} onChange={(event) => setDateText(event.target.value)} />
+        </label>
+        <label>
+          <span>Précision de date</span>
+          <select value={datePrecision} onChange={(event) => setDatePrecision(event.target.value)}>
+            {DATE_PRECISIONS.map((precision) => (
+              <option key={precision} value={precision}>
+                {precision}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Lieu existant (optionnel)</span>
+          <select value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
+            <option value="">— Aucun —</option>
+            {places.map((place) => (
+              <option key={place.id} value={place.id}>
+                {place.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Ou nouveau lieu (optionnel)</span>
+          <input value={newPlaceName} onChange={(event) => setNewPlaceName(event.target.value)} />
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Ajouter l’événement
+        </Button>
+      </form>
+
+      {events === null ? (
+        <p role="status">Chargement…</p>
+      ) : events.length === 0 ? (
+        <p className="notice">Aucun événement pour cette personne.</p>
+      ) : (
+        <ul className="search-results">
+          {events.map((item) => (
+            <li key={item.id}>
+              <Badge tone="neutral">{item.type}</Badge> {item.date_text ?? '(date inconnue)'}
+              {item.place_id ? ` — ${placeLabelById(item.place_id)}` : ''}
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => handleRemove(item.id)}
+                disabled={busy}
+              >
+                Supprimer
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -1656,6 +1840,13 @@ function App() {
                 Sources
               </button>
               <button
+                className={view === 'events' ? 'is-active' : ''}
+                onClick={() => setView('events')}
+                type="button"
+              >
+                Événements
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -1700,6 +1891,8 @@ function App() {
               <MediaPanel selected={selected} />
             ) : view === 'sources' ? (
               <SourcesPanel selected={selected} />
+            ) : view === 'events' ? (
+              <EventsPanel selected={selected} />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}

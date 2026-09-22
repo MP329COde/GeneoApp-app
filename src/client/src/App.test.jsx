@@ -67,6 +67,19 @@ const parentages = vi.hoisted(() => ({
   listChildrenOf: vi.fn().mockResolvedValue([]),
   remove: vi.fn(),
 }));
+const places = vi.hoisted(() => ({
+  create: vi.fn(),
+  list: vi.fn().mockResolvedValue([]),
+  get: vi.fn(),
+  remove: vi.fn(),
+}));
+const events = vi.hoisted(() => ({
+  create: vi.fn(),
+  get: vi.fn(),
+  listForPerson: vi.fn(),
+  addParticipant: vi.fn(),
+  remove: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -85,6 +98,8 @@ vi.mock('./api/geneoapp-client.js', () => ({
     media,
     sources,
     parentages,
+    places,
+    events,
   }),
 }));
 
@@ -723,5 +738,47 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Louis Dupont' }).length).toBeGreaterThan(1),
     );
+  });
+
+  it('ajoute un événement réel à une personne, avec un nouveau lieu créé à la volée', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listForPerson
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 1, type: 'BIRTH', date_text: '12 avril 1850', place_id: 9 }]);
+    places.create.mockResolvedValue({ id: 9, name: 'Nantes' });
+    events.create.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
+    await waitFor(() => expect(events.listForPerson).toHaveBeenCalledWith(1));
+
+    fireEvent.change(screen.getByLabelText('Date (texte libre)'), {
+      target: { value: '12 avril 1850' },
+    });
+    fireEvent.change(screen.getByLabelText('Ou nouveau lieu (optionnel)'), {
+      target: { value: 'Nantes' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter l’événement' }));
+
+    await waitFor(() => expect(places.create).toHaveBeenCalledWith({ name: 'Nantes' }));
+    await waitFor(() =>
+      expect(events.create).toHaveBeenCalledWith({
+        type: 'BIRTH',
+        dateText: '12 avril 1850',
+        datePrecision: 'EXACT',
+        placeId: 9,
+        participants: [{ personId: 1, role: 'PRINCIPAL' }],
+      }),
+    );
+    await waitFor(() => expect(screen.getAllByText(/Nantes/).length).toBeGreaterThan(0));
   });
 });

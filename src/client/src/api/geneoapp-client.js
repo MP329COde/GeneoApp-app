@@ -54,6 +54,20 @@ function createHttpClient() {
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
     },
+    places: {
+      create: (data) => fetchJson('/api/places', { method: 'POST', body: data }),
+      list: () => fetchJson('/api/places'),
+      get: (id) => fetchJson(`/api/places/${id}`),
+      remove: (id) => fetchJson(`/api/places/${id}`, { method: 'DELETE' }),
+    },
+    events: {
+      create: (data) => fetchJson('/api/events', { method: 'POST', body: data }),
+      get: (id) => fetchJson(`/api/events/${id}`),
+      listForPerson: (personId) => fetchJson(`/api/events/by-person/${personId}`),
+      addParticipant: (id, data) =>
+        fetchJson(`/api/events/${id}/participants`, { method: 'POST', body: data }),
+      remove: (id) => fetchJson(`/api/events/${id}`, { method: 'DELETE' }),
+    },
     graph: {
       ancestors: (personId, depth) =>
         fetchJson(`/api/persons/${personId}/ancestors${depth ? `?depth=${depth}` : ''}`),
@@ -164,6 +178,19 @@ function createIpcClient(bridge) {
       list: () => bridge.persons.list(),
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),
+    },
+    places: {
+      create: (data) => bridge.places.create(data),
+      list: () => bridge.places.list(),
+      get: (id) => bridge.places.get(id),
+      remove: (id) => bridge.places.remove(id),
+    },
+    events: {
+      create: (data) => bridge.events.create(data),
+      get: (id) => bridge.events.get(id),
+      listForPerson: (personId) => bridge.events.listForPerson(personId),
+      addParticipant: (id, data) => bridge.events.addParticipant(id, data),
+      remove: (id) => bridge.events.remove(id),
     },
     graph: {
       ancestors: (personId, depth) => bridge.graph.ancestors(personId, depth),
