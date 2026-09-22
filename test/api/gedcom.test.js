@@ -103,3 +103,37 @@ test('GEDCOM exporte un arbre local et permet de sélectionner les ancêtres', a
     await server.close();
   }
 });
+
+test('GEDCOM importe et réexporte les événements étendus (profession, migration, naturalisation...)', async () => {
+  const server = await startTestServer();
+  try {
+    const extended = fixture.replace(
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London',
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London\n1 OCCU Mathématicienne\n1 NATU\n2 DATE 1840',
+    );
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: extended },
+    });
+    assert.equal(imported.status, 201);
+
+    const types = server.database
+      .prepare(
+        `SELECT type FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id
+         WHERE ep.person_id = ? ORDER BY e.id`,
+      )
+      .all(imported.body.ids.persons[0])
+      .map((row) => row.type);
+    assert.deepEqual(types, ['BIRTH', 'OCCUPATION', 'NATURALIZATION']);
+
+    const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '7' },
+    });
+    assert.match(exported.body.gedcom, /1 OCCU/);
+    assert.match(exported.body.gedcom, /1 NATU/);
+  } finally {
+    await server.close();
+  }
+});

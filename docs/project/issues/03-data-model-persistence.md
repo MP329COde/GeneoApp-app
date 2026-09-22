@@ -83,7 +83,6 @@ Un modèle de données généalogique cohérent, solide et extensible, prêt à 
   sous `OTHER`. Migration `0008_expand_event_types.sql` (reconstruction de table, seule voie possible pour
   étendre une contrainte `CHECK` en SQLite) ajoutant `OCCUPATION, RESIDENCE, EMIGRATION, IMMIGRATION, CENSUS,
   MILITARY, GRADUATION, WILL, PROBATE, RELIGIOUS_EVENT, NATURALIZATION`, idempotente et testée
-  (`test/db/event-repository.test.js`). Reste à faire : le mapping GEDCOM (`src/server/src/gedcom/service.js`,
-  `EVENT_TAGS`) ne reconnaît encore que les tags GEDCOM des types d’origine (`BIRT/DEAT/BAPM/BURI/ADOP`) ; les
-  tags GEDCOM correspondant aux nouveaux types (`OCCU`, `RESI`, `EMIG`, `IMMI`, `CENS`, `GRAD`, `WILL`, `NATU`,
-  événements militaires) ne sont pas encore mappés à l’import/export.
+  (`test/db/event-repository.test.js`). Le mapping GEDCOM de ces nouveaux types vers les tags standard
+  (`OCCU/RESI/EMIG/IMMI/CENS/NATU/WILL/PROB/EDUC/RELI`) est fait (voir issue 05) ; seul `MILITARY` reste sans
+  tag GEDCOM 5.5.1 standard direct et n’est donc pas mappé à l’import/export.

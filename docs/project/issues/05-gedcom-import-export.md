@@ -88,3 +88,14 @@ Résultat attendu :
 ## Sortie de livraison
 
 Un pipeline GEDCOM fiable, sûr et réversible, prêt pour les usages de migration, d’échange et d’archive généalogique.
+
+## Suivi post-livraison
+
+- 2026-09-22 : le mapping ne couvrait que `BIRT/DEAT/BAPM/BURI/ADOP` côté individus, alors que la table `events`
+  a été étendue (issue 03) à profession, résidence, migration, recensement, diplôme, testament, succession,
+  religieux et naturalisation. Ajout des tags GEDCOM 5.5.1 standard correspondants (`OCCU, RESI, EMIG, IMMI,
+  CENS, NATU, WILL, PROB, EDUC, RELI`) à l'import et à l'export (table `EXPORT_EVENT_TAGS` dérivée de
+  `EVENT_TAGS`, en remplacement du mapping d'export codé en dur). Testé par un cas d'import/réexport dédié
+  (`test/api/gedcom.test.js`). Limite connue : `MILITARY` n'a pas d'équivalent standard direct en GEDCOM 5.5.1
+  (nécessiterait un événement générique `EVEN` avec sous-tag `TYPE`, non implémenté) et reste donc ignoré à
+  l'import comme à l'export.

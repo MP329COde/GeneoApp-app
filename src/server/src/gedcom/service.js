@@ -1,13 +1,29 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
 import { parseGedcom, validateGedcom } from './parser.js';
 
+// Tags GEDCOM 5.5.1 individuels (INDIVIDUAL_EVENT_STRUCTURE / INDIVIDUAL_ATTRIBUTE_STRUCTURE)
+// mappés vers les types métier. Sans équivalent standard direct dans la norme (ex. événement
+// militaire générique), un type reste non mappé plutôt que forcé sous un tag inexact.
 const EVENT_TAGS = {
   BIRT: 'BIRTH',
   DEAT: 'DEATH',
   BAPM: 'BAPTISM',
   BURI: 'BURIAL',
   ADOP: 'ADOPTION',
+  OCCU: 'OCCUPATION',
+  RESI: 'RESIDENCE',
+  EMIG: 'EMIGRATION',
+  IMMI: 'IMMIGRATION',
+  CENS: 'CENSUS',
+  NATU: 'NATURALIZATION',
+  WILL: 'WILL',
+  PROB: 'PROBATE',
+  EDUC: 'GRADUATION',
+  RELI: 'RELIGIOUS_EVENT',
 };
+const EXPORT_EVENT_TAGS = Object.fromEntries(
+  Object.entries(EVENT_TAGS).map(([tag, type]) => [type, tag]),
+);
 
 export class GedcomService {
   constructor(database) {
@@ -121,7 +137,7 @@ function generateGedcom(database, persons, families, format) {
       )
       .all(person.id);
     for (const event of events) {
-      const tag = { BIRTH: 'BIRT', DEATH: 'DEAT', BAPTISM: 'BAPM', BURIAL: 'BURI' }[event.type];
+      const tag = EXPORT_EVENT_TAGS[event.type];
       if (!tag) continue;
       lines.push(`1 ${tag}`);
       if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
