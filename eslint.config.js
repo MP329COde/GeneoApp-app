@@ -5,7 +5,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**'],
+    ignores: ['**/dist/**', '**/storybook-static/**', '**/node_modules/**'],
   },
   js.configs.recommended,
   {

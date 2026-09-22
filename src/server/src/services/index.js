@@ -29,6 +29,7 @@ import { BackupService } from './backup.service.js';
 import { GedcomService } from '../gedcom/service.js';
 import { MediaStorage } from '../media/storage.js';
 import { OcrService } from '../ocr/service.js';
+import { GenealogyGraphService } from './genealogy-graph.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
 const DEFAULT_BACKUP_DIR =
@@ -64,5 +65,6 @@ export function createServices(
     accounts,
     trash: new TrashService(new TrashRepository(database), entityServices),
     backups: new BackupService(database, { backupDir }),
+    graph: new GenealogyGraphService(database),
   };
 }

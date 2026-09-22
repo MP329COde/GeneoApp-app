@@ -12,6 +12,7 @@ import { gedcomRoutes } from './gedcom.routes.js';
 import { accountRoutes } from './account.routes.js';
 import { trashRoutes } from './trash.routes.js';
 import { backupRoutes } from './backup.routes.js';
+import { graphRoutes } from './graph.routes.js';
 
 export function apiRoutes(services) {
   const router = Router();
@@ -29,6 +30,7 @@ export function apiRoutes(services) {
   router.use('/accounts', accountRoutes(services));
   router.use('/trash', trashRoutes(services));
   router.use('/backups', backupRoutes(services));
+  router.use('/graph', graphRoutes(services));
 
   return router;
 }

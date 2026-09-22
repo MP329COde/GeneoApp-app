@@ -3,3 +3,4 @@ CONTRIBUTING.md
 GOVERNANCE.md
 docs/
 .playwright-cli/
+**/storybook-static/

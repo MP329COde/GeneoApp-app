@@ -5,7 +5,7 @@
 | 01 - Fondation architecture | Terminée | `npm run lint`, `npm run format:check`, `npm run build`, `npm run smoke` | `e4867d7` |
 | 02 - Design system, i18n et gouvernance UI | Terminée | `npm run test:client`, `npm run build-storybook` | à renseigner |
 | 03 - Modèle de données et persistance | Terminée | `npm run test:db` (46 tests) | à renseigner |
-| 04 - Moteur de graphe et relations | À faire | - | - |
+| 04 - Moteur de graphe et relations | Terminée | `npm run lint`, `npm run format:check`, 3 tests graphe + 4 tests relations | à renseigner |
 | 05 - GEDCOM import/export | À faire | - | - |
 | 06 - Recherche, déduplication, notes et preuves | À faire | - | - |
 | 07 - Sources, médias, OCR et carnet de recherche | À faire | - | - |
