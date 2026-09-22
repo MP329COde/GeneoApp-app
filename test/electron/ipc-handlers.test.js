@@ -98,3 +98,35 @@ test('UNIONS_CREATE rejette une union à un seul partenaire via l’enveloppe d�
   assert.equal(response.ok, false);
   assert.equal(response.error.status, 400);
 });
+
+test('GRAPH_ANCESTORS et GRAPH_RELATIONSHIP exposent le moteur de relations au renderer', async () => {
+  const handlers = createHandlers();
+
+  const parent = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Louis', familyName: 'Dupont' },
+  });
+  const child = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Jean', familyName: 'Dupont' },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: child.data.id, parentId: parent.data.id },
+  });
+
+  const ancestors = await handlers[IPC_CHANNELS.GRAPH_ANCESTORS]({ personId: child.data.id });
+  assert.equal(ancestors.ok, true);
+  assert.deepEqual(
+    ancestors.data.map((person) => person.id),
+    [parent.data.id],
+  );
+
+  const relations = await handlers[IPC_CHANNELS.GRAPH_RELATIONS]({ personId: child.data.id });
+  assert.equal(relations.ok, true);
+  assert.equal(relations.data.parents[0].id, parent.data.id);
+
+  const relationship = await handlers[IPC_CHANNELS.GRAPH_RELATIONSHIP]({
+    personA: child.data.id,
+    personB: parent.data.id,
+  });
+  assert.equal(relationship.ok, true);
+  assert.equal(relationship.data.relationship, 'ANCESTOR_1');
+});

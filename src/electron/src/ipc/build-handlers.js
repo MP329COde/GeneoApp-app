@@ -46,7 +46,7 @@ function wrap(handler) {
  * dans le processus principal Electron).
  */
 export function buildIpcHandlers(services) {
-  const { persons, places, events, unions, parentages, sources, audit } = services;
+  const { persons, places, events, unions, parentages, sources, audit, graph } = services;
 
   return {
     [IPC_CHANNELS.PERSONS_CREATE]: wrap(({ data, performedBy }) =>
@@ -124,5 +124,17 @@ export function buildIpcHandlers(services) {
     [IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY]: wrap(({ tableName, rowId }) =>
       audit.listForEntity(tableName, rowId),
     ),
+
+    [IPC_CHANNELS.GRAPH_ANCESTORS]: wrap(({ personId, depth }) =>
+      graph.getAncestors(personId, { maxDepth: depth }),
+    ),
+    [IPC_CHANNELS.GRAPH_DESCENDANTS]: wrap(({ personId, depth }) =>
+      graph.getDescendants(personId, { maxDepth: depth }),
+    ),
+    [IPC_CHANNELS.GRAPH_RELATIONS]: wrap(({ personId }) => graph.getRelations(personId)),
+    [IPC_CHANNELS.GRAPH_RELATIONSHIP]: wrap(({ personA, personB }) => {
+      graph.assertPair(personA, personB);
+      return graph.findRelationship(personA, personB);
+    }),
   };
 }

@@ -36,4 +36,9 @@ export const IPC_CHANNELS = Object.freeze({
   SOURCES_LIST_CITATIONS_FOR_ENTITY: 'geneoapp:sources:listCitationsForEntity',
 
   AUDIT_LIST_FOR_ENTITY: 'geneoapp:audit:listForEntity',
+
+  GRAPH_ANCESTORS: 'geneoapp:graph:ancestors',
+  GRAPH_DESCENDANTS: 'geneoapp:graph:descendants',
+  GRAPH_RELATIONS: 'geneoapp:graph:relations',
+  GRAPH_RELATIONSHIP: 'geneoapp:graph:relationship',
 });

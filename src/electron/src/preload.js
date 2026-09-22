@@ -72,6 +72,14 @@ const api = {
     listForEntity: (tableName, rowId) =>
       invoke(IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY, { tableName, rowId }),
   },
+
+  graph: {
+    ancestors: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_ANCESTORS, { personId, depth }),
+    descendants: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_DESCENDANTS, { personId, depth }),
+    relations: (personId) => invoke(IPC_CHANNELS.GRAPH_RELATIONS, { personId }),
+    relationship: (personA, personB) =>
+      invoke(IPC_CHANNELS.GRAPH_RELATIONSHIP, { personA, personB }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);
