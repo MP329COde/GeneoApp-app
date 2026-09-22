@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { axe } from 'jest-axe';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from './test/test-utils.jsx';
 
@@ -72,6 +73,34 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
+  });
+
+  it("n'a aucune violation d'accessibilité détectée par axe (état vide)", async () => {
+    persons.list.mockResolvedValue([]);
+
+    const { container } = renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("n'a aucune violation d'accessibilité détectée par axe (arbre avec données réelles)", async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    const { container } = renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('charge les personnes et leurs relations réelles depuis le client API', async () => {
