@@ -15,6 +15,7 @@ Ce dossier contient l'historique des décisions d'architecture de GeneoApp, au f
 | [0007](0007-strategie-branches-main-dev.md) | Stratégie de branches `main` / `dev` | Acceptée |
 | [0008](0008-design-system-storybook-a11y-i18n.md) | Design system générique, Storybook, accessibilité et i18n | Acceptée |
 | [0009](0009-site-presentation-cicd-releases.md) | Site de présentation, intégration continue et releases | Acceptée |
+| [0010](0010-ia-locale-exception-reseau.md) | IA locale : exception réseau maîtrisée à l'ADR 0006 | Acceptée |
 
 ## Règles
 
