@@ -167,6 +167,150 @@ function DuplicatesPanel({ onSelect }) {
   );
 }
 
+const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
+
+function FamiliesPanel({ persons, selected, onNavigate }) {
+  const [unions, setUnions] = useState(null);
+  const [type, setType] = useState('MARRIAGE');
+  const [partnerId, setPartnerId] = useState('');
+  const [familiesError, setFamiliesError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const otherPersons = useMemo(
+    () => persons.filter((person) => person.id !== selected?.id),
+    [persons, selected],
+  );
+
+  const loadUnions = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setUnions(await client.unions.listForPerson(selected.id));
+    } catch (loadError) {
+      setFamiliesError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setUnions(null);
+    loadUnions();
+  }, [loadUnions]);
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir et gérer ses familles.</p>;
+  }
+
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    if (!partnerId) return;
+    setBusy(true);
+    setFamiliesError(null);
+    try {
+      await client.unions.create({
+        type,
+        partnerIds: [selected.id, Number(partnerId)],
+      });
+      setPartnerId('');
+      await loadUnions();
+    } catch (createError) {
+      setFamiliesError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (unionId) => {
+    setBusy(true);
+    setFamiliesError(null);
+    try {
+      await client.unions.remove(unionId);
+      await loadUnions();
+    } catch (removeError) {
+      setFamiliesError(removeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const personLabelById = (id) => {
+    const person = persons.find((candidate) => candidate.id === id);
+    return person ? personLabel(person) : `Personne #${id}`;
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Familles de {personLabel(selected)}</h3>
+      {familiesError ? (
+        <p role="alert" className="notice notice--error">
+          {familiesError}
+        </p>
+      ) : null}
+
+      <form className="create-person-form" onSubmit={handleCreate}>
+        <label>
+          <span>Type d’union</span>
+          <select value={type} onChange={(event) => setType(event.target.value)}>
+            {UNION_TYPES.map((unionType) => (
+              <option key={unionType} value={unionType}>
+                {unionType}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Partenaire</span>
+          <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
+            <option value="">— Choisir une personne —</option>
+            {otherPersons.map((person) => (
+              <option key={person.id} value={person.id}>
+                {personLabel(person)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" size="sm" disabled={busy || !partnerId}>
+          Créer l’union
+        </Button>
+      </form>
+
+      {unions === null ? (
+        <p role="status">Chargement…</p>
+      ) : unions.length === 0 ? (
+        <p className="notice">Aucune union enregistrée pour cette personne.</p>
+      ) : (
+        <ul className="search-results">
+          {unions.map((union) => (
+            <li key={union.id}>
+              <Badge tone="neutral">{union.type}</Badge>{' '}
+              {union.partnerIds
+                .filter((id) => id !== selected.id)
+                .map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="person-card"
+                    style={{ display: 'inline', padding: 0, border: 0 }}
+                    onClick={() => onNavigate(id)}
+                  >
+                    {personLabelById(id)}
+                  </button>
+                ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => handleRemove(union.id)}
+                disabled={busy}
+              >
+                Dissoudre / supprimer
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -686,6 +830,13 @@ function App() {
               >
                 Doublons
               </button>
+              <button
+                className={view === 'families' ? 'is-active' : ''}
+                onClick={() => setView('families')}
+                type="button"
+              >
+                Familles
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
@@ -702,6 +853,8 @@ function App() {
                   setView('tree');
                 }}
               />
+            ) : view === 'families' ? (
+              <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (

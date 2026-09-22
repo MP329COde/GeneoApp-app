@@ -142,3 +142,11 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   plus à ce stade) : l'écran signale le doublon potentiel mais ne fusionne pas les fiches — limite à traiter
   quand un assistant de fusion sera spécifié côté serveur. Restent sans UI : familles, carnet de recherche,
   statistiques.
+- 2026-09-22 (suite) : ajout d'une vue « Familles » réelle, branchée sur `client.unions.*`
+  (`UnionService#create/get/listForPerson/remove`, déjà exposé via IPC — `UNIONS_*` — mais absent de
+  `geneoapp-client.js` et sans écran). Pour la personne sélectionnée : liste ses unions réelles (type et
+  partenaire, avec navigation directe vers la fiche du partenaire), formulaire de création d'union
+  (type + choix du partenaire parmi les autres personnes existantes), suppression (douce, cohérente avec le
+  reste de l'application) d'une union. Ajouté à `geneoapp-client.js` (HTTP et IPC) : namespace `unions`.
+  Testé (`App.test.jsx` : liste vide, création réelle via l'API, rafraîchissement affichant le partenaire).
+  Restent sans UI : carnet de recherche, statistiques.

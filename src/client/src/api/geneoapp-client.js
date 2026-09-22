@@ -59,6 +59,12 @@ function createHttpClient() {
         ),
       duplicates: (limit) => fetchJson(`/api/search/duplicates?limit=${limit ?? 100}`),
     },
+    unions: {
+      create: (data) => fetchJson('/api/unions', { method: 'POST', body: data }),
+      get: (id) => fetchJson(`/api/unions/${id}`),
+      listForPerson: (personId) => fetchJson(`/api/unions/by-person/${personId}`),
+      remove: (id) => fetchJson(`/api/unions/${id}`, { method: 'DELETE' }),
+    },
     gedcom: {
       preview: (gedcom) => fetchJson('/api/gedcom/preview', { method: 'POST', body: { gedcom } }),
       import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
@@ -107,6 +113,12 @@ function createIpcClient(bridge) {
     search: {
       query: (q, entityTypes) => bridge.search.query(q, entityTypes),
       duplicates: (limit) => bridge.search.duplicates(limit),
+    },
+    unions: {
+      create: (data) => bridge.unions.create(data),
+      get: (id) => bridge.unions.get(id),
+      listForPerson: (personId) => bridge.unions.listForPerson(personId),
+      remove: (id) => bridge.unions.remove(id),
     },
     gedcom: {
       preview: (gedcom) => bridge.gedcom.preview(gedcom),

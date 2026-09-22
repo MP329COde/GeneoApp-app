@@ -29,9 +29,23 @@ const backups = vi.hoisted(() => ({
 const trash = vi.hoisted(() => ({
   list: vi.fn(),
 }));
+const unions = vi.hoisted(() => ({
+  create: vi.fn(),
+  listForPerson: vi.fn(),
+  remove: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
-  createGeneoAppClient: () => ({ persons, graph, search, gedcom, accounts, backups, trash }),
+  createGeneoAppClient: () => ({
+    persons,
+    graph,
+    search,
+    gedcom,
+    accounts,
+    backups,
+    trash,
+    unions,
+  }),
 }));
 
 const { default: App } = await import('./App.jsx');
@@ -280,5 +294,40 @@ describe('App', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Voir la fiche B' })[0]);
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
+  });
+
+  it('gère les familles (unions) d’une personne via le client API', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Marie', family_name: 'Curie' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    unions.listForPerson
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 7, type: 'MARRIAGE', partnerIds: [1, 2] }]);
+    unions.create.mockResolvedValue({ id: 7, type: 'MARRIAGE', partnerIds: [1, 2] });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
+    await waitFor(() => expect(unions.listForPerson).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(screen.getByText(/Aucune union enregistrée/)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Partenaire'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Créer l’union' }));
+
+    await waitFor(() =>
+      expect(unions.create).toHaveBeenCalledWith({ type: 'MARRIAGE', partnerIds: [1, 2] }),
+    );
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Marie Curie' }).length).toBeGreaterThan(1),
+    );
   });
 });
