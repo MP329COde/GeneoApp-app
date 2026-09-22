@@ -16,18 +16,21 @@ détaillé, issue par issue, est suivi dans [`docs/project/PROGRESS.md`](docs/pr
 Les dix premières issues du plan de développement sont livrées et validées (voir
 [`docs/project/PROGRESS.md`](docs/project/PROGRESS.md) pour le détail des commits et des validations) :
 
-- `src/client` : application React (Vite) avec design system et i18n FR/EN. L'écran principal (liste des
-  personnes, arbre, fiche relations) est branché sur l'API locale réelle (`src/client/src/api/geneoapp-client.js`
-  : IPC Electron en production, `fetch` via le proxy Vite en développement) — aucune donnée fictive. Les autres
-  vues listées par le cahier des charges (familles, recherche, carnet de recherche, sauvegardes/corbeille,
-  statistiques, GEDCOM) ne sont pas encore construites côté interface, seulement côté API ;
+- `src/client` : application React (Vite) avec design system et i18n FR/EN, branchée sur l'API locale réelle
+  (`src/client/src/api/geneoapp-client.js` : IPC Electron en production, `fetch` via le proxy Vite en
+  développement) — aucune donnée fictive. Écrans construits : personnes/arbre/relations, recherche, GEDCOM
+  (import avec aperçu obligatoire, export), sauvegardes/corbeille (protégées par session locale), détection de
+  doublons, familles (unions), carnet de recherche (avec rattachement optionnel à une personne),
+  statistiques, IA locale. Restent des versions simplifiées : pas de vue carte/chronologie graphique/radiale,
+  pas d'assistant de fusion de doublons ;
 - `src/server` : serveur Express local exposant les routes métier (personnes, familles, unions, parentages,
   événements, lieux, sources, médias, GEDCOM, recherche, comptes, sauvegardes, corbeille, audit) ;
 - `src/db` : modèle de données SQLite, migrations et dépôts (repositories) ;
 - `src/electron` : processus principal Electron avec allowlist IPC stricte et isolation du renderer.
 
-Ce socle métier reste un premier jalon fonctionnel : certaines capacités du cahier des charges complet (GEDCOM 7
-intégral, moteur de relations avancé, IA locale, vues graphiques additionnelles, etc.) sont partielles ou à
+Ce socle métier reste perfectible : certaines capacités du cahier des charges complet (nommage du degré de
+parenté au-delà de « cousin issu de germain », vues graphiques additionnelles — carte, chronologie graphique,
+radiale/éventail, assistant de fusion de doublons, IA locale limitée au protocole Ollama) sont partielles ou à
 compléter — voir les limites documentées dans chaque issue de `docs/project/issues/`.
 
 ### Design system
