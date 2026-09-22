@@ -1,0 +1,52 @@
+{
+  "name": "geneoapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Squelette local de GeneoApp",
+  "type": "module",
+  "main": "src/electron/src/main.js",
+  "workspaces": [
+    "src/client",
+    "src/server",
+    "src/db",
+    "src/electron"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @geneoapp/client",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev --workspace @geneoapp/server\" \"npm run dev --workspace @geneoapp/client\"",
+    "electron": "npm run build && npm run start --workspace @geneoapp/electron",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "npm run build && electron-builder --win",
+    "package:linux": "npm run build && electron-builder --linux",
+    "package": "npm run build && electron-builder --mac --win --linux",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "migrate": "npm run migrate --workspace @geneoapp/db",
+    "smoke": "node --test test/smoke/*.test.js",
+    "test:db": "node --test test/db/*.test.js",
+    "test:server": "node --test test/server/*.test.js",
+    "test:api": "node --test test/api/*.test.js",
+    "test:electron": "node --test test/electron/*.test.js",
+    "test:packaging": "node --test test/packaging/*.test.js",
+    "test:client": "npm run test --workspace @geneoapp/client",
+    "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:client",
+    "storybook": "npm run storybook --workspace @geneoapp/client",
+    "build-storybook": "npm run build-storybook --workspace @geneoapp/client"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "concurrently": "^9.2.1",
+    "electron": "^38.1.0",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.35.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.3.0",
+    "js-yaml": "^5.4.2",
+    "prettier": "^3.6.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

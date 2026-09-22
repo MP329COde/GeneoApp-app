@@ -20,9 +20,12 @@ Structure cible à respecter au fur et à mesure de l'ajout du code (créée au 
   /db          → schéma SQLite, migrations
 /docs
   /adr         → décisions d'architecture
+/site          → site de présentation statique, indépendant de l'application (ADR 0009)
 ```
 
 Aucun code métier ne doit être ajouté hors de cette arborescence sans justification dans une PR.
+`/site` est explicitement hors périmètre applicatif : vitrine statique sans logique métier, sans accès
+aux données locales de l'application, avec son propre cycle d'installation (voir ADR 0009).
 
 ## 3. Style de code
 

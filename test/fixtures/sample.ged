@@ -1,0 +1,22 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+0 @I1@ INDI
+1 NAME Ada /Lovelace/
+1 SEX F
+1 BIRT
+2 DATE 10 DEC 1815
+2 PLAC London
+0 @I2@ INDI
+1 NAME Charles /Babbage/
+1 SEX M
+0 @I3@ INDI
+1 NAME Byron /Lovelace/
+1 SEX M
+0 @F1@ FAM
+1 HUSB @I2@
+1 WIFE @I1@
+1 CHIL @I3@
+1 MARR
+2 DATE 1835
+0 TRLR

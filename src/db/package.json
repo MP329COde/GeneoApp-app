@@ -1,0 +1,11 @@
+{
+  "name": "@geneoapp/db",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node src/migrate.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0"
+  }
+}

@@ -1,0 +1,29 @@
+/*
+ * Utilitaires d'accessibilité partagés par tous les composants du design
+ * system. Le focus visible est volontairement fort (3px + offset) pour
+ * rester perceptible aussi bien en clavier qu'en navigation tactile assistée.
+ */
+.gds-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gds-focus-ring:focus-visible,
+[data-gds-focus]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

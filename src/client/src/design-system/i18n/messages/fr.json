@@ -1,0 +1,10 @@
+{
+  "language.name": "Français",
+  "button.loading": "Chargement en cours",
+  "textfield.optional": "(optionnel)",
+  "textfield.required": "(obligatoire)",
+  "select.placeholder": "Sélectionner une option",
+  "modal.close": "Fermer",
+  "badge.new": "Nouveau",
+  "languageSwitcher.label": "Langue"
+}

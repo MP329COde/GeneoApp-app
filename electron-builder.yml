@@ -1,0 +1,65 @@
+# Configuration de packaging multi-OS (ADR 0005 - distribution via Electron).
+# Ne construit rien au runtime : ce fichier ne pilote que `electron-builder`
+# lors de `npm run package[:mac|:win|:linux]`, après `npm run build` du client.
+appId: app.geneoapp.desktop
+productName: GeneoApp
+copyright: Copyright © GeneoApp
+
+directories:
+  output: release
+  buildResources: build
+
+# Seuls les fichiers nécessaires à l'exécution embarquée sont inclus : pas les
+# sources du client (seul le build Vite est chargé), ni les tests, ni les
+# outils de développement (Storybook, ESLint...).
+files:
+  - package.json
+  - src/electron/**/*
+  - src/server/**/*
+  - src/db/**/*
+  - src/client/dist/**/*
+  - node_modules/**/*
+  - '!node_modules/**/{test,tests,__tests__,*.md,*.map}'
+  - '!src/client/src/**'
+  - '!src/client/.storybook/**'
+  - '!src/client/node_modules/**'
+  - '!src/client/vite.config.js'
+  - '!src/client/vitest.config.js'
+  - '!src/client/index.html'
+  - '!**/*.test.js'
+
+# better-sqlite3 embarque un binding natif compilé : il doit rester hors de
+# l'archive asar pour pouvoir être chargé par Node au runtime.
+asarUnpack:
+  - node_modules/better-sqlite3/**
+
+# Le stockage local (fichier SQLite applicatif) vit dans le répertoire
+# utilisateur standard de chaque OS (voir src/electron/src/main.js,
+# app.getPath('userData')) : il n'est jamais inclus dans le paquet distribué.
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  category: public.app-category.education
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Education
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

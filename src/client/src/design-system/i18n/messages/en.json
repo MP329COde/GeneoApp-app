@@ -1,0 +1,10 @@
+{
+  "language.name": "English",
+  "button.loading": "Loading",
+  "textfield.optional": "(optional)",
+  "textfield.required": "(required)",
+  "select.placeholder": "Select an option",
+  "modal.close": "Close",
+  "badge.new": "New",
+  "languageSwitcher.label": "Language"
+}

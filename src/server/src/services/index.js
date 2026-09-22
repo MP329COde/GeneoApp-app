@@ -1,0 +1,68 @@
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import {
+  PersonRepository,
+  PlaceRepository,
+  EventRepository,
+  UnionRepository,
+  ParentageRepository,
+  SourceRepository,
+  MediaRepository,
+  SearchRepository,
+  AuditRepository,
+  AccountRepository,
+  TrashRepository,
+} from '../../../db/src/index.js';
+import { PersonService } from './person.service.js';
+import { PlaceService } from './place.service.js';
+import { EventService } from './event.service.js';
+import { UnionService } from './union.service.js';
+import { ParentageService } from './parentage.service.js';
+import { SourceService } from './source.service.js';
+import { MediaService } from './media.service.js';
+import { SearchService } from './search.service.js';
+import { AuditService } from './audit.service.js';
+import { AccountService } from './account.service.js';
+import { SessionStore } from './session-store.js';
+import { TrashService } from './trash.service.js';
+import { BackupService } from './backup.service.js';
+import { GedcomService } from '../gedcom/service.js';
+import { MediaStorage } from '../media/storage.js';
+import { OcrService } from '../ocr/service.js';
+
+const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
+const DEFAULT_BACKUP_DIR =
+  process.env.GENEOAPP_BACKUP_DIR ?? path.join(tmpdir(), 'geneoapp-backups');
+
+export function createServices(
+  database,
+  { mediaRoot = DEFAULT_MEDIA_ROOT, backupDir = DEFAULT_BACKUP_DIR } = {},
+) {
+  const sources = new SourceService(new SourceRepository(database));
+  const entityServices = {
+    persons: new PersonService(new PersonRepository(database)),
+    places: new PlaceService(new PlaceRepository(database)),
+    events: new EventService(new EventRepository(database)),
+    unions: new UnionService(new UnionRepository(database)),
+    parentages: new ParentageService(new ParentageRepository(database)),
+    media: new MediaService(
+      new MediaRepository(database),
+      new MediaStorage(mediaRoot),
+      new OcrService(),
+      { sourceRepository: sources.repository },
+    ),
+  };
+
+  const accounts = new AccountService(new AccountRepository(database), new SessionStore());
+
+  return {
+    ...entityServices,
+    sources,
+    search: new SearchService(new SearchRepository(database)),
+    audit: new AuditService(new AuditRepository(database)),
+    gedcom: new GedcomService(database),
+    accounts,
+    trash: new TrashService(new TrashRepository(database), entityServices),
+    backups: new BackupService(database, { backupDir }),
+  };
+}

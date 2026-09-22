@@ -1,0 +1,76 @@
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.site {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+.site__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: var(--space-4);
+}
+
+.site__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+}
+
+.site__logo {
+  font-size: var(--font-size-xl);
+}
+
+.site__hero {
+  text-align: center;
+  padding-block: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.site__hero h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  margin: 0;
+}
+
+.site__hero p {
+  max-width: 40ch;
+  color: var(--color-text-subtle, var(--color-text));
+}
+
+.site__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+}
+
+.site__feature {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.site__feature h2 {
+  font-size: var(--font-size-md);
+  margin-top: 0;
+}
+
+.site__footer {
+  text-align: center;
+  padding-block: var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-subtle, var(--color-text));
+}

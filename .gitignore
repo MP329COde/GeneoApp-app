@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/
+coverage/
+storybook-static/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.DS_Store
+.playwright-cli/

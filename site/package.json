@@ -1,0 +1,22 @@
+{
+  "name": "@geneoapp/site",
+  "private": true,
+  "type": "module",
+  "description": "Site de présentation statique de GeneoApp (hors périmètre applicatif, ADR 0009)",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

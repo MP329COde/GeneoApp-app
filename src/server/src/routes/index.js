@@ -1,0 +1,34 @@
+import { Router } from 'express';
+import { personRoutes } from './person.routes.js';
+import { placeRoutes } from './place.routes.js';
+import { eventRoutes } from './event.routes.js';
+import { unionRoutes } from './union.routes.js';
+import { parentageRoutes } from './parentage.routes.js';
+import { sourceRoutes } from './source.routes.js';
+import { mediaRoutes } from './media.routes.js';
+import { searchRoutes } from './search.routes.js';
+import { auditRoutes } from './audit.routes.js';
+import { gedcomRoutes } from './gedcom.routes.js';
+import { accountRoutes } from './account.routes.js';
+import { trashRoutes } from './trash.routes.js';
+import { backupRoutes } from './backup.routes.js';
+
+export function apiRoutes(services) {
+  const router = Router();
+
+  router.use('/persons', personRoutes(services));
+  router.use('/places', placeRoutes(services));
+  router.use('/events', eventRoutes(services));
+  router.use('/unions', unionRoutes(services));
+  router.use('/parentages', parentageRoutes(services));
+  router.use('/sources', sourceRoutes(services));
+  router.use('/media', mediaRoutes(services));
+  router.use('/search', searchRoutes(services));
+  router.use('/audit', auditRoutes(services));
+  router.use('/gedcom', gedcomRoutes(services));
+  router.use('/accounts', accountRoutes(services));
+  router.use('/trash', trashRoutes(services));
+  router.use('/backups', backupRoutes(services));
+
+  return router;
+}

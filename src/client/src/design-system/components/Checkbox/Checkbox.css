@@ -1,0 +1,23 @@
+.gds-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-target-min);
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.gds-checkbox__input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--transition-fast);
+}
+
+.gds-checkbox__input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: var(--focus-ring-glow);
+}
