@@ -84,3 +84,17 @@ Résultat attendu :
 ## Sortie de livraison
 
 Une base de sécurité locale robuste, compatible avec le fonctionnement hors ligne, les comptes multi-utilisateurs et les sauvegardes de reprise en cas de problème.
+
+## Suivi post-livraison
+
+- 2026-09-22 : le test « deux restaurations concurrentes sont sérialisées » était flaky (échec intermittent
+  observé : deux 200 au lieu de [200, 409]). Cause réelle : le test envoyait deux requêtes HTTP indépendantes
+  via `Promise.all`, mais rien ne garantit que deux requêtes réseau (même en boucle locale) atteignent le
+  serveur au même tick JavaScript — la restauration logique (petit dump JSON) peut se terminer avant même que la
+  seconde requête soit routée, ce qui rend le test non déterministe sans que la garantie d'exclusion mutuelle du
+  service (`BackupService#run`, vérifiée par inspection : contrôle-puis-pose du verrou entièrement synchrone,
+  sans `await` intermédiaire) soit en cause. Correction : `createApp` accepte désormais un `services` déjà
+  construit (au lieu d'en fabriquer un nouveau à chaque appel), et `startTestServer` (test/api/helpers.js)
+  expose ces mêmes instances ; le test invoque directement `services.backups.restoreLogical` deux fois via
+  `Promise.all`, garantissant un appel réellement concurrent dans le même tick. Validé sur 5 exécutions
+  consécutives sans échec.

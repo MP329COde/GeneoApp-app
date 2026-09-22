@@ -9,12 +9,12 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
  * permettre son remplacement par une instance en mémoire dans les tests
  * (voir `createDatabase` pour l'usage réel avec SQLite fichier).
  */
-export function createApp({ database, mediaRoot, backupDir } = {}) {
+export function createApp({ database, mediaRoot, backupDir, services } = {}) {
   if (!database) {
     throw new Error('createApp requiert une instance de base de données (option "database")');
   }
 
-  const services = createServices(database, {
+  services ??= createServices(database, {
     ...(mediaRoot ? { mediaRoot } : {}),
     ...(backupDir ? { backupDir } : {}),
   });

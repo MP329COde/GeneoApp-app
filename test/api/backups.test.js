@@ -147,19 +147,21 @@ test('deux restaurations concurrentes sont sérialisées : une seule réussit en
       headers,
     });
 
-    const [first, second] = await Promise.all([
-      requestJson(server.baseUrl, `/api/backups/${backup.body.filename}/restore`, {
-        method: 'POST',
-        headers,
-      }),
-      requestJson(server.baseUrl, `/api/backups/${backup.body.filename}/restore`, {
-        method: 'POST',
-        headers,
-      }),
+    // Deux requêtes HTTP indépendantes ne garantissent pas d'atteindre le
+    // serveur au même tick (le réseau, même en boucle locale, introduit une
+    // latence non déterministe) : ce n'est donc pas un moyen fiable de tester
+    // l'exclusion mutuelle elle-même. On invoque directement le service (même
+    // instance que celle montée dans l'app, voir helpers.js) pour garantir un
+    // véritable appel concurrent dans le même tick JavaScript.
+    const results = await Promise.allSettled([
+      server.services.backups.restoreLogical(backup.body.filename),
+      server.services.backups.restoreLogical(backup.body.filename),
     ]);
 
-    const statuses = [first.status, second.status].sort();
-    assert.deepEqual(statuses, [200, 409]);
+    const outcomes = results
+      .map((result) => (result.status === 'fulfilled' ? 'restored' : result.reason?.status))
+      .sort();
+    assert.deepEqual(outcomes, [409, 'restored']);
   } finally {
     await server.close();
   }
