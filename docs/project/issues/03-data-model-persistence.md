@@ -74,3 +74,16 @@ Résultat attendu :
 ## Sortie de livraison
 
 Un modèle de données généalogique cohérent, solide et extensible, prêt à être exploité par le moteur de relations et la couche GEDCOM.
+
+## Suivi post-livraison
+
+- 2026-09-22 : la table `events` ne couvrait que `BIRTH/DEATH/MARRIAGE/DIVORCE/BAPTISM/BURIAL/ADOPTION/OTHER`,
+  alors que le cahier des charges exige aussi profession, résidence, migration, recensement, événement militaire,
+  diplôme, testament, succession, engagement religieux et naturalisation — tous auparavant indistinctement rangés
+  sous `OTHER`. Migration `0008_expand_event_types.sql` (reconstruction de table, seule voie possible pour
+  étendre une contrainte `CHECK` en SQLite) ajoutant `OCCUPATION, RESIDENCE, EMIGRATION, IMMIGRATION, CENSUS,
+  MILITARY, GRADUATION, WILL, PROBATE, RELIGIOUS_EVENT, NATURALIZATION`, idempotente et testée
+  (`test/db/event-repository.test.js`). Reste à faire : le mapping GEDCOM (`src/server/src/gedcom/service.js`,
+  `EVENT_TAGS`) ne reconnaît encore que les tags GEDCOM des types d’origine (`BIRT/DEAT/BAPM/BURI/ADOP`) ; les
+  tags GEDCOM correspondant aux nouveaux types (`OCCU`, `RESI`, `EMIG`, `IMMI`, `CENS`, `GRAD`, `WILL`, `NATU`,
+  événements militaires) ne sont pas encore mappés à l’import/export.

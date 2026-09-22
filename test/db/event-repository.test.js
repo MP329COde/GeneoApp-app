@@ -50,6 +50,35 @@ test('un type d’événement invalide est rejeté par la contrainte CHECK', () 
   assert.throws(() => events.create({ type: 'INVALID' }));
 });
 
+test('les types d’événements étendus (profession, résidence, migration...) sont acceptés', () => {
+  const database = createTestDatabase();
+  const persons = new PersonRepository(database);
+  const events = new EventRepository(database);
+  const person = createPerson(persons);
+
+  const extendedTypes = [
+    'OCCUPATION',
+    'RESIDENCE',
+    'EMIGRATION',
+    'IMMIGRATION',
+    'CENSUS',
+    'MILITARY',
+    'GRADUATION',
+    'WILL',
+    'PROBATE',
+    'RELIGIOUS_EVENT',
+    'NATURALIZATION',
+  ];
+
+  for (const type of extendedTypes) {
+    const event = events.create({
+      type,
+      participants: [{ personId: person.id, role: 'PRINCIPAL' }],
+    });
+    assert.equal(event.type, type);
+  }
+});
+
 test('softDelete masque l’événement sans supprimer les personnes liées', () => {
   const database = createTestDatabase();
   const persons = new PersonRepository(database);
