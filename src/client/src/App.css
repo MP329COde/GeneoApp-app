@@ -400,6 +400,17 @@ dd {
   margin-top: 4px;
   padding: 6px;
 }
+.backups-panel {
+  padding: 24px;
+  display: grid;
+  gap: 24px;
+}
+.backups-panel .search-results li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 @media (max-width: 1050px) {
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);

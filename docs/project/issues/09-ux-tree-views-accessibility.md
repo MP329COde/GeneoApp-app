@@ -121,4 +121,15 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   ajoutés (jusque-là absents de l'allowlist). Testée (`App.test.jsx` : aperçu invalide bloquant, import valide
   qui recharge la liste des personnes réelles). Écran d'export ajouté dans la foulée (choix du format 7/5.5.1,
   téléchargement réel via Blob/`<a download>`), testé (déclenchement du téléchargement vérifié). Restent sans
-  UI : détection de doublons, familles, carnet de recherche, sauvegardes/corbeille, statistiques.
+  UI à ce stade : détection de doublons, familles, carnet de recherche, statistiques.
+- 2026-09-22 (suite) : ajout d'une vue « Sauvegardes » réelle, couvrant aussi la corbeille. Ces opérations sont
+  protégées par une session (comme côté API) : la vue affiche un formulaire de connexion (profil local + PIN
+  optionnel) tant qu'aucune session n'est active, et crée le profil à la volée si la connexion échoue en 401
+  (premier lancement local, pas d'écran séparé de création de compte — limite connue : un code PIN erroné sur
+  un profil existant déclenche la même tentative de création, qui échoue proprement en conflit sans exposer de
+  faille, mais le message affiché à l'utilisateur n'est pas idéalement formulé pour ce cas précis). Canaux IPC
+  `ACCOUNTS_*`/`BACKUPS_*`/`TRASH_*` ajoutés (commit précédent). Une fois connecté : création de sauvegarde
+  (JSON/SQLite), liste et restauration des sauvegardes, liste/restauration/purge de la corbeille — toutes
+  branchées sur l'API réelle. Testé (`App.test.jsx` : accès bloqué sans session, connexion puis affichage des
+  sauvegardes/corbeille réelles, création de profil à la volée). Restent sans UI : détection de doublons,
+  familles, carnet de recherche, statistiques.

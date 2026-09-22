@@ -17,9 +17,20 @@ const gedcom = vi.hoisted(() => ({
   import: vi.fn(),
   export: vi.fn(),
 }));
+const accounts = vi.hoisted(() => ({
+  create: vi.fn(),
+  login: vi.fn(),
+}));
+const backups = vi.hoisted(() => ({
+  list: vi.fn(),
+  create: vi.fn(),
+}));
+const trash = vi.hoisted(() => ({
+  list: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
-  createGeneoAppClient: () => ({ persons, graph, search, gedcom }),
+  createGeneoAppClient: () => ({ persons, graph, search, gedcom, accounts, backups, trash }),
 }));
 
 const { default: App } = await import('./App.jsx');
@@ -180,5 +191,57 @@ describe('App', () => {
 
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
+  });
+
+  it('exige une connexion avant d’accéder aux sauvegardes et à la corbeille', async () => {
+    persons.list.mockResolvedValue([]);
+    accounts.login.mockResolvedValue({ token: 'tok-1', account: { id: 1, name: 'Alice' } });
+    backups.list.mockResolvedValue([{ filename: 'backup-1.json' }]);
+    trash.list.mockResolvedValue([{ table: 'persons', id: 3, label: 'Jean Dupont' }]);
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
+    expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument();
+    expect(backups.list).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    await waitFor(() => expect(accounts.login).toHaveBeenCalledWith('Alice', undefined));
+    await waitFor(() => expect(screen.getByText('backup-1.json')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Jean Dupont/)).toBeInTheDocument());
+  });
+
+  it('crée un profil à la volée si la connexion échoue en 401 (premier lancement)', async () => {
+    persons.list.mockResolvedValue([]);
+    const unauthorized = Object.assign(new Error('Nom de profil ou code inconnu'), {
+      status: 401,
+    });
+    accounts.login.mockRejectedValueOnce(unauthorized).mockResolvedValueOnce({
+      token: 'tok-2',
+      account: { id: 2, name: 'Bob' },
+    });
+    accounts.create.mockResolvedValue({ id: 2, name: 'Bob' });
+    backups.list.mockResolvedValue([]);
+    trash.list.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    await waitFor(() =>
+      expect(accounts.create).toHaveBeenCalledWith({ name: 'Bob', pin: undefined }),
+    );
+    await waitFor(() => expect(accounts.login).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText(/Aucune sauvegarde/)).toBeInTheDocument());
   });
 });

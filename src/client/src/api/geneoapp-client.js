@@ -13,10 +13,13 @@
 //   directement l'API REST locale via `fetch`, relayée par le proxy Vite
 //   `/api` (voir vite.config.js) vers le serveur Express local.
 
-async function fetchJson(path, { method = 'GET', body } = {}) {
+async function fetchJson(path, { method = 'GET', body, token } = {}) {
   const response = await fetch(path, {
     method,
-    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    headers: {
+      ...(body === undefined ? undefined : { 'content-type': 'application/json' }),
+      ...(token ? { 'x-geneoapp-session': token } : undefined),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
@@ -61,6 +64,30 @@ function createHttpClient() {
       import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
       export: (options) => fetchJson('/api/gedcom/export', { method: 'POST', body: options }),
     },
+    accounts: {
+      create: (data) => fetchJson('/api/accounts', { method: 'POST', body: data }),
+      list: () => fetchJson('/api/accounts'),
+      login: (name, pin) =>
+        fetchJson('/api/accounts/login', { method: 'POST', body: { name, pin } }),
+      logout: (token) => fetchJson('/api/accounts/logout', { method: 'POST', token }),
+    },
+    backups: {
+      create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
+      list: () => fetchJson('/api/backups'),
+      verify: (filename) => fetchJson(`/api/backups/${encodeURIComponent(filename)}/verify`),
+      restore: (filename, kind, token) =>
+        fetchJson(
+          `/api/backups/${encodeURIComponent(filename)}/restore${kind === 'sqlite' ? '?kind=sqlite' : ''}`,
+          { method: 'POST', token },
+        ),
+    },
+    trash: {
+      list: () => fetchJson('/api/trash'),
+      restore: (table, id, token) =>
+        fetchJson(`/api/trash/${table}/${id}/restore`, { method: 'POST', token }),
+      purge: (table, id, token) =>
+        fetchJson(`/api/trash/${table}/${id}`, { method: 'DELETE', token }),
+    },
   };
 }
 
@@ -85,6 +112,23 @@ function createIpcClient(bridge) {
       preview: (gedcom) => bridge.gedcom.preview(gedcom),
       import: (gedcom) => bridge.gedcom.import(gedcom),
       export: (options) => bridge.gedcom.export(options),
+    },
+    accounts: {
+      create: (data) => bridge.accounts.create(data),
+      list: () => bridge.accounts.list(),
+      login: (name, pin) => bridge.accounts.login(name, pin),
+      logout: (token) => bridge.accounts.logout(token),
+    },
+    backups: {
+      create: (data, token) => bridge.backups.create(data, token),
+      list: () => bridge.backups.list(),
+      verify: (filename) => bridge.backups.verify(filename),
+      restore: (filename, kind, token) => bridge.backups.restore(filename, kind, token),
+    },
+    trash: {
+      list: () => bridge.trash.list(),
+      restore: (table, id, token) => bridge.trash.restore(table, id, token),
+      purge: (table, id, token) => bridge.trash.purge(table, id, token),
     },
   };
 }

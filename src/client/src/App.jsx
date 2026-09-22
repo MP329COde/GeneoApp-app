@@ -235,6 +235,208 @@ function GedcomPanel({ onImported }) {
   );
 }
 
+function LoginForm({ onLogin, loginError }) {
+  const [name, setName] = useState('');
+  const [pin, setPin] = useState('');
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    onLogin(name.trim(), pin.trim() || undefined);
+  };
+
+  return (
+    <form className="create-person-form" onSubmit={handleSubmit}>
+      <p className="notice">
+        Les sauvegardes, la restauration et la corbeille sont des opérations sensibles :
+        connectez-vous avec un profil local pour y accéder.
+      </p>
+      <label>
+        <span>Profil local</span>
+        <input value={name} onChange={(event) => setName(event.target.value)} />
+      </label>
+      <label>
+        <span>Code PIN (optionnel)</span>
+        <input type="password" value={pin} onChange={(event) => setPin(event.target.value)} />
+      </label>
+      {loginError ? (
+        <p role="alert" className="notice notice--error">
+          {loginError}
+        </p>
+      ) : null}
+      <Button type="submit" size="sm">
+        Se connecter
+      </Button>
+    </form>
+  );
+}
+
+function BackupsPanel({ session, onLogin, loginError }) {
+  const [backups, setBackups] = useState(null);
+  const [trashItems, setTrashItems] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadAll = useCallback(async () => {
+    try {
+      setBackups(await client.backups.list());
+      setTrashItems(await client.trash.list());
+    } catch (loadError) {
+      setActionError(loadError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session) loadAll();
+  }, [session, loadAll]);
+
+  if (!session) {
+    return <LoginForm onLogin={onLogin} loginError={loginError} />;
+  }
+
+  const handleCreateBackup = async (kind) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.backups.create({ kind }, session.token);
+      await loadAll();
+    } catch (createError) {
+      setActionError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRestore = async (filename) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.backups.restore(filename, 'logical', session.token);
+      await loadAll();
+    } catch (restoreError) {
+      setActionError(restoreError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTrashRestore = async (table, id) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.trash.restore(table, id, session.token);
+      await loadAll();
+    } catch (restoreError) {
+      setActionError(restoreError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePurge = async (table, id) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.trash.purge(table, id, session.token);
+      await loadAll();
+    } catch (purgeError) {
+      setActionError(purgeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="backups-panel">
+      {actionError ? (
+        <p role="alert" className="notice notice--error">
+          {actionError}
+        </p>
+      ) : null}
+
+      <section>
+        <h3>Sauvegardes</h3>
+        <div className="gedcom-panel__actions">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleCreateBackup('json')}
+            disabled={busy}
+          >
+            Créer une sauvegarde (JSON)
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => handleCreateBackup('sqlite')}
+            disabled={busy}
+          >
+            Créer une sauvegarde (SQLite)
+          </Button>
+        </div>
+        {backups === null ? (
+          <p role="status">Chargement…</p>
+        ) : backups.length === 0 ? (
+          <p className="notice">Aucune sauvegarde pour l’instant.</p>
+        ) : (
+          <ul className="search-results">
+            {backups.map((backup) => (
+              <li key={backup.filename}>
+                {backup.filename}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleRestore(backup.filename)}
+                  disabled={busy}
+                >
+                  Restaurer
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h3>Corbeille</h3>
+        {trashItems === null ? (
+          <p role="status">Chargement…</p>
+        ) : trashItems.length === 0 ? (
+          <p className="notice">La corbeille est vide.</p>
+        ) : (
+          <ul className="search-results">
+            {trashItems.map((item) => (
+              <li key={`${item.table}:${item.id}`}>
+                <Badge tone="neutral">{item.table}</Badge> {item.label}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleTrashRestore(item.table, item.id)}
+                  disabled={busy}
+                >
+                  Restaurer
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  onClick={() => handlePurge(item.table, item.id)}
+                  disabled={busy}
+                >
+                  Purger définitivement
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -242,6 +444,30 @@ function App() {
   const [view, setView] = useState('tree');
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [session, setSession] = useState(null);
+  const [loginError, setLoginError] = useState(null);
+
+  const handleLogin = async (name, pin) => {
+    setLoginError(null);
+    try {
+      const { token, account } = await client.accounts.login(name, pin);
+      setSession({ token, account });
+    } catch (loginErr) {
+      if (loginErr.status !== 401) {
+        setLoginError(loginErr.message);
+        return;
+      }
+      // Premier lancement local : aucun écran séparé de création de profil,
+      // on crée le profil à la volée si le nom est inconnu.
+      try {
+        await client.accounts.create({ name, pin });
+        const { token, account } = await client.accounts.login(name, pin);
+        setSession({ token, account });
+      } catch (createErr) {
+        setLoginError(createErr.message);
+      }
+    }
+  };
 
   const loadPersons = useCallback(async () => {
     try {
@@ -382,6 +608,13 @@ function App() {
               >
                 GEDCOM
               </button>
+              <button
+                className={view === 'backups' ? 'is-active' : ''}
+                onClick={() => setView('backups')}
+                type="button"
+              >
+                Sauvegardes
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
@@ -389,6 +622,8 @@ function App() {
               <SearchPanel />
             ) : view === 'gedcom' ? (
               <GedcomPanel onImported={loadPersons} />
+            ) : view === 'backups' ? (
+              <BackupsPanel session={session} onLogin={handleLogin} loginError={loginError} />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (
