@@ -1,6 +1,11 @@
 # Backlog projet GeneoApp
 
-## 1. État réel du dépôt
+> **Document de planification initiale (état au démarrage du projet).** Les sections « État réel du dépôt » et
+> « Pas fait / non livré » ci-dessous datent d'avant la livraison des dix issues et ne reflètent plus l'état
+> courant. Pour l'état réel à jour, voir [`PROGRESS.md`](PROGRESS.md) et le « Suivi post-livraison » de chaque
+> issue dans [`issues/`](issues/).
+
+## 1. État réel du dépôt (au démarrage, avant livraison)
 
 ### Fait aujourd’hui
 
