@@ -103,12 +103,23 @@ function SearchPanel() {
   );
 }
 
+function downloadText(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function GedcomPanel({ onImported }) {
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
   const [report, setReport] = useState(null);
   const [gedcomError, setGedcomError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [exportFormat, setExportFormat] = useState('7');
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -140,6 +151,19 @@ function GedcomPanel({ onImported }) {
       if (result.imported) await onImported();
     } catch (importError) {
       setGedcomError(importError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setGedcomError(null);
+    setBusy(true);
+    try {
+      const result = await client.gedcom.export({ format: exportFormat });
+      downloadText(`geneoapp-export-${exportFormat}.ged`, result.gedcom);
+    } catch (exportError) {
+      setGedcomError(exportError.message);
     } finally {
       setBusy(false);
     }
@@ -194,6 +218,19 @@ function GedcomPanel({ onImported }) {
             : 'Import refusé : aucune donnée écrite (rollback).'}
         </p>
       ) : null}
+
+      <div className="gedcom-panel__export">
+        <label>
+          <span>Format d’export</span>
+          <select value={exportFormat} onChange={(event) => setExportFormat(event.target.value)}>
+            <option value="7">GEDCOM 7</option>
+            <option value="5.5.1">GEDCOM 5.5.1</option>
+          </select>
+        </label>
+        <Button type="button" size="sm" variant="secondary" onClick={handleExport} disabled={busy}>
+          Exporter l’arbre complet
+        </Button>
+      </div>
     </div>
   );
 }

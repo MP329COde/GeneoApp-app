@@ -119,6 +119,6 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   bouton « Importer » reste désactivé tant que l'aperçu n'est pas valide, ce qui matérialise dans l'UI le
   pipeline preview→validation→import transactionnel du serveur). Canaux IPC `GEDCOM_PREVIEW/IMPORT/EXPORT`
   ajoutés (jusque-là absents de l'allowlist). Testée (`App.test.jsx` : aperçu invalide bloquant, import valide
-  qui recharge la liste des personnes réelles). L'export GEDCOM est câblé côté client (`geneoapp-client.js`)
-  mais n'a pas encore d'écran dédié (téléchargement de fichier). Restent sans UI : détection de doublons,
-  familles, carnet de recherche, sauvegardes/corbeille, statistiques.
+  qui recharge la liste des personnes réelles). Écran d'export ajouté dans la foulée (choix du format 7/5.5.1,
+  téléchargement réel via Blob/`<a download>`), testé (déclenchement du téléchargement vérifié). Restent sans
+  UI : détection de doublons, familles, carnet de recherche, sauvegardes/corbeille, statistiques.

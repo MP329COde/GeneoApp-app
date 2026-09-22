@@ -15,6 +15,7 @@ const search = vi.hoisted(() => ({
 const gedcom = vi.hoisted(() => ({
   preview: vi.fn(),
   import: vi.fn(),
+  export: vi.fn(),
 }));
 
 vi.mock('./api/geneoapp-client.js', () => ({
@@ -158,5 +159,26 @@ describe('App', () => {
     await waitFor(() => expect(gedcom.import).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/Import réussi/)).toBeInTheDocument());
     await waitFor(() => expect(persons.list).toHaveBeenCalledTimes(2));
+  });
+
+  it('exporte un GEDCOM réel via le client API (déclenche un téléchargement)', async () => {
+    persons.list.mockResolvedValue([]);
+    gedcom.export.mockResolvedValue({ format: '7', gedcom: '0 HEAD\n0 TRLR\n' });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter l’arbre complet' }));
+
+    await waitFor(() => expect(gedcom.export).toHaveBeenCalledWith({ format: '7' }));
+    expect(clickSpy).toHaveBeenCalled();
+
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

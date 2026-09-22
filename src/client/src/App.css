@@ -388,6 +388,18 @@ dd {
   display: flex;
   gap: 12px;
 }
+.gedcom-panel__export {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.gedcom-panel__export select {
+  display: block;
+  margin-top: 4px;
+  padding: 6px;
+}
 @media (max-width: 1050px) {
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);
