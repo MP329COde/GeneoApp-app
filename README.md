@@ -16,8 +16,11 @@ détaillé, issue par issue, est suivi dans [`docs/project/PROGRESS.md`](docs/pr
 Les dix premières issues du plan de développement sont livrées et validées (voir
 [`docs/project/PROGRESS.md`](docs/project/PROGRESS.md) pour le détail des commits et des validations) :
 
-- `src/client` : application React (Vite) avec design system, i18n FR/EN et vues généalogiques (arbre, familles,
-  recherche, carnet de recherche, sauvegardes/corbeille, statistiques) branchées sur l'API locale ;
+- `src/client` : application React (Vite) avec design system et i18n FR/EN. L'écran principal (liste des
+  personnes, arbre, fiche relations) est branché sur l'API locale réelle (`src/client/src/api/geneoapp-client.js`
+  : IPC Electron en production, `fetch` via le proxy Vite en développement) — aucune donnée fictive. Les autres
+  vues listées par le cahier des charges (familles, recherche, carnet de recherche, sauvegardes/corbeille,
+  statistiques, GEDCOM) ne sont pas encore construites côté interface, seulement côté API ;
 - `src/server` : serveur Express local exposant les routes métier (personnes, familles, unions, parentages,
   événements, lieux, sources, médias, GEDCOM, recherche, comptes, sauvegardes, corbeille, audit) ;
 - `src/db` : modèle de données SQLite, migrations et dépôts (repositories) ;

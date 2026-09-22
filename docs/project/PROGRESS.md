@@ -10,9 +10,11 @@
 | 06 - Recherche, déduplication, notes et preuves | Terminée | 8 tests recherche/notes/doublons, `npm run lint`, `npm run format:check` | `db9c9b1` |
 | 07 - Sources, médias, OCR et carnet de recherche | Terminée | test ciblé du carnet, `npm run test:db`, `npm run lint`, `npm run format:check` | `2dc5fd6` |
 | 08 - Sécurité, comptes, sauvegardes et utilisateurs | Terminée | 4 tests serveur, 7 tests IPC, 22 tests API sécurité/médias | `b374c4b` |
-| 09 - UX, navigation et vues généalogiques | Terminée | 21 tests client, `npm run build`, `npm run format:check` | `8ec536d` |
+| 09 - UX, navigation et vues généalogiques | Terminée* | 21 tests client, `npm run build`, `npm run format:check` | `8ec536d` |
 | 10 - IA locale, CI/CD et release | Terminée | 64 tests API, `npm run lint`, `npm run format:check` | `7e0a1d4` |
 
 ## Règle de progression
 
 Une issue passe à `Terminée` uniquement après exécution des validations indiquées dans son issue et création d’un commit dédié. Les échecs préexistants hors du périmètre de l’issue sont conservés comme dette technique documentée, jamais masqués.
+
+\* 09 : un audit du 2026-09-22 a constaté que l'écran livré était une vitrine statique (données codées en dur, aucun appel API/IPC, zéro test). Corrigé le même jour (voir « Suivi post-livraison » dans `docs/project/issues/09-ux-tree-views-accessibility.md`) : l'écran principal (personnes, relations, arbre) est désormais branché sur l'API locale réelle et testé. Les autres vues du cahier des charges (familles, recherche, carnet, sauvegardes, statistiques, GEDCOM) restent à construire côté interface.

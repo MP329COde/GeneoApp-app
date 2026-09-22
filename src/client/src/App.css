@@ -317,6 +317,37 @@ dd {
   font-family: var(--font-family-base);
   font-size: 0.84rem;
 }
+.notice--error {
+  border-left-color: var(--accent-deep);
+  background: #fbe4de;
+  max-width: 1440px;
+  margin: 0 auto 16px;
+}
+.create-person-form {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.create-person-form label {
+  display: block;
+  font-family: var(--font-family-base);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.create-person-form input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+}
 @media (max-width: 1050px) {
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);

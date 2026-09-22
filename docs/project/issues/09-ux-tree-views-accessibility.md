@@ -89,3 +89,24 @@ Résultat attendu :
 ## Sortie de livraison
 
 Une excellente expérience de navigation généalogique locale, accessible et lisible, prête pour la production de données réelles et l’usage quotidien.
+
+## Suivi post-livraison
+
+- 2026-09-22 : audit du dépôt révélant que `App.jsx` était en réalité une vitrine statique — un tableau
+  `PEOPLE` codé en dur, aucun appel réseau ni IPC, zéro test. Cela contredisait la règle 4 du cahier des charges
+  (« ne pas créer de données fictives en production pour masquer une API absente ») malgré le statut
+  « Terminée » de cette issue. Corrigé :
+  - `src/client/src/api/geneoapp-client.js` : client API unique, bascule automatique entre `window.geneoapp`
+    (IPC Electron sécurisé, production) et `fetch` vers `/api` (proxy Vite, développement navigateur et tests) —
+    jamais de données fictives en repli.
+  - Canaux IPC `GRAPH_ANCESTORS/DESCENDANTS/RELATIONS/RELATIONSHIP` ajoutés (`channels.js`,
+    `build-handlers.js`, `preload.js`) : le moteur de graphe n'était pas exposé au renderer, seuls
+    personnes/lieux/événements/unions/parentages/sources/audit l'étaient.
+  - `App.jsx` réécrit : charge les personnes réelles au montage, affiche un état de chargement et un état vide
+    honnête (pas de repli fictif), permet de créer une personne et affiche ses relations réelles
+    (`graph.relations`). Testé (`App.test.jsx`, 3 cas : état vide, chargement des relations, création).
+  - `vite.config.js` : proxy `/api` → serveur Express local (port 3000) pour le mode développement navigateur.
+  Limite restante : seul l'écran « personnes + relations + arbre simple » est branché. Les autres vues listées
+  au cahier des charges (familles, recherche, carnet de recherche, sauvegardes/corbeille, statistiques, import
+  GEDCOM, vues radiale/éventail/carte/chronologie) restent à construire côté interface — l'API existe déjà
+  côté serveur pour la plupart d'entre elles.

@@ -1,66 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
+import { createGeneoAppClient } from './api/geneoapp-client.js';
 import './App.css';
 
-const PEOPLE = [
-  {
-    id: 1,
-    name: 'Jean Dupont',
-    years: '1872 – 1948',
-    role: 'Personne centrale',
-    parents: [2, 3],
-    children: [4, 5],
-    spouses: [6],
-  },
-  {
-    id: 2,
-    name: 'Louis Dupont',
-    years: '1840 – 1911',
-    role: 'Père',
-    parents: [],
-    children: [1],
-    spouses: [],
-  },
-  {
-    id: 3,
-    name: 'Marie Martin',
-    years: '1845 – 1920',
-    role: 'Mère',
-    parents: [],
-    children: [1],
-    spouses: [],
-  },
-  {
-    id: 4,
-    name: 'Paul Dupont',
-    years: '1900 – 1978',
-    role: 'Fils',
-    parents: [1],
-    children: [],
-    spouses: [],
-  },
-  {
-    id: 5,
-    name: 'Sophie Dupont',
-    years: '1904 – 1991',
-    role: 'Fille',
-    parents: [1],
-    children: [],
-    spouses: [],
-  },
-  {
-    id: 6,
-    name: 'Claire Bernard',
-    years: '1876 – 1952',
-    role: 'Conjointe',
-    parents: [],
-    children: [],
-    spouses: [1],
-  },
-];
+const client = createGeneoAppClient();
 
-function findPerson(id) {
-  return PEOPLE.find((person) => person.id === id);
+function personLabel(person) {
+  return `${person.given_names} ${person.family_name}`;
 }
 
 function PersonCard({ person, selected, onSelect }) {
@@ -70,25 +16,108 @@ function PersonCard({ person, selected, onSelect }) {
       onClick={() => onSelect(person.id)}
       type="button"
     >
-      <span className="person-card__name">{person.name}</span>
-      <span className="person-card__years">{person.years}</span>
-      <span className="person-card__role">{person.role}</span>
+      <span className="person-card__name">{personLabel(person)}</span>
     </button>
   );
 }
 
-function App() {
-  const [selectedId, setSelectedId] = useState(1);
-  const [view, setView] = useState('tree');
-  const selected = findPerson(selectedId);
-  const relations = useMemo(
-    () => ({
-      parents: selected.parents.map(findPerson),
-      children: selected.children.map(findPerson),
-      spouses: selected.spouses.map(findPerson),
-    }),
-    [selected],
+function CreatePersonForm({ onCreate, creating }) {
+  const [givenNames, setGivenNames] = useState('');
+  const [familyName, setFamilyName] = useState('');
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!givenNames.trim() || !familyName.trim()) return;
+    onCreate({ givenNames: givenNames.trim(), familyName: familyName.trim() });
+    setGivenNames('');
+    setFamilyName('');
+  };
+
+  return (
+    <form className="create-person-form" onSubmit={handleSubmit}>
+      <label>
+        <span>Prénom(s)</span>
+        <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
+      </label>
+      <label>
+        <span>Nom</span>
+        <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
+      </label>
+      <Button type="submit" size="sm" disabled={creating}>
+        Ajouter une personne
+      </Button>
+    </form>
   );
+}
+
+function App() {
+  const [persons, setPersons] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [relations, setRelations] = useState(null);
+  const [view, setView] = useState('tree');
+  const [error, setError] = useState(null);
+  const [creating, setCreating] = useState(false);
+
+  const loadPersons = useCallback(async () => {
+    try {
+      const list = await client.persons.list();
+      setPersons(list);
+      setSelectedId((current) => current ?? list[0]?.id ?? null);
+    } catch (loadError) {
+      setError(loadError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPersons();
+  }, [loadPersons]);
+
+  useEffect(() => {
+    if (selectedId === null) {
+      setRelations(null);
+      return;
+    }
+    let cancelled = false;
+    client.graph
+      .relations(selectedId)
+      .then((data) => {
+        if (!cancelled) setRelations(data);
+      })
+      .catch((relationsError) => {
+        if (!cancelled) setError(relationsError.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
+  const handleCreate = async (data) => {
+    setCreating(true);
+    setError(null);
+    try {
+      const person = await client.persons.create(data);
+      await loadPersons();
+      setSelectedId(person.id);
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const selected = useMemo(
+    () => persons?.find((person) => person.id === selectedId) ?? null,
+    [persons, selectedId],
+  );
+
+  if (persons === null) {
+    return (
+      <main className="genealogy-app" aria-labelledby="app-title">
+        <h1 id="app-title">GeneoApp</h1>
+        <p role="status">Chargement des données locales…</p>
+      </main>
+    );
+  }
 
   return (
     <main className="genealogy-app" aria-labelledby="app-title">
@@ -103,30 +132,37 @@ function App() {
         </div>
       </header>
 
+      {error ? (
+        <p role="alert" className="notice notice--error">
+          {error}
+        </p>
+      ) : null}
+
       <section className="workspace" aria-label="Espace de généalogie">
         <aside className="sidebar">
           <div className="sidebar__heading">
             <div>
               <p className="eyebrow">Arbre actif</p>
-              <h2>Famille Dupont</h2>
+              <h2>{persons.length} personne(s)</h2>
             </div>
-            <Button size="sm" variant="secondary" aria-label="Ajouter une personne">
-              +
-            </Button>
           </div>
-          <label className="search-box">
-            <span>Rechercher</span>
-            <input placeholder="Nom, lieu, source..." />
-          </label>
-          <nav className="person-list" aria-label="Personnes récentes">
-            {PEOPLE.slice(0, 5).map((person) => (
-              <PersonCard
-                key={person.id}
-                person={person}
-                selected={person.id === selectedId}
-                onSelect={setSelectedId}
-              />
-            ))}
+          <CreatePersonForm onCreate={handleCreate} creating={creating} />
+          <nav className="person-list" aria-label="Personnes">
+            {persons.length === 0 ? (
+              <p className="notice">
+                Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
+                votre arbre.
+              </p>
+            ) : (
+              persons.map((person) => (
+                <PersonCard
+                  key={person.id}
+                  person={person}
+                  selected={person.id === selectedId}
+                  onSelect={setSelectedId}
+                />
+              ))
+            )}
           </nav>
         </aside>
 
@@ -141,45 +177,19 @@ function App() {
                 Arbre
               </button>
               <button
-                className={view === 'family' ? 'is-active' : ''}
-                onClick={() => setView('family')}
+                className={view === 'relations' ? 'is-active' : ''}
+                onClick={() => setView('relations')}
                 type="button"
               >
-                Famille
-              </button>
-              <button
-                className={view === 'timeline' ? 'is-active' : ''}
-                onClick={() => setView('timeline')}
-                type="button"
-              >
-                Chronologie
-              </button>
-            </div>
-            <div className="canvas-tools">
-              <button type="button" aria-label="Réduire le zoom">
-                −
-              </button>
-              <span>100%</span>
-              <button type="button" aria-label="Augmenter le zoom">
-                +
+                Relations
               </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
-            {view === 'timeline' ? (
-              <div className="timeline">
-                <span className="timeline__line" />
-                {[
-                  '1872 Naissance à Nantes',
-                  '1898 Mariage avec Claire Bernard',
-                  '1900 Naissance de Paul',
-                  '1948 Décès à Paris',
-                ].map((event) => (
-                  <div className="timeline__event" key={event}>
-                    {event}
-                  </div>
-                ))}
-              </div>
+            {!selected ? (
+              <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
+            ) : !relations ? (
+              <p role="status">Chargement des relations…</p>
             ) : (
               <div className="tree-layout">
                 <div className="tree-row">
@@ -221,38 +231,42 @@ function App() {
         </section>
 
         <aside className="details-panel" aria-labelledby="person-title">
-          <div className="details-panel__top">
-            <span className="avatar">{selected.name.charAt(0)}</span>
-            <div>
-              <p className="eyebrow">Fiche personne</p>
-              <h2 id="person-title">{selected.name}</h2>
-              <p>{selected.years}</p>
-            </div>
-          </div>
-          <div className="detail-section">
-            <h3>Relations</h3>
-            <dl>
-              <div>
-                <dt>Parents</dt>
-                <dd>{relations.parents.length}</dd>
+          {selected ? (
+            <>
+              <div className="details-panel__top">
+                <span className="avatar">{selected.given_names.charAt(0)}</span>
+                <div>
+                  <p className="eyebrow">Fiche personne</p>
+                  <h2 id="person-title">{personLabel(selected)}</h2>
+                </div>
               </div>
-              <div>
-                <dt>Enfants</dt>
-                <dd>{relations.children.length}</dd>
-              </div>
-              <div>
-                <dt>Conjoints</dt>
-                <dd>{relations.spouses.length}</dd>
-              </div>
-            </dl>
-          </div>
-          <div className="detail-section">
-            <h3>Éléments à vérifier</h3>
-            <p className="notice">2 sources attendent une confirmation.</p>
-            <Button size="sm" variant="secondary">
-              Ouvrir le carnet
-            </Button>
-          </div>
+              {relations ? (
+                <div className="detail-section">
+                  <h3>Relations</h3>
+                  <dl>
+                    <div>
+                      <dt>Parents</dt>
+                      <dd>{relations.parents.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Enfants</dt>
+                      <dd>{relations.children.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Fratrie</dt>
+                      <dd>{relations.siblings.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Conjoints</dt>
+                      <dd>{relations.spouses.length}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="notice">Aucune personne sélectionnée.</p>
+          )}
         </aside>
       </section>
     </main>
