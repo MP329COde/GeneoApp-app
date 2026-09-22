@@ -10,5 +10,9 @@ export function createGedcomController(services) {
       const report = gedcom.import(request.body?.gedcom, { performedBy: request.performedBy });
       response.status(report.imported ? 201 : 422).json(report);
     },
+
+    export(request, response) {
+      response.json(gedcom.export(request.body ?? {}));
+    },
   };
 }

@@ -6,7 +6,7 @@
 | 02 - Design system, i18n et gouvernance UI | Terminée | `npm run test:client`, `npm run build-storybook` | à renseigner |
 | 03 - Modèle de données et persistance | Terminée | `npm run test:db` (46 tests) | à renseigner |
 | 04 - Moteur de graphe et relations | Terminée | `npm run lint`, `npm run format:check`, 3 tests graphe + 4 tests relations | à renseigner |
-| 05 - GEDCOM import/export | À faire | - | - |
+| 05 - GEDCOM import/export | Terminée | 5 tests GEDCOM, `npm run lint`, `npm run format:check` | à renseigner |
 | 06 - Recherche, déduplication, notes et preuves | À faire | - | - |
 | 07 - Sources, médias, OCR et carnet de recherche | À faire | - | - |
 | 08 - Sécurité, comptes, sauvegardes et utilisateurs | À faire | - | - |

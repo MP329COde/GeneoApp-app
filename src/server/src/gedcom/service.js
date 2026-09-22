@@ -31,6 +31,122 @@ export class GedcomService {
     );
     return { ...report, imported: true, ids: result.ids };
   }
+
+  export({ format = '7', personIds = null, ancestorsOf = null, descendantsOf = null } = {}) {
+    if (!['5.5.1', '7'].includes(format)) {
+      throw new Error(`Format GEDCOM non supporté pour l’export : ${format}`);
+    }
+
+    const allPersons = this.database
+      .prepare('SELECT * FROM persons WHERE deleted_at IS NULL ORDER BY id')
+      .all();
+    const selectedIds = new Set(
+      Array.isArray(personIds) && personIds.length > 0
+        ? personIds.map(Number)
+        : allPersons.map((person) => person.id),
+    );
+    if (ancestorsOf !== null) {
+      selectedIds.add(Number(ancestorsOf));
+      this.collectParents(Number(ancestorsOf), selectedIds);
+    }
+    if (descendantsOf !== null) {
+      selectedIds.add(Number(descendantsOf));
+      this.collectChildren(Number(descendantsOf), selectedIds);
+    }
+    const persons = allPersons.filter((person) => selectedIds.has(person.id));
+    const families = this.database
+      .prepare('SELECT * FROM unions WHERE deleted_at IS NULL ORDER BY id')
+      .all()
+      .map((union) => ({
+        ...union,
+        partners: this.database
+          .prepare('SELECT person_id FROM union_partners WHERE union_id = ? AND deleted_at IS NULL')
+          .all(union.id)
+          .map(({ person_id: personId }) => personId),
+        children: this.database
+          .prepare('SELECT child_id FROM parentages WHERE union_id = ? AND deleted_at IS NULL')
+          .all(union.id)
+          .map(({ child_id: childId }) => childId),
+      }))
+      .filter(
+        (union) =>
+          union.partners.some((personId) => selectedIds.has(personId)) ||
+          union.children.some((personId) => selectedIds.has(personId)),
+      );
+
+    return {
+      format,
+      gedcom: generateGedcom(this.database, persons, families, format),
+      summary: { persons: persons.length, families: families.length },
+    };
+  }
+
+  collectParents(personId, selectedIds) {
+    const parents = this.database
+      .prepare('SELECT parent_id FROM parentages WHERE child_id = ? AND deleted_at IS NULL')
+      .all(personId);
+    for (const { parent_id: parentId } of parents) {
+      if (selectedIds.has(parentId)) continue;
+      selectedIds.add(parentId);
+      this.collectParents(parentId, selectedIds);
+    }
+  }
+
+  collectChildren(personId, selectedIds) {
+    const children = this.database
+      .prepare('SELECT child_id FROM parentages WHERE parent_id = ? AND deleted_at IS NULL')
+      .all(personId);
+    for (const { child_id: childId } of children) {
+      if (selectedIds.has(childId)) continue;
+      selectedIds.add(childId);
+      this.collectChildren(childId, selectedIds);
+    }
+  }
+}
+
+function generateGedcom(database, persons, families, format) {
+  const personIds = new Set(persons.map((person) => person.id));
+  const lines = ['0 HEAD', `1 GEDC`, `2 VERS ${format}`, '1 CHAR UTF-8'];
+  for (const person of persons) {
+    const xref = `@I${person.id}@`;
+    lines.push(`0 ${xref} INDI`);
+    lines.push(`1 NAME ${person.given_names} /${person.family_name}/`);
+    lines.push(`1 SEX ${person.sex}`);
+    const events = database
+      .prepare(
+        `SELECT e.* FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id
+         WHERE ep.person_id = ? AND ep.role = 'PRINCIPAL' AND e.deleted_at IS NULL
+         ORDER BY e.id`,
+      )
+      .all(person.id);
+    for (const event of events) {
+      const tag = { BIRTH: 'BIRT', DEATH: 'DEAT', BAPTISM: 'BAPM', BURIAL: 'BURI' }[event.type];
+      if (!tag) continue;
+      lines.push(`1 ${tag}`);
+      if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
+      if (event.place_id) {
+        const place = database.prepare('SELECT name FROM places WHERE id = ?').get(event.place_id);
+        if (place) lines.push(`2 PLAC ${place.name}`);
+      }
+    }
+    for (const family of families) {
+      if (family.partners.includes(person.id)) lines.push(`1 FAMS @F${family.id}@`);
+      if (family.children.includes(person.id)) lines.push(`1 FAMC @F${family.id}@`);
+    }
+  }
+  for (const family of families) {
+    lines.push(`0 @F${family.id}@ FAM`);
+    for (const partnerId of family.partners.filter((id) => personIds.has(id))) {
+      const tag = family.partners.indexOf(partnerId) === 0 ? 'HUSB' : 'WIFE';
+      lines.push(`1 ${tag} @I${partnerId}@`);
+    }
+    for (const childId of family.children.filter((id) => personIds.has(id))) {
+      lines.push(`1 CHIL @I${childId}@`);
+    }
+  }
+  lines.push('0 TRLR');
+  return `${lines.join('\n')}\n`;
 }
 
 function buildMappingPreview(records) {

@@ -72,3 +72,34 @@ test('GEDCOM invalide retourne le rapport sans écrire', async () => {
     await server.close();
   }
 });
+
+test('GEDCOM exporte un arbre local et permet de sélectionner les ancêtres', async () => {
+  const server = await startTestServer();
+  try {
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(imported.status, 201);
+
+    const all = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '7' },
+    });
+    assert.equal(all.status, 200);
+    assert.equal(all.body.format, '7');
+    assert.equal(all.body.summary.persons, 3);
+    assert.match(all.body.gedcom, /0 @I1@ INDI/);
+    assert.match(all.body.gedcom, /0 @F1@ FAM/);
+
+    const ancestors = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1', ancestorsOf: 3 },
+    });
+    assert.equal(ancestors.status, 200);
+    assert.equal(ancestors.body.summary.persons, 3);
+    assert.match(ancestors.body.gedcom, /2 VERS 5.5.1/);
+  } finally {
+    await server.close();
+  }
+});
