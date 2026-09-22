@@ -9,7 +9,7 @@
 | 05 - GEDCOM import/export | Terminée | 5 tests GEDCOM, `npm run lint`, `npm run format:check` | à renseigner |
 | 06 - Recherche, déduplication, notes et preuves | Terminée | 8 tests recherche/notes/doublons, `npm run lint`, `npm run format:check` | à renseigner |
 | 07 - Sources, médias, OCR et carnet de recherche | Terminée | test ciblé du carnet, `npm run test:db`, `npm run lint`, `npm run format:check` | à renseigner |
-| 08 - Sécurité, comptes, sauvegardes et utilisateurs | À faire | - | - |
+| 08 - Sécurité, comptes, sauvegardes et utilisateurs | Terminée | 4 tests serveur, 7 tests IPC, 22 tests API sécurité/médias | à renseigner |
 | 09 - UX, navigation et vues généalogiques | À faire | - | - |
 | 10 - IA locale, CI/CD et release | À faire | - | - |
 
