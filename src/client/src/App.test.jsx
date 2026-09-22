@@ -11,6 +11,7 @@ const graph = vi.hoisted(() => ({
 }));
 const search = vi.hoisted(() => ({
   query: vi.fn(),
+  duplicates: vi.fn(),
 }));
 const gedcom = vi.hoisted(() => ({
   preview: vi.fn(),
@@ -243,5 +244,41 @@ describe('App', () => {
     );
     await waitFor(() => expect(accounts.login).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByText(/Aucune sauvegarde/)).toBeInTheDocument());
+  });
+
+  it('détecte les doublons potentiels via le client API et permet de rejoindre une fiche', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    search.duplicates.mockResolvedValue([
+      {
+        persons: [
+          { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+          { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
+        ],
+        score: 92,
+        requiresValidation: true,
+      },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
+
+    await waitFor(() => expect(search.duplicates).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Voir la fiche B' })[0]);
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
   });
 });

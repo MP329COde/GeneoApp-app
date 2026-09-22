@@ -103,6 +103,70 @@ function SearchPanel() {
   );
 }
 
+function DuplicatesPanel({ onSelect }) {
+  const [pairs, setPairs] = useState(null);
+  const [duplicatesError, setDuplicatesError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleScan = async () => {
+    setBusy(true);
+    setDuplicatesError(null);
+    try {
+      setPairs(await client.search.duplicates());
+    } catch (scanError) {
+      setDuplicatesError(scanError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <div className="gedcom-panel__actions">
+        <Button type="button" size="sm" onClick={handleScan} disabled={busy}>
+          Analyser les doublons potentiels
+        </Button>
+      </div>
+      {duplicatesError ? (
+        <p role="alert" className="notice notice--error">
+          {duplicatesError}
+        </p>
+      ) : null}
+      {pairs === null ? null : pairs.length === 0 ? (
+        <p className="notice">Aucun doublon potentiel détecté.</p>
+      ) : (
+        <ul className="search-results">
+          {pairs.map((pair) => {
+            const [left, right] = pair.persons;
+            return (
+              <li key={`${left.id}:${right.id}`}>
+                <Badge tone="danger">{pair.score}%</Badge> {personLabel(left)} —{' '}
+                {personLabel(right)}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onSelect(left.id)}
+                >
+                  Voir la fiche A
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onSelect(right.id)}
+                >
+                  Voir la fiche B
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -615,6 +679,13 @@ function App() {
               >
                 Sauvegardes
               </button>
+              <button
+                className={view === 'duplicates' ? 'is-active' : ''}
+                onClick={() => setView('duplicates')}
+                type="button"
+              >
+                Doublons
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
@@ -624,6 +695,13 @@ function App() {
               <GedcomPanel onImported={loadPersons} />
             ) : view === 'backups' ? (
               <BackupsPanel session={session} onLogin={handleLogin} loginError={loginError} />
+            ) : view === 'duplicates' ? (
+              <DuplicatesPanel
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setView('tree');
+                }}
+              />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (

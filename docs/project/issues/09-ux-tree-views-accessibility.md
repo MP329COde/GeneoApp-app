@@ -133,3 +133,12 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   branchées sur l'API réelle. Testé (`App.test.jsx` : accès bloqué sans session, connexion puis affichage des
   sauvegardes/corbeille réelles, création de profil à la volée). Restent sans UI : détection de doublons,
   familles, carnet de recherche, statistiques.
+- 2026-09-22 (suite) : ajout d'une vue « Doublons » réelle, branchée sur `client.search.duplicates`
+  (déjà exposé côté client mais jusque-là consommé par aucun écran). Affiche les paires de personnes
+  potentiellement dupliquées avec leur score de similarité (`SearchService#potentialDuplicates`), et permet
+  de rejoindre directement la fiche de l'une ou l'autre personne (bascule vers l'onglet Arbre avec la
+  personne sélectionnée). Testé (`App.test.jsx` : analyse déclenchée à la demande, affichage du score réel,
+  navigation vers la fiche B). Aucune logique de fusion n'est encore proposée (l'API ne l'expose pas non
+  plus à ce stade) : l'écran signale le doublon potentiel mais ne fusionne pas les fiches — limite à traiter
+  quand un assistant de fusion sera spécifié côté serveur. Restent sans UI : familles, carnet de recherche,
+  statistiques.
