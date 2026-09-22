@@ -62,4 +62,9 @@ export const IPC_CHANNELS = Object.freeze({
   TRASH_LIST: 'geneoapp:trash:list',
   TRASH_RESTORE: 'geneoapp:trash:restore',
   TRASH_PURGE: 'geneoapp:trash:purge',
+
+  RESEARCH_CREATE: 'geneoapp:research:create',
+  RESEARCH_LIST: 'geneoapp:research:list',
+
+  STATISTICS_TOTALS: 'geneoapp:statistics:totals',
 });

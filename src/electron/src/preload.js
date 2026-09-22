@@ -115,6 +115,15 @@ const api = {
     purge: (table, id, token, performedBy) =>
       invoke(IPC_CHANNELS.TRASH_PURGE, { table, id, token, performedBy }),
   },
+
+  research: {
+    create: (data, performedBy) => invoke(IPC_CHANNELS.RESEARCH_CREATE, { data, performedBy }),
+    list: () => invoke(IPC_CHANNELS.RESEARCH_LIST),
+  },
+
+  statistics: {
+    totals: () => invoke(IPC_CHANNELS.STATISTICS_TOTALS),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

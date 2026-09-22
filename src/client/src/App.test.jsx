@@ -34,6 +34,13 @@ const unions = vi.hoisted(() => ({
   listForPerson: vi.fn(),
   remove: vi.fn(),
 }));
+const research = vi.hoisted(() => ({
+  create: vi.fn(),
+  list: vi.fn(),
+}));
+const statistics = vi.hoisted(() => ({
+  totals: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -45,6 +52,8 @@ vi.mock('./api/geneoapp-client.js', () => ({
     backups,
     trash,
     unions,
+    research,
+    statistics,
   }),
 }));
 
@@ -329,5 +338,61 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Marie Curie' }).length).toBeGreaterThan(1),
     );
+  });
+
+  it('gère le carnet de recherche via le client API (aucune donnée fictive)', async () => {
+    persons.list.mockResolvedValue([]);
+    research.list.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 1,
+        title: 'Acte à vérifier',
+        content: 'Registre paroissial 1850',
+        status: 'TODO',
+        priority: 'MEDIUM',
+      },
+    ]);
+    research.create.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
+    await waitFor(() => expect(screen.getByText(/Aucune piste de recherche/)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Acte à vérifier' } });
+    fireEvent.change(screen.getByLabelText('Note'), {
+      target: { value: 'Registre paroissial 1850' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une piste de recherche' }));
+
+    await waitFor(() =>
+      expect(research.create).toHaveBeenCalledWith({
+        title: 'Acte à vérifier',
+        content: 'Registre paroissial 1850',
+        status: 'TODO',
+        priority: 'MEDIUM',
+      }),
+    );
+    await waitFor(() => expect(screen.getByText(/Registre paroissial 1850/)).toBeInTheDocument());
+  });
+
+  it('affiche les statistiques réelles via le client API', async () => {
+    persons.list.mockResolvedValue([]);
+    statistics.totals.mockResolvedValue({
+      totals: { persons: 3, places: 1, events: 0, unions: 0, parentages: 0, sources: 0, media: 0 },
+      generatedAt: '2026-09-22T00:00:00.000Z',
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Statistiques' }));
+
+    await waitFor(() => expect(statistics.totals).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('3')).toBeInTheDocument());
   });
 });

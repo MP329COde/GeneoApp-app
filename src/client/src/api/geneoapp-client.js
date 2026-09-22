@@ -94,6 +94,13 @@ function createHttpClient() {
       purge: (table, id, token) =>
         fetchJson(`/api/trash/${table}/${id}`, { method: 'DELETE', token }),
     },
+    research: {
+      create: (data) => fetchJson('/api/notebook', { method: 'POST', body: data }),
+      list: () => fetchJson('/api/notebook'),
+    },
+    statistics: {
+      totals: () => fetchJson('/api/statistics'),
+    },
   };
 }
 
@@ -141,6 +148,13 @@ function createIpcClient(bridge) {
       list: () => bridge.trash.list(),
       restore: (table, id, token) => bridge.trash.restore(table, id, token),
       purge: (table, id, token) => bridge.trash.purge(table, id, token),
+    },
+    research: {
+      create: (data) => bridge.research.create(data),
+      list: () => bridge.research.list(),
+    },
+    statistics: {
+      totals: () => bridge.statistics.totals(),
     },
   };
 }

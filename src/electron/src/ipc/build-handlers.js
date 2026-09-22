@@ -60,6 +60,8 @@ export function buildIpcHandlers(services) {
     accounts,
     backups,
     trash,
+    research,
+    statistics,
   } = services;
 
   return {
@@ -202,5 +204,15 @@ export function buildIpcHandlers(services) {
       trash.purge(table, id, { performedBy: actorOf(performedBy) });
       return { purged: true };
     }),
+
+    [IPC_CHANNELS.RESEARCH_CREATE]: wrap(({ data, performedBy }) =>
+      research.create(data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_LIST]: wrap(() => research.list()),
+
+    [IPC_CHANNELS.STATISTICS_TOTALS]: wrap(() => ({
+      totals: statistics.totals(),
+      generatedAt: new Date().toISOString(),
+    })),
   };
 }

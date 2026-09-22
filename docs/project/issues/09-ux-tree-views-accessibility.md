@@ -150,3 +150,11 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   reste de l'application) d'une union. Ajouté à `geneoapp-client.js` (HTTP et IPC) : namespace `unions`.
   Testé (`App.test.jsx` : liste vide, création réelle via l'API, rafraîchissement affichant le partenaire).
   Restent sans UI : carnet de recherche, statistiques.
+- 2026-09-22 (suite) : ajout d'une vue « Statistiques » réelle, branchée sur `client.statistics.totals`
+  (`StatisticsService#totals`, route `/api/statistics` déjà testée côté API mais jusque-là ni exposée via
+  IPC ni consommée par un écran). Canal IPC `STATISTICS_TOTALS` ajouté. Affiche les totaux réels par table
+  (personnes, lieux, événements, unions, parentés, sources, médias). Testé (`App.test.jsx`). Le carnet de
+  recherche a également été branché dans la foulée (voir issue 07, suivi post-livraison). Il ne reste plus de
+  vue listée au cahier des charges de cette issue sans écran fonctionnel, même minimal ; les vues avancées
+  (carte, chronologie graphique, radiale/éventail, minimap/zoom/pan) restent des versions simplifiées de leur
+  ambition initiale.

@@ -311,6 +311,148 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
   );
 }
 
+const RESEARCH_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'ABANDONED'];
+const RESEARCH_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
+
+function NotebookPanel() {
+  const [entries, setEntries] = useState(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [status, setStatus] = useState('TODO');
+  const [priority, setPriority] = useState('MEDIUM');
+  const [notebookError, setNotebookError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadEntries = useCallback(async () => {
+    try {
+      setEntries(await client.research.list());
+    } catch (loadError) {
+      setNotebookError(loadError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!title.trim() || !content.trim()) return;
+    setBusy(true);
+    setNotebookError(null);
+    try {
+      await client.research.create({
+        title: title.trim(),
+        content: content.trim(),
+        status,
+        priority,
+      });
+      setTitle('');
+      setContent('');
+      await loadEntries();
+    } catch (createError) {
+      setNotebookError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Carnet de recherche</h3>
+      {notebookError ? (
+        <p role="alert" className="notice notice--error">
+          {notebookError}
+        </p>
+      ) : null}
+
+      <form className="create-person-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Titre</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label>
+          <span>Note</span>
+          <input value={content} onChange={(event) => setContent(event.target.value)} />
+        </label>
+        <label>
+          <span>Statut</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            {RESEARCH_STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Priorité</span>
+          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+            {RESEARCH_PRIORITIES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Ajouter une piste de recherche
+        </Button>
+      </form>
+
+      {entries === null ? (
+        <p role="status">Chargement…</p>
+      ) : entries.length === 0 ? (
+        <p className="notice">Aucune piste de recherche pour l’instant.</p>
+      ) : (
+        <ul className="search-results">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <Badge tone="neutral">{entry.status}</Badge>{' '}
+              <Badge tone="neutral">{entry.priority}</Badge> <strong>{entry.title}</strong> —{' '}
+              {entry.content}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function StatisticsPanel() {
+  const [totals, setTotals] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+
+  useEffect(() => {
+    client.statistics
+      .totals()
+      .then(setTotals)
+      .catch((loadError) => setStatsError(loadError.message));
+  }, []);
+
+  return (
+    <div className="search-panel">
+      <h3>Statistiques locales</h3>
+      {statsError ? (
+        <p role="alert" className="notice notice--error">
+          {statsError}
+        </p>
+      ) : totals === null ? (
+        <p role="status">Chargement…</p>
+      ) : (
+        <dl>
+          {Object.entries(totals.totals).map(([key, value]) => (
+            <div key={key}>
+              <dt>{key}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -837,6 +979,20 @@ function App() {
               >
                 Familles
               </button>
+              <button
+                className={view === 'notebook' ? 'is-active' : ''}
+                onClick={() => setView('notebook')}
+                type="button"
+              >
+                Carnet
+              </button>
+              <button
+                className={view === 'statistics' ? 'is-active' : ''}
+                onClick={() => setView('statistics')}
+                type="button"
+              >
+                Statistiques
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
@@ -855,6 +1011,10 @@ function App() {
               />
             ) : view === 'families' ? (
               <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
+            ) : view === 'notebook' ? (
+              <NotebookPanel />
+            ) : view === 'statistics' ? (
+              <StatisticsPanel />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (

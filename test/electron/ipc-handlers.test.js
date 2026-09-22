@@ -212,3 +212,30 @@ test('ACCOUNTS_LOGIN puis BACKUPS_CREATE/TRASH_PURGE exigent un jeton de session
   });
   assert.equal(purge.ok, true);
 });
+
+test('RESEARCH_CREATE et RESEARCH_LIST gèrent le carnet de recherche réel', async () => {
+  const handlers = createHandlers();
+
+  const created = await handlers[IPC_CHANNELS.RESEARCH_CREATE]({
+    data: { title: 'Acte à vérifier', content: 'Registre paroissial 1850, mairie de Nantes.' },
+  });
+  assert.equal(created.ok, true);
+  assert.equal(created.data.title, 'Acte à vérifier');
+
+  const listed = await handlers[IPC_CHANNELS.RESEARCH_LIST]();
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.length, 1);
+});
+
+test('STATISTICS_TOTALS renvoie des totaux réels calculés depuis la base', async () => {
+  const handlers = createHandlers();
+
+  await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+
+  const response = await handlers[IPC_CHANNELS.STATISTICS_TOTALS]();
+  assert.equal(response.ok, true);
+  assert.equal(response.data.totals.persons, 1);
+  assert.ok(response.data.generatedAt);
+});

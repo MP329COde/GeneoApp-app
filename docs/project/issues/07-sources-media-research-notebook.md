@@ -83,3 +83,19 @@ Résultat attendu :
 ## Sortie de livraison
 
 Un système documentaire, visuel et de recherche généalogique fiable, adapté à un usage hors ligne et orienté preuve, documentation et analyse historique.
+
+## Suivi post-livraison
+
+- 2026-09-22 : le backend du carnet de recherche (`ResearchService#create/list`, route `/api/notebook`)
+  existait déjà et était testé côté API (`test/api/notebook-ai.test.js`), mais n'était exposé ni via IPC
+  Electron ni consommé par aucun écran — contradiction avec la règle 4 (pas de fonctionnalité déclarée
+  utilisable sans validation exécutable de bout en bout). Corrigé :
+  - Canaux IPC `RESEARCH_CREATE`/`RESEARCH_LIST` ajoutés (`channels.js`, `build-handlers.js`, `preload.js`),
+    testés (`test/electron/ipc-handlers.test.js`).
+  - `geneoapp-client.js` : namespace `research` (HTTP + IPC).
+  - `App.jsx` : nouvel onglet « Carnet » listant les pistes de recherche réelles (titre, statut, priorité,
+    note) avec formulaire de création. Testé (`App.test.jsx`).
+  - Limite connue : uniquement création/liste, pas encore de modification de statut ni de rattachement à une
+    personne ou une preuve depuis l'écran (l'API le permettrait via `personId`, mais le formulaire ne
+    l'expose pas encore) — OCR, reconnaissance de personnes dans un média et gestion des documents/médias
+    restent hors périmètre de cette passe et non implémentés côté serveur non plus.
