@@ -61,6 +61,12 @@ const sources = vi.hoisted(() => ({
   addCitation: vi.fn(),
   listCitationsForEntity: vi.fn(),
 }));
+const parentages = vi.hoisted(() => ({
+  create: vi.fn(),
+  listParentsOf: vi.fn().mockResolvedValue([]),
+  listChildrenOf: vi.fn().mockResolvedValue([]),
+  remove: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -78,6 +84,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     notes,
     media,
     sources,
+    parentages,
   }),
 }));
 
@@ -674,5 +681,47 @@ describe('App', () => {
       }),
     );
     await waitFor(() => expect(screen.getByText(/Registre paroissial 1815/)).toBeInTheDocument());
+  });
+
+  it('ajoute un parent et un enfant réels à une personne, avec navigation', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Louis', family_name: 'Dupont' },
+      { id: 3, given_names: 'Alice', family_name: 'Dupont' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    unions.listForPerson.mockResolvedValue([]);
+    parentages.listParentsOf
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, child_id: 1, parent_id: 2, parent_role: 'FATHER' }]);
+    parentages.listChildrenOf.mockResolvedValue([]);
+    parentages.create.mockResolvedValue({ id: 10 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('3 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
+    await waitFor(() => expect(parentages.listParentsOf).toHaveBeenCalledWith(1));
+
+    fireEvent.change(screen.getByLabelText('Ajouter un parent'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Rôle'), { target: { value: 'FATHER' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter le parent' }));
+
+    await waitFor(() =>
+      expect(parentages.create).toHaveBeenCalledWith({
+        childId: 1,
+        parentId: 2,
+        parentRole: 'FATHER',
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Louis Dupont' }).length).toBeGreaterThan(1),
+    );
   });
 });

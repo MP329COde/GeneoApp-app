@@ -116,3 +116,10 @@ Un moteur de relations généalogiques fiable, calculable et testable, base indi
   montée-puis-descente, renvoie une étiquette générique honnête plutôt que d'inventer un terme incertain.
   Testé (`test/api/graph.test.js`, nouveau cas couvrant fratrie/oncle/neveu/cousin germain/grand-parent avec
   les deux genres). Utile pour préparer les vues radiale/éventail de la Phase I.
+- 2026-09-22 (suite) : audit constatant que `ParentageService` (création/suppression de lien parent-enfant,
+  liste des parents/enfants) était exposé côté IPC (`PARENTAGES_*`) mais absent de `geneoapp-client.js` et de
+  tout écran — sans GEDCOM, il n'existait donc aucun moyen de construire manuellement un arbre (ajouter un
+  parent ou un enfant à une personne existante). Corrigé : namespace `parentages` ajouté au client (HTTP + IPC)
+  ; section « Parenté » ajoutée dans l'onglet Familles — ajout d'un parent (avec rôle FATHER/MOTHER/PARENT) ou
+  d'un enfant parmi les personnes existantes, retrait d'un lien, navigation vers la fiche liée. Testé
+  (`App.test.jsx`).

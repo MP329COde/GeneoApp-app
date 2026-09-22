@@ -79,6 +79,13 @@ function createHttpClient() {
       listForPerson: (personId) => fetchJson(`/api/unions/by-person/${personId}`),
       remove: (id) => fetchJson(`/api/unions/${id}`, { method: 'DELETE' }),
     },
+    parentages: {
+      create: (data) => fetchJson('/api/parentages', { method: 'POST', body: data }),
+      get: (id) => fetchJson(`/api/parentages/${id}`),
+      listParentsOf: (personId) => fetchJson(`/api/parentages/parents-of/${personId}`),
+      listChildrenOf: (personId) => fetchJson(`/api/parentages/children-of/${personId}`),
+      remove: (id) => fetchJson(`/api/parentages/${id}`, { method: 'DELETE' }),
+    },
     sources: {
       create: (data) => fetchJson('/api/sources', { method: 'POST', body: data }),
       get: (id) => fetchJson(`/api/sources/${id}`),
@@ -173,6 +180,13 @@ function createIpcClient(bridge) {
       get: (id) => bridge.unions.get(id),
       listForPerson: (personId) => bridge.unions.listForPerson(personId),
       remove: (id) => bridge.unions.remove(id),
+    },
+    parentages: {
+      create: (data) => bridge.parentages.create(data),
+      get: (id) => bridge.parentages.get(id),
+      listParentsOf: (personId) => bridge.parentages.listParentsOf(personId),
+      listChildrenOf: (personId) => bridge.parentages.listChildrenOf(personId),
+      remove: (id) => bridge.parentages.remove(id),
     },
     sources: {
       create: (data) => bridge.sources.create(data),
