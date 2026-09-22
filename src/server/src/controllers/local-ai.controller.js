@@ -1,8 +1,12 @@
 export function createLocalAiController(services) {
   const { localAi } = services;
   return {
-    analyze(request, response) {
-      response.json(localAi.analyze(request.body));
+    async analyze(request, response, next) {
+      try {
+        response.json(await localAi.analyze(request.body));
+      } catch (error) {
+        next(error);
+      }
     },
   };
 }

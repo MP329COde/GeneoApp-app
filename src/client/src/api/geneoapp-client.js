@@ -101,6 +101,9 @@ function createHttpClient() {
     statistics: {
       totals: () => fetchJson('/api/statistics'),
     },
+    ai: {
+      analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
+    },
   };
 }
 
@@ -155,6 +158,9 @@ function createIpcClient(bridge) {
     },
     statistics: {
       totals: () => bridge.statistics.totals(),
+    },
+    ai: {
+      analyze: (prompt) => bridge.ai.analyze(prompt),
     },
   };
 }

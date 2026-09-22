@@ -62,6 +62,7 @@ export function buildIpcHandlers(services) {
     trash,
     research,
     statistics,
+    localAi,
   } = services;
 
   return {
@@ -214,5 +215,7 @@ export function buildIpcHandlers(services) {
       totals: statistics.totals(),
       generatedAt: new Date().toISOString(),
     })),
+
+    [IPC_CHANNELS.AI_ANALYZE]: wrap((data) => localAi.analyze(data)),
   };
 }

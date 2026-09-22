@@ -453,6 +453,58 @@ function StatisticsPanel() {
   );
 }
 
+function AiPanel() {
+  const [prompt, setPrompt] = useState('');
+  const [result, setResult] = useState(null);
+  const [aiError, setAiError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!prompt.trim()) return;
+    setBusy(true);
+    setAiError(null);
+    setResult(null);
+    try {
+      setResult(await client.ai.analyze(prompt.trim()));
+    } catch (analyzeError) {
+      setAiError(analyzeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>IA locale</h3>
+      <p className="notice">
+        Analyse via un serveur IA local compatible Ollama (aucun appel réseau distant). Si l’IA
+        locale n’est pas activée ou que le serveur n’est pas démarré sur cette machine, une erreur
+        explicite est renvoyée — jamais de réponse générée artificiellement en repli.
+      </p>
+      <form className="create-person-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Question</span>
+          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Analyser
+        </Button>
+      </form>
+      {aiError ? (
+        <p role="alert" className="notice notice--error">
+          {aiError}
+        </p>
+      ) : null}
+      {result ? (
+        <p className="notice" role="status">
+          {result.response}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -993,6 +1045,13 @@ function App() {
               >
                 Statistiques
               </button>
+              <button
+                className={view === 'ai' ? 'is-active' : ''}
+                onClick={() => setView('ai')}
+                type="button"
+              >
+                IA locale
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
@@ -1015,6 +1074,8 @@ function App() {
               <NotebookPanel />
             ) : view === 'statistics' ? (
               <StatisticsPanel />
+            ) : view === 'ai' ? (
+              <AiPanel />
             ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (

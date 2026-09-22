@@ -41,6 +41,9 @@ const research = vi.hoisted(() => ({
 const statistics = vi.hoisted(() => ({
   totals: vi.fn(),
 }));
+const ai = vi.hoisted(() => ({
+  analyze: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -54,6 +57,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     unions,
     research,
     statistics,
+    ai,
   }),
 }));
 
@@ -394,5 +398,45 @@ describe('App', () => {
 
     await waitFor(() => expect(statistics.totals).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText('3')).toBeInTheDocument());
+  });
+
+  it('affiche une erreur honnête quand l’IA locale est indisponible (aucune réponse fictive)', async () => {
+    persons.list.mockResolvedValue([]);
+    const unavailable = Object.assign(new Error('L’IA locale est désactivée'), { status: 503 });
+    ai.analyze.mockRejectedValue(unavailable);
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'IA locale' }));
+    fireEvent.change(screen.getByLabelText('Question'), { target: { value: 'Résume la famille' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser' }));
+
+    await waitFor(() => expect(ai.analyze).toHaveBeenCalledWith('Résume la famille'));
+    await waitFor(() => expect(screen.getByText('L’IA locale est désactivée')).toBeInTheDocument());
+  });
+
+  it('affiche la réponse réelle de l’IA locale quand elle est disponible', async () => {
+    persons.list.mockResolvedValue([]);
+    ai.analyze.mockResolvedValue({
+      model: 'llama3',
+      response: 'Trois personnes enregistrées.',
+      generatedAt: '2026-09-22T00:00:00.000Z',
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'IA locale' }));
+    fireEvent.change(screen.getByLabelText('Question'), { target: { value: 'Résume' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Trois personnes enregistrées.')).toBeInTheDocument(),
+    );
   });
 });

@@ -67,4 +67,6 @@ export const IPC_CHANNELS = Object.freeze({
   RESEARCH_LIST: 'geneoapp:research:list',
 
   STATISTICS_TOTALS: 'geneoapp:statistics:totals',
+
+  AI_ANALYZE: 'geneoapp:ai:analyze',
 });

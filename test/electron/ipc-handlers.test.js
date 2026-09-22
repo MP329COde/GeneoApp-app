@@ -239,3 +239,12 @@ test('STATISTICS_TOTALS renvoie des totaux réels calculés depuis la base', asy
   assert.equal(response.data.totals.persons, 1);
   assert.ok(response.data.generatedAt);
 });
+
+test('AI_ANALYZE renvoie une erreur honnête (503) quand l’IA locale est désactivée', async () => {
+  const handlers = createHandlers();
+
+  const response = await handlers[IPC_CHANNELS.AI_ANALYZE]({ prompt: 'Résume la famille' });
+
+  assert.equal(response.ok, false);
+  assert.equal(response.error.status, 503);
+});

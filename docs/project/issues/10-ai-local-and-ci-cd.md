@@ -81,3 +81,24 @@ Résultat attendu :
 ## Sortie de livraison
 
 Un projet mature, testable, documenté, publieable et prêt à évoluer sans perte de contexte ni fuite de qualité.
+
+## Suivi post-livraison
+
+- 2026-09-22 : `LocalAiService#analyze` existait déjà (`POST /api/ai/analyze`, testé) mais ne faisait que
+  vérifier un booléen d'activation puis renvoyait toujours une erreur 503 (« Aucun fournisseur IA locale
+  configuré ») — aucune intégration réelle, uniquement une frontière honnête. Corrigé en implémentant une
+  vraie intégration HTTP vers un serveur Ollama local (`POST {endpoint}/api/generate`, `endpoint`/`model`
+  configurables via `GENEOAPP_LOCAL_AI_ENDPOINT`/`GENEOAPP_LOCAL_AI_MODEL`, désactivé par défaut via
+  `GENEOAPP_LOCAL_AI`) :
+  - `LocalAiService` : `fetchImpl` injectable pour les tests (pas d'appel réseau réel en CI) ; erreurs
+    honnêtes (503) si désactivée, serveur injoignable, ou réponse HTTP en erreur — jamais de réponse
+    générée artificiellement en repli. Testé (`test/server/local-ai-service.test.js`, 5 cas).
+  - Canal IPC `AI_ANALYZE` ajouté (`channels.js`, `build-handlers.js`, `preload.js`), testé
+    (`test/electron/ipc-handlers.test.js`).
+  - `geneoapp-client.js` : namespace `ai` (HTTP + IPC).
+  - `App.jsx` : nouvel onglet « IA locale » avec formulaire de question, affichage de la réponse réelle ou
+    du message d'indisponibilité honnête. Testé (`App.test.jsx`, 2 cas : indisponible, disponible).
+  - Limite restante : aucun modèle n'est embarqué dans l'application (dépend d'un serveur Ollama démarré par
+    l'utilisateur sur sa machine) ; LM Studio (mentionné au périmètre) n'est pas testé, seul le protocole
+    Ollama `/api/generate` l'est. Les workflows CI/CD (`ci.yml`, `release.yml`, `pages.yml`) existaient déjà
+    et n'ont pas été modifiés dans cette passe — à auditer séparément.

@@ -124,6 +124,10 @@ const api = {
   statistics: {
     totals: () => invoke(IPC_CHANNELS.STATISTICS_TOTALS),
   },
+
+  ai: {
+    analyze: (prompt) => invoke(IPC_CHANNELS.AI_ANALYZE, { prompt }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);
