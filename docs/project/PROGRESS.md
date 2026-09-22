@@ -10,11 +10,13 @@
 | 06 - Recherche, déduplication, notes et preuves | Terminée | 8 tests recherche/notes/doublons, `npm run lint`, `npm run format:check` | `db9c9b1` |
 | 07 - Sources, médias, OCR et carnet de recherche | Terminée | test ciblé du carnet, `npm run test:db`, `npm run lint`, `npm run format:check` | `2dc5fd6` |
 | 08 - Sécurité, comptes, sauvegardes et utilisateurs | Terminée | 4 tests serveur, 7 tests IPC, 22 tests API sécurité/médias | `b374c4b` |
-| 09 - UX, navigation et vues généalogiques | Terminée* | 21 tests client, `npm run build`, `npm run format:check` | `8ec536d` |
-| 10 - IA locale, CI/CD et release | Terminée | 64 tests API, `npm run lint`, `npm run format:check` | `7e0a1d4` |
+| 09 - UX, navigation et vues généalogiques | Terminée* | 36 tests client, `npm run build`, `npm run format:check` | `a91c118` |
+| 10 - IA locale, CI/CD et release | Terminée** | 9 tests serveur IA locale, `npm run lint`, `npm run format:check` | `a91c118` |
 
 ## Règle de progression
 
 Une issue passe à `Terminée` uniquement après exécution des validations indiquées dans son issue et création d’un commit dédié. Les échecs préexistants hors du périmètre de l’issue sont conservés comme dette technique documentée, jamais masqués.
 
-\* 09 : un audit du 2026-09-22 a constaté que l'écran livré était une vitrine statique (données codées en dur, aucun appel API/IPC, zéro test). Corrigé le même jour (voir « Suivi post-livraison » dans `docs/project/issues/09-ux-tree-views-accessibility.md`) : l'écran principal (personnes, relations, arbre) est désormais branché sur l'API locale réelle et testé. Les autres vues du cahier des charges (familles, recherche, carnet, sauvegardes, statistiques, GEDCOM) restent à construire côté interface.
+\* 09 : un audit du 2026-09-22 a constaté que l'écran livré était une vitrine statique (données codées en dur, aucun appel API/IPC, zéro test). Corrigé le même jour et dans les jours suivants (voir « Suivi post-livraison » dans `docs/project/issues/09-ux-tree-views-accessibility.md` et `07-sources-media-research-notebook.md`) : personnes/relations/arbre, recherche, GEDCOM (import+export), sauvegardes/corbeille, détection de doublons, familles (unions), carnet de recherche et statistiques sont désormais des écrans réels branchés sur l'API locale, chacun testé. Restent des versions simplifiées : pas de vue carte/chronologie graphique/radiale, pas d'assistant de fusion de doublons.
+
+\*\* 10 : un audit du 2026-09-22 a constaté que `LocalAiService` était une frontière purement symbolique (toujours 503, aucun fournisseur). Corrigé (voir « Suivi post-livraison » dans `docs/project/issues/10-ai-local-and-ci-cd.md`) : intégration HTTP réelle vers un serveur Ollama local, exposée via IPC et un écran dédié. Les workflows CI/CD (`ci.yml`, `release.yml`, `pages.yml`) ont été audités le même jour et sont déjà conformes au cahier des charges (lint/format/tests/build sur PR, matrice multi-OS, packaging + checksums + release GitHub en brouillon, déploiement du site) — aucune correction nécessaire.
