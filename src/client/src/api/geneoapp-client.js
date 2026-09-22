@@ -68,6 +68,9 @@ function createHttpClient() {
         fetchJson(`/api/events/${id}/participants`, { method: 'POST', body: data }),
       remove: (id) => fetchJson(`/api/events/${id}`, { method: 'DELETE' }),
     },
+    audit: {
+      listForEntity: (tableName, rowId) => fetchJson(`/api/audit/${tableName}/${rowId}`),
+    },
     graph: {
       ancestors: (personId, depth) =>
         fetchJson(`/api/persons/${personId}/ancestors${depth ? `?depth=${depth}` : ''}`),
@@ -191,6 +194,9 @@ function createIpcClient(bridge) {
       listForPerson: (personId) => bridge.events.listForPerson(personId),
       addParticipant: (id, data) => bridge.events.addParticipant(id, data),
       remove: (id) => bridge.events.remove(id),
+    },
+    audit: {
+      listForEntity: (tableName, rowId) => bridge.audit.listForEntity(tableName, rowId),
     },
     graph: {
       ancestors: (personId, depth) => bridge.graph.ancestors(personId, depth),

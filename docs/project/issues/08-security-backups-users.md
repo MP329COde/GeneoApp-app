@@ -98,3 +98,11 @@ Une base de sécurité locale robuste, compatible avec le fonctionnement hors li
   expose ces mêmes instances ; le test invoque directement `services.backups.restoreLogical` deux fois via
   `Promise.all`, garantissant un appel réellement concurrent dans le même tick. Validé sur 5 exécutions
   consécutives sans échec.
+- 2026-09-22 (suite) : `AuditService#listForEntity` avait son canal IPC (`AUDIT_LIST_FOR_ENTITY`) mais était
+  absent de `geneoapp-client.js` et de tout écran — le journal d'audit append-only existait mais restait
+  invisible à l'utilisateur. Corrigé : namespace `audit` ajouté au client (HTTP + IPC) ; nouvel onglet
+  « Journal » sur la fiche personne sélectionnée, listant les entrées réelles (opération, horodatage, auteur).
+  Testé (`App.test.jsx`). Avec cet ajout, les dix-sept services du backend (`persons`, `places`, `events`,
+  `unions`, `parentages`, `sources`, `media`, `search`, `audit`, `gedcom`, `accounts`, `trash`, `backups`,
+  `graph`, `notes`, `research`, `statistics`, `localAi`) sont désormais tous exposés via IPC, câblés dans
+  `geneoapp-client.js`, et consommés par au moins un écran réel — plus aucune fonctionnalité backend orpheline.

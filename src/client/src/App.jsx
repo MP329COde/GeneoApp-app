@@ -825,6 +825,55 @@ function SourcesPanel({ selected }) {
 
 const NOTE_CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 
+function AuditPanel({ selected }) {
+  const [entries, setEntries] = useState(null);
+  const [auditError, setAuditError] = useState(null);
+
+  const loadAudit = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setEntries(await client.audit.listForEntity('persons', selected.id));
+    } catch (loadError) {
+      setAuditError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setEntries(null);
+    loadAudit();
+  }, [loadAudit]);
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir son journal d’audit.</p>;
+  }
+
+  return (
+    <div className="search-panel">
+      <h3>Journal d’audit de {personLabel(selected)}</h3>
+      {auditError ? (
+        <p role="alert" className="notice notice--error">
+          {auditError}
+        </p>
+      ) : null}
+
+      {entries === null ? (
+        <p role="status">Chargement…</p>
+      ) : entries.length === 0 ? (
+        <p className="notice">Aucune entrée d’audit pour cette fiche.</p>
+      ) : (
+        <ul className="search-results">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <Badge tone="neutral">{entry.operation}</Badge> {entry.performed_at}
+              {entry.performed_by ? ` — ${entry.performed_by}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function NotesPanel({ selected }) {
   const [notes, setNotes] = useState(null);
   const [body, setBody] = useState('');
@@ -1826,6 +1875,13 @@ function App() {
                 Notes
               </button>
               <button
+                className={view === 'audit' ? 'is-active' : ''}
+                onClick={() => setView('audit')}
+                type="button"
+              >
+                Journal
+              </button>
+              <button
                 className={view === 'media' ? 'is-active' : ''}
                 onClick={() => setView('media')}
                 type="button"
@@ -1887,6 +1943,8 @@ function App() {
               <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
             ) : view === 'notes' ? (
               <NotesPanel selected={selected} />
+            ) : view === 'audit' ? (
+              <AuditPanel selected={selected} />
             ) : view === 'media' ? (
               <MediaPanel selected={selected} />
             ) : view === 'sources' ? (

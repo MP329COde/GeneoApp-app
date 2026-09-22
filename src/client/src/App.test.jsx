@@ -80,6 +80,9 @@ const events = vi.hoisted(() => ({
   addParticipant: vi.fn(),
   remove: vi.fn(),
 }));
+const audit = vi.hoisted(() => ({
+  listForEntity: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -100,6 +103,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     parentages,
     places,
     events,
+    audit,
   }),
 }));
 
@@ -780,5 +784,27 @@ describe('App', () => {
       }),
     );
     await waitFor(() => expect(screen.getAllByText(/Nantes/).length).toBeGreaterThan(0));
+  });
+
+  it('affiche le journal d’audit réel d’une personne', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    audit.listForEntity.mockResolvedValue([
+      { id: 1, operation: 'INSERT', performed_at: '2026-09-22T10:00:00.000Z', performed_by: null },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Journal' }));
+
+    await waitFor(() => expect(audit.listForEntity).toHaveBeenCalledWith('persons', 1));
+    await waitFor(() => expect(screen.getByText('INSERT')).toBeInTheDocument());
   });
 });
