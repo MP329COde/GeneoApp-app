@@ -5,13 +5,13 @@ export function errorHandler(error, request, response, next) {
   const httpError = toHttpError(error);
   const status = httpError.status ?? 500;
 
-  if (status >= 500) {
+  if (status >= 500 && status !== 503) {
     console.error(error);
   }
 
   response.status(status).json({
     error: {
-      message: status >= 500 ? 'Erreur interne du serveur' : httpError.message,
+      message: status >= 500 && status !== 503 ? 'Erreur interne du serveur' : httpError.message,
       fields: httpError.fields ?? undefined,
     },
   });

@@ -34,6 +34,8 @@ import { OcrService } from '../ocr/service.js';
 import { GenealogyGraphService } from './genealogy-graph.service.js';
 import { NoteService } from './note.service.js';
 import { ResearchService } from './research.service.js';
+import { StatisticsService } from './statistics.service.js';
+import { LocalAiService } from './local-ai.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
 const DEFAULT_BACKUP_DIR =
@@ -72,5 +74,7 @@ export function createServices(
     graph: new GenealogyGraphService(database),
     notes: new NoteService(new NoteRepository(database)),
     research: new ResearchService(new ResearchRepository(database)),
+    statistics: new StatisticsService(database),
+    localAi: new LocalAiService(),
   };
 }

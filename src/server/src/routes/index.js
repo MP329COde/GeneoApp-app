@@ -15,6 +15,9 @@ import { backupRoutes } from './backup.routes.js';
 import { graphRoutes } from './graph.routes.js';
 import { noteRoutes } from './note.routes.js';
 import { researchRoutes } from './research.routes.js';
+import { statisticsRoutes } from './statistics.routes.js';
+import { reportsRoutes } from './reports.routes.js';
+import { localAiRoutes } from './local-ai.routes.js';
 
 export function apiRoutes(services) {
   const router = Router();
@@ -35,6 +38,9 @@ export function apiRoutes(services) {
   router.use('/graph', graphRoutes(services));
   router.use('/notes', noteRoutes(services));
   router.use('/notebook', researchRoutes(services));
+  router.use('/statistics', statisticsRoutes(services));
+  router.use('/reports', reportsRoutes(services));
+  router.use('/ai', localAiRoutes(services));
 
   return router;
 }

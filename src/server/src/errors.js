@@ -47,6 +47,14 @@ export class UnsupportedMediaTypeError extends Error {
   }
 }
 
+export class ServiceUnavailableError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+    this.status = 503;
+  }
+}
+
 export function toHttpError(error) {
   if (error.status) {
     return error;
