@@ -137,3 +137,36 @@ test('GEDCOM importe et réexporte les événements étendus (profession, migrat
     await server.close();
   }
 });
+
+test('GEDCOM importe et réexporte un événement militaire via le tag générique EVEN/TYPE', async () => {
+  const server = await startTestServer();
+  try {
+    const withMilitaryEvent = fixture.replace(
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London',
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London\n1 EVEN\n2 TYPE Military\n2 DATE 1835',
+    );
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: withMilitaryEvent },
+    });
+    assert.equal(imported.status, 201);
+
+    const types = server.database
+      .prepare(
+        `SELECT type FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id
+         WHERE ep.person_id = ? ORDER BY e.id`,
+      )
+      .all(imported.body.ids.persons[0])
+      .map((row) => row.type);
+    assert.deepEqual(types, ['BIRTH', 'MILITARY']);
+
+    const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Military/);
+  } finally {
+    await server.close();
+  }
+});

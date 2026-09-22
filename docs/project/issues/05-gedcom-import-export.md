@@ -96,6 +96,10 @@ Un pipeline GEDCOM fiable, sûr et réversible, prêt pour les usages de migrati
   religieux et naturalisation. Ajout des tags GEDCOM 5.5.1 standard correspondants (`OCCU, RESI, EMIG, IMMI,
   CENS, NATU, WILL, PROB, EDUC, RELI`) à l'import et à l'export (table `EXPORT_EVENT_TAGS` dérivée de
   `EVENT_TAGS`, en remplacement du mapping d'export codé en dur). Testé par un cas d'import/réexport dédié
-  (`test/api/gedcom.test.js`). Limite connue : `MILITARY` n'a pas d'équivalent standard direct en GEDCOM 5.5.1
-  (nécessiterait un événement générique `EVEN` avec sous-tag `TYPE`, non implémenté) et reste donc ignoré à
-  l'import comme à l'export.
+  (`test/api/gedcom.test.js`).
+- 2026-09-22 (suite) : `MILITARY` n'ayant pas de tag GEDCOM 5.5.1 dédié, il est désormais représenté via le tag
+  générique `EVEN` avec sous-structure `TYPE Military`, comme le prévoit la norme pour tout événement hors
+  catalogue standard (`resolveEventType` en import, `GENERIC_EVENT_LABELS` en export). Testé par un cas
+  d'import/réexport dédié (`test/api/gedcom.test.js`, vérifiant `1 EVEN` / `2 TYPE Military`). Le mécanisme est
+  extensible à d'autres types hors catalogue en ajoutant une entrée à `GENERIC_EVENT_LABELS`, mais aucun autre
+  type métier n'en a besoin actuellement.

@@ -25,6 +25,23 @@ const EXPORT_EVENT_TAGS = Object.fromEntries(
   Object.entries(EVENT_TAGS).map(([tag, type]) => [type, tag]),
 );
 
+// Types métier sans tag GEDCOM dédié : représentés via le tag générique EVEN
+// avec une sous-structure TYPE, comme le prévoit la norme 5.5.1 pour tout
+// événement hors catalogue standard (§ EVENT_DETAIL / event_descriptor).
+const GENERIC_EVENT_LABELS = { MILITARY: 'Military' };
+const GENERIC_EVENT_TYPES = Object.fromEntries(
+  Object.entries(GENERIC_EVENT_LABELS).map(([type, label]) => [label.toLowerCase(), type]),
+);
+
+function resolveEventType(record) {
+  if (EVENT_TAGS[record.tag]) return EVENT_TAGS[record.tag];
+  if (record.tag === 'EVEN') {
+    const typeValue = value(record, 'TYPE');
+    return typeValue ? (GENERIC_EVENT_TYPES[typeValue.trim().toLowerCase()] ?? null) : null;
+  }
+  return null;
+}
+
 export class GedcomService {
   constructor(database) {
     this.database = database;
@@ -138,8 +155,10 @@ function generateGedcom(database, persons, families, format) {
       .all(person.id);
     for (const event of events) {
       const tag = EXPORT_EVENT_TAGS[event.type];
-      if (!tag) continue;
-      lines.push(`1 ${tag}`);
+      const genericLabel = GENERIC_EVENT_LABELS[event.type];
+      if (!tag && !genericLabel) continue;
+      lines.push(`1 ${tag ?? 'EVEN'}`);
+      if (genericLabel) lines.push(`2 TYPE ${genericLabel}`);
       if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
       if (event.place_id) {
         const place = database.prepare('SELECT name FROM places WHERE id = ?').get(event.place_id);
@@ -172,7 +191,8 @@ function buildMappingPreview(records) {
     persons: individuals.length,
     events:
       individuals.reduce(
-        (count, person) => count + person.children.filter((child) => EVENT_TAGS[child.tag]).length,
+        (count, person) =>
+          count + person.children.filter((child) => resolveEventType(child)).length,
         0,
       ) +
       families.reduce(
@@ -232,13 +252,13 @@ function applyMapping(database, records, performedBy) {
   }
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
-    for (const event of person.children.filter((child) => EVENT_TAGS[child.tag])) {
+    for (const event of person.children.filter((child) => resolveEventType(child))) {
       const eventId = insertEventRecord(
         database,
         insertEvent,
         insertPlace,
         placeIds,
-        EVENT_TAGS[event.tag],
+        resolveEventType(event),
         event,
         performedBy,
       );
