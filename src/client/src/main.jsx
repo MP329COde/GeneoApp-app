@@ -1,19 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { I18nProvider, LanguageSwitcher } from './design-system/index.js';
+import { I18nProvider } from './design-system/index.js';
+import App from './App.jsx';
+import './App.css';
 import './design-system/tokens/tokens.css';
 import './design-system/tokens/a11y.css';
-
-function App() {
-  return (
-    <main aria-labelledby="app-title">
-      <header>
-        <h1 id="app-title">GeneoApp</h1>
-        <LanguageSwitcher />
-      </header>
-    </main>
-  );
-}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
