@@ -64,6 +64,7 @@ export function buildIpcHandlers(services) {
     statistics,
     localAi,
     notes,
+    media,
   } = services;
 
   return {
@@ -226,5 +227,25 @@ export function buildIpcHandlers(services) {
       notes.listForEntity(entityType, entityId),
     ),
     [IPC_CHANNELS.NOTES_GET]: wrap(({ id }) => notes.get(id)),
+
+    [IPC_CHANNELS.MEDIA_UPLOAD]: wrap(({ data, performedBy }) =>
+      media.upload(data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.MEDIA_GET]: wrap(({ id }) => media.get(id)),
+    [IPC_CHANNELS.MEDIA_DOWNLOAD]: wrap(async ({ id }) => {
+      const { media: record, content } = await media.download(id);
+      return {
+        filename: record.original_filename,
+        mimeType: record.mime_type,
+        contentBase64: content.toString('base64'),
+      };
+    }),
+    [IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY]: wrap(({ entityType, entityId }) =>
+      media.listForEntity(entityType, entityId),
+    ),
+    [IPC_CHANNELS.MEDIA_REMOVE]: wrap(({ id, performedBy }) => {
+      media.remove(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
   };
 }

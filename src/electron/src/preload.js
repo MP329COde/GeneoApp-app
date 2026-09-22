@@ -135,6 +135,15 @@ const api = {
       invoke(IPC_CHANNELS.NOTES_LIST_FOR_ENTITY, { entityType, entityId }),
     get: (id) => invoke(IPC_CHANNELS.NOTES_GET, { id }),
   },
+
+  media: {
+    upload: (data, performedBy) => invoke(IPC_CHANNELS.MEDIA_UPLOAD, { data, performedBy }),
+    get: (id) => invoke(IPC_CHANNELS.MEDIA_GET, { id }),
+    download: (id) => invoke(IPC_CHANNELS.MEDIA_DOWNLOAD, { id }),
+    listForEntity: (entityType, entityId) =>
+      invoke(IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY, { entityType, entityId }),
+    remove: (id, performedBy) => invoke(IPC_CHANNELS.MEDIA_REMOVE, { id, performedBy }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

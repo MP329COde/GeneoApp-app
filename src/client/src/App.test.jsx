@@ -49,6 +49,12 @@ const notes = vi.hoisted(() => ({
   create: vi.fn(),
   listForEntity: vi.fn(),
 }));
+const media = vi.hoisted(() => ({
+  upload: vi.fn(),
+  download: vi.fn(),
+  listForEntity: vi.fn(),
+  remove: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -64,6 +70,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     statistics,
     ai,
     notes,
+    media,
   }),
 }));
 
@@ -569,5 +576,44 @@ describe('App', () => {
       }),
     );
     await waitFor(() => expect(screen.getByText('Contradiction')).toBeInTheDocument());
+  });
+
+  it('téléverse et liste des médias réels pour une personne, avec statut OCR', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    media.listForEntity
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 1, original_filename: 'acte.txt', ocr_status: 'UNAVAILABLE' }]);
+    media.upload.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
+    await waitFor(() => expect(media.listForEntity).toHaveBeenCalledWith('PERSON', 1));
+    await waitFor(() => expect(screen.getByText(/Aucun média/)).toBeInTheDocument());
+
+    const file = new File(['contenu'], 'acte.txt', { type: 'text/plain' });
+    fireEvent.change(screen.getByLabelText('Ajouter un fichier'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() =>
+      expect(media.upload).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filename: 'acte.txt',
+          entityType: 'PERSON',
+          entityId: 1,
+        }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByText('acte.txt')).toBeInTheDocument());
+    expect(screen.getByText('UNAVAILABLE')).toBeInTheDocument();
   });
 });

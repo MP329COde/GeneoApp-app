@@ -279,3 +279,42 @@ test('NOTES_CREATE et NOTES_LIST_FOR_ENTITY gèrent les notes réelles avec conf
   assert.equal(fetched.ok, true);
   assert.equal(fetched.data.confidence, 'LOW');
 });
+
+test('MEDIA_UPLOAD, MEDIA_LIST_FOR_ENTITY, MEDIA_DOWNLOAD et MEDIA_REMOVE gèrent des médias réels', async () => {
+  const handlers = createHandlers();
+
+  const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+
+  // Signature binaire PNG minimale : le stockage vérifie le contenu réel
+  // (magic bytes), jamais l'extension ou le type MIME déclaré.
+  const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const contentBase64 = pngBytes.toString('base64');
+  const uploaded = await handlers[IPC_CHANNELS.MEDIA_UPLOAD]({
+    data: {
+      filename: 'acte.png',
+      contentBase64,
+      entityType: 'PERSON',
+      entityId: person.data.id,
+    },
+  });
+  assert.equal(uploaded.ok, true);
+  assert.equal(uploaded.data.original_filename, 'acte.png');
+
+  const listed = await handlers[IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY]({
+    entityType: 'PERSON',
+    entityId: person.data.id,
+  });
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.length, 1);
+
+  const downloaded = await handlers[IPC_CHANNELS.MEDIA_DOWNLOAD]({ id: uploaded.data.id });
+  assert.equal(downloaded.ok, true);
+  assert.equal(downloaded.data.filename, 'acte.png');
+  assert.ok(Buffer.from(downloaded.data.contentBase64, 'base64').equals(pngBytes));
+
+  const removed = await handlers[IPC_CHANNELS.MEDIA_REMOVE]({ id: uploaded.data.id });
+  assert.equal(removed.ok, true);
+  assert.equal(removed.data.removed, true);
+});

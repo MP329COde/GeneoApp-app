@@ -99,5 +99,16 @@ Un système documentaire, visuel et de recherche généalogique fiable, adapté 
 - 2026-09-22 (suite) : le rattachement d'une piste de recherche à une personne (`personId`, déjà accepté par
   `ResearchService#create`) est désormais exposé dans le formulaire du Carnet (sélecteur optionnel) et affiché
   dans la liste avec un lien de navigation direct vers la fiche de la personne. Testé (`App.test.jsx`). Reste
-  hors périmètre : modification de statut depuis l'écran, rattachement à une preuve, OCR, reconnaissance de
-  personnes dans un média et gestion des documents/médias (non implémentés côté serveur non plus).
+  hors périmètre : modification de statut depuis l'écran, rattachement à une preuve.
+- 2026-09-22 (suite) : audit constatant que `MediaService` (upload avec validation de signature binaire réelle,
+  OCR conditionnel via `OcrService`, téléchargement, suppression) était complet et testé côté API
+  (`test/api/media.test.js`), mais absent de l'allowlist IPC et de tout écran. Corrigé :
+  - Canaux IPC `MEDIA_UPLOAD`/`MEDIA_GET`/`MEDIA_DOWNLOAD`/`MEDIA_LIST_FOR_ENTITY`/`MEDIA_REMOVE` ajoutés,
+    testés (`test/electron/ipc-handlers.test.js`). Le contenu binaire transite en base64 (jamais de
+    `Buffer`/`Blob` bruts à travers `contextBridge`) ; `geneoapp-client.js` reconstruit un `Blob` côté renderer
+    pour les deux transports (IPC et HTTP, ce dernier lisant directement la réponse binaire du serveur).
+  - `App.jsx` : nouvel onglet « Médias » sur la fiche personne sélectionnée — téléversement (lu en base64 côté
+    client via `FileReader`), liste avec statut OCR réel, téléchargement (déclenche un fichier via Blob),
+    suppression. Testé (`App.test.jsx`).
+  - Limite connue : seuls les médias de type PERSON sont exposés côté écran ; pas d'affichage du texte OCR
+    extrait ni de reconnaissance de personnes dans une photo.

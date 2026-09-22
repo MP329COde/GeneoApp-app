@@ -33,6 +33,20 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   return data;
 }
 
+function base64ToBlob(base64, mimeType) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+function parseContentDispositionFilename(header) {
+  const match = /filename\*?=(?:UTF-8''|")?([^";]+)"?/i.exec(header ?? '');
+  return match ? decodeURIComponent(match[1]) : 'fichier';
+}
+
 function createHttpClient() {
   return {
     persons: {
@@ -109,6 +123,24 @@ function createHttpClient() {
       listForEntity: (entityType, entityId) => fetchJson(`/api/notes/${entityType}/${entityId}`),
       get: (id) => fetchJson(`/api/notes/by-id/${id}`),
     },
+    media: {
+      upload: (data) => fetchJson('/api/media', { method: 'POST', body: data }),
+      get: (id) => fetchJson(`/api/media/${id}`),
+      download: async (id) => {
+        const response = await fetch(`/api/media/${id}/content`);
+        if (!response.ok) {
+          throw new Error('Impossible de télécharger le média');
+        }
+        const blob = await response.blob();
+        const filename = parseContentDispositionFilename(
+          response.headers.get('content-disposition'),
+        );
+        return { filename, blob };
+      },
+      listForEntity: (entityType, entityId) =>
+        fetchJson(`/api/media/by-entity/${entityType}/${entityId}`),
+      remove: (id) => fetchJson(`/api/media/${id}`, { method: 'DELETE' }),
+    },
   };
 }
 
@@ -171,6 +203,16 @@ function createIpcClient(bridge) {
       create: (data) => bridge.notes.create(data),
       listForEntity: (entityType, entityId) => bridge.notes.listForEntity(entityType, entityId),
       get: (id) => bridge.notes.get(id),
+    },
+    media: {
+      upload: (data) => bridge.media.upload(data),
+      get: (id) => bridge.media.get(id),
+      download: async (id) => {
+        const { filename, mimeType, contentBase64 } = await bridge.media.download(id);
+        return { filename, blob: base64ToBlob(contentBase64, mimeType) };
+      },
+      listForEntity: (entityType, entityId) => bridge.media.listForEntity(entityType, entityId),
+      remove: (id) => bridge.media.remove(id),
     },
   };
 }

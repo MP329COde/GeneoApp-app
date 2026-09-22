@@ -73,4 +73,10 @@ export const IPC_CHANNELS = Object.freeze({
   NOTES_CREATE: 'geneoapp:notes:create',
   NOTES_LIST_FOR_ENTITY: 'geneoapp:notes:listForEntity',
   NOTES_GET: 'geneoapp:notes:get',
+
+  MEDIA_UPLOAD: 'geneoapp:media:upload',
+  MEDIA_GET: 'geneoapp:media:get',
+  MEDIA_DOWNLOAD: 'geneoapp:media:download',
+  MEDIA_LIST_FOR_ENTITY: 'geneoapp:media:listForEntity',
+  MEDIA_REMOVE: 'geneoapp:media:remove',
 });

@@ -656,6 +656,140 @@ function downloadText(filename, text) {
   URL.revokeObjectURL(url);
 }
 
+function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+    reader.onerror = () => reject(reader.error ?? new Error('Lecture du fichier impossible'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function MediaPanel({ selected }) {
+  const [items, setItems] = useState(null);
+  const [mediaError, setMediaError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadMedia = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setItems(await client.media.listForEntity('PERSON', selected.id));
+    } catch (loadError) {
+      setMediaError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setItems(null);
+    loadMedia();
+  }, [loadMedia]);
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir et ajouter des médias.</p>;
+  }
+
+  const handleUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setMediaError(null);
+    try {
+      const contentBase64 = await readFileAsBase64(file);
+      await client.media.upload({
+        filename: file.name,
+        contentBase64,
+        entityType: 'PERSON',
+        entityId: selected.id,
+      });
+      await loadMedia();
+    } catch (uploadError) {
+      setMediaError(uploadError.message);
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDownload = async (id) => {
+    setMediaError(null);
+    try {
+      const { filename, blob } = await client.media.download(id);
+      downloadBlob(filename, blob);
+    } catch (downloadError) {
+      setMediaError(downloadError.message);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    setBusy(true);
+    setMediaError(null);
+    try {
+      await client.media.remove(id);
+      await loadMedia();
+    } catch (removeError) {
+      setMediaError(removeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Médias de {personLabel(selected)}</h3>
+      {mediaError ? (
+        <p role="alert" className="notice notice--error">
+          {mediaError}
+        </p>
+      ) : null}
+
+      <label className="gedcom-panel__file">
+        <span>Ajouter un fichier</span>
+        <input type="file" onChange={handleUpload} disabled={busy} />
+      </label>
+
+      {items === null ? (
+        <p role="status">Chargement…</p>
+      ) : items.length === 0 ? (
+        <p className="notice">Aucun média pour cette personne.</p>
+      ) : (
+        <ul className="search-results">
+          {items.map((item) => (
+            <li key={item.id}>
+              <Badge tone="neutral">{item.ocr_status}</Badge> {item.original_filename}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleDownload(item.id)}
+              >
+                Télécharger
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => handleRemove(item.id)}
+                disabled={busy}
+              >
+                Supprimer
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function GedcomPanel({ onImported }) {
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
@@ -1180,6 +1314,13 @@ function App() {
                 Notes
               </button>
               <button
+                className={view === 'media' ? 'is-active' : ''}
+                onClick={() => setView('media')}
+                type="button"
+              >
+                Médias
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -1220,6 +1361,8 @@ function App() {
               <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
             ) : view === 'notes' ? (
               <NotesPanel selected={selected} />
+            ) : view === 'media' ? (
+              <MediaPanel selected={selected} />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}
