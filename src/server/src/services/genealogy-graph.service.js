@@ -76,13 +76,17 @@ export class GenealogyGraphService {
       .all(personId, personId);
   }
 
-  traverse(personId, direction) {
+  traverse(personId, direction, { maxDepth } = {}) {
     this.getPerson(personId);
+    if (maxDepth !== undefined && (!Number.isInteger(maxDepth) || maxDepth < 0)) {
+      throw new ValidationError('La profondeur doit être un entier positif ou nul');
+    }
     const result = [];
     const seen = new Set([personId]);
     const queue = [{ id: personId, generation: 0 }];
     while (queue.length > 0) {
       const current = queue.shift();
+      if (maxDepth !== undefined && current.generation >= maxDepth) continue;
       const relatives =
         direction === 'up' ? this.getParents(current.id) : this.getChildren(current.id);
       for (const relative of relatives) {
@@ -96,12 +100,12 @@ export class GenealogyGraphService {
     return result;
   }
 
-  getAncestors(personId) {
-    return this.traverse(personId, 'up');
+  getAncestors(personId, options = {}) {
+    return this.traverse(personId, 'up', options);
   }
 
-  getDescendants(personId) {
-    return this.traverse(personId, 'down');
+  getDescendants(personId, options = {}) {
+    return this.traverse(personId, 'down', options);
   }
 
   getRelations(personId) {

@@ -96,3 +96,12 @@ Résultat attendu :
 ## Sortie de livraison
 
 Un moteur de relations généalogiques fiable, calculable et testable, base indispensable pour les vues d’arbres, la recherche et la validation des données.
+
+## Suivi post-livraison
+
+- 2026-09-22 : `getAncestors`/`getDescendants` acceptaient une profondeur illimitée uniquement ; ajout d’un
+  paramètre `depth` optionnel (query string `?depth=`), validé côté service (`GenealogyGraphService.traverse`)
+  et testé (`test/api/graph.test.js`). `findRelationship` ne calcule pas encore explicitement la branche
+  (paternelle/maternelle) ni le degré de parenté nommé (ex. « cousin germain ») ; reste une dette technique à
+  traiter avant la Phase I (vues radiale/éventail qui en dépendent). `detectPotentialDuplicates()` n’est pas
+  implémenté dans ce service : la déduplication vit dans le module de recherche (issue 06).

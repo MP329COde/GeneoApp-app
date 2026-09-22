@@ -53,6 +53,30 @@ test('le graphe retourne ancêtres, descendants, fratrie et conjoints', async ()
     assert.equal(relations.body.parents[0].id, parent);
     assert.equal(relations.body.siblings[0].id, sibling);
     assert.equal(relations.body.spouses[0].id, spouse);
+
+    const shallowAncestors = await requestJson(
+      server.baseUrl,
+      `/api/persons/${child}/ancestors?depth=1`,
+    );
+    assert.deepEqual(
+      shallowAncestors.body.map((person) => person.id),
+      [parent],
+    );
+
+    const shallowDescendants = await requestJson(
+      server.baseUrl,
+      `/api/persons/${grandParent}/descendants?depth=1`,
+    );
+    assert.deepEqual(
+      shallowDescendants.body.map((person) => person.id),
+      [parent],
+    );
+
+    const invalidDepth = await requestJson(
+      server.baseUrl,
+      `/api/persons/${child}/ancestors?depth=-1`,
+    );
+    assert.equal(invalidDepth.status, 400);
   } finally {
     await server.close();
   }

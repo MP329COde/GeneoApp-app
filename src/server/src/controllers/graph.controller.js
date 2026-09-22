@@ -1,11 +1,19 @@
+function parseDepth(rawDepth) {
+  if (rawDepth === undefined) return undefined;
+  const depth = Number(rawDepth);
+  return depth;
+}
+
 export function createGraphController(services) {
   const { graph } = services;
   return {
     ancestors(request, response) {
-      response.json(graph.getAncestors(Number(request.params.id)));
+      const maxDepth = parseDepth(request.query.depth);
+      response.json(graph.getAncestors(Number(request.params.id), { maxDepth }));
     },
     descendants(request, response) {
-      response.json(graph.getDescendants(Number(request.params.id)));
+      const maxDepth = parseDepth(request.query.depth);
+      response.json(graph.getDescendants(Number(request.params.id), { maxDepth }));
     },
     relations(request, response) {
       response.json(graph.getRelations(Number(request.params.id)));
