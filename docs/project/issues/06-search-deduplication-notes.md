@@ -86,3 +86,19 @@ Résultat attendu :
 ## Sortie de livraison
 
 Une couche de recherche, de preuves et de qualité des données fiable, orientée démonstration, préparation de l’enquête généalogique et réduction des erreurs de saisie.
+
+## Suivi post-livraison
+
+- 2026-09-22 : audit constatant que `NoteService` (confiance LOW/MEDIUM/HIGH, `isContradiction`, entités
+  PERSON/FAMILY/EVENT/SOURCE/CITATION/PLACE/TREE/SEARCH) était complet et testé côté API
+  (`POST/GET /api/notes`), mais totalement absent de l'allowlist IPC et de tout écran — aucun moyen d'y accéder
+  depuis Electron ou l'interface. Corrigé :
+  - Canaux IPC `NOTES_CREATE`/`NOTES_LIST_FOR_ENTITY`/`NOTES_GET` ajoutés (`channels.js`, `build-handlers.js`,
+    `preload.js`), testés (`test/electron/ipc-handlers.test.js`).
+  - `geneoapp-client.js` : namespace `notes` (HTTP + IPC).
+  - `App.jsx` : nouvel onglet « Notes » sur la fiche personne sélectionnée — liste des notes réelles avec
+    niveau de confiance et signalement visuel des contradictions, formulaire de création. Testé
+    (`App.test.jsx`).
+  - Limite connue : uniquement les notes de type PERSON sont exposées côté écran (l'API et le service gèrent
+    aussi FAMILY/EVENT/SOURCE/CITATION/PLACE/TREE/SEARCH, mais aucun écran ne les couvre encore). La
+    détection de doublons dispose d'un écran (issue 09) mais sans assistant de fusion.

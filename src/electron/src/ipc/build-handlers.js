@@ -63,6 +63,7 @@ export function buildIpcHandlers(services) {
     research,
     statistics,
     localAi,
+    notes,
   } = services;
 
   return {
@@ -217,5 +218,13 @@ export function buildIpcHandlers(services) {
     })),
 
     [IPC_CHANNELS.AI_ANALYZE]: wrap((data) => localAi.analyze(data)),
+
+    [IPC_CHANNELS.NOTES_CREATE]: wrap(({ data, performedBy }) =>
+      notes.create(data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.NOTES_LIST_FOR_ENTITY]: wrap(({ entityType, entityId }) =>
+      notes.listForEntity(entityType, entityId),
+    ),
+    [IPC_CHANNELS.NOTES_GET]: wrap(({ id }) => notes.get(id)),
   };
 }

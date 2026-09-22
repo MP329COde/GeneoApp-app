@@ -128,6 +128,13 @@ const api = {
   ai: {
     analyze: (prompt) => invoke(IPC_CHANNELS.AI_ANALYZE, { prompt }),
   },
+
+  notes: {
+    create: (data, performedBy) => invoke(IPC_CHANNELS.NOTES_CREATE, { data, performedBy }),
+    listForEntity: (entityType, entityId) =>
+      invoke(IPC_CHANNELS.NOTES_LIST_FOR_ENTITY, { entityType, entityId }),
+    get: (id) => invoke(IPC_CHANNELS.NOTES_GET, { id }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

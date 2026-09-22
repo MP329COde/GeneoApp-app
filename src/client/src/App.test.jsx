@@ -45,6 +45,10 @@ const statistics = vi.hoisted(() => ({
 const ai = vi.hoisted(() => ({
   analyze: vi.fn(),
 }));
+const notes = vi.hoisted(() => ({
+  create: vi.fn(),
+  listForEntity: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -59,6 +63,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     research,
     statistics,
     ai,
+    notes,
   }),
 }));
 
@@ -517,5 +522,52 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByText('Trois personnes enregistrées.')).toBeInTheDocument(),
     );
+  });
+
+  it('ajoute et affiche des notes réelles sur une personne, y compris les contradictions', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    notes.listForEntity.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 1,
+        body: 'Deux actes de naissance différents circulent pour cette personne.',
+        confidence: 'LOW',
+        is_contradiction: true,
+      },
+    ]);
+    notes.create.mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await waitFor(() => expect(notes.listForEntity).toHaveBeenCalledWith('PERSON', 1));
+    await waitFor(() => expect(screen.getByText(/Aucune note/)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Note'), {
+      target: { value: 'Deux actes de naissance différents circulent pour cette personne.' },
+    });
+    fireEvent.change(screen.getByLabelText('Niveau de confiance'), {
+      target: { value: 'LOW' },
+    });
+    fireEvent.click(screen.getByLabelText(/Signale une contradiction/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter la note' }));
+
+    await waitFor(() =>
+      expect(notes.create).toHaveBeenCalledWith({
+        entityType: 'PERSON',
+        entityId: 1,
+        body: 'Deux actes de naissance différents circulent pour cette personne.',
+        confidence: 'LOW',
+        isContradiction: true,
+      }),
+    );
+    await waitFor(() => expect(screen.getByText('Contradiction')).toBeInTheDocument());
   });
 });

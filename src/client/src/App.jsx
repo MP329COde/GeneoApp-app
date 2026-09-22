@@ -311,6 +311,113 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
   );
 }
 
+const NOTE_CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
+
+function NotesPanel({ selected }) {
+  const [notes, setNotes] = useState(null);
+  const [body, setBody] = useState('');
+  const [confidence, setConfidence] = useState('MEDIUM');
+  const [isContradiction, setIsContradiction] = useState(false);
+  const [notesError, setNotesError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadNotes = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setNotes(await client.notes.listForEntity('PERSON', selected.id));
+    } catch (loadError) {
+      setNotesError(loadError.message);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setNotes(null);
+    loadNotes();
+  }, [loadNotes]);
+
+  if (!selected) {
+    return <p className="notice">Sélectionnez une personne pour voir et ajouter des notes.</p>;
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!body.trim()) return;
+    setBusy(true);
+    setNotesError(null);
+    try {
+      await client.notes.create({
+        entityType: 'PERSON',
+        entityId: selected.id,
+        body: body.trim(),
+        confidence,
+        isContradiction,
+      });
+      setBody('');
+      setIsContradiction(false);
+      await loadNotes();
+    } catch (createError) {
+      setNotesError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <h3>Notes sur {personLabel(selected)}</h3>
+      {notesError ? (
+        <p role="alert" className="notice notice--error">
+          {notesError}
+        </p>
+      ) : null}
+
+      <form className="create-person-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Note</span>
+          <input value={body} onChange={(event) => setBody(event.target.value)} />
+        </label>
+        <label>
+          <span>Niveau de confiance</span>
+          <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
+            {NOTE_CONFIDENCE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={isContradiction}
+            onChange={(event) => setIsContradiction(event.target.checked)}
+          />{' '}
+          <span>Signale une contradiction (ne remplace aucune autre note)</span>
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Ajouter la note
+        </Button>
+      </form>
+
+      {notes === null ? (
+        <p role="status">Chargement…</p>
+      ) : notes.length === 0 ? (
+        <p className="notice">Aucune note pour cette personne.</p>
+      ) : (
+        <ul className="search-results">
+          {notes.map((note) => (
+            <li key={note.id}>
+              <Badge tone="neutral">{note.confidence}</Badge>{' '}
+              {note.is_contradiction ? <Badge tone="danger">Contradiction</Badge> : null}{' '}
+              {note.body}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const RESEARCH_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'ABANDONED'];
 const RESEARCH_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
@@ -1066,6 +1173,13 @@ function App() {
                 Familles
               </button>
               <button
+                className={view === 'notes' ? 'is-active' : ''}
+                onClick={() => setView('notes')}
+                type="button"
+              >
+                Notes
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -1104,6 +1218,8 @@ function App() {
               />
             ) : view === 'families' ? (
               <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
+            ) : view === 'notes' ? (
+              <NotesPanel selected={selected} />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}

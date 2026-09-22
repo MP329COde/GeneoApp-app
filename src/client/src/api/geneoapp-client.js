@@ -104,6 +104,11 @@ function createHttpClient() {
     ai: {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
     },
+    notes: {
+      create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
+      listForEntity: (entityType, entityId) => fetchJson(`/api/notes/${entityType}/${entityId}`),
+      get: (id) => fetchJson(`/api/notes/by-id/${id}`),
+    },
   };
 }
 
@@ -161,6 +166,11 @@ function createIpcClient(bridge) {
     },
     ai: {
       analyze: (prompt) => bridge.ai.analyze(prompt),
+    },
+    notes: {
+      create: (data) => bridge.notes.create(data),
+      listForEntity: (entityType, entityId) => bridge.notes.listForEntity(entityType, entityId),
+      get: (id) => bridge.notes.get(id),
     },
   };
 }

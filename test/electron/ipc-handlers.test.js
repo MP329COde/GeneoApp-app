@@ -248,3 +248,34 @@ test('AI_ANALYZE renvoie une erreur honnête (503) quand l’IA locale est désa
   assert.equal(response.ok, false);
   assert.equal(response.error.status, 503);
 });
+
+test('NOTES_CREATE et NOTES_LIST_FOR_ENTITY gèrent les notes réelles avec confiance et contradiction', async () => {
+  const handlers = createHandlers();
+
+  const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+
+  const created = await handlers[IPC_CHANNELS.NOTES_CREATE]({
+    data: {
+      entityType: 'PERSON',
+      entityId: person.data.id,
+      body: 'Deux dates de naissance circulent.',
+      confidence: 'LOW',
+      isContradiction: true,
+    },
+  });
+  assert.equal(created.ok, true);
+  assert.equal(created.data.is_contradiction, 1);
+
+  const listed = await handlers[IPC_CHANNELS.NOTES_LIST_FOR_ENTITY]({
+    entityType: 'PERSON',
+    entityId: person.data.id,
+  });
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.length, 1);
+
+  const fetched = await handlers[IPC_CHANNELS.NOTES_GET]({ id: created.data.id });
+  assert.equal(fetched.ok, true);
+  assert.equal(fetched.data.confidence, 'LOW');
+});
