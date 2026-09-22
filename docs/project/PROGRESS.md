@@ -2,8 +2,8 @@
 
 | Issue | Statut | Validation | Commit |
 |---|---|---|---|
-| 01 - Fondation architecture | Terminée | `npm run lint`, `npm run format:check`, `npm run build`, `npm run smoke` | à renseigner |
-| 02 - Design system, i18n et gouvernance UI | À faire | - | - |
+| 01 - Fondation architecture | Terminée | `npm run lint`, `npm run format:check`, `npm run build`, `npm run smoke` | `e4867d7` |
+| 02 - Design system, i18n et gouvernance UI | Terminée | `npm run test:client`, `npm run build-storybook` | à renseigner |
 | 03 - Modèle de données et persistance | À faire | - | - |
 | 04 - Moteur de graphe et relations | À faire | - | - |
 | 05 - GEDCOM import/export | À faire | - | - |
