@@ -348,6 +348,28 @@ dd {
   background: transparent;
   color: var(--ink);
 }
+.search-panel {
+  padding: 24px;
+}
+.search-panel__form {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.search-results li {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
 @media (max-width: 1050px) {
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);

@@ -46,6 +46,16 @@ function createHttpClient() {
       relationship: (personA, personB) =>
         fetchJson(`/api/graph/relationship?personA=${personA}&personB=${personB}`),
     },
+    search: {
+      query: (q, entityTypes) =>
+        fetchJson(
+          `/api/search?${new URLSearchParams({
+            q,
+            ...(entityTypes ? { entityTypes: entityTypes.join(',') } : {}),
+          })}`,
+        ),
+      duplicates: (limit) => fetchJson(`/api/search/duplicates?limit=${limit ?? 100}`),
+    },
   };
 }
 
@@ -61,6 +71,10 @@ function createIpcClient(bridge) {
       descendants: (personId, depth) => bridge.graph.descendants(personId, depth),
       relations: (personId) => bridge.graph.relations(personId),
       relationship: (personA, personB) => bridge.graph.relationship(personA, personB),
+    },
+    search: {
+      query: (q, entityTypes) => bridge.search.query(q, entityTypes),
+      duplicates: (limit) => bridge.search.duplicates(limit),
     },
   };
 }

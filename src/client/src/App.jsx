@@ -50,6 +50,59 @@ function CreatePersonForm({ onCreate, creating }) {
   );
 }
 
+function SearchPanel() {
+  const [term, setTerm] = useState('');
+  const [results, setResults] = useState(null);
+  const [searchError, setSearchError] = useState(null);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!term.trim()) return;
+    setSearchError(null);
+    try {
+      const found = await client.search.query(term.trim());
+      setResults(found);
+    } catch (queryError) {
+      setSearchError(queryError.message);
+      setResults(null);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <form onSubmit={handleSubmit} className="search-panel__form">
+        <label className="search-box">
+          <span>Rechercher</span>
+          <input
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="Nom, lieu, source..."
+          />
+        </label>
+        <Button type="submit" size="sm">
+          Rechercher
+        </Button>
+      </form>
+      {searchError ? (
+        <p role="alert" className="notice notice--error">
+          {searchError}
+        </p>
+      ) : null}
+      {results === null ? null : results.length === 0 ? (
+        <p className="notice">Aucun résultat pour « {term} ».</p>
+      ) : (
+        <ul className="search-results">
+          {results.map((result) => (
+            <li key={`${result.entity_type}:${result.entity_id}`}>
+              <Badge tone="neutral">{result.entity_type}</Badge> {result.title}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -183,10 +236,19 @@ function App() {
               >
                 Relations
               </button>
+              <button
+                className={view === 'search' ? 'is-active' : ''}
+                onClick={() => setView('search')}
+                type="button"
+              >
+                Recherche
+              </button>
             </div>
           </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
-            {!selected ? (
+            {view === 'search' ? (
+              <SearchPanel />
+            ) : !selected ? (
               <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
             ) : !relations ? (
               <p role="status">Chargement des relations…</p>

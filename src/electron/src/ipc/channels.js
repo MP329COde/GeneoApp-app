@@ -41,4 +41,7 @@ export const IPC_CHANNELS = Object.freeze({
   GRAPH_DESCENDANTS: 'geneoapp:graph:descendants',
   GRAPH_RELATIONS: 'geneoapp:graph:relations',
   GRAPH_RELATIONSHIP: 'geneoapp:graph:relationship',
+
+  SEARCH_QUERY: 'geneoapp:search:query',
+  SEARCH_DUPLICATES: 'geneoapp:search:duplicates',
 });

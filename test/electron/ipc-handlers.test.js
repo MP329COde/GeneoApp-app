@@ -130,3 +130,20 @@ test('GRAPH_ANCESTORS et GRAPH_RELATIONSHIP exposent le moteur de relations au r
   assert.equal(relationship.ok, true);
   assert.equal(relationship.data.relationship, 'ANCESTOR_1');
 });
+
+test('SEARCH_QUERY expose la recherche locale au renderer', async () => {
+  const handlers = createHandlers();
+
+  await handlers[IPC_CHANNELS.SOURCES_CREATE]({
+    data: { title: 'Registre paroissial de Sainte-Anne 1815' },
+  });
+
+  const response = await handlers[IPC_CHANNELS.SEARCH_QUERY]({
+    q: 'paroissial',
+    entityTypes: ['SOURCE'],
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.data.length, 1);
+  assert.equal(response.data[0].entity_type, 'SOURCE');
+});

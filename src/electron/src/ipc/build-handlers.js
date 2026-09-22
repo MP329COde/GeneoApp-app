@@ -46,7 +46,7 @@ function wrap(handler) {
  * dans le processus principal Electron).
  */
 export function buildIpcHandlers(services) {
-  const { persons, places, events, unions, parentages, sources, audit, graph } = services;
+  const { persons, places, events, unions, parentages, sources, audit, graph, search } = services;
 
   return {
     [IPC_CHANNELS.PERSONS_CREATE]: wrap(({ data, performedBy }) =>
@@ -136,5 +136,12 @@ export function buildIpcHandlers(services) {
       graph.assertPair(personA, personB);
       return graph.findRelationship(personA, personB);
     }),
+
+    [IPC_CHANNELS.SEARCH_QUERY]: wrap(({ q, entityTypes, limit } = {}) =>
+      search.search({ q, entityTypes, limit }),
+    ),
+    [IPC_CHANNELS.SEARCH_DUPLICATES]: wrap(({ limit } = {}) =>
+      search.potentialDuplicates({ limit }),
+    ),
   };
 }

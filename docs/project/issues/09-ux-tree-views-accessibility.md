@@ -110,3 +110,8 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   au cahier des charges (familles, recherche, carnet de recherche, sauvegardes/corbeille, statistiques, import
   GEDCOM, vues radiale/éventail/carte/chronologie) restent à construire côté interface — l'API existe déjà
   côté serveur pour la plupart d'entre elles.
+- 2026-09-22 (suite) : ajout d'une vue « Recherche » réelle (onglet dans le sélecteur de vues), branchée sur
+  `client.search.query` (canaux IPC `SEARCH_QUERY`/`SEARCH_DUPLICATES` ajoutés, jusque-là absents de
+  l'allowlist). Testée (`App.test.jsx`). Reste sans UI : détection de doublons (`potentialDuplicates`, déjà
+  câblée côté client mais aucun écran ne l'utilise), familles, carnet de recherche, sauvegardes/corbeille,
+  statistiques, import/export GEDCOM.

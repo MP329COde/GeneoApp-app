@@ -80,6 +80,11 @@ const api = {
     relationship: (personA, personB) =>
       invoke(IPC_CHANNELS.GRAPH_RELATIONSHIP, { personA, personB }),
   },
+
+  search: {
+    query: (q, entityTypes) => invoke(IPC_CHANNELS.SEARCH_QUERY, { q, entityTypes }),
+    duplicates: (limit) => invoke(IPC_CHANNELS.SEARCH_DUPLICATES, { limit }),
+  },
 };
 
 contextBridge.exposeInMainWorld('geneoapp', api);

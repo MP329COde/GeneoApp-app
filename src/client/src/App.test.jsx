@@ -9,9 +9,12 @@ const persons = vi.hoisted(() => ({
 const graph = vi.hoisted(() => ({
   relations: vi.fn(),
 }));
+const search = vi.hoisted(() => ({
+  query: vi.fn(),
+}));
 
 vi.mock('./api/geneoapp-client.js', () => ({
-  createGeneoAppClient: () => ({ persons, graph }),
+  createGeneoAppClient: () => ({ persons, graph, search }),
 }));
 
 const { default: App } = await import('./App.jsx');
@@ -71,6 +74,32 @@ describe('App', () => {
 
     await waitFor(() =>
       expect(persons.create).toHaveBeenCalledWith({ givenNames: 'Ada', familyName: 'Lovelace' }),
+    );
+  });
+
+  it('recherche via le client API et affiche les résultats réels (aucune donnée fictive)', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    search.query.mockResolvedValue([
+      { entity_type: 'SOURCE', entity_id: 3, title: 'Registre paroissial de Sainte-Anne 1815' },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
+    fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'paroissial' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }));
+
+    await waitFor(() => expect(search.query).toHaveBeenCalledWith('paroissial'));
+    await waitFor(() =>
+      expect(screen.getByText(/Registre paroissial de Sainte-Anne 1815/)).toBeInTheDocument(),
     );
   });
 });
