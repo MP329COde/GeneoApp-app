@@ -8,19 +8,24 @@ Application de généalogie **100 % locale**, sans dépendance à un service en 
 - **Packaging / exécution** : Electron
 - **Fonctionnement** : entièrement hors-ligne, aucune donnée envoyée vers un tiers
 
-Ce dépôt est actuellement au stade de **gouvernance** : aucune fonctionnalité métier n'est encore implémentée.
-Les décisions structurantes sont documentées sous forme d'ADR (Architecture Decision Records).
+Les décisions structurantes sont documentées sous forme d'ADR (Architecture Decision Records). L'avancement
+détaillé, issue par issue, est suivi dans [`docs/project/PROGRESS.md`](docs/project/PROGRESS.md).
 
-## Squelette local
+## État du projet
 
-Le dépôt contient uniquement l'outillage et les points d'entrée techniques :
+Les dix premières issues du plan de développement sont livrées et validées (voir
+[`docs/project/PROGRESS.md`](docs/project/PROGRESS.md) pour le détail des commits et des validations) :
 
-- `src/client` : shell React construit avec Vite, incluant un design system générique (`src/client/src/design-system`) ;
-- `src/server` : serveur Express local, avec healthcheck d'infrastructure ;
-- `src/db` : point d'accès SQLite et runner de migration vide ;
-- `src/electron` : processus principal Electron, qui démarre le serveur local et charge le client.
+- `src/client` : application React (Vite) avec design system, i18n FR/EN et vues généalogiques (arbre, familles,
+  recherche, carnet de recherche, sauvegardes/corbeille, statistiques) branchées sur l'API locale ;
+- `src/server` : serveur Express local exposant les routes métier (personnes, familles, unions, parentages,
+  événements, lieux, sources, médias, GEDCOM, recherche, comptes, sauvegardes, corbeille, audit) ;
+- `src/db` : modèle de données SQLite, migrations et dépôts (repositories) ;
+- `src/electron` : processus principal Electron avec allowlist IPC stricte et isolation du renderer.
 
-Aucun modèle métier, endpoint métier ou écran généalogique n'est inclus.
+Ce socle métier reste un premier jalon fonctionnel : certaines capacités du cahier des charges complet (GEDCOM 7
+intégral, moteur de relations avancé, IA locale, vues graphiques additionnelles, etc.) sont partielles ou à
+compléter — voir les limites documentées dans chaque issue de `docs/project/issues/`.
 
 ### Design system
 
