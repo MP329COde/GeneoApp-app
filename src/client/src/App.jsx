@@ -1963,10 +1963,22 @@ function GedcomPanel({ onImported, selected }) {
   const [exportFormat, setExportFormat] = useState('7');
   const [exportScope, setExportScope] = useState('all');
   const [exportSummary, setExportSummary] = useState(null);
+  const [archive, setArchive] = useState(null);
+  const [archiveReport, setArchiveReport] = useState(null);
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setArchiveReport(null);
+    if (/\.(gdz|zip)$/i.test(file.name)) {
+      // GEDZIP (GEDCOM 7 + médias) : importé tel quel, sans édition du texte.
+      setArchive({ name: file.name, contentBase64: await readFileAsBase64(file) });
+      setContent('');
+      setPreview(null);
+      setReport(null);
+      return;
+    }
+    setArchive(null);
     setContent(await file.text());
     setPreview(null);
     setReport(null);
@@ -1999,6 +2011,42 @@ function GedcomPanel({ onImported, selected }) {
     }
   };
 
+  const handleImportArchive = async () => {
+    setGedcomError(null);
+    setBusy(true);
+    try {
+      const result = await client.gedcom.importArchive(archive.contentBase64);
+      setArchiveReport(result);
+      if (result.imported) {
+        setArchive(null);
+        await onImported();
+      }
+    } catch (importError) {
+      setGedcomError(importError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleExportArchive = async () => {
+    setGedcomError(null);
+    setBusy(true);
+    try {
+      const scope = selected ? exportScope : 'all';
+      const result = await client.gedcom.exportArchive(exportOptions(scope, selected?.id));
+      const bytes = Uint8Array.from(atob(result.contentBase64), (char) => char.charCodeAt(0));
+      downloadBlob(
+        scope === 'all' ? 'geneoapp-export.gdz' : `geneoapp-export-${scope}.gdz`,
+        new Blob([bytes], { type: 'application/zip' }),
+      );
+      if (result.summary) setExportSummary(result.summary);
+    } catch (exportError) {
+      setGedcomError(exportError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleExport = async () => {
     setGedcomError(null);
     setBusy(true);
@@ -2025,9 +2073,34 @@ function GedcomPanel({ onImported, selected }) {
   return (
     <div className="gedcom-panel">
       <label className="gedcom-panel__file">
-        <span>Fichier GEDCOM (.ged)</span>
-        <input type="file" accept=".ged" onChange={handleFile} />
+        <span>Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)</span>
+        <input type="file" accept=".ged,.gdz,.zip" onChange={handleFile} />
       </label>
+      {archive ? (
+        <div className="notice" role="status">
+          <p>
+            Archive prête : <strong>{archive.name}</strong>. Les personnes, familles et événements
+            sont importés en une transaction, puis les fichiers médias rattachés.
+          </p>
+          <Button type="button" size="sm" onClick={handleImportArchive} disabled={busy}>
+            Importer l’archive GEDZIP
+          </Button>
+        </div>
+      ) : null}
+      {archiveReport ? (
+        <p className="notice" role="status">
+          {archiveReport.imported
+            ? `Archive importée : ${archiveReport.mapping.persons} personne(s), ${archiveReport.media.attached} média(s) rattaché(s)` +
+              (archiveReport.media.missing.length
+                ? `, ${archiveReport.media.missing.length} fichier(s) absent(s) de l’archive`
+                : '') +
+              (archiveReport.media.rejected.length
+                ? `, ${archiveReport.media.rejected.length} fichier(s) refusé(s) : ${archiveReport.media.rejected.map((item) => `${item.file} (${item.reason})`).join(', ')}`
+                : '') +
+              '.'
+            : 'Import refusé : aucune donnée écrite (rollback).'}
+        </p>
+      ) : null}
       <textarea
         aria-label="Contenu GEDCOM"
         value={content}
@@ -2094,6 +2167,15 @@ function GedcomPanel({ onImported, selected }) {
           {exportScope === 'all' || !selected
             ? 'Exporter l’arbre complet'
             : 'Exporter le périmètre'}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={handleExportArchive}
+          disabled={busy}
+        >
+          Exporter en GEDZIP (avec médias)
         </Button>
         {selected && exportScope !== 'all' ? (
           <p className="settings-hint">Personne de contexte : {personLabel(selected)}</p>

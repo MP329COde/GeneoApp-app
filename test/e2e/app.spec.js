@@ -374,3 +374,36 @@ test('exporte réellement l’arbre en SVG et prépare une impression géante d�
   await expect(page.getByText(/page\(s\) · 3 ×/)).toBeVisible();
   await expect(page.locator('.giant-print__tile')).not.toHaveCount(0);
 });
+
+test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nouvel arbre', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exporter en GEDZIP (avec médias)' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('geneoapp-export.gdz');
+  const { readFile } = await import('node:fs/promises');
+  const archive = await readFile(await download.path());
+
+  await page.getByRole('button', { name: 'Arbres', exact: true }).click();
+  await page.getByLabel('Nom de l’arbre').fill('Réimport GEDZIP');
+  await page.getByRole('button', { name: 'Créer l’arbre' }).click();
+  await page.getByRole('button', { name: 'Ouvrir Réimport GEDZIP' }).click();
+  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  await expect(counter).toHaveText('0 personne(s)');
+
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
+  await page
+    .getByLabel('Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)')
+    .setInputFiles({ name: 'export.gdz', mimeType: 'application/zip', buffer: archive });
+  await page.getByRole('button', { name: 'Importer l’archive GEDZIP' }).click();
+  await expect(
+    page.getByText(/Archive importée : \d+ personne\(s\), \d+ média\(s\)/),
+  ).toBeVisible();
+  await expect(counter).not.toHaveText('0 personne(s)');
+
+  await page.getByRole('button', { name: 'Arbres', exact: true }).click();
+  await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
+});

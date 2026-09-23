@@ -69,7 +69,7 @@ export function createServices(
     sources,
     search: new SearchService(new SearchRepository(database), database),
     audit: new AuditService(new AuditRepository(database)),
-    gedcom: new GedcomService(database),
+    gedcom: new GedcomService(database, { media: entityServices.media }),
     accounts,
     trash: new TrashService(new TrashRepository(database), entityServices),
     backups: new BackupService(database, { backupDir }),

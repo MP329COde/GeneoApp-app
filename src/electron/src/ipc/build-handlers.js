@@ -245,8 +245,24 @@ function buildRawHandlers(services, workspace) {
     [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>
       gedcom.import(input, { performedBy: actorOf(performedBy) }),
     ),
-    [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(({ format, personIds, ancestorsOf, descendantsOf } = {}) =>
-      gedcom.export({ format, personIds, ancestorsOf, descendantsOf }),
+    [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(
+      ({ format, personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>
+        gedcom.export({
+          format,
+          personIds,
+          personOnly,
+          ancestorsOf,
+          descendantsOf,
+          branchOf,
+          side,
+        }),
+    ),
+    [IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE]: wrap(
+      ({ personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>
+        gedcom.exportArchive({ personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side }),
+    ),
+    [IPC_CHANNELS.GEDCOM_IMPORT_ARCHIVE]: wrap(({ contentBase64, performedBy }) =>
+      gedcom.importArchive(contentBase64, { performedBy: actorOf(performedBy) }),
     ),
 
     [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, performedBy }) =>

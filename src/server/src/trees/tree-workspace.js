@@ -14,11 +14,13 @@ const TREE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
 function validateName(name) {
   if (typeof name !== 'string' || name.trim() === '') {
-    throw new ValidationError('Le nom de l’arbre est obligatoire', { name: 'obligatoire' });
+    throw new ValidationError('Le nom de l’arbre est obligatoire', {
+      fields: { name: 'obligatoire' },
+    });
   }
   if (name.trim().length > NAME_MAX_LENGTH) {
     throw new ValidationError(`Le nom de l’arbre dépasse ${NAME_MAX_LENGTH} caractères`, {
-      name: 'trop long',
+      fields: { name: 'trop long' },
     });
   }
   return name.trim();
@@ -27,7 +29,7 @@ function validateName(name) {
 function validateDescription(description) {
   if (description === undefined || description === null) return null;
   if (typeof description !== 'string' || description.length > DESCRIPTION_MAX_LENGTH) {
-    throw new ValidationError('Description invalide', { description: 'invalide' });
+    throw new ValidationError('Description invalide', { fields: { description: 'invalide' } });
   }
   return description.trim() || null;
 }
@@ -98,7 +100,7 @@ export class TreeWorkspace {
 
   find(id) {
     if (typeof id !== 'string' || !TREE_ID_PATTERN.test(id)) {
-      throw new ValidationError('Identifiant d’arbre invalide', { id: 'invalide' });
+      throw new ValidationError('Identifiant d’arbre invalide', { fields: { id: 'invalide' } });
     }
     const tree = this.catalog.trees.find(
       (candidate) => candidate.id === id && !candidate.deletedAt,
@@ -229,7 +231,7 @@ export class TreeWorkspace {
 
   restore(id) {
     if (typeof id !== 'string' || !TREE_ID_PATTERN.test(id)) {
-      throw new ValidationError('Identifiant d’arbre invalide', { id: 'invalide' });
+      throw new ValidationError('Identifiant d’arbre invalide', { fields: { id: 'invalide' } });
     }
     const tree = this.catalog.trees.find((candidate) => candidate.id === id && candidate.deletedAt);
     if (!tree) throw new NotFoundError('Arbre supprimé introuvable');

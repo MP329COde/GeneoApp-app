@@ -57,7 +57,7 @@ export function validateGedcom(records) {
   const errors = [];
   const warnings = [];
   const xrefs = new Map();
-  const rootTags = new Set(['HEAD', 'INDI', 'FAM', 'TRLR', 'NOTE', 'SOUR', 'SUBM', 'REPO']);
+  const rootTags = new Set(['HEAD', 'INDI', 'FAM', 'TRLR', 'NOTE', 'SOUR', 'SUBM', 'REPO', 'OBJE']);
 
   for (const record of records) {
     if (record.level !== 0) errors.push(issue(record, 'Le niveau racine doit être 0'));

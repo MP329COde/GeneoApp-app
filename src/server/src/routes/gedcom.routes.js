@@ -8,6 +8,8 @@ export function gedcomRoutes(services) {
   router.post('/preview', controller.preview);
   router.post('/import', controller.import);
   router.post('/export', controller.export);
+  router.post('/export-archive', controller.exportArchive);
+  router.post('/import-archive', controller.importArchive);
 
   return router;
 }

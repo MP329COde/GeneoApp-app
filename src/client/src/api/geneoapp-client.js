@@ -124,6 +124,10 @@ function createHttpClient() {
       preview: (gedcom) => fetchJson('/api/gedcom/preview', { method: 'POST', body: { gedcom } }),
       import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
       export: (options) => fetchJson('/api/gedcom/export', { method: 'POST', body: options }),
+      exportArchive: (options) =>
+        fetchJson('/api/gedcom/export-archive', { method: 'POST', body: options }),
+      importArchive: (contentBase64) =>
+        fetchJson('/api/gedcom/import-archive', { method: 'POST', body: { contentBase64 } }),
     },
     accounts: {
       create: (data) => fetchJson('/api/accounts', { method: 'POST', body: data }),
@@ -290,6 +294,8 @@ function createIpcClient(bridge) {
       preview: (gedcom) => bridge.gedcom.preview(gedcom),
       import: (gedcom) => bridge.gedcom.import(gedcom),
       export: (options) => bridge.gedcom.export(options),
+      exportArchive: (options) => bridge.gedcom.exportArchive(options),
+      importArchive: (contentBase64) => bridge.gedcom.importArchive(contentBase64),
     },
     accounts: {
       create: (data) => bridge.accounts.create(data),

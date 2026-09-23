@@ -99,6 +99,8 @@ const api = {
     preview: (gedcom) => invoke(IPC_CHANNELS.GEDCOM_PREVIEW, { gedcom }),
     import: (gedcom, performedBy) => invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy }),
     export: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT, options),
+    exportArchive: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE, options),
+    importArchive: (contentBase64) => invoke(IPC_CHANNELS.GEDCOM_IMPORT_ARCHIVE, { contentBase64 }),
   },
 
   accounts: {

@@ -1,6 +1,7 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
 import { parseGedcom, validateGedcom } from './parser.js';
-import { ValidationError } from '../errors.js';
+import { PayloadTooLargeError, ValidationError } from '../errors.js';
+import { createZip, readZip } from './zip.js';
 
 // Tags GEDCOM 5.5.1 individuels (INDIVIDUAL_EVENT_STRUCTURE / INDIVIDUAL_ATTRIBUTE_STRUCTURE)
 // mappés vers les types métier. Sans équivalent standard direct dans la norme (ex. événement
@@ -43,9 +44,97 @@ function resolveEventType(record) {
   return null;
 }
 
+const MAX_ARCHIVE_BASE64 = Math.ceil((200 * 1024 * 1024 * 4) / 3);
+const FORM_551 = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/tiff': 'tif',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+  'text/plain': 'txt',
+};
+
+function mediaPath(media) {
+  const safe = media.original_filename
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/^\.+/, '')
+    .slice(0, 80);
+  return `media/${media.id}-${safe || 'fichier'}`;
+}
+
 export class GedcomService {
-  constructor(database) {
+  constructor(database, { media = null } = {}) {
     this.database = database;
+    this.media = media;
+  }
+
+  /**
+   * GEDZIP (GEDCOM 7) : archive contenant gedcom.ged et les fichiers médias
+   * référencés par les enregistrements OBJE des personnes exportées.
+   */
+  async exportArchive(options = {}) {
+    const result = this.export({ ...options, format: '7' });
+    const entries = [{ name: 'gedcom.ged', content: Buffer.from(result.gedcom, 'utf8') }];
+    for (const item of result.media) {
+      const { content } = await this.media.download(item.id);
+      entries.push({ name: item.path, content });
+    }
+    return {
+      filename: 'geneoapp-export.gdz',
+      contentBase64: createZip(entries).toString('base64'),
+      summary: result.summary,
+    };
+  }
+
+  async importArchive(contentBase64, { performedBy = null } = {}) {
+    if (typeof contentBase64 !== 'string' || contentBase64 === '') {
+      throw new ValidationError('Archive GEDZIP manquante', {
+        fields: { contentBase64: 'obligatoire' },
+      });
+    }
+    if (contentBase64.length > MAX_ARCHIVE_BASE64) {
+      throw new PayloadTooLargeError('Archive GEDZIP trop volumineuse');
+    }
+    const entries = readZip(Buffer.from(contentBase64, 'base64'));
+    const gedcomEntry =
+      entries.find((entry) => entry.name === 'gedcom.ged') ??
+      entries.find((entry) => entry.name.toLowerCase().endsWith('.ged'));
+    if (!gedcomEntry) throw new ValidationError('Aucun fichier .ged dans l’archive');
+    const text = gedcomEntry.content.toString('utf8');
+    const report = this.import(text, { performedBy });
+    if (!report.imported) return { ...report, media: { attached: 0, missing: [], rejected: [] } };
+
+    const files = new Map(entries.map((entry) => [entry.name, entry.content]));
+    const links = collectMediaLinks(parseGedcom(text));
+    const media = { attached: 0, missing: [], rejected: [] };
+    for (const link of links) {
+      const personId = report.personXrefs?.[link.personXref];
+      const content = files.get(link.file);
+      if (!personId) continue;
+      if (!content) {
+        media.missing.push(link.file);
+        continue;
+      }
+      try {
+        await this.media.upload(
+          {
+            filename: link.file.split('/').pop(),
+            contentBase64: content.toString('base64'),
+            entityType: 'PERSON',
+            entityId: personId,
+            notes: link.title ?? null,
+          },
+          { performedBy },
+        );
+        media.attached += 1;
+      } catch (error) {
+        media.rejected.push({ file: link.file, reason: error.message });
+      }
+    }
+    return { ...report, media };
   }
 
   preview(input) {
@@ -63,7 +152,7 @@ export class GedcomService {
     const result = withTransaction(this.database, () =>
       applyMapping(this.database, records, performedBy),
     );
-    return { ...report, imported: true, ids: result.ids };
+    return { ...report, imported: true, ids: result.ids, personXrefs: result.personXrefs };
   }
 
   /**
@@ -90,7 +179,7 @@ export class GedcomService {
       if (value === null || value === undefined) return null;
       const id = Number(value);
       if (!Number.isInteger(id) || id <= 0) {
-        throw new ValidationError(`${field} invalide`, { [field]: 'invalide' });
+        throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
       }
       return id;
     };
@@ -99,10 +188,14 @@ export class GedcomService {
     const descendantsId = asId(descendantsOf, 'descendantsOf');
     const branchId = asId(branchOf, 'branchOf');
     if (branchId !== null && !['PATERNAL', 'MATERNAL'].includes(side)) {
-      throw new ValidationError('side doit valoir PATERNAL ou MATERNAL', { side: 'invalide' });
+      throw new ValidationError('side doit valoir PATERNAL ou MATERNAL', {
+        fields: { side: 'invalide' },
+      });
     }
     if (personIds !== null && !Array.isArray(personIds)) {
-      throw new ValidationError('personIds doit être une liste', { personIds: 'invalide' });
+      throw new ValidationError('personIds doit être une liste', {
+        fields: { personIds: 'invalide' },
+      });
     }
 
     const allPersons = this.database
@@ -137,30 +230,19 @@ export class GedcomService {
       }
     }
     const persons = allPersons.filter((person) => selectedIds.has(person.id));
-    const families = this.database
-      .prepare('SELECT * FROM unions WHERE deleted_at IS NULL ORDER BY id')
+    const families = buildExportFamilies(this.database, selectedIds);
+    const media = this.database
+      .prepare(
+        `SELECT * FROM media WHERE entity_type = 'PERSON' AND deleted_at IS NULL ORDER BY id`,
+      )
       .all()
-      .map((union) => ({
-        ...union,
-        partners: this.database
-          .prepare('SELECT person_id FROM union_partners WHERE union_id = ? AND deleted_at IS NULL')
-          .all(union.id)
-          .map(({ person_id: personId }) => personId),
-        children: this.database
-          .prepare('SELECT child_id FROM parentages WHERE union_id = ? AND deleted_at IS NULL')
-          .all(union.id)
-          .map(({ child_id: childId }) => childId),
-      }))
-      .filter(
-        (union) =>
-          union.partners.some((personId) => selectedIds.has(personId)) ||
-          union.children.some((personId) => selectedIds.has(personId)),
-      );
-
+      .filter((item) => selectedIds.has(item.entity_id))
+      .map((item) => ({ ...item, path: mediaPath(item) }));
     return {
       format,
-      gedcom: generateGedcom(this.database, persons, families, format),
-      summary: { persons: persons.length, families: families.length },
+      gedcom: generateGedcom(this.database, persons, families, format, media),
+      summary: { persons: persons.length, families: families.length, media: media.length },
+      media: media.map((item) => ({ id: item.id, path: item.path, mimeType: item.mime_type })),
     };
   }
 
@@ -187,7 +269,65 @@ export class GedcomService {
   }
 }
 
-function generateGedcom(database, persons, families, format) {
+const PEDIGREE_TAGS = { BIOLOGICAL: 'BIRTH', ADOPTIVE: 'ADOPTED', FOSTER: 'FOSTER', STEP: 'OTHER' };
+const PEDIGREE_TO_LINK = {
+  BIRTH: 'BIOLOGICAL',
+  ADOPTED: 'ADOPTIVE',
+  FOSTER: 'FOSTER',
+  OTHER: 'STEP',
+};
+
+/**
+ * Familles à exporter : chaque union, plus une famille par ensemble de
+ * parents pour les filiations saisies sans union (sinon elles seraient
+ * perdues). Chaque enfant n'apparaît qu'une fois par famille.
+ */
+function buildExportFamilies(database, selectedIds) {
+  const parentages = database
+    .prepare(
+      `SELECT child_id, parent_id, link_type, union_id FROM parentages
+       WHERE deleted_at IS NULL ORDER BY id`,
+    )
+    .all();
+  const families = [];
+  for (const union of database
+    .prepare('SELECT * FROM unions WHERE deleted_at IS NULL ORDER BY id')
+    .all()) {
+    const partners = database
+      .prepare('SELECT person_id FROM union_partners WHERE union_id = ? AND deleted_at IS NULL')
+      .all(union.id)
+      .map(({ person_id: personId }) => personId);
+    const children = new Map();
+    for (const link of parentages.filter((item) => item.union_id === union.id)) {
+      if (!children.has(link.child_id)) {
+        children.set(link.child_id, { id: link.child_id, linkType: link.link_type });
+      }
+    }
+    families.push({ xref: `@F${union.id}@`, partners, children: [...children.values()] });
+  }
+  const byChild = new Map();
+  for (const link of parentages.filter((item) => item.union_id === null)) {
+    if (!byChild.has(link.child_id)) byChild.set(link.child_id, []);
+    byChild.get(link.child_id).push(link);
+  }
+  const synthetic = new Map();
+  for (const [childId, links] of byChild) {
+    const parents = [...new Set(links.map((link) => link.parent_id))].sort((a, b) => a - b);
+    const key = parents.join('-');
+    if (!synthetic.has(key)) {
+      synthetic.set(key, { xref: `@FP${key}@`, partners: parents, children: [], noUnion: true });
+    }
+    synthetic.get(key).children.push({ id: childId, linkType: links[0].link_type });
+  }
+  families.push(...synthetic.values());
+  return families.filter(
+    (family) =>
+      family.partners.some((id) => selectedIds.has(id)) ||
+      family.children.some((item) => selectedIds.has(item.id)),
+  );
+}
+
+function generateGedcom(database, persons, families, format, media = []) {
   const personIds = new Set(persons.map((person) => person.id));
   const lines = ['0 HEAD', `1 GEDC`, `2 VERS ${format}`, '1 CHAR UTF-8'];
   for (const person of persons) {
@@ -216,20 +356,40 @@ function generateGedcom(database, persons, families, format) {
         if (place) lines.push(`2 PLAC ${place.name}`);
       }
     }
+    for (const item of media.filter((candidate) => candidate.entity_id === person.id)) {
+      lines.push(`1 OBJE @O${item.id}@`);
+    }
     for (const family of families) {
-      if (family.partners.includes(person.id)) lines.push(`1 FAMS @F${family.id}@`);
-      if (family.children.includes(person.id)) lines.push(`1 FAMC @F${family.id}@`);
+      if (family.partners.includes(person.id)) lines.push(`1 FAMS ${family.xref}`);
+      const link = family.children.find((item) => item.id === person.id);
+      if (link) {
+        lines.push(`1 FAMC ${family.xref}`);
+        const pedigree = PEDIGREE_TAGS[link.linkType];
+        if (pedigree) lines.push(`2 PEDI ${format === '7' ? pedigree : pedigree.toLowerCase()}`);
+      }
     }
   }
+  const sexById = new Map(persons.map((person) => [person.id, person.sex]));
   for (const family of families) {
-    lines.push(`0 @F${family.id}@ FAM`);
-    for (const partnerId of family.partners.filter((id) => personIds.has(id))) {
-      const tag = family.partners.indexOf(partnerId) === 0 ? 'HUSB' : 'WIFE';
-      lines.push(`1 ${tag} @I${partnerId}@`);
+    lines.push(`0 ${family.xref} FAM`);
+    // HUSB/WIFE d'après le sexe quand il est connu, sinon dans l'ordre.
+    const partners = family.partners
+      .filter((id) => personIds.has(id))
+      .sort((a, b) => (sexById.get(a) === 'F') - (sexById.get(b) === 'F'));
+    partners.slice(0, 2).forEach((partnerId, index) => {
+      lines.push(`1 ${index === 0 ? 'HUSB' : 'WIFE'} @I${partnerId}@`);
+    });
+    for (const item of family.children.filter((candidate) => personIds.has(candidate.id))) {
+      lines.push(`1 CHIL @I${item.id}@`);
     }
-    for (const childId of family.children.filter((id) => personIds.has(id))) {
-      lines.push(`1 CHIL @I${childId}@`);
-    }
+    // Filiation sans union dans GeneoApp : ne pas inventer d'union à l'import.
+    if (family.noUnion) lines.push('1 _NOUNION Y');
+  }
+  for (const item of media) {
+    lines.push(`0 @O${item.id}@ OBJE`);
+    lines.push(`1 FILE ${item.path}`);
+    lines.push(`2 FORM ${format === '7' ? item.mime_type : (FORM_551[item.mime_type] ?? 'bin')}`);
+    lines.push(`${format === '7' ? '3' : '2'} TITL ${item.original_filename}`.replace(/\n/g, ' '));
   }
   lines.push('0 TRLR');
   return `${lines.join('\n')}\n`;
@@ -288,6 +448,8 @@ function applyMapping(database, records, performedBy) {
     `INSERT INTO parentages (child_id, parent_id, parent_role, link_type, union_id, notes) VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const placeIds = new Map();
+  // Une même filiation ne peut être insérée deux fois (index unique).
+  const insertedPairs = new Set();
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
     const name = parseName(value(person, 'NAME'));
@@ -354,11 +516,17 @@ function applyMapping(database, records, performedBy) {
           performedBy,
         )
       : null;
-    const union = insertUnion.run('OTHER', startEventId, endEventId, notes(family));
-    ids.unions.push(union.lastInsertRowid);
-    audit(database, 'unions', union.lastInsertRowid, { xref: family.xref }, performedBy);
+    // _NOUNION (extension GeneoApp) : filiation sans union à recréer telle quelle.
+    const withoutUnion = value(family, '_NOUNION') === 'Y';
+    const union = withoutUnion
+      ? null
+      : insertUnion.run('OTHER', startEventId, endEventId, notes(family));
+    if (union) {
+      ids.unions.push(union.lastInsertRowid);
+      audit(database, 'unions', union.lastInsertRowid, { xref: family.xref }, performedBy);
+    }
 
-    for (const spouseTag of ['HUSB', 'WIFE']) {
+    for (const spouseTag of union ? ['HUSB', 'WIFE'] : []) {
       for (const spouse of children(family, spouseTag)) {
         const partner = insertPartner.run(union.lastInsertRowid, personIds.get(spouse.value));
         audit(
@@ -370,16 +538,25 @@ function applyMapping(database, records, performedBy) {
         );
       }
     }
-    for (const childRef of children(family, 'CHIL')) {
+    const childXrefs = [...new Set(children(family, 'CHIL').map((item) => item.value))];
+    for (const childXref of childXrefs) {
+      const childRef = { value: childXref };
+      const linkType = pedigreeOf(records, childXref, family.xref);
       for (const parentTag of ['HUSB', 'WIFE']) {
         const parentRef = child(family, parentTag);
         if (!parentRef) continue;
+        const pairKey = `${childXref}>${parentRef.value}`;
+        if (insertedPairs.has(pairKey)) continue;
+        insertedPairs.add(pairKey);
+        const parentRecord = records.find((record) => record.xref === parentRef.value);
+        const parentSex = parentRecord ? value(parentRecord, 'SEX') : null;
+        const role = parentSex === 'F' ? 'MOTHER' : parentSex === 'M' ? 'FATHER' : 'PARENT';
         const parentage = insertParentage.run(
           personIds.get(childRef.value),
           personIds.get(parentRef.value),
-          parentTag === 'HUSB' ? 'FATHER' : 'MOTHER',
-          'BIOLOGICAL',
-          union.lastInsertRowid,
+          role,
+          linkType,
+          union ? union.lastInsertRowid : null,
           null,
         );
         ids.parentages.push(parentage.lastInsertRowid);
@@ -390,14 +567,14 @@ function applyMapping(database, records, performedBy) {
           {
             childId: personIds.get(childRef.value),
             parentId: personIds.get(parentRef.value),
-            unionId: union.lastInsertRowid,
+            unionId: union ? union.lastInsertRowid : null,
           },
           performedBy,
         );
       }
     }
   }
-  return { ids };
+  return { ids, personXrefs: Object.fromEntries(personIds) };
 }
 
 function insertEventRecord(
@@ -475,4 +652,37 @@ function children(record, tag) {
 
 function child(record, tag) {
   return children(record, tag)[0] ?? null;
+}
+
+// Liens personne → fichier : OBJE référencé (@O1@) ou OBJE en ligne sous INDI.
+function collectMediaLinks(records) {
+  const objects = new Map(
+    records
+      .filter((record) => record.tag === 'OBJE' && record.xref)
+      .map((record) => {
+        const file = child(record, 'FILE');
+        return [
+          record.xref,
+          { file: file?.value, title: child(file ?? record, 'TITL')?.value ?? null },
+        ];
+      }),
+  );
+  const links = [];
+  for (const person of records.filter((record) => record.tag === 'INDI')) {
+    for (const reference of children(person, 'OBJE')) {
+      const target = reference.value
+        ? objects.get(reference.value)
+        : { file: value(reference, 'FILE'), title: value(reference, 'TITL') ?? null };
+      if (target?.file) links.push({ personXref: person.xref, ...target });
+    }
+  }
+  return links;
+}
+
+function pedigreeOf(records, childXref, familyXref) {
+  const person = records.find((record) => record.tag === 'INDI' && record.xref === childXref);
+  if (!person) return 'BIOLOGICAL';
+  const famc = children(person, 'FAMC').find((link) => link.value === familyXref);
+  const pedigree = famc ? value(famc, 'PEDI')?.toUpperCase() : null;
+  return PEDIGREE_TO_LINK[pedigree] ?? 'BIOLOGICAL';
 }

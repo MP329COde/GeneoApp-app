@@ -10,10 +10,12 @@ const TEXT_MAX = 20_000;
 
 function requiredText(value, field, max = TITLE_MAX) {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new ValidationError(`${field} est obligatoire`, { [field]: 'obligatoire' });
+    throw new ValidationError(`${field} est obligatoire`, { fields: { [field]: 'obligatoire' } });
   }
   if (value.length > max) {
-    throw new ValidationError(`${field} dépasse ${max} caractères`, { [field]: 'trop long' });
+    throw new ValidationError(`${field} dépasse ${max} caractères`, {
+      fields: { [field]: 'trop long' },
+    });
   }
   return value.trim();
 }
@@ -22,14 +24,15 @@ function optionalText(value, field, max = TEXT_MAX) {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
   if (typeof value !== 'string' || value.length > max) {
-    throw new ValidationError(`${field} invalide`, { [field]: 'invalide' });
+    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
   }
   return value;
 }
 
 function oneOf(value, allowed, field) {
   if (value === undefined) return undefined;
-  if (!allowed.has(value)) throw new ValidationError(`${field} invalide`, { [field]: 'invalide' });
+  if (!allowed.has(value))
+    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
   return value;
 }
 
@@ -37,7 +40,9 @@ function optionalDate(value, field) {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
   if (typeof value !== 'string' || !ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
-    throw new ValidationError(`${field} doit être une date AAAA-MM-JJ`, { [field]: 'invalide' });
+    throw new ValidationError(`${field} doit être une date AAAA-MM-JJ`, {
+      fields: { [field]: 'invalide' },
+    });
   }
   return value;
 }
@@ -47,7 +52,7 @@ function optionalId(value, field) {
   if (value === null || value === '') return null;
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new ValidationError(`${field} invalide`, { [field]: 'invalide' });
+    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
   }
   return id;
 }

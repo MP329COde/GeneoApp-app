@@ -287,3 +287,150 @@ test('POST /api/gedcom/export refuse un format ou un périmètre invalide (400, 
     await server.close();
   }
 });
+
+test('GEDZIP : export avec médias puis import dans un arbre vide rattache les fichiers', async () => {
+  const source = await startTestServer();
+  const target = await startTestServer();
+  try {
+    const png = await readFile(new URL('../fixtures/sample.png', import.meta.url));
+    const { body: person } = await requestJson(source.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const upload = await requestJson(source.baseUrl, '/api/media', {
+      method: 'POST',
+      body: {
+        filename: 'portrait Ada.png',
+        contentBase64: png.toString('base64'),
+        entityType: 'PERSON',
+        entityId: person.id,
+      },
+    });
+    assert.equal(upload.status, 201);
+
+    const plain = await requestJson(source.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '7' },
+    });
+    assert.match(plain.body.gedcom, /1 OBJE @O\d+@/);
+    assert.match(plain.body.gedcom, /1 FILE media\/\d+-portrait_Ada\.png/);
+    assert.match(plain.body.gedcom, /2 FORM image\/png/);
+
+    const archive = await requestJson(source.baseUrl, '/api/gedcom/export-archive', {
+      method: 'POST',
+      body: {},
+    });
+    assert.equal(archive.status, 200);
+    assert.equal(archive.body.summary.media, 1);
+
+    const imported = await requestJson(target.baseUrl, '/api/gedcom/import-archive', {
+      method: 'POST',
+      body: { contentBase64: archive.body.contentBase64 },
+    });
+    assert.equal(imported.status, 201);
+    assert.equal(imported.body.media.attached, 1);
+    assert.deepEqual(imported.body.media.rejected, []);
+
+    const [importedPerson] = (await requestJson(target.baseUrl, '/api/persons')).body;
+    const media = await requestJson(
+      target.baseUrl,
+      `/api/media/by-entity/PERSON/${importedPerson.id}`,
+    );
+    assert.equal(media.body.length, 1);
+    assert.equal(media.body[0].mime_type, 'image/png');
+  } finally {
+    await source.close();
+    await target.close();
+  }
+});
+
+test('GEDZIP : refuse une archive sans .ged ou invalide', async () => {
+  const server = await startTestServer();
+  try {
+    const { createZip } = await import('../../src/server/src/gedcom/zip.js');
+    const noGed = createZip([{ name: 'photo.png', content: Buffer.from('x') }]);
+    const missing = await requestJson(server.baseUrl, '/api/gedcom/import-archive', {
+      method: 'POST',
+      body: { contentBase64: noGed.toString('base64') },
+    });
+    assert.equal(missing.status, 400);
+    const garbage = await requestJson(server.baseUrl, '/api/gedcom/import-archive', {
+      method: 'POST',
+      body: { contentBase64: Buffer.from('pas un zip').toString('base64') },
+    });
+    assert.equal(garbage.status, 400);
+  } finally {
+    await server.close();
+  }
+});
+
+test('aller-retour GEDCOM fidèle : filiations sans union, enfant unique par famille, adoption', async () => {
+  const source = await startTestServer();
+  const target = await startTestServer();
+  try {
+    const person = async (givenNames, familyName, sex) =>
+      (
+        await requestJson(source.baseUrl, '/api/persons', {
+          method: 'POST',
+          body: { givenNames, familyName, sex },
+        })
+      ).body;
+    const ada = await person('Ada', 'Lovelace', 'F');
+    const charles = await person('Charles', 'Babbage', 'M');
+    const byron = await person('Byron', 'Lovelace', 'M');
+    const adopte = await person('Adopté', 'Lovelace', 'U');
+    const { body: union } = await requestJson(source.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { type: 'MARRIAGE', partnerIds: [ada.id, charles.id] },
+    });
+    for (const [parent, role] of [
+      [ada, 'MOTHER'],
+      [charles, 'FATHER'],
+    ]) {
+      await requestJson(source.baseUrl, '/api/parentages', {
+        method: 'POST',
+        body: { childId: byron.id, parentId: parent.id, parentRole: role, unionId: union.id },
+      });
+    }
+    await requestJson(source.baseUrl, '/api/parentages', {
+      method: 'POST',
+      body: { childId: adopte.id, parentId: ada.id, parentRole: 'MOTHER', linkType: 'ADOPTIVE' },
+    });
+
+    const { body: exported } = await requestJson(source.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '7' },
+    });
+    const chil = exported.gedcom.match(new RegExp(`1 CHIL @I${byron.id}@`, 'g'));
+    assert.equal(chil.length, 1, 'un enfant n’apparaît qu’une fois dans sa famille');
+    assert.match(exported.gedcom, new RegExp(`1 HUSB @I${charles.id}@`));
+    assert.match(exported.gedcom, new RegExp(`1 WIFE @I${ada.id}@`));
+    assert.match(exported.gedcom, /2 PEDI ADOPTED/);
+    assert.match(exported.gedcom, /1 _NOUNION Y/);
+
+    const imported = await requestJson(target.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: exported.gedcom },
+    });
+    assert.equal(imported.status, 201, JSON.stringify(imported.body).slice(0, 300));
+    assert.equal(
+      imported.body.ids.unions.length,
+      1,
+      'aucune union inventée pour la filiation seule',
+    );
+    assert.equal(imported.body.ids.parentages.length, 3);
+
+    const newIds = imported.body.personXrefs;
+    const adopted = await requestJson(
+      target.baseUrl,
+      `/api/parentages/parents-of/${newIds[`@I${adopte.id}@`]}`,
+    );
+    assert.equal(adopted.body.length, 1);
+    assert.equal(adopted.body[0].link_type, 'ADOPTIVE');
+    assert.equal(adopted.body[0].parent_role, 'MOTHER');
+    assert.equal(adopted.body[0].union_id, null);
+  } finally {
+    await source.close();
+    await target.close();
+  }
+});

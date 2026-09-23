@@ -16,7 +16,7 @@ const RESOURCES = {
 const SPECIAL = [
   [/\/restore$/, 'Restauration'],
   [/\/merge$/, 'Fusion'],
-  [/\/import$/, 'Import'],
+  [/\/import(-archive)?$/, 'Import'],
   [/\/participants$/, 'Ajout de participant'],
   [/\/citations$/, 'Ajout de citation'],
   [/\/hypotheses$/, 'Ajout d’hypothèse'],

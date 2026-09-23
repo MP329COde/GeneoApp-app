@@ -54,6 +54,8 @@ export const IPC_CHANNELS = Object.freeze({
   GEDCOM_PREVIEW: 'geneoapp:gedcom:preview',
   GEDCOM_IMPORT: 'geneoapp:gedcom:import',
   GEDCOM_EXPORT: 'geneoapp:gedcom:export',
+  GEDCOM_EXPORT_ARCHIVE: 'geneoapp:gedcom:exportArchive',
+  GEDCOM_IMPORT_ARCHIVE: 'geneoapp:gedcom:importArchive',
 
   ACCOUNTS_CREATE: 'geneoapp:accounts:create',
   ACCOUNTS_LIST: 'geneoapp:accounts:list',
