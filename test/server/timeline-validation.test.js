@@ -24,11 +24,12 @@ function setup() {
       ...(linkType ? { linkType } : {}),
     });
   const issues = () => services.graph.validateTimeline();
+  const markLiving = (id) => services.persons.update(id, { isLiving: true });
   const codes = () =>
     issues()
       .map((issue) => `${issue.code}:${issue.severity}`)
       .sort();
-  return { person, event, link, issues, codes };
+  return { person, event, link, issues, codes, markLiving };
 }
 
 test('une date approximative qui chevauche ne produit qu’un signalement « possible »', () => {
@@ -97,5 +98,23 @@ test('une adoption n’est pas soumise aux contrôles biologiques', () => {
   t.link(enfant, parent, 'MOTHER', 'ADOPTIVE');
   t.event('BIRTH', '1900', parent);
   t.event('BIRTH', '1850', enfant);
-  assert.deepEqual(t.codes(), []);
+  assert.deepEqual(
+    t.codes().filter((code) => !code.startsWith('LIVING_')),
+    [],
+  );
+});
+
+test('le statut « vivant » contredit par un décès ou un âge extrême est signalé', () => {
+  const t = setup();
+  const mort = t.person('Mort');
+  t.event('BIRTH', '1788', mort);
+  t.event('DEATH', '1851', mort);
+  // Le décès rend la personne décédée ; seule une saisie explicite la contredit.
+  assert.ok(!t.codes().includes('LIVING_WITH_DEATH:CERTAIN'));
+  t.markLiving(mort);
+  const ancien = t.person('Ancien');
+  t.event('BIRTH', '1850', ancien);
+  const codes = t.codes();
+  assert.ok(codes.includes('LIVING_WITH_DEATH:CERTAIN'));
+  assert.ok(codes.includes('LIVING_TOO_OLD:POSSIBLE'));
 });

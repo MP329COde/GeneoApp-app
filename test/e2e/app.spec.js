@@ -225,7 +225,7 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
 });
 
-test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohérence attendue)', async ({
+test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune erreur certaine)', async ({
   page,
 }) => {
   await page.goto('/');
@@ -233,7 +233,10 @@ test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohére
   await page.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }).click();
 
   await expect(page.getByText('Aucun cycle détecté.')).toBeVisible();
-  await expect(page.getByText('Aucune incohérence de date détectée.')).toBeVisible();
+  // Aucune erreur certaine ; seuls des signalements « à vérifier » sont admis
+  // (ex. personne née en 1815 encore marquée vivante).
+  await expect(page.getByText('Incohérences de chronologie')).toBeVisible();
+  await expect(page.getByText('Erreur certaine')).toHaveCount(0);
 });
 
 test('calcule les ancêtres communs réels (ou leur absence) entre deux personnes', async ({

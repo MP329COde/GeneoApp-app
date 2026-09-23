@@ -13,6 +13,7 @@ const graph = vi.hoisted(() => ({
   cycles: vi.fn(),
   timeline: vi.fn(),
   commonAncestors: vi.fn(),
+  network: vi.fn(),
   ancestors: vi.fn(),
   descendants: vi.fn(),
   relationship: vi.fn(),
@@ -1884,5 +1885,42 @@ describe('App', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('https://');
     open.mockRestore();
     localStorage.clear();
+  });
+  it('affiche le graphe familial radial avec liens typés et nœuds navigables', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.network.mockResolvedValue({
+      rootId: 1,
+      nodes: [
+        { id: 1, given_names: 'Jean', family_name: 'Dupont', distance: 0 },
+        { id: 2, given_names: 'Marie', family_name: 'Martin', distance: 1 },
+        { id: 3, given_names: 'Paul', family_name: 'Dupont', distance: 1 },
+      ],
+      edges: [
+        { from: 1, to: 2, kind: 'SPOUSE' },
+        { from: 1, to: 3, kind: 'PARENT', linkType: 'ADOPTIVE' },
+      ],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Graphe' }));
+
+    await waitFor(() => expect(graph.network).toHaveBeenCalledWith(1, 4));
+    expect(
+      await screen.findByRole('group', { name: 'Graphe familial de Jean Dupont' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Filiation adoptive')).toBeInTheDocument();
+    expect(screen.getByText('Union')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Marie Martin, .*degré 1$/ }), {
+      key: 'Enter',
+    });
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
   });
 });

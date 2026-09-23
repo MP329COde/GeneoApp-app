@@ -1142,6 +1142,8 @@ const TIMELINE_ISSUE_LABELS = {
   PARENT_TOO_YOUNG: 'Parent très jeune à la naissance',
   PARENT_TOO_OLD: 'Parent âgé à la naissance',
   CHILD_AFTER_PARENT_DEATH: "Naissance de l'enfant enregistrée après le décès du parent",
+  LIVING_WITH_DEATH: 'Marquée vivante malgré un décès enregistré',
+  LIVING_TOO_OLD: 'Marquée vivante mais très âgée',
 };
 const SEVERITY_LABELS = { CERTAIN: 'Erreur certaine', POSSIBLE: 'Inhabituel, à vérifier' };
 

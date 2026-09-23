@@ -412,6 +412,9 @@ function buildRawHandlers(services, workspace, storage) {
       return { removed: true };
     }),
 
+    [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
+      services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
+    ),
     [IPC_CHANNELS.PERSON_QUALITY]: wrap(({ personId }) => services.quality.forPerson(personId)),
     [IPC_CHANNELS.SEARCH_ADVANCED]: wrap(({ filters }) =>
       services.advancedSearch.search(filters ?? {}),

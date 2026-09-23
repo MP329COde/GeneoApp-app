@@ -201,3 +201,44 @@ test('la chronologie trie les dates généalogiques, pas le texte', async () => 
     await server.close();
   }
 });
+
+test('un décès enregistré (saisie ou GEDCOM) rend la personne décédée, et c’est annulable', async () => {
+  const server = await startTestServer();
+  try {
+    const { body: person } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Jean', familyName: 'Défunt' },
+    });
+    assert.equal(person.is_living, 1);
+    await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: {
+        type: 'DEATH',
+        dateText: '1851',
+        participants: [{ personId: person.id, role: 'PRINCIPAL' }],
+      },
+    });
+    assert.equal(
+      (await requestJson(server.baseUrl, `/api/persons/${person.id}`)).body.is_living,
+      0,
+    );
+    await requestJson(server.baseUrl, '/api/history/undo', { method: 'POST' });
+    assert.equal(
+      (await requestJson(server.baseUrl, `/api/persons/${person.id}`)).body.is_living,
+      1,
+    );
+
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: {
+        gedcom:
+          '0 HEAD\n1 GEDC\n2 VERS 7\n0 @I1@ INDI\n1 NAME Anne /Morte/\n1 DEAT\n2 DATE 1900\n0 @I2@ INDI\n1 NAME Paul /Vivant/\n0 TRLR\n',
+      },
+    });
+    const [dead, alive] = imported.body.ids.persons;
+    assert.equal((await requestJson(server.baseUrl, `/api/persons/${dead}`)).body.is_living, 0);
+    assert.equal((await requestJson(server.baseUrl, `/api/persons/${alive}`)).body.is_living, 1);
+  } finally {
+    await server.close();
+  }
+});

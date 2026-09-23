@@ -231,3 +231,50 @@ test('le graphe nomme le degré de parenté en français (fratrie, oncle/tante, 
     await server.close();
   }
 });
+
+test('GET /api/persons/:id/network renvoie le réseau typé jusqu’à la profondeur demandée', async () => {
+  const server = await startTestServer();
+  try {
+    const person = async (givenNames) =>
+      (
+        await requestJson(server.baseUrl, '/api/persons', {
+          method: 'POST',
+          body: { givenNames, familyName: 'Réseau' },
+        })
+      ).body.id;
+    const [moi, pere, grandPere, epouse, adopte] = [
+      await person('Moi'),
+      await person('Père'),
+      await person('Grand-père'),
+      await person('Épouse'),
+      await person('Adopté'),
+    ];
+    const link = (childId, parentId, extra = {}) =>
+      requestJson(server.baseUrl, '/api/parentages', {
+        method: 'POST',
+        body: { childId, parentId, parentRole: 'PARENT', ...extra },
+      });
+    await link(moi, pere);
+    await link(pere, grandPere);
+    await link(adopte, moi, { linkType: 'ADOPTIVE' });
+    await requestJson(server.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { type: 'MARRIAGE', partnerIds: [moi, epouse] },
+    });
+
+    const near = (await requestJson(server.baseUrl, `/api/persons/${moi}/network?depth=1`)).body;
+    assert.deepEqual(
+      near.nodes.map((node) => node.id).sort((a, b) => a - b),
+      [moi, pere, epouse, adopte].sort((a, b) => a - b),
+    );
+    assert.ok(near.edges.some((edge) => edge.kind === 'SPOUSE'));
+    assert.ok(near.edges.some((edge) => edge.linkType === 'ADOPTIVE' && edge.to === adopte));
+
+    const far = (await requestJson(server.baseUrl, `/api/persons/${moi}/network?depth=2`)).body;
+    assert.equal(far.nodes.find((node) => node.id === grandPere).distance, 2);
+    const bad = await requestJson(server.baseUrl, `/api/persons/${moi}/network?depth=9`);
+    assert.equal(bad.status, 400);
+  } finally {
+    await server.close();
+  }
+});

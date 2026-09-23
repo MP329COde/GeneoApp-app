@@ -440,8 +440,8 @@ function applyMapping(database, records, performedBy) {
   const eventIds = new Map();
   const ids = { persons: [], events: [], unions: [], parentages: [] };
   const insertPerson = database.prepare(
-    `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes, nickname, external_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes, nickname, external_id, is_living)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertPlace = database.prepare(`INSERT INTO places (name, normalized_name) VALUES (?, ?)`);
   const insertEvent = database.prepare(
@@ -473,6 +473,8 @@ function applyMapping(database, records, performedBy) {
       notes(person),
       value(person, 'NICK') ?? null,
       person.xref ?? null,
+      // Décès ou inhumation connus : la personne n'est pas vivante.
+      children(person, 'DEAT').length > 0 || children(person, 'BURI').length > 0 ? 0 : 1,
     );
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);

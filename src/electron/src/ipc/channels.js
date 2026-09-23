@@ -110,6 +110,7 @@ export const IPC_CHANNELS = Object.freeze({
 
   SEARCH_ADVANCED: 'geneoapp:search:advanced',
   PERSON_QUALITY: 'geneoapp:quality:forPerson',
+  GRAPH_NETWORK: 'geneoapp:graph:network',
   HISTORY_STATUS: 'geneoapp:history:status',
   HISTORY_UNDO: 'geneoapp:history:undo',
   HISTORY_REDO: 'geneoapp:history:redo',

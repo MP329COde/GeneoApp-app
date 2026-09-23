@@ -78,6 +78,7 @@ const api = {
     ancestors: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_ANCESTORS, { personId, depth }),
     descendants: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_DESCENDANTS, { personId, depth }),
     relations: (personId) => invoke(IPC_CHANNELS.GRAPH_RELATIONS, { personId }),
+    network: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_NETWORK, { personId, depth }),
     relationship: (personA, personB) =>
       invoke(IPC_CHANNELS.GRAPH_RELATIONSHIP, { personA, personB }),
     commonAncestors: (personA, personB) =>

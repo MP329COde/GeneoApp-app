@@ -276,6 +276,84 @@ export class GenealogyGraphService {
     return cycles;
   }
 
+  /**
+   * Réseau familial autour d'une personne (distance ≤ depth) : nœuds avec
+   * leur distance et arêtes typées (filiation biologique, adoptive,
+   * nourricière, par alliance, inconnue ; union), pour la vue graphe.
+   */
+  getNetwork(personId, { depth = 2 } = {}) {
+    this.getPerson(personId);
+    if (!Number.isInteger(depth) || depth < 1 || depth > 6) {
+      throw new ValidationError('La profondeur du graphe doit être comprise entre 1 et 6');
+    }
+    const parentages = this.database
+      .prepare(
+        `SELECT child_id, parent_id, link_type FROM parentages pa
+         JOIN persons c ON c.id = pa.child_id AND c.deleted_at IS NULL
+         JOIN persons p ON p.id = pa.parent_id AND p.deleted_at IS NULL
+         WHERE pa.deleted_at IS NULL`,
+      )
+      .all();
+    const partners = this.database
+      .prepare(
+        `SELECT a.person_id AS a, b.person_id AS b
+         FROM union_partners a
+         JOIN union_partners b ON b.union_id = a.union_id AND b.person_id > a.person_id AND b.deleted_at IS NULL
+         JOIN unions u ON u.id = a.union_id AND u.deleted_at IS NULL
+         WHERE a.deleted_at IS NULL`,
+      )
+      .all();
+    const adjacency = new Map();
+    const link = (from, to) => {
+      if (!adjacency.has(from)) adjacency.set(from, new Set());
+      adjacency.get(from).add(to);
+    };
+    for (const edge of parentages) {
+      link(edge.child_id, edge.parent_id);
+      link(edge.parent_id, edge.child_id);
+    }
+    for (const edge of partners) {
+      link(edge.a, edge.b);
+      link(edge.b, edge.a);
+    }
+    const distance = new Map([[personId, 0]]);
+    const queue = [personId];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (distance.get(current) >= depth) continue;
+      for (const next of adjacency.get(current) ?? []) {
+        if (distance.has(next)) continue;
+        distance.set(next, distance.get(current) + 1);
+        queue.push(next);
+      }
+    }
+    const ids = [...distance.keys()];
+    const persons = this.database
+      .prepare(
+        `SELECT id, given_names, family_name, sex FROM persons
+         WHERE deleted_at IS NULL AND id IN (${ids.map(() => '?').join(',')})`,
+      )
+      .all(...ids);
+    const inside = (id) => distance.has(id);
+    return {
+      rootId: personId,
+      nodes: persons.map((person) => ({ ...person, distance: distance.get(person.id) })),
+      edges: [
+        ...parentages
+          .filter((edge) => inside(edge.child_id) && inside(edge.parent_id))
+          .map((edge) => ({
+            from: edge.parent_id,
+            to: edge.child_id,
+            kind: 'PARENT',
+            linkType: edge.link_type,
+          })),
+        ...partners
+          .filter((edge) => inside(edge.a) && inside(edge.b))
+          .map((edge) => ({ from: edge.a, to: edge.b, kind: 'SPOUSE' })),
+      ],
+    };
+  }
+
   validateTimeline() {
     return validateTimeline(this.database);
   }

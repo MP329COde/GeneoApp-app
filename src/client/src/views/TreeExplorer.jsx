@@ -14,12 +14,14 @@ import {
   svgToPngBlob,
   tileSvg,
 } from '../export/tree-export.js';
+import { RadialGraph } from './RadialGraph.jsx';
 
 const MODES = [
   { id: 'family', label: 'Familial' },
   { id: 'ancestors', label: 'Ascendant' },
   { id: 'descendants', label: 'Descendant' },
   { id: 'fan', label: 'Éventail' },
+  { id: 'graph', label: 'Graphe' },
 ];
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
@@ -323,9 +325,11 @@ export function TreeExplorer({
     setItems(null);
     setLoadError(null);
     const request =
-      mode === 'ancestors' || mode === 'fan'
-        ? client.graph.ancestors(selected.id, mode === 'fan' ? Math.min(depth, 6) : depth)
-        : client.graph.descendants(selected.id, depth);
+      mode === 'graph'
+        ? client.graph.network(selected.id, Math.min(depth, 6))
+        : mode === 'ancestors' || mode === 'fan'
+          ? client.graph.ancestors(selected.id, mode === 'fan' ? Math.min(depth, 6) : depth)
+          : client.graph.descendants(selected.id, depth);
     request
       .then((list) => !cancelled && setItems(list))
       .catch((error) => !cancelled && setLoadError(error.message));
@@ -437,7 +441,7 @@ export function TreeExplorer({
   };
 
   // Isolation d'une branche : Sosa 2 (père) et ses ascendants, ou Sosa 3 (mère).
-  let visibleItems = items ?? [];
+  let visibleItems = Array.isArray(items) ? items : [];
   if (selected && branchFilter !== 'all' && (mode === 'ancestors' || mode === 'fan')) {
     const sosa = computeSosa(selected.id, visibleItems);
     const wanted = branchFilter === 'paternal' ? 2 : 3;
@@ -469,6 +473,10 @@ export function TreeExplorer({
         Chargement de l’arbre…
       </p>
     );
+  } else if (mode === 'graph') {
+    content = items?.nodes ? (
+      <RadialGraph network={items} lifespans={lifespans} onSelect={onSelect} />
+    ) : null;
   } else if (mode === 'fan') {
     content = <FanChart root={selected} items={visibleItems} onSelect={onSelect} />;
   } else {

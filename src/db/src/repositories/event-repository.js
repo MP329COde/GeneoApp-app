@@ -73,6 +73,26 @@ export class EventRepository {
         performedBy,
       });
 
+      // Un décès ou une inhumation de la personne principale la rend décédée
+      // (le statut « vivant » par défaut ne doit pas contredire les faits).
+      if (role === 'PRINCIPAL') {
+        const event = this.database.prepare('SELECT type FROM events WHERE id = ?').get(eventId);
+        if (event && (event.type === 'DEATH' || event.type === 'BURIAL')) {
+          const updated = this.database
+            .prepare('UPDATE persons SET is_living = 0 WHERE id = ? AND is_living = 1')
+            .run(personId);
+          if (updated.changes > 0) {
+            recordAudit(this.database, {
+              tableName: 'persons',
+              rowId: personId,
+              operation: 'UPDATE',
+              changes: { isLiving: false, reason: 'décès enregistré' },
+              performedBy,
+            });
+          }
+        }
+      }
+
       return info.lastInsertRowid;
     });
   }

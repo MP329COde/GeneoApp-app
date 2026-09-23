@@ -79,6 +79,8 @@ function createHttpClient() {
       descendants: (personId, depth) =>
         fetchJson(`/api/persons/${personId}/descendants${depth ? `?depth=${depth}` : ''}`),
       relations: (personId) => fetchJson(`/api/persons/${personId}/relations`),
+      network: (personId, depth) =>
+        fetchJson(`/api/persons/${personId}/network${depth ? `?depth=${depth}` : ''}`),
       relationship: (personA, personB) =>
         fetchJson(`/api/graph/relationship?personA=${personA}&personB=${personB}`),
       commonAncestors: (personA, personB) =>
@@ -287,6 +289,7 @@ function createIpcClient(bridge) {
       ancestors: (personId, depth) => bridge.graph.ancestors(personId, depth),
       descendants: (personId, depth) => bridge.graph.descendants(personId, depth),
       relations: (personId) => bridge.graph.relations(personId),
+      network: (personId, depth) => bridge.graph.network(personId, depth),
       relationship: (personA, personB) => bridge.graph.relationship(personA, personB),
       commonAncestors: (personA, personB) => bridge.graph.commonAncestors(personA, personB),
       cycles: () => bridge.graph.cycles(),

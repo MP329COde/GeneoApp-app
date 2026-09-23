@@ -2193,3 +2193,55 @@ input[type='radio'] {
   cursor: pointer;
   color: var(--text-link);
 }
+
+/* ---------- Graphe radial ---------- */
+.radial-graph {
+  overflow: visible;
+}
+.graph-edge {
+  stroke: var(--rel-biological);
+  stroke-width: 2;
+  fill: none;
+}
+.graph-edge--adoptive {
+  stroke: var(--rel-adoptive);
+}
+.graph-edge--unknown {
+  stroke: var(--rel-unknown);
+}
+.graph-edge--spouse line {
+  stroke: var(--rel-spouse);
+}
+.graph-edge--spouse .graph-edge__gap {
+  stroke: var(--bg-app);
+}
+.graph-node {
+  cursor: pointer;
+  outline: none;
+}
+.graph-node rect {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.graph-node--root rect {
+  fill: var(--surface-selected);
+  stroke: var(--action);
+  stroke-width: 2;
+}
+.graph-node:hover rect,
+.graph-node:focus-visible rect {
+  stroke: var(--focus-ring);
+  stroke-width: 2.5;
+}
+.graph-node__name {
+  fill: var(--text);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 14px;
+}
+.graph-node__years {
+  fill: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

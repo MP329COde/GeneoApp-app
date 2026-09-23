@@ -130,6 +130,33 @@ export function validateTimeline(database) {
     }
   }
 
+  // Statut « vivant » contredit par les données.
+  const currentYear = new Date().getUTCFullYear();
+  for (const { id } of database
+    .prepare('SELECT id FROM persons WHERE deleted_at IS NULL AND is_living = 1')
+    .all()) {
+    const timeline = byPerson.get(id);
+    if (!timeline) continue;
+    if ((timeline.DEATH?.length ?? 0) > 0 || (timeline.BURIAL?.length ?? 0) > 0) {
+      push({
+        personId: id,
+        code: 'LIVING_WITH_DEATH',
+        severity: 'CERTAIN',
+        message: 'Marquée vivante alors qu’un décès ou une inhumation est enregistré',
+      });
+      continue;
+    }
+    const birth = first(timeline, 'BIRTH');
+    if (birth?.max !== null && birth && currentYear - Math.floor(birth.max / 372) > 110) {
+      push({
+        personId: id,
+        code: 'LIVING_TOO_OLD',
+        severity: 'POSSIBLE',
+        message: 'Marquée vivante mais née il y a plus de 110 ans',
+      });
+    }
+  }
+
   const links = database
     .prepare(
       `SELECT pa.parent_id, pa.child_id, pa.parent_role, parent.sex AS parent_sex
