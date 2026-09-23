@@ -168,3 +168,19 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   de test. `npm run test:e2e` ajouté, exécuté en CI dans un job dédié (`ci.yml`) avec upload du rapport HTML en
   cas d'échec. 5 scénarios couverts : état vide honnête, création de personne, liaison parent/enfant reflétée
   dans l'arbre, statistiques réelles, persistance du carnet de recherche après rechargement de page.
+- 2026-09-23 (suite) : extension de la suite E2E à trois parcours supplémentaires — import GEDCOM réel via
+  texte collé (aperçu bloquant puis import transactionnel), export GEDCOM réel (téléchargement déclenché),
+  et accès aux sauvegardes (blocage sans session, connexion, création réelle). Le scénario sauvegardes a
+  immédiatement révélé un vrai bug de sécurité côté client : `client.backups.list()` et
+  `client.backups.verify()` (HTTP **et** IPC) n'envoyaient jamais le jeton de session, alors que le serveur
+  exige une session sur toute la route `/api/backups` (`router.use(requireSession(...))` dans
+  `backup.routes.js`) — en pratique, l'écran Sauvegardes ne pouvait jamais afficher la liste réelle une fois
+  connecté, et côté Electron, `BACKUPS_LIST`/`BACKUPS_VERIFY` n'appliquaient même aucune vérification de
+  session (incohérence avec le transport HTTP). Corrigé : `geneoapp-client.js` (les deux transports),
+  `build-handlers.js` (`accounts.requireSession(token)` ajouté sur ces deux canaux) et `preload.js`
+  acceptent et propagent désormais le jeton ; `App.jsx` passe `session.token` à `client.backups.list`.
+  Testé (`test/electron/ipc-handlers.test.js`, nouveau cas dédié ; suite E2E complète, 8/8). Effet de bord
+  découvert et corrigé au passage : les sauvegardes de test réelles s'accumulaient indéfiniment dans le
+  répertoire temporaire partagé de la machine (aucun répertoire dédié aux tests) — `playwright.config.js`
+  isole désormais chaque exécution via `GENEOAPP_BACKUP_DIR` pointant vers un répertoire temporaire créé et
+  propre à cette exécution.

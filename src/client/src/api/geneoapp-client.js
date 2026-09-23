@@ -124,8 +124,9 @@ function createHttpClient() {
     },
     backups: {
       create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
-      list: () => fetchJson('/api/backups'),
-      verify: (filename) => fetchJson(`/api/backups/${encodeURIComponent(filename)}/verify`),
+      list: (token) => fetchJson('/api/backups', { token }),
+      verify: (filename, token) =>
+        fetchJson(`/api/backups/${encodeURIComponent(filename)}/verify`, { token }),
       restore: (filename, kind, token) =>
         fetchJson(
           `/api/backups/${encodeURIComponent(filename)}/restore${kind === 'sqlite' ? '?kind=sqlite' : ''}`,
@@ -133,7 +134,7 @@ function createHttpClient() {
         ),
     },
     trash: {
-      list: () => fetchJson('/api/trash'),
+      list: (token) => fetchJson('/api/trash', { token }),
       restore: (table, id, token) =>
         fetchJson(`/api/trash/${table}/${id}/restore`, { method: 'POST', token }),
       purge: (table, id, token) =>
@@ -241,12 +242,12 @@ function createIpcClient(bridge) {
     },
     backups: {
       create: (data, token) => bridge.backups.create(data, token),
-      list: () => bridge.backups.list(),
-      verify: (filename) => bridge.backups.verify(filename),
+      list: (token) => bridge.backups.list(token),
+      verify: (filename, token) => bridge.backups.verify(filename, token),
       restore: (filename, kind, token) => bridge.backups.restore(filename, kind, token),
     },
     trash: {
-      list: () => bridge.trash.list(),
+      list: (token) => bridge.trash.list(token),
       restore: (table, id, token) => bridge.trash.restore(table, id, token),
       purge: (table, id, token) => bridge.trash.purge(table, id, token),
     },

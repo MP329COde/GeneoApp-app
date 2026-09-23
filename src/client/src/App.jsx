@@ -1527,12 +1527,12 @@ function BackupsPanel({ session, onLogin, loginError }) {
 
   const loadAll = useCallback(async () => {
     try {
-      setBackups(await client.backups.list());
+      setBackups(await client.backups.list(session.token));
       setTrashItems(await client.trash.list());
     } catch (loadError) {
       setActionError(loadError.message);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (session) loadAll();

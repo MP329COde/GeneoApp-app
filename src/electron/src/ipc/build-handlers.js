@@ -188,8 +188,14 @@ export function buildIpcHandlers(services) {
       accounts.requireSession(token);
       return backups.create(data, { performedBy: actorOf(performedBy) });
     }),
-    [IPC_CHANNELS.BACKUPS_LIST]: wrap(() => backups.list()),
-    [IPC_CHANNELS.BACKUPS_VERIFY]: wrap(({ filename }) => backups.verify(filename)),
+    [IPC_CHANNELS.BACKUPS_LIST]: wrap(({ token }) => {
+      accounts.requireSession(token);
+      return backups.list();
+    }),
+    [IPC_CHANNELS.BACKUPS_VERIFY]: wrap(({ filename, token }) => {
+      accounts.requireSession(token);
+      return backups.verify(filename);
+    }),
     [IPC_CHANNELS.BACKUPS_RESTORE]: wrap(({ filename, kind, token, performedBy }) => {
       accounts.requireSession(token);
       return kind === 'sqlite'

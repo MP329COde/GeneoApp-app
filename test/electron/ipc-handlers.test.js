@@ -213,6 +213,40 @@ test('ACCOUNTS_LOGIN puis BACKUPS_CREATE/TRASH_PURGE exigent un jeton de session
   assert.equal(purge.ok, true);
 });
 
+test('BACKUPS_LIST et BACKUPS_VERIFY exigent aussi un jeton de session valide', async () => {
+  const handlers = createHandlers();
+
+  await handlers[IPC_CHANNELS.ACCOUNTS_CREATE]({ data: { name: 'Bob' } });
+  const login = await handlers[IPC_CHANNELS.ACCOUNTS_LOGIN]({ name: 'Bob' });
+  const { token } = login.data;
+
+  const listWithoutToken = await handlers[IPC_CHANNELS.BACKUPS_LIST]();
+  assert.equal(listWithoutToken.ok, false);
+  assert.equal(listWithoutToken.error.status, 401);
+
+  const created = await handlers[IPC_CHANNELS.BACKUPS_CREATE]({
+    data: { kind: 'json' },
+    token,
+  });
+  assert.equal(created.ok, true);
+
+  const listWithToken = await handlers[IPC_CHANNELS.BACKUPS_LIST]({ token });
+  assert.equal(listWithToken.ok, true);
+  assert.ok(listWithToken.data.some((backup) => backup.filename === created.data.filename));
+
+  const verifyWithoutToken = await handlers[IPC_CHANNELS.BACKUPS_VERIFY]({
+    filename: created.data.filename,
+  });
+  assert.equal(verifyWithoutToken.ok, false);
+  assert.equal(verifyWithoutToken.error.status, 401);
+
+  const verifyWithToken = await handlers[IPC_CHANNELS.BACKUPS_VERIFY]({
+    filename: created.data.filename,
+    token,
+  });
+  assert.equal(verifyWithToken.ok, true);
+});
+
 test('RESEARCH_CREATE et RESEARCH_LIST gèrent le carnet de recherche réel', async () => {
   const handlers = createHandlers();
 

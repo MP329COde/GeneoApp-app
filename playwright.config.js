@@ -1,4 +1,13 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { defineConfig } from '@playwright/test';
+
+// Répertoire de sauvegardes dédié à cette exécution de test : évite
+// d'accumuler indéfiniment de vrais fichiers de sauvegarde dans le
+// répertoire temporaire partagé de la machine à chaque lancement de la
+// suite E2E.
+const e2eBackupDir = mkdtempSync(path.join(tmpdir(), 'geneoapp-e2e-backups-'));
 
 // Suite E2E navigateur : pilote l'application réelle (serveur Express local
 // + client React servi par Vite) exactement comme en développement
@@ -24,6 +33,7 @@ export default defineConfig({
       env: {
         PORT: String(PORT),
         GENEOAPP_DATABASE: process.env.GENEOAPP_E2E_DATABASE ?? ':memory:',
+        GENEOAPP_BACKUP_DIR: e2eBackupDir,
       },
       port: PORT,
       reuseExistingServer: false,

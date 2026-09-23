@@ -102,8 +102,8 @@ const api = {
   backups: {
     create: (data, token, performedBy) =>
       invoke(IPC_CHANNELS.BACKUPS_CREATE, { data, token, performedBy }),
-    list: () => invoke(IPC_CHANNELS.BACKUPS_LIST),
-    verify: (filename) => invoke(IPC_CHANNELS.BACKUPS_VERIFY, { filename }),
+    list: (token) => invoke(IPC_CHANNELS.BACKUPS_LIST, { token }),
+    verify: (filename, token) => invoke(IPC_CHANNELS.BACKUPS_VERIFY, { filename, token }),
     restore: (filename, kind, token, performedBy) =>
       invoke(IPC_CHANNELS.BACKUPS_RESTORE, { filename, kind, token, performedBy }),
   },

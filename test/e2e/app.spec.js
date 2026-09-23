@@ -1,4 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
+
+const sampleGedcom = readFileSync(
+  fileURLToPath(new URL('../fixtures/sample.ged', import.meta.url)),
+  'utf8',
+);
 
 // Suite E2E navigateur : pilote l'application réelle (React + Vite + Express
 // + SQLite en mémoire), sans mock d'API — vérifie le parcours métier de
@@ -54,6 +61,51 @@ test('les statistiques reflètent les données réelles créées durant le parco
   await page.getByRole('button', { name: 'Statistiques' }).click();
   const personsRow = page.locator('dl div', { hasText: 'persons' });
   await expect(personsRow.locator('dd')).toHaveText('2');
+});
+
+test('importe un GEDCOM réel après aperçu valide et recharge la liste des personnes', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'GEDCOM' }).click();
+  await page.getByLabel('Contenu GEDCOM').fill(sampleGedcom);
+
+  const importButton = page.getByRole('button', { name: 'Importer' });
+  await expect(importButton).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Aperçu' }).click();
+  await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  await expect(importButton).toBeEnabled();
+
+  await importButton.click();
+  await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  await expect(page.getByText('5 personne(s)')).toBeVisible();
+});
+
+test('exporte réellement l’arbre au format GEDCOM (téléchargement déclenché)', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'GEDCOM' }).click();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exporter l’arbre complet' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('geneoapp-export-7.ged');
+});
+
+test('bloque les sauvegardes sans session puis autorise la création après connexion', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Sauvegardes' }).click();
+  await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
+
+  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+
+  await page.getByRole('button', { name: 'Créer une sauvegarde (JSON)' }).click();
+  await expect(page.getByText(/\.json/).first()).toBeVisible();
 });
 
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
