@@ -106,3 +106,16 @@ Un projet mature, testable, documenté, publieable et prêt à évoluer sans per
   issue 09 suivi post-livraison) avec installation de Chromium et upload du rapport HTML en cas d'échec — la
   CI valide désormais aussi le parcours utilisateur réel dans un navigateur, pas seulement les tests unitaires
   et d'intégration HTTP.
+- 2026-09-23 (suite) : exécution réelle de `npm run build-storybook` et `npm run package:linux` sur la machine
+  de développement (macOS), comme l'exige le cahier des charges avant toute déclaration de fin de produit.
+  `build-storybook` réussit sans erreur. `package:linux` échoue avec `spawn Unknown system error -86` lors de
+  la construction de l'AppImage : `electron-builder` invoque `appimagetool`, un binaire natif Linux, qui ne
+  peut pas s'exécuter sur macOS (erreur de format d'exécutable, indépendante du code de l'application — la
+  compilation croisée d'un AppImage depuis macOS n'est pas prise en charge par l'outillage amont). Ce n'est
+  pas une régression à corriger dans le code : `.github/workflows/release.yml` construit déjà chaque cible
+  sur son propre système d'exploitation (`ubuntu-latest` → `package:linux`, `windows-latest` → `package:win`,
+  `macos-latest` → `package:mac`), donc la CI n'est jamais exposée à cette limitation de compilation croisée.
+  La configuration de packaging elle-même reste validée indépendamment de la plateforme d'exécution par
+  `test/packaging/electron-builder-config.test.js` (cibles par OS, exclusion du binding natif et des sources
+  de l'archive asar), conformément à la consigne « valide au minimum la configuration de packaging dans la CI
+  adaptée » quand une commande de packaging ne peut pas s'exécuter sur la plateforme courante.
