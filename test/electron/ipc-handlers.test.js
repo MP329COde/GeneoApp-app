@@ -45,6 +45,25 @@ test('PERSONS_CREATE renvoie une enveloppe d’erreur 400 pour un payload invali
   assert.ok(response.error.fields.familyName);
 });
 
+test('PERSONS_UPDATE modifie réellement l’identité étendue (surnom, nom marital, titre, suffixe, vivant)', async () => {
+  const handlers = createHandlers();
+
+  const created = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+
+  const updated = await handlers[IPC_CHANNELS.PERSONS_UPDATE]({
+    id: created.data.id,
+    data: { nickname: 'Lady A', marriedName: 'Ada King', title: 'Comtesse', isLiving: false },
+    performedBy: 'renderer-user',
+  });
+
+  assert.equal(updated.ok, true);
+  assert.equal(updated.data.nickname, 'Lady A');
+  assert.equal(updated.data.married_name, 'Ada King');
+  assert.equal(updated.data.is_living, 0);
+});
+
 test('un payload qui n’est pas un objet est rejeté avant d’atteindre le service', async () => {
   const handlers = createHandlers();
 

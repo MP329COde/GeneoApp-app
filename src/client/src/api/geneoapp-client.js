@@ -53,6 +53,7 @@ function createHttpClient() {
       list: () => fetchJson('/api/persons'),
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
+      update: (id, data) => fetchJson(`/api/persons/${id}`, { method: 'PATCH', body: data }),
     },
     places: {
       create: (data) => fetchJson('/api/places', { method: 'POST', body: data }),
@@ -193,6 +194,7 @@ function createIpcClient(bridge) {
       list: () => bridge.persons.list(),
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),
+      update: (id, data) => bridge.persons.update(id, data),
     },
     places: {
       create: (data) => bridge.places.create(data),

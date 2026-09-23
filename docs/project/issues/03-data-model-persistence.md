@@ -93,3 +93,21 @@ Un modèle de données généalogique cohérent, solide et extensible, prêt à 
   Corrigé : namespaces `events` et `places` ajoutés au client (HTTP + IPC) ; nouvel onglet « Événements » sur
   la fiche personne sélectionnée — création d'un événement (type, date en texte libre, précision de date, lieu
   existant ou nouveau lieu créé à la volée), liste des événements réels, suppression. Testé (`App.test.jsx`).
+- 2026-09-23 : le cahier des charges (Phase B) exige que le modèle personne couvre « alias, surnoms, nom
+  marital, titres et suffixes » ainsi que « informations privées et personnes vivantes » et des « identifiants
+  ... GEDCOM et externes » — la table `persons` ne portait que prénom/nom/nom de naissance/sexe/notes. Ajouté
+  via `0010_expand_person_identity.sql` (`ALTER TABLE ADD COLUMN`, pas de reconstruction nécessaire ici car
+  aucune colonne existante ni contrainte CHECK partagée n'est modifiée) : `nickname`, `married_name`, `title`,
+  `suffix`, `is_living` (défaut vrai) et `external_id` (indexé). `PersonRepository`/`validatePersonCreate`/
+  `validatePersonUpdate` étendus ; le surnom est désormais indexé dans la recherche FTS. L'import GEDCOM
+  renseigne `external_id` avec le xref (`@I1@`) et `nickname` avec le tag `NICK` s'il est présent ; l'export
+  réécrit `1 NICK` en retour. Découvert dans la foulée : `PERSONS_UPDATE` avait son canal IPC (les deux
+  transports) mais `geneoapp-client.js` n'exposait `persons.update` nulle part — aucun écran ne pouvait
+  modifier une fiche personne existante, seulement la créer. Corrigé (`update` ajouté aux deux transports) et
+  nouvel outil « Identité » dans la fiche personne (surnom, nom marital, titre, suffixe, case à cocher
+  « personne vivante »). Testé : 2 cas DB, 2 cas API, 1 cas IPC (pour `PERSONS_UPDATE`, qui n'avait jusque-là
+  aucun test dédié), 1 cas GEDCOM (roundtrip NICK/xref), 1 cas client (Vitest), 1 scénario E2E Playwright
+  (édition puis rechargement de fiche, valeurs relues depuis l'API et non un état local optimiste). Limite
+  restante majeure, non traitée ici : toujours **un seul arbre global** — aucune notion de `tree_id`, alors
+  que le cahier des charges exige des « arbres généalogiques multiples » ; c'est une migration de fond
+  (colonne + filtrage sur toutes les requêtes), hors du périmètre raisonnable d'une seule étape.

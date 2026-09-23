@@ -127,3 +127,53 @@ test('PATCH /api/persons/:id sans champ modifiable retourne 400', async () => {
     await server.close();
   }
 });
+
+test('POST /api/persons accepte et persiste l’identité étendue (alias, nom marital, titre, suffixe, vivant, id externe)', async () => {
+  const server = await startTestServer();
+  try {
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {
+        givenNames: 'Ada',
+        familyName: 'Lovelace',
+        nickname: 'Ada',
+        marriedName: 'Ada King',
+        title: 'Comtesse',
+        suffix: null,
+        isLiving: false,
+        externalId: 'GEDCOM-I1',
+      },
+    });
+
+    assert.equal(status, 201);
+    assert.equal(body.nickname, 'Ada');
+    assert.equal(body.married_name, 'Ada King');
+    assert.equal(body.title, 'Comtesse');
+    assert.equal(body.is_living, 0);
+    assert.equal(body.external_id, 'GEDCOM-I1');
+
+    const updated = await requestJson(server.baseUrl, `/api/persons/${body.id}`, {
+      method: 'PATCH',
+      body: { isLiving: true },
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.is_living, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/persons rejette un isLiving non booléen', async () => {
+  const server = await startTestServer();
+  try {
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace', isLiving: 'oui' },
+    });
+
+    assert.equal(status, 400);
+    assert.ok(body.error.fields.isLiving);
+  } finally {
+    await server.close();
+  }
+});

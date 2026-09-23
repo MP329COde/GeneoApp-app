@@ -46,6 +46,41 @@ test('update modifie les champs autorisés et journalise', () => {
   assert.equal(entries[1].operation, 'UPDATE');
 });
 
+test('create et update gèrent l’identité étendue (alias, nom marital, titre, suffixe, vivant, id externe)', () => {
+  const database = createTestDatabase();
+  const repository = new PersonRepository(database);
+
+  const person = repository.create({
+    givenNames: 'Ada',
+    familyName: 'Lovelace',
+    nickname: 'Ada',
+    marriedName: 'Ada King',
+    title: 'Comtesse',
+    suffix: null,
+    isLiving: false,
+    externalId: 'GEDCOM-I1',
+  });
+
+  assert.equal(person.nickname, 'Ada');
+  assert.equal(person.married_name, 'Ada King');
+  assert.equal(person.title, 'Comtesse');
+  assert.equal(person.is_living, 0);
+  assert.equal(person.external_id, 'GEDCOM-I1');
+
+  const updated = repository.update(person.id, { isLiving: true, suffix: 'III' });
+  assert.equal(updated.is_living, 1);
+  assert.equal(updated.suffix, 'III');
+});
+
+test('create applique isLiving=true par défaut', () => {
+  const database = createTestDatabase();
+  const repository = new PersonRepository(database);
+
+  const person = repository.create({ givenNames: 'Ada', familyName: 'Lovelace' });
+
+  assert.equal(person.is_living, 1);
+});
+
 test('update lève une erreur si la personne est introuvable', () => {
   const database = createTestDatabase();
   const repository = new PersonRepository(database);

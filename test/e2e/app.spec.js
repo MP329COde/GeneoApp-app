@@ -203,6 +203,26 @@ test('navigue entre les personnes réelles avec les flèches du clavier', async 
   await expect(list.getByRole('button').nth(1)).toBeFocused();
 });
 
+test('modifie réellement l’identité étendue d’une personne (surnom, titre, statut vivant)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+
+  await page.getByLabel('Surnom / alias').fill('Le petit Byron');
+  await page.getByLabel('Titre honorifique').fill('Lord');
+  await page.getByLabel('Personne vivante').uncheck();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+  // Rechargement de la fiche : les valeurs persistées doivent revenir telles
+  // quelles depuis l'API, pas depuis un état local optimiste.
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+  await expect(page.getByLabel('Surnom / alias')).toHaveValue('Le petit Byron');
+  await expect(page.getByLabel('Titre honorifique')).toHaveValue('Lord');
+  await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
+});
+
 test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohérence attendue)', async ({
   page,
 }) => {
@@ -243,7 +263,7 @@ test('le carnet de recherche persiste réellement une piste entre deux navigatio
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Carnet' }).click();
-  await page.getByLabel('Titre').fill('Vérifier acte de naissance');
+  await page.getByLabel('Titre', { exact: true }).fill('Vérifier acte de naissance');
   await page.getByLabel('Note').fill('Mairie de Nantes, 1815.');
   await page.getByRole('button', { name: 'Ajouter une piste de recherche' }).click();
   await expect(page.getByText('Vérifier acte de naissance')).toBeVisible();

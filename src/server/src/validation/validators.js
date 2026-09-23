@@ -82,6 +82,15 @@ export function isFiniteNumber(value, label = 'Ce champ') {
   };
 }
 
+export function isBoolean(value, label = 'Ce champ') {
+  return () => {
+    if (value !== undefined && value !== null && typeof value !== 'boolean') {
+      return `${label} doit être un booléen`;
+    }
+    return null;
+  };
+}
+
 export function isArray(value, label = 'Ce champ') {
   return () => {
     if (value !== undefined && value !== null && !Array.isArray(value)) {

@@ -57,6 +57,43 @@ test('GEDCOM import mappe les entités dans une transaction', async () => {
   }
 });
 
+test('GEDCOM import persiste le surnom (NICK) et l’identifiant externe (xref), réexportés à l’identique', async () => {
+  const server = await startTestServer();
+  try {
+    const gedcomWithNick = [
+      '0 HEAD',
+      '1 GEDC',
+      '2 VERS 5.5.1',
+      '0 @I1@ INDI',
+      '1 NAME Ada /Lovelace/',
+      '1 NICK Lady A',
+      '1 SEX F',
+      '0 TRLR',
+    ].join('\n');
+
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: gedcomWithNick },
+    });
+    assert.equal(imported.status, 201);
+
+    const person = server.database
+      .prepare('SELECT * FROM persons WHERE given_names = ?')
+      .get('Ada');
+    assert.equal(person.nickname, 'Lady A');
+    assert.equal(person.external_id, '@I1@');
+
+    const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.equal(exported.status, 200);
+    assert.match(exported.body.gedcom, /1 NICK Lady A/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('GEDCOM invalide retourne le rapport sans écrire', async () => {
   const server = await startTestServer();
   try {

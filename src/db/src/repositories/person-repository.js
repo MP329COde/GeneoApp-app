@@ -1,7 +1,19 @@
 import { withTransaction, recordAudit } from './base-repository.js';
 import { indexDocument } from './search-index.js';
 
-const UPDATABLE_FIELDS = ['givenNames', 'familyName', 'birthFamilyName', 'sex', 'notes'];
+const UPDATABLE_FIELDS = [
+  'givenNames',
+  'familyName',
+  'birthFamilyName',
+  'sex',
+  'notes',
+  'nickname',
+  'marriedName',
+  'title',
+  'suffix',
+  'isLiving',
+  'externalId',
+];
 
 const FIELD_TO_COLUMN = {
   givenNames: 'given_names',
@@ -9,6 +21,12 @@ const FIELD_TO_COLUMN = {
   birthFamilyName: 'birth_family_name',
   sex: 'sex',
   notes: 'notes',
+  nickname: 'nickname',
+  marriedName: 'married_name',
+  title: 'title',
+  suffix: 'suffix',
+  isLiving: 'is_living',
+  externalId: 'external_id',
 };
 
 export class PersonRepository {
@@ -17,7 +35,19 @@ export class PersonRepository {
   }
 
   create(
-    { givenNames, familyName, birthFamilyName = null, sex = 'U', notes = null },
+    {
+      givenNames,
+      familyName,
+      birthFamilyName = null,
+      sex = 'U',
+      notes = null,
+      nickname = null,
+      marriedName = null,
+      title = null,
+      suffix = null,
+      isLiving = true,
+      externalId = null,
+    },
     { performedBy = null } = {},
   ) {
     if (!givenNames || !familyName) {
@@ -27,17 +57,47 @@ export class PersonRepository {
     return withTransaction(this.database, () => {
       const info = this.database
         .prepare(
-          `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes)
-           VALUES (@givenNames, @familyName, @birthFamilyName, @sex, @notes)`,
+          `INSERT INTO persons (
+             given_names, family_name, birth_family_name, sex, notes,
+             nickname, married_name, title, suffix, is_living, external_id
+           )
+           VALUES (
+             @givenNames, @familyName, @birthFamilyName, @sex, @notes,
+             @nickname, @marriedName, @title, @suffix, @isLiving, @externalId
+           )`,
         )
-        .run({ givenNames, familyName, birthFamilyName, sex, notes });
+        .run({
+          givenNames,
+          familyName,
+          birthFamilyName,
+          sex,
+          notes,
+          nickname,
+          marriedName,
+          title,
+          suffix,
+          isLiving: isLiving ? 1 : 0,
+          externalId,
+        });
 
       const id = info.lastInsertRowid;
       recordAudit(this.database, {
         tableName: 'persons',
         rowId: id,
         operation: 'INSERT',
-        changes: { givenNames, familyName, birthFamilyName, sex, notes },
+        changes: {
+          givenNames,
+          familyName,
+          birthFamilyName,
+          sex,
+          notes,
+          nickname,
+          marriedName,
+          title,
+          suffix,
+          isLiving,
+          externalId,
+        },
         performedBy,
       });
 
@@ -45,7 +105,7 @@ export class PersonRepository {
         entityType: 'PERSON',
         entityId: id,
         title: `${givenNames} ${familyName}`,
-        body: [birthFamilyName, notes].filter(Boolean).join(' — '),
+        body: [birthFamilyName, nickname, notes].filter(Boolean).join(' — '),
       });
 
       return this.findById(id);
@@ -77,7 +137,15 @@ export class PersonRepository {
       }
 
       const assignments = fields.map((field) => `${FIELD_TO_COLUMN[field]} = @${field}`).join(', ');
-      const params = { id, ...Object.fromEntries(fields.map((field) => [field, patch[field]])) };
+      const params = {
+        id,
+        ...Object.fromEntries(
+          fields.map((field) => [
+            field,
+            field === 'isLiving' ? (patch[field] ? 1 : 0) : patch[field],
+          ]),
+        ),
+      };
 
       this.database
         .prepare(
@@ -99,7 +167,9 @@ export class PersonRepository {
         entityType: 'PERSON',
         entityId: id,
         title: `${updated.given_names} ${updated.family_name}`,
-        body: [updated.birth_family_name, updated.notes].filter(Boolean).join(' — '),
+        body: [updated.birth_family_name, updated.nickname, updated.notes]
+          .filter(Boolean)
+          .join(' — '),
       });
 
       return updated;

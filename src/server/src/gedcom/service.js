@@ -145,6 +145,7 @@ function generateGedcom(database, persons, families, format) {
     lines.push(`0 ${xref} INDI`);
     lines.push(`1 NAME ${person.given_names} /${person.family_name}/`);
     lines.push(`1 SEX ${person.sex}`);
+    if (person.nickname) lines.push(`1 NICK ${person.nickname}`);
     const events = database
       .prepare(
         `SELECT e.* FROM events e
@@ -217,7 +218,8 @@ function applyMapping(database, records, performedBy) {
   const eventIds = new Map();
   const ids = { persons: [], events: [], unions: [], parentages: [] };
   const insertPerson = database.prepare(
-    `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes, nickname, external_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertPlace = database.prepare(`INSERT INTO places (name, normalized_name) VALUES (?, ?)`);
   const insertEvent = database.prepare(
@@ -245,6 +247,8 @@ function applyMapping(database, records, performedBy) {
       null,
       sex(value(person, 'SEX')),
       notes(person),
+      value(person, 'NICK') ?? null,
+      person.xref ?? null,
     );
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);

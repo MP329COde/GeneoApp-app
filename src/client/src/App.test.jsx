@@ -6,6 +6,7 @@ import { renderWithProviders } from './test/test-utils.jsx';
 const persons = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
 }));
 const graph = vi.hoisted(() => ({
   relations: vi.fn(),
@@ -230,6 +231,37 @@ describe('App', () => {
 
     await waitFor(() =>
       expect(persons.create).toHaveBeenCalledWith({ givenNames: 'Ada', familyName: 'Lovelace' }),
+    );
+  });
+
+  it('modifie l’identité étendue d’une personne via le client API', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', is_living: 1 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    persons.update.mockResolvedValue({});
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Surnom / alias'), { target: { value: 'Jeannot' } });
+    fireEvent.click(screen.getByLabelText('Personne vivante'));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() =>
+      expect(persons.update).toHaveBeenCalledWith(1, {
+        nickname: 'Jeannot',
+        marriedName: null,
+        title: null,
+        suffix: null,
+        isLiving: false,
+      }),
     );
   });
 

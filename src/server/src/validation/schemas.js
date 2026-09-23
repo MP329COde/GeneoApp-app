@@ -7,6 +7,7 @@ import {
   oneOf,
   isInteger,
   isFiniteNumber,
+  isBoolean,
   isArray,
   isPlainObject,
 } from './validators.js';
@@ -50,9 +51,50 @@ export function assertId(value, label = 'id') {
   }
 }
 
+const PERSON_IDENTITY_FIELDS = [
+  'givenNames',
+  'familyName',
+  'birthFamilyName',
+  'sex',
+  'notes',
+  'nickname',
+  'marriedName',
+  'title',
+  'suffix',
+  'isLiving',
+  'externalId',
+];
+
+function validatePersonIdentityFields({
+  birthFamilyName,
+  sex,
+  notes,
+  nickname,
+  marriedName,
+  title,
+  suffix,
+  isLiving,
+  externalId,
+}) {
+  assertValid({
+    birthFamilyName: [
+      isString(birthFamilyName, 'birthFamilyName'),
+      maxLength(birthFamilyName, 200, 'birthFamilyName'),
+    ],
+    sex: [oneOf(sex, SEX_VALUES, 'sex')],
+    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+    nickname: [isString(nickname, 'nickname'), maxLength(nickname, 200, 'nickname')],
+    marriedName: [isString(marriedName, 'marriedName'), maxLength(marriedName, 200, 'marriedName')],
+    title: [isString(title, 'title'), maxLength(title, 100, 'title')],
+    suffix: [isString(suffix, 'suffix'), maxLength(suffix, 50, 'suffix')],
+    isLiving: [isBoolean(isLiving, 'isLiving')],
+    externalId: [isString(externalId, 'externalId'), maxLength(externalId, 200, 'externalId')],
+  });
+}
+
 export function validatePersonCreate(payload) {
   assertPayload(payload);
-  const { givenNames, familyName, birthFamilyName, sex, notes } = payload;
+  const { givenNames, familyName, ...rest } = payload;
 
   assertValid({
     givenNames: [
@@ -65,26 +107,27 @@ export function validatePersonCreate(payload) {
       isString(familyName, 'familyName'),
       maxLength(familyName, 200, 'familyName'),
     ],
-    birthFamilyName: [
-      isString(birthFamilyName, 'birthFamilyName'),
-      maxLength(birthFamilyName, 200, 'birthFamilyName'),
-    ],
-    sex: [oneOf(sex, SEX_VALUES, 'sex')],
-    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
   });
+  validatePersonIdentityFields(payload);
 
   return {
     givenNames,
     familyName,
-    birthFamilyName: birthFamilyName ?? null,
-    sex: sex ?? 'U',
-    notes: notes ?? null,
+    birthFamilyName: rest.birthFamilyName ?? null,
+    sex: rest.sex ?? 'U',
+    notes: rest.notes ?? null,
+    nickname: rest.nickname ?? null,
+    marriedName: rest.marriedName ?? null,
+    title: rest.title ?? null,
+    suffix: rest.suffix ?? null,
+    isLiving: rest.isLiving ?? true,
+    externalId: rest.externalId ?? null,
   };
 }
 
 export function validatePersonUpdate(payload) {
   assertPayload(payload);
-  const { givenNames, familyName, birthFamilyName, sex, notes } = payload;
+  const { givenNames, familyName } = payload;
 
   assertValid({
     givenNames: [
@@ -95,17 +138,12 @@ export function validatePersonUpdate(payload) {
       nonEmptyString(familyName, 'familyName'),
       maxLength(familyName, 200, 'familyName'),
     ],
-    birthFamilyName: [
-      isString(birthFamilyName, 'birthFamilyName'),
-      maxLength(birthFamilyName, 200, 'birthFamilyName'),
-    ],
-    sex: [oneOf(sex, SEX_VALUES, 'sex')],
-    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
   });
+  validatePersonIdentityFields(payload);
 
   const patch = {};
   for (const [key, value] of Object.entries(payload)) {
-    if (['givenNames', 'familyName', 'birthFamilyName', 'sex', 'notes'].includes(key)) {
+    if (PERSON_IDENTITY_FIELDS.includes(key)) {
       patch[key] = value;
     }
   }

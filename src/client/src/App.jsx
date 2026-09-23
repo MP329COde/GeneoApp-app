@@ -1229,6 +1229,85 @@ function SourceMediaTool({ sourceId }) {
   );
 }
 
+// Édition de l'identité étendue d'une personne — alias, nom marital, titre,
+// suffixe et statut « vivant » existent côté modèle (Phase B du cahier des
+// charges) mais n'avaient jusque-là aucun formulaire pour les saisir.
+function IdentityTool({ selected, onUpdated }) {
+  const [nickname, setNickname] = useState(selected.nickname ?? '');
+  const [marriedName, setMarriedName] = useState(selected.married_name ?? '');
+  const [title, setTitle] = useState(selected.title ?? '');
+  const [suffix, setSuffix] = useState(selected.suffix ?? '');
+  const [isLiving, setIsLiving] = useState(selected.is_living !== 0);
+  const [identityError, setIdentityError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setNickname(selected.nickname ?? '');
+    setMarriedName(selected.married_name ?? '');
+    setTitle(selected.title ?? '');
+    setSuffix(selected.suffix ?? '');
+    setIsLiving(selected.is_living !== 0);
+  }, [selected]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setIdentityError(null);
+    try {
+      await client.persons.update(selected.id, {
+        nickname: nickname.trim() || null,
+        marriedName: marriedName.trim() || null,
+        title: title.trim() || null,
+        suffix: suffix.trim() || null,
+        isLiving,
+      });
+      await onUpdated();
+    } catch (updateError) {
+      setIdentityError(updateError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="detail-section create-person-form" onSubmit={handleSubmit}>
+      <h3>Identité</h3>
+      {identityError ? (
+        <p role="alert" className="notice notice--error">
+          {identityError}
+        </p>
+      ) : null}
+      <label>
+        <span>Surnom / alias</span>
+        <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
+      </label>
+      <label>
+        <span>Nom marital</span>
+        <input value={marriedName} onChange={(event) => setMarriedName(event.target.value)} />
+      </label>
+      <label>
+        <span>Titre honorifique</span>
+        <input value={title} onChange={(event) => setTitle(event.target.value)} />
+      </label>
+      <label>
+        <span>Suffixe</span>
+        <input value={suffix} onChange={(event) => setSuffix(event.target.value)} />
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={isLiving}
+          onChange={(event) => setIsLiving(event.target.checked)}
+        />
+        <span>Personne vivante</span>
+      </label>
+      <Button type="submit" size="sm" disabled={busy}>
+        Enregistrer
+      </Button>
+    </form>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -2659,6 +2738,7 @@ function App() {
                   <h2 id="person-title">{personLabel(selected)}</h2>
                 </div>
               </div>
+              <IdentityTool selected={selected} onUpdated={loadPersons} />
               {relations ? (
                 <div className="detail-section">
                   <h3>Relations</h3>
