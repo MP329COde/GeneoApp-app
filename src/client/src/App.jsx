@@ -1951,7 +1951,7 @@ function LoginForm({ onLogin, loginError }) {
   );
 }
 
-function BackupsPanel({ session, onLogin, loginError }) {
+function BackupsPanel({ session, onLogin, loginError, onLogout }) {
   const [backups, setBackups] = useState(null);
   const [trashItems, setTrashItems] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -2026,6 +2026,32 @@ function BackupsPanel({ session, onLogin, loginError }) {
     }
   };
 
+  const handleLogout = async () => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.accounts.logout(session.token);
+      onLogout();
+    } catch (logoutError) {
+      setActionError(logoutError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoveAccount = async () => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await client.accounts.remove(session.account.id, session.token);
+      onLogout();
+    } catch (removeError) {
+      setActionError(removeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="backups-panel">
       {actionError ? (
@@ -2033,6 +2059,30 @@ function BackupsPanel({ session, onLogin, loginError }) {
           {actionError}
         </p>
       ) : null}
+
+      <section>
+        <h3>Profil connecté : {session.account.name}</h3>
+        <div className="gedcom-panel__actions">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handleLogout}
+            disabled={busy}
+          >
+            Se déconnecter
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="danger"
+            onClick={handleRemoveAccount}
+            disabled={busy}
+          >
+            Supprimer ce profil
+          </Button>
+        </div>
+      </section>
 
       <section>
         <h3>Sauvegardes</h3>
@@ -2407,7 +2457,12 @@ function App() {
             ) : view === 'gedcom' ? (
               <GedcomPanel onImported={loadPersons} />
             ) : view === 'backups' ? (
-              <BackupsPanel session={session} onLogin={handleLogin} loginError={loginError} />
+              <BackupsPanel
+                session={session}
+                onLogin={handleLogin}
+                loginError={loginError}
+                onLogout={() => setSession(null)}
+              />
             ) : view === 'duplicates' ? (
               <DuplicatesPanel
                 onSelect={(id) => {

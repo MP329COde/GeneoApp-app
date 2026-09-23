@@ -263,3 +263,17 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   leur génération respective depuis chacune des deux personnes, et lien direct vers leur fiche. Testé : 1 cas
   IPC (ancêtre commun réel calculé par filiation), 1 cas client (Vitest), 1 scénario E2E Playwright (absence
   réelle d'ancêtre commun entre deux personnes sans lien de filiation).
+- 2026-09-23 (suite) : audit systématique de toutes les routes API face aux canaux IPC et au client (`for f in
+  src/server/src/routes/*.js`) pour détecter d'autres angles morts moteur→interface du même type que les
+  trois précédents. Trouvé : `DELETE /api/accounts/:id` (suppression de profil local, protégée par session,
+  testée côté API) n'était exposée ni via IPC ni par le client ni par aucun écran — une fois connecté, un
+  utilisateur ne pouvait ni se déconnecter, ni supprimer son profil local, alors que ces deux actions sont
+  attendues pour « travail avec plusieurs profils locaux » (Phase H). Canal IPC `ACCOUNTS_REMOVE` ajouté (les
+  deux transports, `accounts.requireSession` appliqué comme pour les autres opérations sensibles). L'écran
+  Sauvegardes affiche désormais le profil connecté avec deux actions réelles : « Se déconnecter »
+  (`client.accounts.logout`) et « Supprimer ce profil » (`client.accounts.remove`), les deux ramenant au
+  formulaire de connexion. `GET /api/reports/summary` reste volontairement non exposé : contenu strictement
+  redondant avec la vue Statistiques déjà branchée (mêmes totaux, horodatage en plus), sans valeur ajoutée
+  distincte. Testé : 1 cas IPC (session requise, suppression réelle vérifiée via la liste des profils), 1 cas
+  client (Vitest, déconnexion puis reconnexion puis suppression), 1 scénario E2E Playwright (parcours complet
+  déconnexion → reconnexion → suppression → re-création via le repli 401 de premier lancement).

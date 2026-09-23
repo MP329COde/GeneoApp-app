@@ -59,6 +59,7 @@ export const IPC_CHANNELS = Object.freeze({
   ACCOUNTS_LIST: 'geneoapp:accounts:list',
   ACCOUNTS_LOGIN: 'geneoapp:accounts:login',
   ACCOUNTS_LOGOUT: 'geneoapp:accounts:logout',
+  ACCOUNTS_REMOVE: 'geneoapp:accounts:remove',
 
   BACKUPS_CREATE: 'geneoapp:backups:create',
   BACKUPS_LIST: 'geneoapp:backups:list',

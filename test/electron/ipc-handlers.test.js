@@ -372,6 +372,28 @@ test('ACCOUNTS_LOGIN puis BACKUPS_CREATE/TRASH_PURGE exigent un jeton de session
   assert.equal(purge.ok, true);
 });
 
+test('ACCOUNTS_REMOVE exige un jeton de session valide et supprime réellement le profil', async () => {
+  const handlers = createHandlers();
+
+  const created = await handlers[IPC_CHANNELS.ACCOUNTS_CREATE]({ data: { name: 'Bob' } });
+  const login = await handlers[IPC_CHANNELS.ACCOUNTS_LOGIN]({ name: 'Bob' });
+  const { token } = login.data;
+
+  const withoutToken = await handlers[IPC_CHANNELS.ACCOUNTS_REMOVE]({ id: created.data.id });
+  assert.equal(withoutToken.ok, false);
+  assert.equal(withoutToken.error.status, 401);
+
+  const removed = await handlers[IPC_CHANNELS.ACCOUNTS_REMOVE]({ id: created.data.id, token });
+  assert.equal(removed.ok, true);
+
+  const list = await handlers[IPC_CHANNELS.ACCOUNTS_LIST]();
+  assert.equal(list.ok, true);
+  assert.equal(
+    list.data.some((account) => account.id === created.data.id),
+    false,
+  );
+});
+
 test('BACKUPS_LIST et BACKUPS_VERIFY exigent aussi un jeton de session valide', async () => {
   const handlers = createHandlers();
 

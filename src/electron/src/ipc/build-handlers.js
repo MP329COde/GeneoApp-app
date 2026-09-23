@@ -194,6 +194,11 @@ export function buildIpcHandlers(services) {
       accounts.logout(token);
       return { loggedOut: true };
     }),
+    [IPC_CHANNELS.ACCOUNTS_REMOVE]: wrap(({ id, token, performedBy }) => {
+      accounts.requireSession(token);
+      accounts.remove(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
 
     // Les opérations sensibles (sauvegarde/restauration, purge de corbeille)
     // exigent un jeton de session valide dans le payload, comme côté HTTP

@@ -27,6 +27,8 @@ const gedcom = vi.hoisted(() => ({
 const accounts = vi.hoisted(() => ({
   create: vi.fn(),
   login: vi.fn(),
+  logout: vi.fn(),
+  remove: vi.fn(),
 }));
 const backups = vi.hoisted(() => ({
   list: vi.fn(),
@@ -351,6 +353,41 @@ describe('App', () => {
     await waitFor(() => expect(accounts.login).toHaveBeenCalledWith('Alice', undefined));
     await waitFor(() => expect(screen.getByText('backup-1.json')).toBeInTheDocument());
     await waitFor(() => expect(screen.getByText(/Jean Dupont/)).toBeInTheDocument());
+  });
+
+  it('permet de se déconnecter et de supprimer réellement le profil local', async () => {
+    persons.list.mockResolvedValue([]);
+    accounts.login.mockResolvedValue({ token: 'tok-1', account: { id: 1, name: 'Alice' } });
+    accounts.logout.mockResolvedValue(undefined);
+    accounts.remove.mockResolvedValue(undefined);
+    backups.list.mockResolvedValue([]);
+    trash.list.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+    await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+    await waitFor(() => expect(accounts.logout).toHaveBeenCalledWith('tok-1'));
+    await waitFor(() =>
+      expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+    await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer ce profil' }));
+    await waitFor(() => expect(accounts.remove).toHaveBeenCalledWith(1, 'tok-1'));
+    await waitFor(() =>
+      expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument(),
+    );
   });
 
   it('crée un profil à la volée si la connexion échoue en 401 (premier lancement)', async () => {

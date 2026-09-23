@@ -108,6 +108,33 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   await expect(page.getByText(/\.json/).first()).toBeVisible();
 });
 
+test('permet de se déconnecter puis de supprimer réellement le profil local', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Sauvegardes' }).click();
+
+  // Toujours connecté depuis le test précédent (état React réinitialisé par
+  // page.goto, la session locale doit donc être rétablie).
+  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Se déconnecter' }).click();
+  await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
+
+  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Supprimer ce profil' }).click();
+  await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
+
+  // Le profil supprimé n'existe plus : une nouvelle connexion avec le même
+  // nom recrée un profil distinct via le repli 401 (premier lancement).
+  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
+});
+
 test('fusionne un doublon réel : les données du doublon rejoignent le survivant', async ({
   page,
 }) => {

@@ -130,6 +130,7 @@ function createHttpClient() {
       login: (name, pin) =>
         fetchJson('/api/accounts/login', { method: 'POST', body: { name, pin } }),
       logout: (token) => fetchJson('/api/accounts/logout', { method: 'POST', token }),
+      remove: (id, token) => fetchJson(`/api/accounts/${id}`, { method: 'DELETE', token }),
     },
     backups: {
       create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
@@ -255,6 +256,7 @@ function createIpcClient(bridge) {
       list: () => bridge.accounts.list(),
       login: (name, pin) => bridge.accounts.login(name, pin),
       logout: (token) => bridge.accounts.logout(token),
+      remove: (id, token) => bridge.accounts.remove(id, token),
     },
     backups: {
       create: (data, token) => bridge.backups.create(data, token),

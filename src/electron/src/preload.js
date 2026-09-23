@@ -106,6 +106,8 @@ const api = {
     list: () => invoke(IPC_CHANNELS.ACCOUNTS_LIST),
     login: (name, pin) => invoke(IPC_CHANNELS.ACCOUNTS_LOGIN, { name, pin }),
     logout: (token) => invoke(IPC_CHANNELS.ACCOUNTS_LOGOUT, { token }),
+    remove: (id, token, performedBy) =>
+      invoke(IPC_CHANNELS.ACCOUNTS_REMOVE, { id, token, performedBy }),
   },
 
   backups: {
