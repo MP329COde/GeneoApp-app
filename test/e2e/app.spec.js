@@ -351,3 +351,24 @@ test('mène une recherche complète : hypothèse étayée, tâche faite, persist
   await expect(page.getByText('Recensement 1836')).toBeVisible();
   await expect(page.getByLabel('Statut de l’hypothèse Né à Nantes')).toHaveValue('SUPPORTED');
 });
+
+test('exporte réellement l’arbre en SVG et prépare une impression géante découpée', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  await page.getByRole('button', { name: 'Ascendant' }).click();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'SVG', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^arbre-ancestors-.*\.svg$/);
+  const { readFile } = await import('node:fs/promises');
+  const svg = await readFile(await download.path(), 'utf8');
+  expect(svg).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+
+  await page.getByRole('button', { name: 'Impression géante' }).click();
+  await page.getByLabel('Pages en largeur').fill('3');
+  await expect(page.getByText(/page\(s\) · 3 ×/)).toBeVisible();
+  await expect(page.locator('.giant-print__tile')).not.toHaveCount(0);
+});

@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  buildTreeSvg,
+  downloadBlob,
+  downloadSvg,
+  svgToPngBlob,
+  tileSvg,
+} from '../export/tree-export.js';
 
 const MODES = [
   { id: 'family', label: 'Familial' },
@@ -227,6 +234,11 @@ export function TreeExplorer({
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef(null);
+  const stageRef = useRef(null);
+  const [exportError, setExportError] = useState(null);
+  const [giant, setGiant] = useState(null);
+  const [giantOptions, setGiantOptions] = useState({ pageSize: 'A4', pagesWide: 2 });
+  const [printTiles, setPrintTiles] = useState(null);
 
   useEffect(() => {
     if (mode === 'family' || !selected) return undefined;
@@ -244,6 +256,47 @@ export function TreeExplorer({
       cancelled = true;
     };
   }, [client, mode, depth, selected]);
+
+  const baseName = selected
+    ? `arbre-${mode}-${selected.given_names}-${selected.family_name}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+    : 'arbre';
+
+  const currentSvg = () =>
+    buildTreeSvg(stageRef.current, {
+      title: selected ? `Arbre de ${selected.given_names} ${selected.family_name}` : 'Arbre',
+    });
+
+  const runExport = async (kind) => {
+    setExportError(null);
+    try {
+      const svg = currentSvg();
+      if (kind === 'svg') downloadSvg(`${baseName}.svg`, svg);
+      else downloadBlob(`${baseName}.png`, await svgToPngBlob(svg));
+    } catch (error) {
+      setExportError(error.message);
+    }
+  };
+
+  // Impression géante : l'arbre est découpé en pages (avec recouvrement pour
+  // l'assemblage), imprimables ou enregistrables en PDF via la boîte système.
+  useEffect(() => {
+    if (!printTiles) return undefined;
+    const done = () => {
+      delete document.documentElement.dataset.print;
+      setPrintTiles(null);
+    };
+    document.documentElement.dataset.print = 'tiles';
+    window.addEventListener('afterprint', done, { once: true });
+    const timer = setTimeout(() => window.print?.(), 50);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('afterprint', done);
+    };
+  }, [printTiles]);
 
   const recenter = useCallback(() => {
     setZoom(1);
@@ -397,7 +450,112 @@ export function TreeExplorer({
             Recentrer
           </button>
         </div>
+        <div className="tree-toolbar__export" role="group" aria-label="Exporter l’arbre">
+          <button type="button" onClick={() => runExport('svg')}>
+            SVG
+          </button>
+          <button type="button" onClick={() => runExport('png')}>
+            PNG
+          </button>
+          <button type="button" onClick={() => window.print?.()}>
+            Imprimer / PDF
+          </button>
+          <button
+            type="button"
+            aria-expanded={giant !== null}
+            onClick={() => {
+              setExportError(null);
+              try {
+                const svg = currentSvg();
+                setGiant({ svg, ...tileSvg(svg, giantOptions) });
+              } catch (error) {
+                setExportError(error.message);
+              }
+            }}
+          >
+            Impression géante
+          </button>
+        </div>
       </div>
+      {exportError ? (
+        <p role="alert" className="notice notice--error tree-explorer__notice">
+          {exportError}
+        </p>
+      ) : null}
+      {giant ? (
+        <section className="giant-print" aria-labelledby="giant-print-title">
+          <h4 id="giant-print-title">Impression géante</h4>
+          <div className="giant-print__options">
+            <label>
+              <span>Format de page</span>
+              <select
+                value={giantOptions.pageSize}
+                onChange={(event) => {
+                  const options = { ...giantOptions, pageSize: event.target.value };
+                  setGiantOptions(options);
+                  setGiant({ svg: giant.svg, ...tileSvg(giant.svg, options) });
+                }}
+              >
+                <option value="A4">A4 paysage</option>
+                <option value="A3">A3 paysage</option>
+              </select>
+            </label>
+            <label>
+              <span>Pages en largeur</span>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={giantOptions.pagesWide}
+                onChange={(event) => {
+                  const pagesWide = Math.min(10, Math.max(1, Number(event.target.value) || 1));
+                  const options = { ...giantOptions, pagesWide };
+                  setGiantOptions(options);
+                  setGiant({ svg: giant.svg, ...tileSvg(giant.svg, options) });
+                }}
+              />
+            </label>
+            <p className="data-id" aria-live="polite">
+              {giant.tiles.length} page(s) · {giant.columns} × {giant.rows}
+            </p>
+            <button type="button" className="primary-inline" onClick={() => setPrintTiles(giant)}>
+              Imprimer les {giant.tiles.length} pages
+            </button>
+            <button type="button" onClick={() => setGiant(null)}>
+              Fermer
+            </button>
+          </div>
+          <div
+            className="giant-print__preview"
+            style={{ gridTemplateColumns: `repeat(${giant.columns}, 1fr)` }}
+            aria-label="Aperçu du découpage"
+          >
+            {giant.tiles.map((tile) => (
+              <figure key={`${tile.row}-${tile.column}`} className="giant-print__tile">
+                <div
+                  className="giant-print__svg"
+                  // SVG généré localement, textes échappés (voir tree-export.js).
+                  dangerouslySetInnerHTML={{ __html: tile.svg }}
+                />
+                <figcaption className="data-id">
+                  Ligne {tile.row} · colonne {tile.column}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {printTiles ? (
+        <div className={`print-tiles print-tiles--${giantOptions.pageSize}`} aria-hidden="true">
+          {printTiles.tiles.map((tile) => (
+            <div
+              key={`${tile.row}-${tile.column}`}
+              className="print-tiles__page"
+              dangerouslySetInnerHTML={{ __html: tile.svg }}
+            />
+          ))}
+        </div>
+      ) : null}
       {/* Canevas déplaçable : focusable pour le clavier (flèches, +, −, 0), les
           nœuds restent des boutons natifs. */}
       {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
@@ -415,6 +573,7 @@ export function TreeExplorer({
         onKeyDown={handleKeyDown}
       >
         <div
+          ref={stageRef}
           className="tree-stage"
           style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
         >

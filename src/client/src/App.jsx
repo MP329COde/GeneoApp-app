@@ -45,6 +45,7 @@ const ICON_PATHS = {
   chip: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
   undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3',
+  print: 'M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6z',
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
   settings:
@@ -2340,6 +2341,15 @@ function PersonSheet({ selected, relations, onUpdated }) {
             <span className="data-id">#{selected.id}</span>
           </p>
         </div>
+        <button
+          type="button"
+          className="icon-button person-sheet__print"
+          aria-label="Imprimer la fiche ou l’enregistrer en PDF"
+          title="Imprimer / PDF"
+          onClick={() => window.print?.()}
+        >
+          <Icon name="print" />
+        </button>
       </header>
       <div className="tabs" role="tablist" aria-label="Sections de la fiche">
         {PERSON_TABS.map((item) => (
