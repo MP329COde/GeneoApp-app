@@ -1224,4 +1224,53 @@ describe('App', () => {
     );
     await waitFor(() => expect(events.listForPerson).toHaveBeenCalledWith(1));
   });
+  it('applique et mémorise les paramètres d’affichage', async () => {
+    persons.list.mockResolvedValue([]);
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Sombre — Salle d’archives' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Très grande' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Compacte' }));
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.dataset.textSize).toBe('xlarge');
+    expect(document.documentElement.dataset.density).toBe('compact');
+    expect(JSON.parse(localStorage.getItem('geneoapp.settings')).theme).toBe('dark');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passer au thème clair' }));
+    expect(document.documentElement.dataset.theme).toBe('light');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rétablir les valeurs par défaut' }));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.dataset.textSize).toBeUndefined();
+    localStorage.clear();
+  });
+
+  it('affiche l’éventail des ancêtres avec secteurs Sosa navigables', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.ancestors.mockResolvedValue([
+      { id: 2, given_names: 'Pierre', family_name: 'Dupont', sex: 'M', generation: 1, viaId: 1 },
+      { id: 3, given_names: 'Anne', family_name: 'Morel', sex: 'F', generation: 1, viaId: 1 },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Éventail' }));
+
+    const mother = await screen.findByRole('button', { name: 'Anne Morel, Sosa 3' });
+    expect(screen.getByRole('button', { name: 'Pierre Dupont, Sosa 2' })).toBeInTheDocument();
+    fireEvent.keyDown(mother, { key: 'Enter' });
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(3));
+  });
 });

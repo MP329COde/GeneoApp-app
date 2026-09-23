@@ -1073,3 +1073,191 @@ input[type='radio'] {
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
+
+/* ---------- Préférences appliquées (Paramètres) ---------- */
+:root[data-text-size='large'] body {
+  zoom: 1.125;
+}
+:root[data-text-size='xlarge'] body {
+  zoom: 1.25;
+}
+:root[data-text-size] .genealogy-app {
+  height: calc(100vh / var(--app-zoom, 1));
+}
+:root[data-text-size='large'] {
+  --app-zoom: 1.125;
+}
+:root[data-text-size='xlarge'] {
+  --app-zoom: 1.25;
+}
+:root[data-density='compact'] {
+  --control-md: 28px;
+  --row-standard: 28px;
+  --space-4: 12px;
+}
+:root[data-density='comfortable'] {
+  --control-md: 40px;
+  --row-standard: 44px;
+}
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.icon-button {
+  width: var(--control-md);
+  height: var(--control-md);
+  display: inline-grid;
+  place-items: center;
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.icon-button:hover {
+  background: var(--surface-hover);
+}
+
+/* ---------- Écran Paramètres ---------- */
+.settings-panel {
+  max-width: 760px;
+}
+.settings-panel section {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+}
+.settings-panel h4 {
+  margin: 0;
+  font: var(--type-heading);
+}
+.settings-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.settings-choice legend {
+  margin-bottom: var(--space-2);
+  font: var(--type-label);
+}
+.settings-choice__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.settings-option {
+  display: inline-flex !important;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  font: var(--type-body) !important;
+  cursor: pointer;
+}
+.settings-option:has(input:checked) {
+  border-color: var(--action);
+  background: var(--surface-selected);
+  color: var(--action-subtle-text);
+  font-weight: 700 !important;
+}
+.settings-option:has(input:focus-visible) {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.settings-toggle {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--type-body) !important;
+}
+.settings-toggle span {
+  display: grid;
+}
+.settings-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.settings-field {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 240px;
+  font: var(--type-label);
+}
+.settings-panel > .gds-button {
+  margin-top: var(--space-4);
+}
+.theme-previews {
+  display: flex;
+  gap: var(--space-3);
+}
+.theme-preview {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: var(--border-hairline) solid;
+}
+.theme-preview--light {
+  background: #fbf9f5;
+  border-color: #cfc7b8;
+  color: #1c2124;
+}
+.theme-preview--dark {
+  background: #1a1e21;
+  border-color: #394148;
+  color: #ece7df;
+}
+.theme-preview__name {
+  font: var(--type-person-name);
+}
+.theme-preview__date {
+  font: var(--type-date);
+  opacity: 0.8;
+}
+
+/* ---------- Éventail ---------- */
+.fan-chart {
+  max-width: 100%;
+  height: auto;
+}
+.fan-chart__cell {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.fan-chart__cell--root {
+  fill: var(--surface-selected);
+  stroke: var(--action);
+  stroke-width: 2;
+}
+.fan-chart__cell--paternal {
+  fill: color-mix(in srgb, var(--branch-paternal) 14%, var(--surface-raised));
+}
+.fan-chart__cell--maternal {
+  fill: color-mix(in srgb, var(--branch-maternal) 14%, var(--surface-raised));
+}
+.fan-chart__sector {
+  cursor: pointer;
+  outline: none;
+}
+.fan-chart__sector:hover .fan-chart__cell,
+.fan-chart__sector:focus-visible .fan-chart__cell {
+  stroke: var(--focus-ring);
+  stroke-width: 2.5;
+}
+.fan-chart__text {
+  fill: var(--text);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 9px;
+  pointer-events: none;
+}

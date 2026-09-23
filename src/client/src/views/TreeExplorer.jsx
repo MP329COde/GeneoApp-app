@@ -4,6 +4,7 @@ const MODES = [
   { id: 'family', label: 'Familial' },
   { id: 'ancestors', label: 'Ascendant' },
   { id: 'descendants', label: 'Descendant' },
+  { id: 'fan', label: 'Éventail' },
 ];
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
@@ -38,7 +39,7 @@ function TreeNode({ person, sosa, branch, focus, onSelect }) {
 }
 
 // Arbre récursif horizontal : la personne à gauche, ses parents (ou enfants) à droite.
-function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa }) {
+function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa, showSosa = true }) {
   const linked = linksOf.get(person.id) ?? [];
   const ordered = withSosa
     ? [...linked].sort((a, b) => (a.sex === 'F' ? 1 : 0) - (b.sex === 'F' ? 1 : 0))
@@ -50,7 +51,7 @@ function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa }) {
         <div className="tree-branch__children">
           {ordered.map((relative, index) => {
             const childSosa =
-              withSosa && sosa
+              withSosa && showSosa && sosa
                 ? sosa * 2 + (relative.sex === 'F' ? 1 : relative.sex === 'M' ? 0 : index)
                 : null;
             const childBranch =
@@ -64,6 +65,7 @@ function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa }) {
                 branch={childBranch}
                 onSelect={onSelect}
                 withSosa={withSosa}
+                showSosa={showSosa}
               />
             );
           })}
@@ -73,9 +75,153 @@ function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa }) {
   );
 }
 
-export function TreeExplorer({ client, selected, onSelect, familyView }) {
-  const [mode, setMode] = useState('family');
-  const [depth, setDepth] = useState(4);
+// Numérotation Sosa-Stradonitz : père = 2n, mère = 2n + 1.
+export function computeSosa(rootId, items) {
+  const sosa = new Map([[rootId, 1]]);
+  const byVia = new Map();
+  for (const item of items) {
+    if (!byVia.has(item.viaId)) byVia.set(item.viaId, []);
+    byVia.get(item.viaId).push(item);
+  }
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift();
+    const parents = byVia.get(id) ?? [];
+    parents.forEach((parent, index) => {
+      if (sosa.has(parent.id)) return;
+      const offset = parent.sex === 'F' ? 1 : parent.sex === 'M' ? 0 : index % 2;
+      sosa.set(parent.id, sosa.get(id) * 2 + offset);
+      queue.push(parent.id);
+    });
+  }
+  return sosa;
+}
+
+const FAN_CENTER = 220;
+const FAN_INNER = 56;
+const FAN_RING = 46;
+
+function arcPath(r0, r1, a0, a1) {
+  const point = (r, a) => `${FAN_CENTER + r * Math.cos(a)} ${FAN_CENTER + r * Math.sin(a)}`;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return `M ${point(r0, a0)} L ${point(r1, a0)} A ${r1} ${r1} 0 ${large} 1 ${point(r1, a1)} L ${point(r0, a1)} A ${r0} ${r0} 0 ${large} 0 ${point(r0, a0)} Z`;
+}
+
+// Éventail ascendant sur un demi-cercle : un anneau par génération, un
+// secteur par numéro Sosa. Chaque secteur est un lien SVG focusable.
+function FanChart({ root, items, onSelect }) {
+  const sosa = computeSosa(root.id, items);
+  const people = [root, ...items];
+  const generations = Math.max(1, ...items.map((item) => item.generation));
+  const size = FAN_CENTER * 2;
+  return (
+    <svg
+      className="fan-chart"
+      viewBox={`0 0 ${size} ${FAN_CENTER + 20}`}
+      width={size * 1.6}
+      role="group"
+      aria-label={`Éventail des ancêtres de ${root.given_names} ${root.family_name}`}
+    >
+      {people.map((person) => {
+        const number = sosa.get(person.id);
+        if (!number) return null;
+        const generation = Math.floor(Math.log2(number));
+        if (generation > generations) return null;
+        const label = `${person.given_names} ${person.family_name}`;
+        const handleKey = (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect(person.id);
+          }
+        };
+        if (generation === 0) {
+          return (
+            <g
+              key={person.id}
+              role="button"
+              tabIndex={0}
+              className="fan-chart__sector"
+              aria-label={`${label}, Sosa 1`}
+              onClick={() => onSelect(person.id)}
+              onKeyDown={handleKey}
+            >
+              <path
+                className="fan-chart__cell fan-chart__cell--root"
+                d={arcPath(0.01, FAN_INNER, Math.PI, 2 * Math.PI)}
+              />
+              <text
+                className="fan-chart__text"
+                x={FAN_CENTER}
+                y={FAN_CENTER - 18}
+                textAnchor="middle"
+              >
+                {person.given_names}
+              </text>
+              <text
+                className="fan-chart__text"
+                x={FAN_CENTER}
+                y={FAN_CENTER - 6}
+                textAnchor="middle"
+              >
+                {person.family_name}
+              </text>
+            </g>
+          );
+        }
+        const count = 2 ** generation;
+        const index = number - count;
+        const a0 = Math.PI + (index * Math.PI) / count;
+        const a1 = a0 + Math.PI / count;
+        const r0 = FAN_INNER + (generation - 1) * FAN_RING;
+        const r1 = r0 + FAN_RING;
+        const mid = (a0 + a1) / 2;
+        const radius = (r0 + r1) / 2;
+        const x = FAN_CENTER + radius * Math.cos(mid);
+        const y = FAN_CENTER + radius * Math.sin(mid);
+        const branch = number.toString(2)[1] === '1' ? 'maternal' : 'paternal';
+        const short = generation >= 4 ? person.given_names.charAt(0) + '.' : person.given_names;
+        return (
+          <g
+            key={person.id}
+            role="button"
+            tabIndex={0}
+            className="fan-chart__sector"
+            aria-label={`${label}, Sosa ${number}`}
+            onClick={() => onSelect(person.id)}
+            onKeyDown={handleKey}
+          >
+            <path
+              className={`fan-chart__cell fan-chart__cell--${branch}`}
+              d={arcPath(r0, r1, a0, a1)}
+            />
+            <text
+              className="fan-chart__text"
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={generation >= 3 ? 7 : 9}
+            >
+              {short}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+export function TreeExplorer({
+  client,
+  selected,
+  onSelect,
+  familyView,
+  defaultMode = 'family',
+  defaultDepth = 4,
+  showSosa = true,
+}) {
+  const [mode, setMode] = useState(defaultMode);
+  const [depth, setDepth] = useState(defaultDepth);
   const [items, setItems] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -88,8 +234,8 @@ export function TreeExplorer({ client, selected, onSelect, familyView }) {
     setItems(null);
     setLoadError(null);
     const request =
-      mode === 'ancestors'
-        ? client.graph.ancestors(selected.id, depth)
+      mode === 'ancestors' || mode === 'fan'
+        ? client.graph.ancestors(selected.id, mode === 'fan' ? Math.min(depth, 6) : depth)
         : client.graph.descendants(selected.id, depth);
     request
       .then((list) => !cancelled && setItems(list))
@@ -181,6 +327,8 @@ export function TreeExplorer({ client, selected, onSelect, familyView }) {
         Chargement de l’arbre…
       </p>
     );
+  } else if (mode === 'fan') {
+    content = <FanChart root={selected} items={items} onSelect={onSelect} />;
   } else {
     content = (
       <>
@@ -192,10 +340,11 @@ export function TreeExplorer({ client, selected, onSelect, familyView }) {
         <Branch
           person={selected}
           linksOf={linksOf}
-          sosa={mode === 'ancestors' ? 1 : null}
+          sosa={mode === 'ancestors' && showSosa ? 1 : null}
           focus
           onSelect={onSelect}
           withSosa={mode === 'ancestors'}
+          showSosa={showSosa}
         />
       </>
     );

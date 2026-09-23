@@ -3,6 +3,8 @@ import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import { SettingsPanel } from './views/SettingsPanel.jsx';
+import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
 import appIcon from './assets/geneoapp-icon.png';
 import './App.css';
 
@@ -34,6 +36,10 @@ const ICON_PATHS = {
   note: 'M4 4h16v12l-4 4H4zM16 20v-4h4',
   history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 3',
   chip: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
+  settings:
+    'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
   offline: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
 };
 
@@ -97,6 +103,7 @@ const NAV_GROUPS = [
       { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
       { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
       { id: 'ai', label: 'IA locale', icon: 'chip' },
+      { id: 'settings', label: 'Paramètres', icon: 'settings' },
     ],
   },
 ];
@@ -2529,42 +2536,27 @@ function PersonSheet({ selected, relations, onUpdated }) {
   );
 }
 
-function readStoredTheme() {
-  try {
-    return localStorage.getItem('geneoapp.theme') ?? 'system';
-  } catch {
-    return 'system';
-  }
-}
-
-// Thèmes du design système : Clair — Papier, Sombre — Salle d'archives.
-function ThemeSwitcher() {
-  const [theme, setTheme] = useState(readStoredTheme);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'system') delete root.dataset.theme;
-    else root.dataset.theme = theme;
-    try {
-      localStorage.setItem('geneoapp.theme', theme);
-    } catch {
-      // stockage indisponible : le choix reste valable pour la session
-    }
-  }, [theme]);
-
+// Bascule rapide Clair ↔ Sombre ; le réglage complet est dans Paramètres.
+function ThemeToggle() {
+  const { settings, update } = useSettings();
+  const prefersDark =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const isDark = settings.theme === 'dark' || (settings.theme === 'system' && prefersDark);
   return (
-    <label className="theme-switcher">
-      <span>Thème</span>
-      <select value={theme} onChange={(event) => setTheme(event.target.value)}>
-        <option value="system">Système</option>
-        <option value="light">Clair — Papier</option>
-        <option value="dark">Sombre — Salle d’archives</option>
-      </select>
-    </label>
+    <button
+      type="button"
+      className="icon-button"
+      aria-label={isDark ? 'Passer au thème clair' : 'Passer au thème sombre'}
+      title={isDark ? 'Thème clair' : 'Thème sombre'}
+      onClick={() => update({ theme: isDark ? 'light' : 'dark' })}
+    >
+      <Icon name={isDark ? 'sun' : 'moon'} />
+    </button>
   );
 }
 
-function App() {
+function AppContent() {
+  const { settings } = useSettings();
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
@@ -2705,7 +2697,7 @@ function App() {
                   >
                     <Icon name={item.icon} />
                     <span className="sidenav__text">{item.label}</span>
-                    {item.shortcut ? (
+                    {item.shortcut && settings.showShortcuts ? (
                       <kbd className="sidenav__kbd" aria-hidden="true">
                         {item.shortcut}
                       </kbd>
@@ -2776,7 +2768,7 @@ function App() {
         ) : null}
         <div className="topbar__actions">
           <Badge tone="success">Hors ligne</Badge>
-          <ThemeSwitcher />
+          <ThemeToggle />
           <LanguageSwitcher />
         </div>
       </header>
@@ -2858,6 +2850,8 @@ function App() {
               <StatisticsPanel />
             ) : view === 'ai' ? (
               <AiPanel />
+            ) : view === 'settings' ? (
+              <SettingsPanel />
             ) : view === 'person' && selected ? (
               <PersonSheet selected={selected} relations={relations} onUpdated={loadPersons} />
             ) : view === 'relations' ? (
@@ -2882,6 +2876,9 @@ function App() {
             ) : (
               <TreeExplorer
                 client={client}
+                defaultMode={settings.treeMode}
+                defaultDepth={settings.treeDepth}
+                showSosa={settings.showSosa}
                 selected={selected}
                 onSelect={setSelectedId}
                 familyView={
@@ -2992,6 +2989,14 @@ function App() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 
