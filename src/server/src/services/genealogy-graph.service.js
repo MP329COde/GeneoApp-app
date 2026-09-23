@@ -92,7 +92,9 @@ export class GenealogyGraphService {
       for (const relative of relatives) {
         if (seen.has(relative.id)) continue;
         seen.add(relative.id);
-        const item = { ...relative, generation: current.generation + 1 };
+        // viaId : personne depuis laquelle on a atteint ce parent/enfant, pour
+        // permettre au client de dessiner l'arbre génération par génération.
+        const item = { ...relative, generation: current.generation + 1, viaId: current.id };
         result.push(item);
         queue.push(item);
       }

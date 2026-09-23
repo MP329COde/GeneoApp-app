@@ -13,6 +13,9 @@ const graph = vi.hoisted(() => ({
   cycles: vi.fn(),
   timeline: vi.fn(),
   commonAncestors: vi.fn(),
+  ancestors: vi.fn(),
+  descendants: vi.fn(),
+  relationship: vi.fn(),
 }));
 const search = vi.hoisted(() => ({
   query: vi.fn(),
@@ -1120,5 +1123,105 @@ describe('App', () => {
 
     await waitFor(() => expect(audit.listForEntity).toHaveBeenCalledWith('persons', 1));
     await waitFor(() => expect(screen.getByText('INSERT')).toBeInTheDocument());
+  });
+  it('affiche l’arbre ascendant réel avec numéros Sosa et branches', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.ancestors.mockResolvedValue([
+      { id: 2, given_names: 'Pierre', family_name: 'Dupont', sex: 'M', generation: 1, viaId: 1 },
+      { id: 3, given_names: 'Anne', family_name: 'Morel', sex: 'F', generation: 1, viaId: 1 },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
+
+    await waitFor(() => expect(graph.ancestors).toHaveBeenCalledWith(1, 4));
+    await waitFor(() => expect(screen.getByText('Sosa 2')).toBeInTheDocument());
+    expect(screen.getByText('Sosa 3')).toBeInTheDocument();
+    expect(screen.getByLabelText('Branche maternelle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ascendant' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom avant' }));
+    expect(screen.getByText('110 %')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Recentrer' }));
+    expect(screen.getByText('100 %')).toBeInTheDocument();
+  });
+
+  it('calcule la parenté entre deux personnes via le moteur', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Marie', family_name: 'Martin' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.relationship.mockResolvedValue({
+      relationship: 'COUSIN',
+      distance: 4,
+      branch: null,
+      label: 'cousine germaine',
+      path: [
+        { personId: 1, via: 'SELF' },
+        { personId: 2, via: 'CHILD' },
+      ],
+    });
+    graph.commonAncestors.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Parenté' }));
+    fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Calculer la parenté' }));
+
+    await waitFor(() => expect(graph.relationship).toHaveBeenCalledWith(1, 2));
+    await waitFor(() => expect(screen.getByText('cousine germaine')).toBeInTheDocument());
+    expect(screen.getByText('Aucun ancêtre commun enregistré.')).toBeInTheDocument();
+  });
+
+  it('ouvre la fiche personne avec des onglets navigables au clavier', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', sex: 'M', is_living: 0 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listForPerson.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
+
+    expect(screen.getByText('Homme')).toBeInTheDocument();
+    expect(screen.getByText('Décédé(e)')).toBeInTheDocument();
+    const identityTab = screen.getByRole('tab', { name: 'Identité' });
+    expect(identityTab).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(identityTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Événements' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await waitFor(() => expect(events.listForPerson).toHaveBeenCalledWith(1));
   });
 });

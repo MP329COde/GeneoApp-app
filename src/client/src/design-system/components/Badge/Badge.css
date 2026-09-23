@@ -1,29 +1,26 @@
+/* Badge : caption 12px, rayon sm, fond -subtle ; jamais pour une phrase. */
 .gds-badge {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.02em;
-  border: 1px solid transparent;
+  gap: var(--space-1);
+  padding: var(--space-0-5) var(--space-2);
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  font: var(--type-caption);
 }
 
 .gds-badge--neutral {
-  background-color: var(--color-surface-alt);
-  color: var(--color-text);
-  border-color: var(--color-border);
+  background-color: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 
 .gds-badge--success {
-  background-color: var(--color-success-50);
-  color: var(--color-success-contrast); /* contraste ~7.7:1 sur --color-success-50 */
-  border-color: var(--color-success-contrast);
+  background-color: var(--success-subtle);
+  color: var(--success);
 }
 
 .gds-badge--danger {
-  background-color: var(--color-danger-50);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
+  background-color: var(--danger-subtle);
+  color: var(--danger);
 }

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
+import { TreeExplorer } from './views/TreeExplorer.jsx';
+import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import appIcon from './assets/geneoapp-icon.png';
 import './App.css';
 
 const client = createGeneoAppClient();
@@ -8,6 +11,95 @@ const client = createGeneoAppClient();
 function personLabel(person) {
   return `${person.given_names} ${person.family_name}`;
 }
+
+// Icônes au trait (grille 24, trait 1.5, extrémités carrées, currentColor),
+// conformes à la section Iconographie du design système.
+const ICON_PATHS = {
+  tree: 'M12 4v4M6 12h12M6 12v4M18 12v4M12 8v4M9 4h6v4H9zM3 16h6v4H3zM15 16h6v4h-6z',
+  person: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  family:
+    'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14a6.5 6.5 0 0 1 3.5 6',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+  source: 'M5 3h10l4 4v14H5zM9 9h6M9 13h6M9 17h4',
+  media: 'M3 5h18v14H3zM3 16l5-5 5 5 3-3 5 5M15.5 9.5h.01',
+  event: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  timeline: 'M3 12h18M7 8v8M12 5v14M17 9v6',
+  map: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  duplicate: 'M8 8h12v12H8zM4 16V4h12',
+  warning: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+  notebook: 'M6 3h13v18H6zM3 7h3M3 12h3M3 17h3M10 8h6M10 12h6',
+  stats: 'M4 20V10M10 20V4M16 20v-8M3 20h18',
+  file: 'M6 3h9l4 4v14H6zM15 3v4h4',
+  backup: 'M4 5h16v5H4zM4 10h16v9H4zM8 14h8',
+  note: 'M4 4h16v12l-4 4H4zM16 20v-4h4',
+  history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 3',
+  chip: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
+  offline: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
+};
+
+function Icon({ name }) {
+  return (
+    <svg
+      className="icon"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={ICON_PATHS[name]} />
+    </svg>
+  );
+}
+
+// Architecture de navigation : vues regroupées en 4 familles (Explorer,
+// Documenter, Vérifier, Données locales), comme dans les maquettes.
+const NAV_GROUPS = [
+  {
+    label: 'Explorer',
+    items: [
+      { id: 'tree', label: 'Arbre', icon: 'tree', shortcut: '⌘1' },
+      { id: 'person', label: 'Personne', icon: 'person', shortcut: '⌘2' },
+      { id: 'families', label: 'Familles', icon: 'family', shortcut: '⌘3' },
+      { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
+      { id: 'relations', label: 'Parenté', icon: 'family' },
+    ],
+  },
+  {
+    label: 'Documenter',
+    items: [
+      { id: 'sources', label: 'Sources', icon: 'source' },
+      { id: 'media', label: 'Médias', icon: 'media' },
+      { id: 'events', label: 'Événements', icon: 'event' },
+      { id: 'timeline', label: 'Chronologie', icon: 'timeline' },
+      { id: 'map', label: 'Carte', icon: 'map' },
+      { id: 'notes', label: 'Notes', icon: 'note' },
+    ],
+  },
+  {
+    label: 'Vérifier',
+    items: [
+      { id: 'duplicates', label: 'Doublons', icon: 'duplicate' },
+      { id: 'consistency', label: 'Cohérence', icon: 'warning' },
+      { id: 'notebook', label: 'Carnet', icon: 'notebook' },
+      { id: 'statistics', label: 'Statistiques', icon: 'stats' },
+      { id: 'audit', label: 'Journal', icon: 'history' },
+    ],
+  },
+  {
+    label: 'Données locales',
+    items: [
+      { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
+      { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
+      { id: 'ai', label: 'IA locale', icon: 'chip' },
+    ],
+  },
+];
 
 function PersonCard({ person, selected, onSelect, onKeyDown }) {
   return (
@@ -2331,6 +2423,147 @@ function BackupsPanel({ session, onLogin, loginError, onLogout }) {
   );
 }
 
+const PERSON_TABS = [
+  { id: 'identity', label: 'Identité' },
+  { id: 'events', label: 'Événements' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'media', label: 'Médias' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'history', label: 'Historique' },
+];
+
+// Fiche personne complète : un en-tête d'identité puis des onglets réutilisant
+// les outils déjà branchés sur l'API locale.
+function PersonSheet({ selected, relations, onUpdated }) {
+  const [tab, setTab] = useState('identity');
+
+  const handleTabKeyDown = (event) => {
+    const index = PERSON_TABS.findIndex((item) => item.id === tab);
+    const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!delta) return;
+    event.preventDefault();
+    const next = PERSON_TABS[(index + delta + PERSON_TABS.length) % PERSON_TABS.length];
+    setTab(next.id);
+    event.currentTarget.parentElement.querySelector(`#person-tab-${next.id}`)?.focus();
+  };
+
+  return (
+    <div className="person-sheet">
+      <header className="person-sheet__header">
+        <span className="avatar avatar--lg" aria-hidden="true">
+          <Icon name="person" />
+        </span>
+        <div>
+          <h2 className="person-sheet__name">{personLabel(selected)}</h2>
+          <p className="person-sheet__badges">
+            {selected.sex ? (
+              <Badge>
+                {selected.sex === 'M' ? 'Homme' : selected.sex === 'F' ? 'Femme' : 'Sexe inconnu'}
+              </Badge>
+            ) : null}
+            <Badge>{selected.is_living === 0 ? 'Décédé(e)' : 'Vivant(e)'}</Badge>
+            <span className="data-id">#{selected.id}</span>
+          </p>
+        </div>
+      </header>
+      <div className="tabs" role="tablist" aria-label="Sections de la fiche">
+        {PERSON_TABS.map((item) => (
+          <button
+            key={item.id}
+            id={`person-tab-${item.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            aria-controls="person-tabpanel"
+            tabIndex={tab === item.id ? 0 : -1}
+            onClick={() => setTab(item.id)}
+            onKeyDown={handleTabKeyDown}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div id="person-tabpanel" role="tabpanel" aria-labelledby={`person-tab-${tab}`}>
+        {tab === 'identity' ? (
+          <div className="person-sheet__identity">
+            <div className="details-panel person-sheet__form">
+              <IdentityTool selected={selected} onUpdated={onUpdated} />
+            </div>
+            {relations ? (
+              <div className="detail-section">
+                <h3>Famille proche</h3>
+                <dl>
+                  <div>
+                    <dt>Parents</dt>
+                    <dd>{relations.parents.map(personLabel).join(', ') || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Conjoints</dt>
+                    <dd>{relations.spouses.map(personLabel).join(', ') || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Enfants</dt>
+                    <dd>{relations.children.map(personLabel).join(', ') || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Fratrie</dt>
+                    <dd>{relations.siblings.map(personLabel).join(', ') || '—'}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+          </div>
+        ) : tab === 'events' ? (
+          <EventsPanel selected={selected} />
+        ) : tab === 'sources' ? (
+          <SourcesPanel selected={selected} />
+        ) : tab === 'media' ? (
+          <MediaPanel selected={selected} />
+        ) : tab === 'notes' ? (
+          <NotesPanel selected={selected} />
+        ) : (
+          <AuditPanel selected={selected} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem('geneoapp.theme') ?? 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+// Thèmes du design système : Clair — Papier, Sombre — Salle d'archives.
+function ThemeSwitcher() {
+  const [theme, setTheme] = useState(readStoredTheme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'system') delete root.dataset.theme;
+    else root.dataset.theme = theme;
+    try {
+      localStorage.setItem('geneoapp.theme', theme);
+    } catch {
+      // stockage indisponible : le choix reste valable pour la session
+    }
+  }, [theme]);
+
+  return (
+    <label className="theme-switcher">
+      <span>Thème</span>
+      <select value={theme} onChange={(event) => setTheme(event.target.value)}>
+        <option value="system">Système</option>
+        <option value="light">Clair — Papier</option>
+        <option value="dark">Sombre — Salle d’archives</option>
+      </select>
+    </label>
+  );
+}
+
 function App() {
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -2394,6 +2627,19 @@ function App() {
     loadRelations();
   }, [loadRelations]);
 
+  useEffect(() => {
+    const shortcuts = NAV_GROUPS.flatMap((group) => group.items).filter((item) => item.shortcut);
+    const handleKeyDown = (event) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      const item = shortcuts[Number(event.key) - 1];
+      if (!item) return;
+      event.preventDefault();
+      setView(item.id);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleCreate = async (data) => {
     setCreating(true);
     setError(null);
@@ -2420,201 +2666,129 @@ function App() {
 
   if (persons === null) {
     return (
-      <main className="genealogy-app" aria-labelledby="app-title">
-        <h1 id="app-title">GeneoApp</h1>
-        <p role="status">Chargement des données locales…</p>
+      <main className="startup" aria-labelledby="app-title">
+        <div className="startup__card">
+          <img className="startup__logo" src={appIcon} alt="" width="56" height="56" />
+          <h1 id="app-title">GeneoApp</h1>
+          <div className="startup__progress" aria-hidden="true">
+            <span />
+          </div>
+          <p role="status">Chargement des données locales…</p>
+        </div>
       </main>
     );
   }
 
+  const currentView = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === view);
+
   return (
     <main className="genealogy-app" aria-labelledby="app-title">
-      <header className="app-header">
-        <div>
-          <p className="app-kicker">Recherche familiale locale</p>
+      <aside className="sidenav" aria-label="Navigation principale">
+        <div className="sidenav__brand">
+          <img src={appIcon} alt="" width="32" height="32" />
           <h1 id="app-title">GeneoApp</h1>
         </div>
-        <div className="app-header__actions">
+        <div className="sidenav__scroll">
+          <div className="view-switcher" role="group" aria-label="Vues">
+            {NAV_GROUPS.map((group) => (
+              <div className="sidenav__group" key={group.label}>
+                <p className="sidenav__label" aria-hidden="true">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    className={`sidenav__item${view === item.id ? ' is-active' : ''}`}
+                    aria-current={view === item.id ? 'page' : undefined}
+                    onClick={() => setView(item.id)}
+                    type="button"
+                  >
+                    <Icon name={item.icon} />
+                    <span className="sidenav__text">{item.label}</span>
+                    {item.shortcut ? (
+                      <kbd className="sidenav__kbd" aria-hidden="true">
+                        {item.shortcut}
+                      </kbd>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className="sidenav__group sidenav__persons">
+            <h2 className="sidenav__label">
+              Personnes · <span>{persons.length} personne(s)</span>
+            </h2>
+            <CreatePersonForm onCreate={handleCreate} creating={creating} />
+            <nav className="person-list" aria-label="Personnes">
+              {persons.length === 0 ? (
+                <p className="notice">
+                  Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
+                  votre arbre.
+                </p>
+              ) : (
+                persons.map((person, index) => (
+                  <PersonCard
+                    key={person.id}
+                    person={person}
+                    selected={person.id === selectedId}
+                    onSelect={setSelectedId}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                      event.preventDefault();
+                      const delta = event.key === 'ArrowDown' ? 1 : -1;
+                      const nextIndex = (index + delta + persons.length) % persons.length;
+                      setSelectedId(persons[nextIndex].id);
+                      const buttons =
+                        event.currentTarget.parentElement.querySelectorAll('.person-card');
+                      buttons[nextIndex]?.focus();
+                    }}
+                  />
+                ))
+              )}
+            </nav>
+          </div>
+        </div>
+        <div className="sidenav__footer">
+          <p>
+            <Icon name="chip" /> IA locale
+          </p>
+          <p>
+            <Icon name="offline" /> Hors ligne · 100 % local
+          </p>
+        </div>
+      </aside>
+
+      <header className="topbar">
+        <p className="topbar__crumbs">
+          <span>Arbre local</span>
+          <span aria-hidden="true">›</span>
+          <strong>{currentView?.label ?? 'Arbre'}</strong>
+        </p>
+        {selected ? (
+          <p className="topbar__context">
+            <Icon name="person" />
+            <span>Contexte :</span>
+            <strong className="person-name">{personLabel(selected)}</strong>
+            <span className="data-id">#{selected.id}</span>
+          </p>
+        ) : null}
+        <div className="topbar__actions">
           <Badge tone="success">Hors ligne</Badge>
+          <ThemeSwitcher />
           <LanguageSwitcher />
         </div>
       </header>
 
       {error ? (
-        <p role="alert" className="notice notice--error">
+        <p role="alert" className="notice notice--error app-error">
           {error}
         </p>
       ) : null}
 
       <section className="workspace" aria-label="Espace de généalogie">
-        <aside className="sidebar">
-          <div className="sidebar__heading">
-            <div>
-              <p className="eyebrow">Arbre actif</p>
-              <h2>{persons.length} personne(s)</h2>
-            </div>
-          </div>
-          <CreatePersonForm onCreate={handleCreate} creating={creating} />
-          <nav className="person-list" aria-label="Personnes">
-            {persons.length === 0 ? (
-              <p className="notice">
-                Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
-                votre arbre.
-              </p>
-            ) : (
-              persons.map((person, index) => (
-                <PersonCard
-                  key={person.id}
-                  person={person}
-                  selected={person.id === selectedId}
-                  onSelect={setSelectedId}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-                    event.preventDefault();
-                    const delta = event.key === 'ArrowDown' ? 1 : -1;
-                    const nextIndex = (index + delta + persons.length) % persons.length;
-                    setSelectedId(persons[nextIndex].id);
-                    const buttons =
-                      event.currentTarget.parentElement.querySelectorAll('.person-card');
-                    buttons[nextIndex]?.focus();
-                  }}
-                />
-              ))
-            )}
-          </nav>
-        </aside>
-
         <section className="canvas-panel" aria-label="Vue de l'arbre">
-          <div className="canvas-toolbar">
-            <div className="view-switcher" role="group" aria-label="Vues">
-              <button
-                className={view === 'tree' ? 'is-active' : ''}
-                onClick={() => setView('tree')}
-                type="button"
-              >
-                Arbre
-              </button>
-              <button
-                className={view === 'relations' ? 'is-active' : ''}
-                onClick={() => setView('relations')}
-                type="button"
-              >
-                Relations
-              </button>
-              <button
-                className={view === 'search' ? 'is-active' : ''}
-                onClick={() => setView('search')}
-                type="button"
-              >
-                Recherche
-              </button>
-              <button
-                className={view === 'gedcom' ? 'is-active' : ''}
-                onClick={() => setView('gedcom')}
-                type="button"
-              >
-                GEDCOM
-              </button>
-              <button
-                className={view === 'backups' ? 'is-active' : ''}
-                onClick={() => setView('backups')}
-                type="button"
-              >
-                Sauvegardes
-              </button>
-              <button
-                className={view === 'duplicates' ? 'is-active' : ''}
-                onClick={() => setView('duplicates')}
-                type="button"
-              >
-                Doublons
-              </button>
-              <button
-                className={view === 'families' ? 'is-active' : ''}
-                onClick={() => setView('families')}
-                type="button"
-              >
-                Familles
-              </button>
-              <button
-                className={view === 'notes' ? 'is-active' : ''}
-                onClick={() => setView('notes')}
-                type="button"
-              >
-                Notes
-              </button>
-              <button
-                className={view === 'audit' ? 'is-active' : ''}
-                onClick={() => setView('audit')}
-                type="button"
-              >
-                Journal
-              </button>
-              <button
-                className={view === 'media' ? 'is-active' : ''}
-                onClick={() => setView('media')}
-                type="button"
-              >
-                Médias
-              </button>
-              <button
-                className={view === 'sources' ? 'is-active' : ''}
-                onClick={() => setView('sources')}
-                type="button"
-              >
-                Sources
-              </button>
-              <button
-                className={view === 'events' ? 'is-active' : ''}
-                onClick={() => setView('events')}
-                type="button"
-              >
-                Événements
-              </button>
-              <button
-                className={view === 'timeline' ? 'is-active' : ''}
-                onClick={() => setView('timeline')}
-                type="button"
-              >
-                Chronologie
-              </button>
-              <button
-                className={view === 'map' ? 'is-active' : ''}
-                onClick={() => setView('map')}
-                type="button"
-              >
-                Carte
-              </button>
-              <button
-                className={view === 'consistency' ? 'is-active' : ''}
-                onClick={() => setView('consistency')}
-                type="button"
-              >
-                Cohérence
-              </button>
-              <button
-                className={view === 'notebook' ? 'is-active' : ''}
-                onClick={() => setView('notebook')}
-                type="button"
-              >
-                Carnet
-              </button>
-              <button
-                className={view === 'statistics' ? 'is-active' : ''}
-                onClick={() => setView('statistics')}
-                type="button"
-              >
-                Statistiques
-              </button>
-              <button
-                className={view === 'ai' ? 'is-active' : ''}
-                onClick={() => setView('ai')}
-                type="button"
-              >
-                IA locale
-              </button>
-            </div>
-          </div>
           <div className={`genealogy-canvas genealogy-canvas--${view}`}>
             {view === 'search' ? (
               <SearchPanel />
@@ -2684,46 +2858,85 @@ function App() {
               <StatisticsPanel />
             ) : view === 'ai' ? (
               <AiPanel />
+            ) : view === 'person' && selected ? (
+              <PersonSheet selected={selected} relations={relations} onUpdated={loadPersons} />
+            ) : view === 'relations' ? (
+              <RelationshipPanel
+                client={client}
+                persons={persons}
+                selected={selected}
+                onNavigate={setSelectedId}
+              />
             ) : !selected ? (
-              <p className="notice">Sélectionnez ou créez une personne pour afficher son arbre.</p>
-            ) : !relations ? (
-              <p role="status">Chargement des relations…</p>
-            ) : (
-              <div className="tree-layout">
-                <div className="tree-row">
-                  {relations.parents.map((person) => (
-                    <PersonCard
-                      key={person.id}
-                      person={person}
-                      selected={false}
-                      onSelect={setSelectedId}
-                    />
-                  ))}
-                </div>
-                <div className="tree-connector" aria-hidden="true" />
-                <div className="tree-row tree-row--focus">
-                  <PersonCard person={selected} selected onSelect={setSelectedId} />
-                  {relations.spouses.map((person) => (
-                    <PersonCard
-                      key={person.id}
-                      person={person}
-                      selected={false}
-                      onSelect={setSelectedId}
-                    />
-                  ))}
-                </div>
-                <div className="tree-connector" aria-hidden="true" />
-                <div className="tree-row">
-                  {relations.children.map((person) => (
-                    <PersonCard
-                      key={person.id}
-                      person={person}
-                      selected={false}
-                      onSelect={setSelectedId}
-                    />
-                  ))}
-                </div>
+              <div className="empty-state">
+                <img src={appIcon} alt="" width="56" height="56" />
+                <h2>Profil prêt, arbre vide</h2>
+                <p className="notice">
+                  Sélectionnez ou créez une personne pour afficher son arbre.
+                </p>
               </div>
+            ) : !relations ? (
+              <p role="status" className="loading-line">
+                Chargement des relations…
+              </p>
+            ) : (
+              <TreeExplorer
+                client={client}
+                selected={selected}
+                onSelect={setSelectedId}
+                familyView={
+                  <div className="tree-layout">
+                    <div className="tree-row">
+                      {relations.parents.map((person) => (
+                        <PersonCard
+                          key={person.id}
+                          person={person}
+                          selected={false}
+                          onSelect={setSelectedId}
+                        />
+                      ))}
+                    </div>
+                    {relations.parents.length > 0 ? (
+                      <div className="tree-connector" aria-hidden="true" />
+                    ) : null}
+                    <div className="tree-row tree-row--focus">
+                      <PersonCard person={selected} selected onSelect={setSelectedId} />
+                      {relations.spouses.map((person) => (
+                        <PersonCard
+                          key={person.id}
+                          person={person}
+                          selected={false}
+                          onSelect={setSelectedId}
+                        />
+                      ))}
+                    </div>
+                    {relations.children.length > 0 ? (
+                      <div className="tree-connector" aria-hidden="true" />
+                    ) : null}
+                    <div className="tree-row">
+                      {relations.children.map((person) => (
+                        <PersonCard
+                          key={person.id}
+                          person={person}
+                          selected={false}
+                          onSelect={setSelectedId}
+                        />
+                      ))}
+                    </div>
+                    <ul className="tree-legend" aria-label="Légende">
+                      <li>
+                        <span className="tree-legend__line tree-legend__line--bio" /> Biologique
+                      </li>
+                      <li>
+                        <span className="tree-legend__line tree-legend__line--adoptive" /> Adoptive
+                      </li>
+                      <li>
+                        <span className="tree-legend__line tree-legend__line--unknown" /> Inconnue
+                      </li>
+                    </ul>
+                  </div>
+                }
+              />
             )}
           </div>
         </section>
@@ -2732,10 +2945,13 @@ function App() {
           {selected ? (
             <>
               <div className="details-panel__top">
-                <span className="avatar">{selected.given_names.charAt(0)}</span>
+                <span className="avatar" aria-hidden="true">
+                  <Icon name="person" />
+                </span>
                 <div>
-                  <p className="eyebrow">Fiche personne</p>
+                  <p className="eyebrow">Personne sélectionnée</p>
                   <h2 id="person-title">{personLabel(selected)}</h2>
+                  <p className="data-id">#{selected.id}</p>
                 </div>
               </div>
               <IdentityTool selected={selected} onUpdated={loadPersons} />
