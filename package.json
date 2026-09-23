@@ -31,6 +31,7 @@
     "test:packaging": "node --test test/packaging/*.test.js",
     "test:client": "npm run test --workspace @geneoapp/client",
     "test:e2e": "playwright test",
+    "screenshots": "node scripts/capture-screenshots.js",
     "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:client",
     "storybook": "npm run storybook --workspace @geneoapp/client",
     "build-storybook": "npm run build-storybook --workspace @geneoapp/client"
