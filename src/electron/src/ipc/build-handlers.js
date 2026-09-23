@@ -420,6 +420,18 @@ function buildRawHandlers(services, workspace, storage) {
       return { removed: true };
     }),
 
+    [IPC_CHANNELS.INDEXING_STATUS]: wrap(() => services.indexing.status()),
+    [IPC_CHANNELS.INDEXING_SEARCH]: wrap(({ q, limit }) => services.indexing.search(q, limit)),
+    [IPC_CHANNELS.INDEXING_ADD_SOURCE]: wrap(({ data }) => services.indexing.addSource(data ?? {})),
+    [IPC_CHANNELS.INDEXING_SET_SOURCE]: wrap(({ id, enabled }) =>
+      services.indexing.setSourceEnabled(id, enabled),
+    ),
+    [IPC_CHANNELS.INDEXING_REMOVE_SOURCE]: wrap(({ id }) => {
+      services.indexing.removeSource(id);
+      return { removed: true };
+    }),
+    [IPC_CHANNELS.INDEXING_SETTINGS]: wrap(({ data }) => services.indexing.updateSettings(data ?? {})),
+    [IPC_CHANNELS.INDEXING_RUN]: wrap(() => services.indexing.run('MANUAL')),
     [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
       services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
     ),

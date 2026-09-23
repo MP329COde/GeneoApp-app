@@ -2659,3 +2659,26 @@ input[type='radio'] {
 .settings-field input[type='range'] {
   accent-color: var(--action);
 }
+
+/* ---------- Documents indexés ---------- */
+.indexing-hits__main {
+  display: grid;
+  flex: 1;
+  gap: var(--space-1);
+  min-width: 240px;
+}
+.indexing-hits__snippet {
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.indexing-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+.indexing-schedule label:not(.settings-toggle) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

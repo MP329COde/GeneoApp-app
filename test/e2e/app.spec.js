@@ -451,3 +451,27 @@ test('identifie réellement une personne sur une photo et la retrouve sur sa fic
   await page.getByRole('button', { name: 'Photographié Présent' }).first().click();
   await expect(page.getByText('Apparaît aussi sur')).toBeVisible();
 });
+
+test('indexe réellement un dossier local et retrouve un document par son contenu', async ({
+  page,
+}) => {
+  const { mkdtemp, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const folder = await mkdtemp(path.join(tmpdir(), 'geneoapp-e2e-docs-'));
+  await writeFile(
+    path.join(folder, 'bapteme.txt'),
+    'Baptême de Jean-Baptiste Lefèvre à Saint-Maclou',
+  );
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Documents indexés', exact: true }).click();
+  await page.getByLabel('Dossier (chemin complet)').fill(folder);
+  await page.getByRole('button', { name: 'Ajouter le dossier' }).click();
+  await page.getByRole('button', { name: 'Indexer maintenant' }).click();
+  await expect(page.getByText(/Indexation terminée : 1 nouveau/)).toBeVisible();
+
+  await page.getByLabel('Rechercher dans les documents').fill('saint maclou');
+  await page.getByRole('button', { name: 'Chercher' }).click();
+  await expect(page.getByText('bapteme.txt').first()).toBeVisible();
+});

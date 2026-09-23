@@ -199,6 +199,20 @@ function createHttpClient() {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
     },
     quality: (personId) => fetchJson(`/api/persons/${personId}/quality`),
+    indexing: {
+      status: () => fetchJson('/api/indexing'),
+      search: (q, limit) =>
+        fetchJson(
+          `/api/indexing/search?${new URLSearchParams({ q, ...(limit ? { limit } : {}) })}`,
+        ),
+      addSource: (data) => fetchJson('/api/indexing/sources', { method: 'POST', body: data }),
+      setSource: (id, enabled) =>
+        fetchJson(`/api/indexing/sources/${id}`, { method: 'PATCH', body: { enabled } }),
+      removeSource: (id) => fetchJson(`/api/indexing/sources/${id}`, { method: 'DELETE' }),
+      updateSettings: (data) =>
+        fetchJson('/api/indexing/settings', { method: 'PATCH', body: data }),
+      run: () => fetchJson('/api/indexing/run', { method: 'POST' }),
+    },
     advancedSearch: (filters) =>
       fetchJson('/api/search/advanced', { method: 'POST', body: filters }),
     history: {
@@ -379,6 +393,15 @@ function createIpcClient(bridge) {
       analyze: (prompt) => bridge.ai.analyze(prompt),
     },
     quality: (personId) => bridge.quality(personId),
+    indexing: {
+      status: () => bridge.indexing.status(),
+      search: (q, limit) => bridge.indexing.search(q, limit),
+      addSource: (data) => bridge.indexing.addSource(data),
+      setSource: (id, enabled) => bridge.indexing.setSource(id, enabled),
+      removeSource: (id) => bridge.indexing.removeSource(id),
+      updateSettings: (data) => bridge.indexing.updateSettings(data),
+      run: () => bridge.indexing.run(),
+    },
     advancedSearch: (filters) => bridge.advancedSearch(filters),
     history: {
       status: (limit) => bridge.history.status(limit),

@@ -86,5 +86,6 @@
   "tree.descendants": "Descendant",
   "tree.fan": "Éventail",
   "tree.graph": "Graphe",
-  "nav.annotations": "Annotations"
+  "nav.annotations": "Annotations",
+  "nav.indexing": "Documents indexés"
 }

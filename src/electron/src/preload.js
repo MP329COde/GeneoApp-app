@@ -185,6 +185,15 @@ const api = {
     photosForPerson: (personId) => invoke(IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON, { personId }),
   },
 
+  indexing: {
+    status: () => invoke(IPC_CHANNELS.INDEXING_STATUS),
+    search: (q, limit) => invoke(IPC_CHANNELS.INDEXING_SEARCH, { q, limit }),
+    addSource: (data) => invoke(IPC_CHANNELS.INDEXING_ADD_SOURCE, { data }),
+    setSource: (id, enabled) => invoke(IPC_CHANNELS.INDEXING_SET_SOURCE, { id, enabled }),
+    removeSource: (id) => invoke(IPC_CHANNELS.INDEXING_REMOVE_SOURCE, { id }),
+    updateSettings: (data) => invoke(IPC_CHANNELS.INDEXING_SETTINGS, { data }),
+    run: () => invoke(IPC_CHANNELS.INDEXING_RUN),
+  },
   quality: (personId) => invoke(IPC_CHANNELS.PERSON_QUALITY, { personId }),
   advancedSearch: (filters) => invoke(IPC_CHANNELS.SEARCH_ADVANCED, { filters }),
 

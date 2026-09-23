@@ -53,6 +53,9 @@ Les dix premières issues du plan de développement sont livrées et validées (
   filiations fidèles (adoptions, filiations sans union).
 - **Sauvegardes** automatiques (lancement, avant import, avant migration), copies chiffrées AES-256-GCM,
   miroir et dossier de travail sur clé USB.
+- **Documents indexés** : dossiers locaux et sites d'archives (robot désactivé par défaut, ADR 0011),
+  recherche plein texte, indexation nocturne planifiée (voir [`docs/INDEXATION.md`](docs/INDEXATION.md)).
+- **Personnalisation** : menu, couleur d'accent, panneaux redimensionnables, sections de fiche.
 - **Ligne de commande** (`npm run cli -- --help`, voir [`docs/CLI.md`](docs/CLI.md)) et **traductions**
   extensibles (voir [`docs/I18N.md`](docs/I18N.md)).
 

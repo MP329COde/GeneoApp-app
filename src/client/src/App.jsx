@@ -25,6 +25,7 @@ import { QualityCard } from './views/QualityCard.jsx';
 import { SiteSearch } from './views/SiteSearch.jsx';
 import { AnnotationsHub, AnnotationsPanel } from './views/AnnotationsPanel.jsx';
 import { QuickSearch } from './views/QuickSearch.jsx';
+import { IndexingPanel } from './views/IndexingPanel.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -121,6 +122,7 @@ const NAV_GROUPS = [
       { id: 'timeline', label: 'Chronologie', icon: 'timeline' },
       { id: 'map', label: 'Carte', icon: 'map' },
       { id: 'annotations', label: 'Annotations', icon: 'notebook' },
+      { id: 'indexing', label: 'Documents indexés', icon: 'search' },
     ],
   },
   {
@@ -3383,6 +3385,8 @@ function AppContent() {
                   onNavigate={setSelectedId}
                   onChange={loadRelations}
                 />
+              ) : view === 'indexing' ? (
+                <IndexingPanel client={client} />
               ) : view === 'annotations' ? (
                 <AnnotationsHub client={client} />
               ) : view === 'notes' ? (
