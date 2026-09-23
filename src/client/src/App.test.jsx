@@ -97,6 +97,11 @@ const audit = vi.hoisted(() => ({
   listForEntity: vi.fn(),
 }));
 
+const history = vi.hoisted(() => ({
+  status: vi.fn().mockResolvedValue({ canUndo: false, canRedo: false }),
+  undo: vi.fn(),
+  redo: vi.fn(),
+}));
 const trees = vi.hoisted(() => ({
   list: vi.fn(),
   active: vi.fn().mockResolvedValue({ id: 'default', name: 'Mon arbre', active: true }),
@@ -129,6 +134,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     events,
     audit,
     trees,
+    history,
   }),
 }));
 
@@ -1325,5 +1331,52 @@ describe('App', () => {
     await waitFor(() => expect(trees.activate).toHaveBeenCalledWith('abc-1'));
     await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Famille Morel' })).toBeInTheDocument();
+  });
+  it('annule la dernière action via le bouton puis Ctrl+Z, sans intercepter la frappe', async () => {
+    persons.list
+      .mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }])
+      .mockResolvedValue([]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    history.status.mockResolvedValue({
+      canUndo: true,
+      canRedo: false,
+      undoLabel: 'Ajout · personne',
+      redoLabel: null,
+    });
+    history.undo.mockResolvedValue({
+      undone: 'Ajout · personne',
+      canUndo: false,
+      canRedo: true,
+      undoLabel: null,
+      redoLabel: 'Ajout · personne',
+    });
+    history.redo.mockResolvedValue({
+      redone: 'Ajout · personne',
+      canUndo: true,
+      canRedo: false,
+      undoLabel: 'Ajout · personne',
+      redoLabel: null,
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Annuler : Ajout · personne' }));
+    await waitFor(() => expect(history.undo).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    expect(screen.getByText('Annulé : Ajout · personne')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByLabelText('Prénom(s)'), { key: 'z', ctrlKey: true });
+    expect(history.undo).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(history.redo).toHaveBeenCalledTimes(1));
+    history.status.mockResolvedValue({ canUndo: false, canRedo: false });
   });
 });

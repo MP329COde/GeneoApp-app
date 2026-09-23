@@ -607,3 +607,21 @@ test('les canaux d’arbres basculent les services IPC « live » sur l’arbre 
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('une écriture IPC forme une action annulable puis rétablissable', async () => {
+  const handlers = createHandlers();
+  const created = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  assert.equal(created.ok, true);
+
+  const status = await handlers[IPC_CHANNELS.HISTORY_STATUS]({});
+  assert.equal(status.data.undoLabel, 'Ajout · personne');
+
+  const undone = await handlers[IPC_CHANNELS.HISTORY_UNDO]({});
+  assert.equal(undone.data.undone, 'Ajout · personne');
+  assert.deepEqual((await handlers[IPC_CHANNELS.PERSONS_LIST]({})).data, []);
+
+  await handlers[IPC_CHANNELS.HISTORY_REDO]({});
+  assert.equal((await handlers[IPC_CHANNELS.PERSONS_LIST]({})).data.length, 1);
+});

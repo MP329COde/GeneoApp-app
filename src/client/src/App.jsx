@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
+import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -9,7 +10,11 @@ import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
 import appIcon from './assets/geneoapp-icon.png';
 import './App.css';
 
-const client = createGeneoAppClient();
+// Toute écriture réussie notifie l'App pour rafraîchir Annuler/Rétablir.
+const writeListeners = new Set();
+const client = withWriteNotifications(createGeneoAppClient(), () => {
+  for (const listener of writeListeners) listener();
+});
 
 function personLabel(person) {
   return `${person.given_names} ${person.family_name}`;
@@ -37,6 +42,8 @@ const ICON_PATHS = {
   note: 'M4 4h16v12l-4 4H4zM16 20v-4h4',
   history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 3',
   chip: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
+  undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
+  redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3',
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
   settings:
@@ -2568,6 +2575,9 @@ function AppContent() {
   const [session, setSession] = useState(null);
   const [loginError, setLoginError] = useState(null);
   const [activeTree, setActiveTree] = useState(null);
+  const [history, setHistory] = useState({ canUndo: false, canRedo: false });
+  const [historyMessage, setHistoryMessage] = useState('');
+  const [dataVersion, setDataVersion] = useState(0);
 
   const handleLogin = async (name, pin) => {
     setLoginError(null);
@@ -2612,6 +2622,65 @@ function AppContent() {
       .catch(() => setActiveTree(null));
   }, []);
 
+  const refreshHistory = useCallback(async () => {
+    try {
+      const status = await client.history?.status(1);
+      if (status) setHistory(status);
+    } catch {
+      // l'historique est une aide : son indisponibilité ne bloque rien
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshHistory();
+    writeListeners.add(refreshHistory);
+    return () => writeListeners.delete(refreshHistory);
+  }, [refreshHistory]);
+
+  const applyHistory = useCallback(async (direction) => {
+    try {
+      const result = await client.history[direction]();
+      const label = direction === 'undo' ? result.undone : result.redone;
+      setHistory(result);
+      if (!label) return;
+      setHistoryMessage(`${direction === 'undo' ? 'Annulé' : 'Rétabli'} : ${label}`);
+      // Les panneaux rechargent leurs données après un retour en arrière.
+      setDataVersion((version) => version + 1);
+      const list = await client.persons.list();
+      setPersons(list);
+      setSelectedId((current) =>
+        list.some((person) => person.id === current) ? current : (list[0]?.id ?? null),
+      );
+    } catch (historyError) {
+      setError(historyError.message);
+    }
+  }, []);
+
+  // Ctrl/⌘+Z annule, Ctrl/⌘+Maj+Z ou Ctrl+Y rétablit ; dans un champ de
+  // saisie, le raccourci garde son comportement natif (annuler la frappe).
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        applyHistory('undo');
+      } else if ((key === 'z' && event.shiftKey) || (key === 'y' && event.ctrlKey)) {
+        event.preventDefault();
+        applyHistory('redo');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [applyHistory]);
+
   // Changer d'arbre : toute la sélection appartient à l'ancien arbre.
   const handleTreeActivated = async (tree) => {
     setActiveTree(tree);
@@ -2619,6 +2688,7 @@ function AppContent() {
     setRelations(null);
     setSession(null);
     setPersons(await client.persons.list());
+    refreshHistory();
   };
 
   const loadRelations = useCallback(async () => {
@@ -2636,7 +2706,8 @@ function AppContent() {
   useEffect(() => {
     setRelations(null);
     loadRelations();
-  }, [loadRelations]);
+    // dataVersion : recharger aussi après Annuler/Rétablir sur la même personne.
+  }, [loadRelations, dataVersion]);
 
   useEffect(() => {
     const shortcuts = NAV_GROUPS.flatMap((group) => group.items).filter((item) => item.shortcut);
@@ -2788,6 +2859,33 @@ function AppContent() {
           </p>
         ) : null}
         <div className="topbar__actions">
+          <div className="history-controls" role="group" aria-label="Historique">
+            <button
+              type="button"
+              className="icon-button"
+              disabled={!history.canUndo}
+              aria-label={history.canUndo ? `Annuler : ${history.undoLabel}` : 'Rien à annuler'}
+              title={history.canUndo ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Rien à annuler'}
+              onClick={() => applyHistory('undo')}
+            >
+              <Icon name="undo" />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              disabled={!history.canRedo}
+              aria-label={history.canRedo ? `Rétablir : ${history.redoLabel}` : 'Rien à rétablir'}
+              title={
+                history.canRedo ? `Rétablir : ${history.redoLabel} (Ctrl+Maj+Z)` : 'Rien à rétablir'
+              }
+              onClick={() => applyHistory('redo')}
+            >
+              <Icon name="redo" />
+            </button>
+          </div>
+          <p className="gds-visually-hidden" role="status" aria-live="polite">
+            {historyMessage}
+          </p>
           <Badge tone="success">Hors ligne</Badge>
           <ThemeToggle />
           <LanguageSwitcher />
@@ -2802,7 +2900,7 @@ function AppContent() {
 
       <section className="workspace" aria-label="Espace de généalogie">
         <section className="canvas-panel" aria-label="Vue de l'arbre">
-          <div className={`genealogy-canvas genealogy-canvas--${view}`}>
+          <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
             {view === 'search' ? (
               <SearchPanel />
             ) : view === 'gedcom' ? (

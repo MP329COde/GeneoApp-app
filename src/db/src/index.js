@@ -1,5 +1,6 @@
 export { openDatabase } from './database.js';
 export { runMigrations } from './migrate.js';
+export { UndoHistory, installUndoTriggers } from './history/undo-history.js';
 export { PersonRepository } from './repositories/person-repository.js';
 export { NoteRepository } from './repositories/note-repository.js';
 export { ResearchRepository } from './repositories/research-repository.js';

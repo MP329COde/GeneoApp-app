@@ -298,3 +298,25 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
   await expect(counter).toHaveText(before);
   await expect(page.getByRole('button', { name: 'Anne Morel' })).toHaveCount(0);
 });
+
+test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la rétablit', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  const before = Number((await counter.textContent()).split(' ')[0]);
+
+  await page.getByLabel('Prénom(s)').fill('Temporaire');
+  await page.getByLabel('Nom', { exact: true }).fill('Annulable');
+  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(counter).toHaveText(`${before} personne(s)`);
+  await expect(page.getByRole('button', { name: 'Temporaire Annulable' })).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+});

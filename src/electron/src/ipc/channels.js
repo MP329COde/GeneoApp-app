@@ -88,6 +88,10 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_LIST_FOR_SOURCE: 'geneoapp:media:listForSource',
   MEDIA_REMOVE: 'geneoapp:media:remove',
 
+  HISTORY_STATUS: 'geneoapp:history:status',
+  HISTORY_UNDO: 'geneoapp:history:undo',
+  HISTORY_REDO: 'geneoapp:history:redo',
+
   TREES_LIST: 'geneoapp:trees:list',
   TREES_ACTIVE: 'geneoapp:trees:active',
   TREES_LIST_DELETED: 'geneoapp:trees:listDeleted',

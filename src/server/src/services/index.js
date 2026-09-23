@@ -1,3 +1,4 @@
+import { UndoHistory } from '../../../db/src/history/undo-history.js';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -78,5 +79,6 @@ export function createServices(
     statistics: new StatisticsService(database),
     localAi: new LocalAiService(),
     merge: new MergeService(database),
+    history: new UndoHistory(database),
   };
 }

@@ -161,6 +161,11 @@ function createHttpClient() {
     ai: {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
     },
+    history: {
+      status: (limit) => fetchJson(`/api/history${limit ? `?limit=${limit}` : ''}`),
+      undo: () => fetchJson('/api/history/undo', { method: 'POST' }),
+      redo: () => fetchJson('/api/history/redo', { method: 'POST' }),
+    },
     trees: {
       list: () => fetchJson('/api/trees'),
       active: () => fetchJson('/api/trees/active'),
@@ -294,6 +299,11 @@ function createIpcClient(bridge) {
     },
     ai: {
       analyze: (prompt) => bridge.ai.analyze(prompt),
+    },
+    history: {
+      status: (limit) => bridge.history.status(limit),
+      undo: () => bridge.history.undo(),
+      redo: () => bridge.history.redo(),
     },
     trees: {
       list: () => bridge.trees.list(),

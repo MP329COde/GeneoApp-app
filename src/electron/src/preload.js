@@ -157,6 +157,12 @@ const api = {
     remove: (id, performedBy) => invoke(IPC_CHANNELS.MEDIA_REMOVE, { id, performedBy }),
   },
 
+  history: {
+    status: (limit) => invoke(IPC_CHANNELS.HISTORY_STATUS, { limit }),
+    undo: () => invoke(IPC_CHANNELS.HISTORY_UNDO),
+    redo: () => invoke(IPC_CHANNELS.HISTORY_REDO),
+  },
+
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),
     active: () => invoke(IPC_CHANNELS.TREES_ACTIVE),

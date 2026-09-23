@@ -45,7 +45,66 @@ function wrap(handler) {
  * pouvoir être testée en dehors du runtime Electron (ipcMain n'existe que
  * dans le processus principal Electron).
  */
+// Écritures regroupées en une action annulable (Ctrl+Z), sauf domaines
+// techniques : comptes, sauvegardes, arbres, IA, historique lui-même.
+const WRITE_ACTIONS =
+  /^(create|update|remove|restore|merge|import|addParticipant|addCitation|upload|purge)$/;
+const NON_UNDOABLE_DOMAINS = new Set(['accounts', 'backups', 'trees', 'ai', 'history']);
+const DOMAIN_LABELS = {
+  persons: 'personne',
+  places: 'lieu',
+  events: 'événement',
+  unions: 'union',
+  parentages: 'lien de parenté',
+  sources: 'source',
+  media: 'média',
+  notes: 'note',
+  research: 'carnet de recherche',
+  gedcom: 'import GEDCOM',
+  search: 'fusion de doublons',
+  trash: 'corbeille',
+};
+const ACTION_LABELS = {
+  create: 'Ajout',
+  update: 'Modification',
+  remove: 'Suppression',
+  restore: 'Restauration',
+  merge: 'Fusion',
+  import: 'Import',
+  addParticipant: 'Ajout de participant',
+  addCitation: 'Ajout de citation',
+  upload: 'Ajout',
+  purge: 'Suppression définitive',
+};
+
+function withUndoGroup(services, channel, handler) {
+  const [, domain, action] = channel.split(':');
+  if (NON_UNDOABLE_DOMAINS.has(domain) || !WRITE_ACTIONS.test(action ?? '')) return handler;
+  return async (payload) => {
+    const history = services.history;
+    const groupId = history?.begin(
+      `${ACTION_LABELS[action]} · ${DOMAIN_LABELS[domain] ?? domain}`,
+      payload?.performedBy ?? null,
+    );
+    try {
+      return await handler(payload);
+    } finally {
+      history?.end(groupId);
+    }
+  };
+}
+
 export function buildIpcHandlers(services, workspace = null) {
+  const handlers = buildRawHandlers(services, workspace);
+  return Object.fromEntries(
+    Object.entries(handlers).map(([channel, handler]) => [
+      channel,
+      withUndoGroup(services, channel, handler),
+    ]),
+  );
+}
+
+function buildRawHandlers(services, workspace) {
   const {
     persons,
     places,
@@ -273,6 +332,13 @@ export function buildIpcHandlers(services, workspace = null) {
       media.remove(id, { performedBy: actorOf(performedBy) });
       return { removed: true };
     }),
+
+    [IPC_CHANNELS.HISTORY_STATUS]: wrap(({ limit }) => ({
+      ...services.history.status(),
+      actions: services.history.list(Math.min(Math.max(Number(limit) || 50, 1), 200)),
+    })),
+    [IPC_CHANNELS.HISTORY_UNDO]: wrap(() => services.history.undo()),
+    [IPC_CHANNELS.HISTORY_REDO]: wrap(() => services.history.redo()),
 
     ...(workspace
       ? {

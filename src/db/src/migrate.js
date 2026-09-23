@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { openDatabase } from './database.js';
+import { installUndoTriggers } from './history/undo-history.js';
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
@@ -45,6 +46,9 @@ export function runMigrations(database, { migrationsDir = MIGRATIONS_DIR } = {})
     });
     applyMigration();
   }
+
+  // Régénérés à chaque ouverture : couvrent aussi les colonnes ajoutées.
+  installUndoTriggers(database);
 
   return pending;
 }
