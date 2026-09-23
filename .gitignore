@@ -13,3 +13,6 @@ test-results/
 playwright-report/
 blob-report/
 screenshots/
+# Catalogue local des arbres (données utilisateur)
+trees.json
+trees.json.tmp

@@ -161,6 +161,19 @@ function createHttpClient() {
     ai: {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
     },
+    trees: {
+      list: () => fetchJson('/api/trees'),
+      active: () => fetchJson('/api/trees/active'),
+      listDeleted: () => fetchJson('/api/trees/deleted'),
+      create: (data) => fetchJson('/api/trees', { method: 'POST', body: data }),
+      update: (id, data) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'PATCH', body: data }),
+      activate: (id) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}/activate`, { method: 'POST' }),
+      remove: (id) => fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+      restore: (id) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+    },
     notes: {
       create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
       listForEntity: (entityType, entityId) => fetchJson(`/api/notes/${entityType}/${entityId}`),
@@ -281,6 +294,16 @@ function createIpcClient(bridge) {
     },
     ai: {
       analyze: (prompt) => bridge.ai.analyze(prompt),
+    },
+    trees: {
+      list: () => bridge.trees.list(),
+      active: () => bridge.trees.active(),
+      listDeleted: () => bridge.trees.listDeleted(),
+      create: (data) => bridge.trees.create(data),
+      update: (id, data) => bridge.trees.update(id, data),
+      activate: (id) => bridge.trees.activate(id),
+      remove: (id) => bridge.trees.remove(id),
+      restore: (id) => bridge.trees.restore(id),
     },
     notes: {
       create: (data) => bridge.notes.create(data),

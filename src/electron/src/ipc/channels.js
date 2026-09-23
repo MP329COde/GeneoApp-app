@@ -87,4 +87,13 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_LIST_FOR_ENTITY: 'geneoapp:media:listForEntity',
   MEDIA_LIST_FOR_SOURCE: 'geneoapp:media:listForSource',
   MEDIA_REMOVE: 'geneoapp:media:remove',
+
+  TREES_LIST: 'geneoapp:trees:list',
+  TREES_ACTIVE: 'geneoapp:trees:active',
+  TREES_LIST_DELETED: 'geneoapp:trees:listDeleted',
+  TREES_CREATE: 'geneoapp:trees:create',
+  TREES_UPDATE: 'geneoapp:trees:update',
+  TREES_ACTIVATE: 'geneoapp:trees:activate',
+  TREES_REMOVE: 'geneoapp:trees:remove',
+  TREES_RESTORE: 'geneoapp:trees:restore',
 });

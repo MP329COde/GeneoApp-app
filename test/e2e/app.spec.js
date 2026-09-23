@@ -51,7 +51,7 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
   await expect(page.getByRole('button', { name: 'Byron Lovelace' }).last()).toBeVisible();
 
   // Vérifie que la relation est bien reflétée dans la vue Arbre.
-  await page.getByRole('button', { name: 'Arbre' }).click();
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
   await expect(page.locator('.tree-row').last().getByText('Byron Lovelace')).toBeVisible();
 });
 
@@ -272,4 +272,29 @@ test('le carnet de recherche persiste réellement une piste entre deux navigatio
   await page.reload();
   await page.getByRole('button', { name: 'Carnet' }).click();
   await expect(page.getByText('Vérifier acte de naissance')).toBeVisible();
+});
+
+test('crée un second arbre isolé, y travaille, puis revient au premier arbre intact', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  const before = await counter.textContent();
+
+  await page.getByRole('button', { name: 'Arbres', exact: true }).click();
+  await page.getByLabel('Nom de l’arbre').fill('Famille Morel');
+  await page.getByRole('button', { name: 'Créer l’arbre' }).click();
+  await page.getByRole('button', { name: 'Ouvrir Famille Morel' }).click();
+
+  await expect(counter).toHaveText('0 personne(s)');
+  await expect(page.getByRole('button', { name: 'Famille Morel', exact: true })).toBeVisible();
+  await page.getByLabel('Prénom(s)').fill('Anne');
+  await page.getByLabel('Nom', { exact: true }).fill('Morel');
+  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await expect(counter).toHaveText('1 personne(s)');
+
+  await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
+  await expect(counter).toHaveText(before);
+  await expect(page.getByRole('button', { name: 'Anne Morel' })).toHaveCount(0);
 });

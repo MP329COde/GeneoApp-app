@@ -3,8 +3,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createApp } from '../../server/src/app.js';
-import { createDatabase } from '../../server/src/db.js';
-import { createServices } from '../../server/src/services/index.js';
+import { TreeWorkspace, createLiveServices } from '../../server/src/trees/tree-workspace.js';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
 
 const host = '127.0.0.1';
@@ -12,17 +11,20 @@ const port = 0;
 const preloadPath = fileURLToPath(new URL('./preload.js', import.meta.url));
 
 let server;
-let database;
+let workspace;
 let unregisterIpcHandlers;
 
 async function createWindow() {
-  database = createDatabase(
-    path.join(app.getPath('userData'), process.env.GENEOAPP_DATABASE ?? 'geneoapp.sqlite'),
-  );
-  const services = createServices(database);
-  unregisterIpcHandlers = registerIpcHandlers(services);
+  const userData = app.getPath('userData');
+  workspace = new TreeWorkspace({
+    dataDir: userData,
+    defaultDatabaseFile: path.join(userData, process.env.GENEOAPP_DATABASE ?? 'geneoapp.sqlite'),
+  });
+  // Services résolus à chaque appel : un changement d'arbre est suivi par
+  // l'IPC et par l'API HTTP sans ré-enregistrer les handlers.
+  unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace);
 
-  server = createServer(createApp({ database })).listen(port, host);
+  server = createServer(createApp({ workspace })).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
 
   const window = new BrowserWindow({
@@ -42,6 +44,6 @@ app.whenReady().then(createWindow);
 app.on('window-all-closed', () => {
   unregisterIpcHandlers?.();
   server?.close();
-  database?.close();
+  workspace?.close();
   if (process.platform !== 'darwin') app.quit();
 });

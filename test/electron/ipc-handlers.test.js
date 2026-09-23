@@ -575,3 +575,35 @@ test('MEDIA_LIST_FOR_SOURCE liste les documents réellement associés à une sou
   assert.equal(listed.data.length, 1);
   assert.equal(listed.data[0].original_filename, 'scan-registre.png');
 });
+
+test('les canaux d’arbres basculent les services IPC « live » sur l’arbre ouvert', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { TreeWorkspace, createLiveServices } =
+    await import('../../src/server/src/trees/tree-workspace.js');
+  const dataDir = await mkdtemp(path.join(tmpdir(), 'geneoapp-ipc-trees-'));
+  const workspace = new TreeWorkspace({
+    dataDir,
+    defaultDatabaseFile: path.join(dataDir, 'geneoapp.sqlite'),
+  });
+  try {
+    const handlers = buildIpcHandlers(createLiveServices(workspace), workspace);
+    await handlers[IPC_CHANNELS.PERSONS_CREATE]({ data: { givenNames: 'Ada', familyName: 'L' } });
+
+    const created = await handlers[IPC_CHANNELS.TREES_CREATE]({ data: { name: 'Second' } });
+    assert.equal(created.ok, true);
+    const activated = await handlers[IPC_CHANNELS.TREES_ACTIVATE]({ id: created.data.id });
+    assert.equal(activated.data.active, true);
+
+    const persons = await handlers[IPC_CHANNELS.PERSONS_LIST]({});
+    assert.deepEqual(persons.data, []);
+
+    const invalid = await handlers[IPC_CHANNELS.TREES_ACTIVATE]({ id: '../x' });
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.error.status, 400);
+  } finally {
+    workspace.close();
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

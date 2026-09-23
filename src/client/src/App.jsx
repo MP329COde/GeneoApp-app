@@ -3,6 +3,7 @@ import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import { TreesPanel } from './views/TreesPanel.jsx';
 import { SettingsPanel } from './views/SettingsPanel.jsx';
 import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
 import appIcon from './assets/geneoapp-icon.png';
@@ -100,6 +101,7 @@ const NAV_GROUPS = [
   {
     label: 'Données locales',
     items: [
+      { id: 'trees', label: 'Arbres', icon: 'tree' },
       { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
       { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
       { id: 'ai', label: 'IA locale', icon: 'chip' },
@@ -2565,6 +2567,7 @@ function AppContent() {
   const [creating, setCreating] = useState(false);
   const [session, setSession] = useState(null);
   const [loginError, setLoginError] = useState(null);
+  const [activeTree, setActiveTree] = useState(null);
 
   const handleLogin = async (name, pin) => {
     setLoginError(null);
@@ -2601,6 +2604,22 @@ function AppContent() {
   useEffect(() => {
     loadPersons();
   }, [loadPersons]);
+
+  useEffect(() => {
+    client.trees
+      ?.active()
+      .then(setActiveTree)
+      .catch(() => setActiveTree(null));
+  }, []);
+
+  // Changer d'arbre : toute la sélection appartient à l'ancien arbre.
+  const handleTreeActivated = async (tree) => {
+    setActiveTree(tree);
+    setSelectedId(null);
+    setRelations(null);
+    setSession(null);
+    setPersons(await client.persons.list());
+  };
 
   const loadRelations = useCallback(async () => {
     if (selectedId === null) {
@@ -2754,7 +2773,9 @@ function AppContent() {
 
       <header className="topbar">
         <p className="topbar__crumbs">
-          <span>Arbre local</span>
+          <button type="button" className="topbar__tree" onClick={() => setView('trees')}>
+            {activeTree?.name ?? 'Arbre local'}
+          </button>
           <span aria-hidden="true">›</span>
           <strong>{currentView?.label ?? 'Arbre'}</strong>
         </p>
@@ -2850,6 +2871,8 @@ function AppContent() {
               <StatisticsPanel />
             ) : view === 'ai' ? (
               <AiPanel />
+            ) : view === 'trees' ? (
+              <TreesPanel client={client} onActivated={handleTreeActivated} />
             ) : view === 'settings' ? (
               <SettingsPanel />
             ) : view === 'person' && selected ? (

@@ -2,6 +2,8 @@ import express from 'express';
 import { createServices } from './services/index.js';
 import { apiRoutes } from './routes/index.js';
 import { performedBy } from './middleware/performed-by.js';
+import { treeRoutes } from './routes/tree.routes.js';
+import { createLiveServices } from './trees/tree-workspace.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 
 /**
@@ -9,8 +11,9 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
  * permettre son remplacement par une instance en mémoire dans les tests
  * (voir `createDatabase` pour l'usage réel avec SQLite fichier).
  */
-export function createApp({ database, mediaRoot, backupDir, services } = {}) {
-  if (!database) {
+export function createApp({ database, mediaRoot, backupDir, services, workspace } = {}) {
+  if (workspace) services ??= createLiveServices(workspace);
+  if (!database && !services) {
     throw new Error('createApp requiert une instance de base de données (option "database")');
   }
 
@@ -27,6 +30,7 @@ export function createApp({ database, mediaRoot, backupDir, services } = {}) {
     response.json({ status: 'ok' });
   });
 
+  if (workspace) app.use('/api/trees', treeRoutes(workspace));
   app.use('/api', apiRoutes(services));
 
   app.use(notFoundHandler);

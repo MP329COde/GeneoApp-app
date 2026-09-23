@@ -1261,3 +1261,59 @@ input[type='radio'] {
   font-size: 9px;
   pointer-events: none;
 }
+
+/* ---------- Arbres ---------- */
+.topbar__tree {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+.topbar__tree:hover {
+  color: var(--text);
+}
+.trees-panel h4 {
+  margin: var(--space-6) 0 var(--space-3);
+  font: var(--type-heading);
+}
+.tree-cards {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tree-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.tree-card--active {
+  border: var(--border-thick) solid var(--action);
+  background: var(--surface-selected);
+}
+.tree-card__name {
+  margin: 0 0 var(--space-1);
+  font: var(--type-person-name-lg);
+}
+.tree-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.tree-card__rename {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+  margin: 0 !important;
+}

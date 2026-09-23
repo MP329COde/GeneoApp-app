@@ -45,7 +45,7 @@ function wrap(handler) {
  * pouvoir être testée en dehors du runtime Electron (ipcMain n'existe que
  * dans le processus principal Electron).
  */
-export function buildIpcHandlers(services) {
+export function buildIpcHandlers(services, workspace = null) {
   const {
     persons,
     places,
@@ -273,5 +273,18 @@ export function buildIpcHandlers(services) {
       media.remove(id, { performedBy: actorOf(performedBy) });
       return { removed: true };
     }),
+
+    ...(workspace
+      ? {
+          [IPC_CHANNELS.TREES_LIST]: wrap(() => workspace.list()),
+          [IPC_CHANNELS.TREES_ACTIVE]: wrap(() => workspace.active()),
+          [IPC_CHANNELS.TREES_LIST_DELETED]: wrap(() => workspace.listDeleted()),
+          [IPC_CHANNELS.TREES_CREATE]: wrap(({ data }) => workspace.create(data ?? {})),
+          [IPC_CHANNELS.TREES_UPDATE]: wrap(({ id, data }) => workspace.update(id, data ?? {})),
+          [IPC_CHANNELS.TREES_ACTIVATE]: wrap(({ id }) => workspace.activate(id)),
+          [IPC_CHANNELS.TREES_REMOVE]: wrap(({ id }) => workspace.remove(id)),
+          [IPC_CHANNELS.TREES_RESTORE]: wrap(({ id }) => workspace.restore(id)),
+        }
+      : {}),
   };
 }

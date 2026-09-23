@@ -97,6 +97,17 @@ const audit = vi.hoisted(() => ({
   listForEntity: vi.fn(),
 }));
 
+const trees = vi.hoisted(() => ({
+  list: vi.fn(),
+  active: vi.fn().mockResolvedValue({ id: 'default', name: 'Mon arbre', active: true }),
+  listDeleted: vi.fn().mockResolvedValue([]),
+  create: vi.fn(),
+  update: vi.fn(),
+  activate: vi.fn(),
+  remove: vi.fn(),
+  restore: vi.fn(),
+}));
+
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
     persons,
@@ -117,6 +128,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     places,
     events,
     audit,
+    trees,
   }),
 }));
 
@@ -1272,5 +1284,46 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Pierre Dupont, Sosa 2' })).toBeInTheDocument();
     fireEvent.keyDown(mother, { key: 'Enter' });
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(3));
+  });
+  it('crée et ouvre un autre arbre, puis recharge les personnes de cet arbre', async () => {
+    persons.list
+      .mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }])
+      .mockResolvedValueOnce([]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    const second = {
+      id: 'abc-1',
+      name: 'Famille Morel',
+      active: false,
+      createdAt: '2026-09-23T10:00:00Z',
+      personCount: null,
+    };
+    trees.list.mockResolvedValue([
+      {
+        id: 'default',
+        name: 'Mon arbre',
+        active: true,
+        createdAt: '2026-09-22T10:00:00Z',
+        personCount: 1,
+      },
+      second,
+    ]);
+    trees.activate.mockResolvedValue({ ...second, active: true, personCount: 0 });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    expect(await screen.findByRole('button', { name: 'Mon arbre' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Arbres' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir Famille Morel' }));
+
+    await waitFor(() => expect(trees.activate).toHaveBeenCalledWith('abc-1'));
+    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Famille Morel' })).toBeInTheDocument();
   });
 });
