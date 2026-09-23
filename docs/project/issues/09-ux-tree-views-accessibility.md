@@ -246,3 +246,13 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   de coordonnées via le formulaire d'événement, vérification du point sur la carte). Limite assumée : pas de
   zoom/pan/tuiles satellite — une carte-croquis fonctionnelle et déjà bien plus qu'un espace réservé vide,
   conforme à l'ambition « version simplifiée » déjà actée pour cette vue.
+- 2026-09-23 (suite) : ajout d'une vue « Cohérence » réelle. `GenealogyGraphService#detectCycles` et
+  `#validateTimeline` existaient déjà côté moteur (Phase C du cahier des charges) et étaient testés côté API
+  (`/api/graph/cycles`, `/api/graph/timeline`), mais n'étaient exposés ni via IPC ni par aucun écran — un
+  utilisateur ne pouvait jamais voir un cycle de filiation ou une incohérence de date (naissance après décès,
+  mariage après décès, enfant né après le décès d'un parent) que l'application avait pourtant détectée.
+  Canaux IPC `GRAPH_CYCLES`/`GRAPH_TIMELINE` ajoutés (les deux transports). L'écran liste les cycles détectés
+  (chemin complet des personnes impliquées) et les incohérences de chronologie (gravité, libellé, lien direct
+  vers la fiche concernée) — signalement seul, jamais de correction ni de fusion automatique, conformément à
+  la Phase F du cahier des charges. Testé : 1 cas IPC, 1 cas client (Vitest), 1 scénario E2E Playwright
+  (vérifie l'absence de faux positif sur les données réelles déjà créées par le reste de la suite).

@@ -157,6 +157,8 @@ export function buildIpcHandlers(services) {
       graph.assertPair(personA, personB);
       return graph.findRelationship(personA, personB);
     }),
+    [IPC_CHANNELS.GRAPH_CYCLES]: wrap(() => graph.detectCycles()),
+    [IPC_CHANNELS.GRAPH_TIMELINE]: wrap(() => graph.validateTimeline()),
 
     [IPC_CHANNELS.SEARCH_QUERY]: wrap(({ q, entityTypes, limit } = {}) =>
       search.search({ q, entityTypes, limit }),

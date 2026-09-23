@@ -9,6 +9,8 @@ const persons = vi.hoisted(() => ({
 }));
 const graph = vi.hoisted(() => ({
   relations: vi.fn(),
+  cycles: vi.fn(),
+  timeline: vi.fn(),
 }));
 const search = vi.hoisted(() => ({
   query: vi.fn(),
@@ -931,6 +933,36 @@ describe('App', () => {
     );
     expect(screen.getByText('Nantes')).toBeInTheDocument();
     expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
+  });
+
+  it('signale les incohérences réelles détectées par le moteur (cycle et chronologie)', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Marie', family_name: 'Curie' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.cycles.mockResolvedValue([[1, 2, 1]]);
+    graph.timeline.mockResolvedValue([
+      { personId: 1, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cohérence' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }));
+
+    await waitFor(() => expect(graph.cycles).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText(/Naissance enregistrée après le décès/)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Jean Dupont → Marie Curie → Jean Dupont/)).toBeInTheDocument();
   });
 
   it('affiche le journal d’audit réel d’une personne', async () => {

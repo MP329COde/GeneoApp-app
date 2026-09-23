@@ -981,6 +981,97 @@ function MapPanel() {
   );
 }
 
+const TIMELINE_ISSUE_LABELS = {
+  BIRTH_AFTER_DEATH: 'Naissance enregistrée après le décès',
+  MARRIAGE_AFTER_DEATH: 'Mariage enregistré après le décès',
+  CHILD_AFTER_PARENT_DEATH: "Naissance de l'enfant enregistrée après le décès du parent",
+};
+
+// Signale les incohérences réellement détectées par le moteur de graphe
+// (`GenealogyGraphService#detectCycles`/`#validateTimeline`) — jamais
+// corrigées ni fusionnées automatiquement, seulement portées à la
+// connaissance de l'utilisateur pour validation humaine.
+function ConsistencyPanel({ onNavigate, personLabelById }) {
+  const [cycles, setCycles] = useState(null);
+  const [timelineIssues, setTimelineIssues] = useState(null);
+  const [consistencyError, setConsistencyError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleCheck = async () => {
+    setBusy(true);
+    setConsistencyError(null);
+    try {
+      const [cyclesResult, timelineResult] = await Promise.all([
+        client.graph.cycles(),
+        client.graph.timeline(),
+      ]);
+      setCycles(cyclesResult);
+      setTimelineIssues(timelineResult);
+    } catch (checkError) {
+      setConsistencyError(checkError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="search-panel">
+      <div className="gedcom-panel__actions">
+        <Button type="button" size="sm" onClick={handleCheck} disabled={busy}>
+          Vérifier la cohérence de l’arbre
+        </Button>
+      </div>
+      {consistencyError ? (
+        <p role="alert" className="notice notice--error">
+          {consistencyError}
+        </p>
+      ) : null}
+      {cycles !== null || timelineIssues !== null ? (
+        <>
+          <h3>Cycles de filiation</h3>
+          {cycles.length === 0 ? (
+            <p className="notice">Aucun cycle détecté.</p>
+          ) : (
+            <ul className="search-results">
+              {cycles.map((cycle, index) => (
+                <li key={index}>
+                  <Badge tone="danger">Cycle</Badge>{' '}
+                  {cycle.map((id) => personLabelById(id)).join(' → ')}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h3>Incohérences de chronologie</h3>
+          {timelineIssues.length === 0 ? (
+            <p className="notice">Aucune incohérence de date détectée.</p>
+          ) : (
+            <ul className="search-results">
+              {timelineIssues.map((issue, index) => (
+                <li key={index}>
+                  <Badge tone={issue.severity === 'CERTAIN' ? 'danger' : 'neutral'}>
+                    {issue.severity}
+                  </Badge>{' '}
+                  {TIMELINE_ISSUE_LABELS[issue.code] ?? issue.code} —{' '}
+                  {personLabelById(issue.personId ?? issue.childId)}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onNavigate(issue.personId ?? issue.childId)}
+                  >
+                    Voir la fiche
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -2035,6 +2126,11 @@ function App() {
     [persons, selectedId],
   );
 
+  const personLabelById = (id) => {
+    const person = persons?.find((candidate) => candidate.id === id);
+    return person ? personLabel(person) : `Personne #${id}`;
+  };
+
   if (persons === null) {
     return (
       <main className="genealogy-app" aria-labelledby="app-title">
@@ -2203,6 +2299,13 @@ function App() {
                 Carte
               </button>
               <button
+                className={view === 'consistency' ? 'is-active' : ''}
+                onClick={() => setView('consistency')}
+                type="button"
+              >
+                Cohérence
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -2269,6 +2372,14 @@ function App() {
               />
             ) : view === 'map' ? (
               <MapPanel />
+            ) : view === 'consistency' ? (
+              <ConsistencyPanel
+                personLabelById={personLabelById}
+                onNavigate={(id) => {
+                  setSelectedId(id);
+                  setView('tree');
+                }}
+              />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}

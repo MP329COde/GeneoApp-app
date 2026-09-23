@@ -153,6 +153,38 @@ test('GRAPH_ANCESTORS et GRAPH_RELATIONSHIP exposent le moteur de relations au r
   assert.equal(relationship.data.relationship, 'ANCESTOR_1');
 });
 
+test('GRAPH_CYCLES et GRAPH_TIMELINE exposent les détections d’incohérences au renderer', async () => {
+  const handlers = createHandlers();
+
+  const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Chronologie', familyName: 'Test' },
+  });
+  await handlers[IPC_CHANNELS.EVENTS_CREATE]({
+    data: {
+      type: 'BIRTH',
+      dateText: '2000',
+      participants: [{ personId: person.data.id, role: 'PRINCIPAL' }],
+    },
+  });
+  await handlers[IPC_CHANNELS.EVENTS_CREATE]({
+    data: {
+      type: 'DEATH',
+      dateText: '1900',
+      participants: [{ personId: person.data.id, role: 'PRINCIPAL' }],
+    },
+  });
+
+  const timeline = await handlers[IPC_CHANNELS.GRAPH_TIMELINE]();
+  assert.equal(timeline.ok, true);
+  assert.deepEqual(timeline.data, [
+    { personId: person.data.id, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' },
+  ]);
+
+  const cycles = await handlers[IPC_CHANNELS.GRAPH_CYCLES]();
+  assert.equal(cycles.ok, true);
+  assert.deepEqual(cycles.data, []);
+});
+
 test('SEARCH_QUERY expose la recherche locale au renderer', async () => {
   const handlers = createHandlers();
 

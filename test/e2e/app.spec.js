@@ -175,6 +175,17 @@ test('navigue entre les personnes réelles avec les flèches du clavier', async 
   await expect(list.getByRole('button').nth(1)).toBeFocused();
 });
 
+test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohérence attendue)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Cohérence' }).click();
+  await page.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }).click();
+
+  await expect(page.getByText('Aucun cycle détecté.')).toBeVisible();
+  await expect(page.getByText('Aucune incohérence de date détectée.')).toBeVisible();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {

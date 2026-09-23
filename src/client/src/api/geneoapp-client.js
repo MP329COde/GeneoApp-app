@@ -80,6 +80,8 @@ function createHttpClient() {
       relations: (personId) => fetchJson(`/api/persons/${personId}/relations`),
       relationship: (personA, personB) =>
         fetchJson(`/api/graph/relationship?personA=${personA}&personB=${personB}`),
+      cycles: () => fetchJson('/api/graph/cycles'),
+      timeline: () => fetchJson('/api/graph/timeline'),
     },
     search: {
       query: (q, entityTypes) =>
@@ -210,6 +212,8 @@ function createIpcClient(bridge) {
       descendants: (personId, depth) => bridge.graph.descendants(personId, depth),
       relations: (personId) => bridge.graph.relations(personId),
       relationship: (personA, personB) => bridge.graph.relationship(personA, personB),
+      cycles: () => bridge.graph.cycles(),
+      timeline: () => bridge.graph.timeline(),
     },
     search: {
       query: (q, entityTypes) => bridge.search.query(q, entityTypes),
