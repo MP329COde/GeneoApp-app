@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { USER_AGENT, parseRobots } from './robots.js';
 import { extractText, kindOf } from './text-extract.js';
@@ -130,9 +128,7 @@ export async function crawlSite(
         extracted =
           kind === 'html' ? await extractText({ buffer, filename: name, mimeType: type }) : null;
       } else {
-        let filePath = null;
-        let directory = null;
-        if (kind === 'ocr') {
+        if (kind === 'pdf' || kind === 'image') {
           // PDF et images conservés localement pour une consultation hors ligne.
           if (media) {
             const stored = await media.upload({
@@ -142,15 +138,13 @@ export async function crawlSite(
             });
             mediaId = stored.id;
           }
-          directory = await mkdtemp(path.join(tmpdir(), 'geneoapp-ocr-'));
-          filePath = path.join(directory, `document${path.extname(name) || '.bin'}`);
-          await writeFile(filePath, buffer);
         }
-        try {
-          extracted = await extractText({ buffer, filename: name, mimeType: type, filePath, ocr });
-        } finally {
-          if (directory) await rm(directory, { recursive: true, force: true });
-        }
+        extracted = await extractText({
+          buffer,
+          filename: name,
+          mimeType: type,
+          ...(ocr ? { ocr } : {}),
+        });
         repository.upsertDocument({
           sourceId: source.id,
           location,

@@ -54,8 +54,7 @@ export async function scanFolder(source, { repository, ocr, counts }) {
         const extracted = await extractText({
           buffer: await readFile(full),
           filename: entry.name,
-          filePath: full,
-          ocr,
+          ...(ocr ? { ocr } : {}),
         });
         repository.upsertDocument({
           sourceId: source.id,

@@ -32,6 +32,12 @@ files:
 # l'archive asar pour pouvoir être chargé par Node au runtime.
 asarUnpack:
   - node_modules/better-sqlite3/**
+  # Indexation (ADR 0011) : l'OCR embarqué charge un thread, du WebAssembly et
+  # les données de langue depuis le disque ; pdfjs charge son worker.
+  - node_modules/tesseract.js/**
+  - node_modules/tesseract.js-core/**
+  - node_modules/@tesseract.js-data/**
+  - node_modules/pdfjs-dist/**
 
 # Le stockage local (fichier SQLite applicatif) vit dans le répertoire
 # utilisateur standard de chaque OS (voir src/electron/src/main.js,

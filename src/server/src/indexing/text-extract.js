@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { OFFICE_EXTENSIONS, ocrImage, officeText, pdfContent } from './content-extract.js';
 
 // Extraction de texte pour l'index plein texte. Aucune exécution de contenu :
 // le HTML est réduit à son texte (scripts, styles et commentaires retirés).
@@ -66,61 +67,42 @@ export function htmlToText(html) {
 export function kindOf(filename, mimeType = '') {
   const extension = path.extname(filename).toLowerCase();
   if (mimeType.startsWith('text/html') || HTML_EXTENSIONS.has(extension)) return 'html';
-  if (
-    mimeType.startsWith('application/pdf') ||
-    mimeType.startsWith('image/') ||
-    OCR_EXTENSIONS.has(extension)
-  ) {
-    return 'ocr';
-  }
+  if (mimeType.startsWith('application/pdf') || extension === '.pdf') return 'pdf';
+  if (OFFICE_EXTENSIONS.has(extension)) return 'office';
+  if (mimeType.startsWith('image/') || OCR_EXTENSIONS.has(extension)) return 'image';
   if (mimeType.startsWith('text/') || TEXT_EXTENSIONS.has(extension)) return 'text';
   return null;
 }
 
 /**
- * Extrait le texte indexable. `ocr(filePath)` est facultatif (tesseract local) :
- * sans lui, un PDF ou une image est indexé par son titre uniquement.
+ * Extrait le contenu indexable : texte, HTML, PDF (texte ou pages scannées),
+ * images (OCR) et documents bureautiques. `ocr(buffer)` est remplaçable
+ * (tests) ; par défaut, OCR local embarqué.
  */
-export async function extractText({
-  buffer,
-  filename,
-  mimeType = '',
-  filePath = null,
-  ocr = null,
-}) {
+export async function extractText({ buffer, filename, mimeType = '', ocr = ocrImage }) {
   const kind = kindOf(filename, mimeType);
   const fallbackTitle = path.basename(filename);
-  if (kind === 'text') {
-    return {
-      title: fallbackTitle,
-      text: buffer.toString('utf8').slice(0, MAX_INDEXED_CHARS),
-      status: 'EXTRACTED',
-      links: [],
-    };
-  }
-  if (kind === 'html') {
-    const { title, text, links } = htmlToText(buffer.toString('utf8'));
-    return {
-      title: title || fallbackTitle,
-      text: text.slice(0, MAX_INDEXED_CHARS),
-      status: 'EXTRACTED',
-      links,
-    };
-  }
-  if (kind === 'ocr' && ocr && filePath) {
-    try {
-      const text = (await ocr(filePath)) ?? '';
-      if (text.trim()) {
-        return {
-          title: fallbackTitle,
-          text: text.slice(0, MAX_INDEXED_CHARS),
-          status: 'OCR',
-          links: [],
-        };
-      }
-    } catch {
-      // OCR indisponible ou en échec : indexation par le titre seulement.
+  const done = (text, status, extra = {}) => ({
+    title: fallbackTitle,
+    text: (text ?? '').slice(0, MAX_INDEXED_CHARS),
+    status: text && text.trim() ? status : 'UNAVAILABLE',
+    links: [],
+    ...extra,
+  });
+  try {
+    if (kind === 'text') return done(buffer.toString('utf8'), 'EXTRACTED');
+    if (kind === 'html') {
+      const { title, text, links } = htmlToText(buffer.toString('utf8'));
+      return done(text, 'EXTRACTED', { title: title || fallbackTitle, links });
     }
+    if (kind === 'office') return done(officeText(buffer), 'EXTRACTED');
+    if (kind === 'pdf') {
+      const { text, status } = await pdfContent(buffer, { ocr });
+      return done(text, status);
+    }
+    if (kind === 'image') return done(await ocr(buffer), 'OCR');
+  } catch {
+    // Contenu illisible : le document reste trouvable par son nom.
   }
-  return { title: fallbackTitle, text: '', status: 'UNAVAILABLE', links: [] };
+  return done('', 'UNAVAILABLE');
 }

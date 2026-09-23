@@ -2,9 +2,9 @@
 
 Écran **Documents indexés** (menu Documenter). Voir l'[ADR 0011](adr/0011-indexation-documents-et-robot-web.md).
 
-- **Dossiers** : scans, PDF, notes, pages HTML enregistrées… indexés sur place (aucune copie).
-  Texte, HTML, Markdown, CSV, JSON, GEDCOM lus directement ; images et PDF passés à l'OCR si
-  [`tesseract`](https://tesseract-ocr.github.io/) est installé (sinon indexés par leur nom).
+- **Dossiers** : indexés sur place (aucune copie). **Le contenu est lu** : texte, HTML,
+  Markdown, CSV, JSON, GEDCOM, PDF (texte intégré, et OCR des pages scannées), images (OCR),
+  Word, Excel, PowerPoint et LibreOffice. L'OCR est embarqué (français), rien à installer.
 - **Sites** : robot limité aux adresses listées, **désactivé tant que « Autoriser l'accès
   internet » n'est pas coché**. Même site uniquement, `robots.txt` respecté, délai entre pages,
   profondeur réglable. PDF et images sont conservés dans les médias pour une lecture hors ligne.

@@ -2,7 +2,6 @@ import { PhotoService } from './photo.service.js';
 import { AdvancedSearchService } from './advanced-search.service.js';
 import { QualityService } from './quality.service.js';
 import { IndexService } from '../indexing/index.service.js';
-import { runTesseract } from '../ocr/tesseract-runner.js';
 import { UndoHistory } from '../../../db/src/history/undo-history.js';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -90,10 +89,8 @@ export function createServices(
     advancedSearch: new AdvancedSearchService(database),
     quality: new QualityService(database),
     // OCR direct (tesseract local, facultatif) pour les images et PDF indexés.
-    indexing: new IndexService(database, {
-      media: entityServices.media,
-      ocr: async (filePath) => (await runTesseract(filePath)).trim(),
-    }),
+    // Contenu des fichiers indexé localement (OCR embarqué, PDF, bureautique).
+    indexing: new IndexService(database, { media: entityServices.media }),
     photos: new PhotoService(new PhotoRepository(database), database),
   };
 }

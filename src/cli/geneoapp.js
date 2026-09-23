@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { TreeWorkspace } from '../server/src/trees/tree-workspace.js';
 import { configuredDataDir } from '../server/src/storage/storage-config.js';
 import { formatGenealogyDate } from '../db/src/dates/genealogy-date.js';
+import { stopOcr } from '../server/src/indexing/content-extract.js';
 
 const HELP = `GeneoApp — ligne de commande (100 % locale)
 
@@ -373,6 +374,8 @@ async function run(argv, { stdout = process.stdout } = {}) {
     }
   } finally {
     workspace.close();
+    // Le moteur OCR tourne dans un thread : l'arrêter pour rendre la main.
+    await stopOcr();
   }
 }
 
