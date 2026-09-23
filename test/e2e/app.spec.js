@@ -15,6 +15,16 @@ const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.met
 
 test.describe.configure({ mode: 'serial' });
 
+// Création d'une personne par la fenêtre « Nouvelle personne ».
+async function addPerson(page, givenNames, familyName) {
+  await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  await dialog.getByLabel('Prénom(s)').fill(givenNames);
+  await dialog.getByLabel('Nom', { exact: true }).fill(familyName);
+  await dialog.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 test('démarre sur un état vide honnête, sans donnée fictive', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText(/Aucune personne enregistrée/)).toBeVisible();
@@ -25,9 +35,7 @@ test('crée une personne réelle via le formulaire et la voit apparaître dans l
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('Prénom(s)').fill('Ada');
-  await page.getByLabel('Nom', { exact: true }).fill('Lovelace');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await addPerson(page, 'Ada', 'Lovelace');
 
   await expect(page.getByText('1 personne(s)')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
@@ -37,9 +45,7 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('Prénom(s)').fill('Byron');
-  await page.getByLabel('Nom', { exact: true }).fill('Lovelace');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await addPerson(page, 'Byron', 'Lovelace');
   await expect(page.getByText('2 personne(s)')).toBeVisible();
 
   // Sélectionne Ada, puis ajoute Byron comme enfant via l'onglet Familles.
@@ -303,9 +309,7 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
 
   await expect(counter).toHaveText('0 personne(s)');
   await expect(page.getByRole('button', { name: 'Famille Morel', exact: true })).toBeVisible();
-  await page.getByLabel('Prénom(s)').fill('Anne');
-  await page.getByLabel('Nom', { exact: true }).fill('Morel');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await addPerson(page, 'Anne', 'Morel');
   await expect(counter).toHaveText('1 personne(s)');
 
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
@@ -321,9 +325,7 @@ test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la ré
   await expect(counter).toHaveText(/\d+ personne\(s\)/);
   const before = Number((await counter.textContent()).split(' ')[0]);
 
-  await page.getByLabel('Prénom(s)').fill('Temporaire');
-  await page.getByLabel('Nom', { exact: true }).fill('Annulable');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await addPerson(page, 'Temporaire', 'Annulable');
   await expect(counter).toHaveText(`${before + 1} personne(s)`);
 
   await page.locator('body').click({ position: { x: 5, y: 5 } });
@@ -426,12 +428,8 @@ test('identifie réellement une personne sur une photo et la retrouve sur sa fic
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
-  await page.getByLabel('Prénom(s)').fill('Photographié');
-  await page.getByLabel('Nom', { exact: true }).fill('Présent');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
-  await page.getByLabel('Prénom(s)').fill('Porteur');
-  await page.getByLabel('Nom', { exact: true }).fill('Photo');
-  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await addPerson(page, 'Photographié', 'Présent');
+  await addPerson(page, 'Porteur', 'Photo');
   await page.getByRole('button', { name: 'Porteur Photo' }).first().click();
 
   await page.getByRole('button', { name: 'Médias', exact: true }).click();

@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Badge, Button, useI18n } from './design-system/index.js';
+import { Badge, Button, Modal, useI18n } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import {
   formatGenealogyDate,
@@ -169,13 +169,21 @@ function PersonCard({ person, selected, onSelect, onKeyDown }) {
 function CreatePersonForm({ onCreate, creating }) {
   const [givenNames, setGivenNames] = useState('');
   const [familyName, setFamilyName] = useState('');
+  const [sex, setSex] = useState('');
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!givenNames.trim() || !familyName.trim()) return;
-    onCreate({ givenNames: givenNames.trim(), familyName: familyName.trim() });
-    setGivenNames('');
-    setFamilyName('');
+    const created = await onCreate({
+      givenNames: givenNames.trim(),
+      familyName: familyName.trim(),
+      ...(sex ? { sex } : {}),
+    });
+    if (created !== false) {
+      setGivenNames('');
+      setFamilyName('');
+      setSex('');
+    }
   };
 
   return (
@@ -188,7 +196,18 @@ function CreatePersonForm({ onCreate, creating }) {
         <span>Nom</span>
         <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
       </label>
-      <Button type="submit" size="sm" disabled={creating}>
+      <label>
+        <span>Sexe</span>
+        <select value={sex} onChange={(event) => setSex(event.target.value)}>
+          <option value="">Inconnu</option>
+          <option value="F">Femme</option>
+          <option value="M">Homme</option>
+        </select>
+      </label>
+      <p className="settings-hint">
+        Les dates, lieux et liens se complètent ensuite depuis la fiche.
+      </p>
+      <Button type="submit" disabled={creating || !givenNames.trim() || !familyName.trim()}>
         Ajouter une personne
       </Button>
     </form>
@@ -2853,6 +2872,7 @@ function AppContent() {
   const [dataVersion, setDataVersion] = useState(0);
   const [lifespans, setLifespans] = useState(() => new Map());
   const [personFilter, setPersonFilter] = useState('');
+  const [creatingOpen, setCreatingOpen] = useState(false);
   const quickSearchRef = useRef(null);
 
   const handleLogin = async (name, pin) => {
@@ -3024,8 +3044,11 @@ function AppContent() {
       const person = await client.persons.create(data);
       await loadPersons();
       setSelectedId(person.id);
+      setCreatingOpen(false);
+      return true;
     } catch (createError) {
       setError(createError.message);
+      return false;
     } finally {
       setCreating(false);
     }
@@ -3080,7 +3103,18 @@ function AppContent() {
               {t('shell.persons')} ·{' '}
               <span>{t('shell.personCount', { count: persons.length })}</span>
             </h2>
-            <CreatePersonForm onCreate={handleCreate} creating={creating} />
+            <div className="new-person-button">
+              <Button size="sm" onClick={() => setCreatingOpen(true)}>
+                + Nouvelle personne
+              </Button>
+            </div>
+            <Modal
+              isOpen={creatingOpen}
+              title="Nouvelle personne"
+              onClose={() => setCreatingOpen(false)}
+            >
+              <CreatePersonForm onCreate={handleCreate} creating={creating} />
+            </Modal>
             {persons.length > 5 ? (
               <label className="person-filter">
                 <span className="gds-visually-hidden">Filtrer les personnes</span>
@@ -3095,8 +3129,8 @@ function AppContent() {
             <nav className="person-list" aria-label="Personnes">
               {persons.length === 0 ? (
                 <p className="notice">
-                  Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
-                  votre arbre.
+                  Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre
+                  arbre.
                 </p>
               ) : (
                 visiblePersons.map((person, index) => (
@@ -3352,11 +3386,7 @@ function AppContent() {
                         parent.
                       </p>
                       <div className="empty-state__actions">
-                        <Button
-                          onClick={() =>
-                            document.querySelector('.create-person-form input')?.focus()
-                          }
-                        >
+                        <Button onClick={() => setCreatingOpen(true)}>
                           Ajouter la première personne
                         </Button>
                         <Button variant="secondary" onClick={() => setView('gedcom')}>

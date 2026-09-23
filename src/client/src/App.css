@@ -2456,3 +2456,27 @@ input[type='radio'] {
   gap: var(--space-2);
   width: 100%;
 }
+
+.new-person-button {
+  display: grid;
+  margin: var(--space-2);
+}
+.gds-modal .create-person-form {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.gds-modal .create-person-form label {
+  display: grid;
+  gap: var(--space-1);
+  font: var(--type-label);
+}
+.gds-modal .create-person-form input,
+.gds-modal .create-person-form select {
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font: var(--type-body);
+}

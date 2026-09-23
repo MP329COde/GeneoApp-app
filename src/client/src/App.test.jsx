@@ -281,12 +281,17 @@ describe('App', () => {
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
 
-    fireEvent.change(screen.getByLabelText('Prénom(s)'), { target: { value: 'Ada' } });
-    fireEvent.change(screen.getByLabelText('Nom'), { target: { value: 'Lovelace' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une personne' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Nouvelle personne' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nouvelle personne' });
+    fireEvent.change(within(dialog).getByLabelText('Prénom(s)'), { target: { value: 'Ada' } });
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Lovelace' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ajouter une personne' }));
 
     await waitFor(() =>
       expect(persons.create).toHaveBeenCalledWith({ givenNames: 'Ada', familyName: 'Lovelace' }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Nouvelle personne' })).not.toBeInTheDocument(),
     );
   });
 
@@ -1429,7 +1434,10 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
     expect(screen.getByText('Annulé : Ajout · personne')).toBeInTheDocument();
 
-    fireEvent.keyDown(screen.getByLabelText('Prénom(s)'), { key: 'z', ctrlKey: true });
+    fireEvent.keyDown(screen.getByRole('combobox', { name: /Rechercher une personne/ }), {
+      key: 'z',
+      ctrlKey: true,
+    });
     expect(history.undo).toHaveBeenCalledTimes(1);
 
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
