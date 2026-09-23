@@ -45,6 +45,7 @@ const ICON_PATHS = {
   chip: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
   undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
   print: 'M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6z',
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
@@ -113,6 +114,8 @@ const NAV_GROUPS = [
       { id: 'trees', label: 'Arbres', icon: 'tree' },
       { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
       { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
+      { id: 'trash', label: 'Corbeille', icon: 'trash' },
+      { id: 'profile', label: 'Profil local', icon: 'person' },
       { id: 'ai', label: 'IA locale', icon: 'chip' },
       { id: 'settings', label: 'Paramètres', icon: 'settings' },
     ],
@@ -2060,7 +2063,7 @@ function LoginForm({ onLogin, loginError }) {
   return (
     <form className="create-person-form" onSubmit={handleSubmit}>
       <p className="notice">
-        Les sauvegardes, la restauration et la corbeille sont des opérations sensibles :
+        Les sauvegardes, la restauration, la corbeille et le profil sont des opérations sensibles :
         connectez-vous avec un profil local pour y accéder.
       </p>
       <label>
@@ -2083,8 +2086,9 @@ function LoginForm({ onLogin, loginError }) {
   );
 }
 
-function BackupsPanel({ session, onLogin, loginError, onLogout }) {
+function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backups' }) {
   const [backups, setBackups] = useState(null);
+  const [confirming, setConfirming] = useState(null);
   const [trashItems, setTrashItems] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -2192,7 +2196,7 @@ function BackupsPanel({ session, onLogin, loginError, onLogout }) {
         </p>
       ) : null}
 
-      <section>
+      <section className="session-banner">
         <h3>Profil connecté : {session.account.name}</h3>
         <div className="gedcom-panel__actions">
           <Button
@@ -2204,97 +2208,178 @@ function BackupsPanel({ session, onLogin, loginError, onLogout }) {
           >
             Se déconnecter
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="danger"
-            onClick={handleRemoveAccount}
-            disabled={busy}
-          >
-            Supprimer ce profil
-          </Button>
         </div>
       </section>
 
-      <section>
-        <h3>Sauvegardes</h3>
-        <div className="gedcom-panel__actions">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleCreateBackup('json')}
-            disabled={busy}
-          >
-            Créer une sauvegarde (JSON)
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => handleCreateBackup('sqlite')}
-            disabled={busy}
-          >
-            Créer une sauvegarde (SQLite)
-          </Button>
-        </div>
-        {backups === null ? (
-          <p role="status">Chargement…</p>
-        ) : backups.length === 0 ? (
-          <p className="notice">Aucune sauvegarde pour l’instant.</p>
-        ) : (
-          <ul className="search-results">
-            {backups.map((backup) => (
-              <li key={backup.filename}>
-                {backup.filename}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleRestore(backup.filename)}
-                  disabled={busy}
-                >
-                  Restaurer
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h3>Corbeille</h3>
-        {trashItems === null ? (
-          <p role="status">Chargement…</p>
-        ) : trashItems.length === 0 ? (
-          <p className="notice">La corbeille est vide.</p>
-        ) : (
-          <ul className="search-results">
-            {trashItems.map((item) => (
-              <li key={`${item.table}:${item.id}`}>
-                <Badge tone="neutral">{item.table}</Badge> {item.label}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleTrashRestore(item.table, item.id)}
-                  disabled={busy}
-                >
-                  Restaurer
-                </Button>
+      {section === 'profile' ? (
+        <section>
+          <h3>Profil local</h3>
+          <dl className="profile-details">
+            <div>
+              <dt>Nom du profil</dt>
+              <dd>{session.account.name}</dd>
+            </div>
+            <div>
+              <dt>Protection</dt>
+              <dd>{session.account.hasPin ? 'Code PIN activé' : 'Sans code PIN'}</dd>
+            </div>
+            <div>
+              <dt>Stockage</dt>
+              <dd>Local à cet appareil, aucun compte en ligne</dd>
+            </div>
+          </dl>
+          <div className="danger-zone">
+            <h4>Zone sensible</h4>
+            <p className="settings-hint">
+              Supprimer le profil retire l’accès aux sauvegardes et à la corbeille pour ce nom. Les
+              personnes de l’arbre ne sont pas supprimées.
+            </p>
+            {confirming === 'account' ? (
+              <div className="gedcom-panel__actions">
                 <Button
                   type="button"
                   size="sm"
                   variant="danger"
-                  onClick={() => handlePurge(item.table, item.id)}
+                  onClick={handleRemoveAccount}
                   disabled={busy}
                 >
-                  Purger définitivement
+                  Confirmer la suppression du profil
                 </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setConfirming(null)}
+                >
+                  Annuler
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => setConfirming('account')}
+                disabled={busy}
+              >
+                Supprimer ce profil
+              </Button>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {section === 'backups' ? (
+        <section>
+          <h3>Sauvegardes</h3>
+          <div className="gedcom-panel__actions">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleCreateBackup('json')}
+              disabled={busy}
+            >
+              Créer une sauvegarde (JSON)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => handleCreateBackup('sqlite')}
+              disabled={busy}
+            >
+              Créer une sauvegarde (SQLite)
+            </Button>
+          </div>
+          {backups === null ? (
+            <p role="status">Chargement…</p>
+          ) : backups.length === 0 ? (
+            <p className="notice">Aucune sauvegarde pour l’instant.</p>
+          ) : (
+            <ul className="search-results">
+              {backups.map((backup) => (
+                <li key={backup.filename}>
+                  {backup.filename}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleRestore(backup.filename)}
+                    disabled={busy}
+                  >
+                    Restaurer
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {section === 'trash' ? (
+        <section>
+          <h3>Corbeille</h3>
+          <p className="settings-hint">
+            Suppression logique : tout élément reste restaurable ici tant qu’il n’est pas purgé.
+          </p>
+          {trashItems === null ? (
+            <p role="status">Chargement…</p>
+          ) : trashItems.length === 0 ? (
+            <p className="notice">La corbeille est vide.</p>
+          ) : (
+            <ul className="search-results">
+              {trashItems.map((item) => (
+                <li key={`${item.table}:${item.id}`}>
+                  <Badge tone="neutral">{item.table}</Badge> {item.label}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleTrashRestore(item.table, item.id)}
+                    disabled={busy}
+                  >
+                    Restaurer
+                  </Button>
+                  {confirming === `${item.table}:${item.id}` ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          setConfirming(null);
+                          handlePurge(item.table, item.id);
+                        }}
+                        disabled={busy}
+                      >
+                        Confirmer la purge
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setConfirming(null)}
+                      >
+                        Annuler
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setConfirming(`${item.table}:${item.id}`)}
+                      disabled={busy}
+                    >
+                      Purger définitivement
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -2774,8 +2859,9 @@ function AppContent() {
               <SearchPanel />
             ) : view === 'gedcom' ? (
               <GedcomPanel onImported={loadPersons} />
-            ) : view === 'backups' ? (
+            ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
               <BackupsPanel
+                section={view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'}
                 session={session}
                 onLogin={handleLogin}
                 loginError={loginError}

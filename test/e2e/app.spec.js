@@ -126,7 +126,9 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Profil local', exact: true }).click();
   await page.getByRole('button', { name: 'Supprimer ce profil' }).click();
+  await page.getByRole('button', { name: 'Confirmer la suppression du profil' }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
   // Le profil supprimé n'existe plus : une nouvelle connexion avec le même

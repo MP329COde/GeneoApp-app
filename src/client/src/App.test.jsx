@@ -40,6 +40,8 @@ const backups = vi.hoisted(() => ({
 }));
 const trash = vi.hoisted(() => ({
   list: vi.fn(),
+  restore: vi.fn(),
+  purge: vi.fn(),
 }));
 const unions = vi.hoisted(() => ({
   create: vi.fn(),
@@ -416,7 +418,13 @@ describe('App', () => {
 
     await waitFor(() => expect(accounts.login).toHaveBeenCalledWith('Alice', undefined));
     await waitFor(() => expect(screen.getByText('backup-1.json')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Corbeille' }));
     await waitFor(() => expect(screen.getByText(/Jean Dupont/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Purger définitivement' }));
+    expect(trash.purge).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByRole('button', { name: 'Purger définitivement' })).toBeInTheDocument();
   });
 
   it('permet de se déconnecter et de supprimer réellement le profil local', async () => {
@@ -447,7 +455,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
 
+    fireEvent.click(screen.getByRole('button', { name: 'Profil local' }));
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer ce profil' }));
+    expect(accounts.remove).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer la suppression du profil' }));
     await waitFor(() => expect(accounts.remove).toHaveBeenCalledWith(1, 'tok-1'));
     await waitFor(() =>
       expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument(),
