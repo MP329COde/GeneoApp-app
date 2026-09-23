@@ -203,3 +203,15 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   et la mise à jour du compte réel de personnes). Limite restante : aucune prévisualisation des changements
   avant confirmation (pas de `previewPersons` exposé côté API/IPC pour l'instant, seule la méthode existe
   côté service) — à exposer si un écran de confirmation détaillée est demandé.
+- 2026-09-23 (suite) : ajout d'une vue « Chronologie » réelle, jusque-là absente (seule une vue par personne
+  existait via l'onglet « Événements » ; aucune vue transverse triant tous les événements de l'arbre).
+  `EventRepository#listAll`/`EventService#listAll` renvoient tous les événements réels (non supprimés),
+  triés par `date_text` (événements datés d'abord, sans date en dernier), chacun avec le nom du lieu déjà
+  résolu et ses participants (avec leur nom), pour éviter tout N+1 côté écran. Exposé via `GET /api/events`
+  et le canal IPC `EVENTS_LIST_ALL` (les deux transports). L'écran liste chronologiquement type, date, lieu
+  et participants, avec un bouton par participant pour rejoindre sa fiche. Testé : 1 cas API (tri, lieu,
+  participants), 1 cas IPC, 1 cas client (Vitest), 1 scénario E2E Playwright (chronologie réelle issue de
+  l'import GEDCOM précédent). Limite restante : le tri reste purement textuel sur `date_text` (pas de dates
+  structurées en base), donc l'ordre chronologique n'est fiable que pour des dates au format comparable
+  lexicographiquement (ex. AAAA-MM-JJ) — cohérent avec le reste de l'application qui traite déjà la date
+  comme texte libre à précision variable (EXACT/ABOUT/BEFORE/AFTER/BETWEEN/UNKNOWN).

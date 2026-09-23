@@ -99,6 +99,7 @@ export function buildIpcHandlers(services) {
       events.create(data, { performedBy: actorOf(performedBy) }),
     ),
     [IPC_CHANNELS.EVENTS_GET]: wrap(({ id }) => events.get(id)),
+    [IPC_CHANNELS.EVENTS_LIST_ALL]: wrap(() => events.listAll()),
     [IPC_CHANNELS.EVENTS_LIST_FOR_PERSON]: wrap(({ personId }) => events.listForPerson(personId)),
     [IPC_CHANNELS.EVENTS_ADD_PARTICIPANT]: wrap(({ id, data, performedBy }) =>
       events.addParticipant(id, data, { performedBy: actorOf(performedBy) }),

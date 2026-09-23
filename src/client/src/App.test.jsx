@@ -77,6 +77,7 @@ const places = vi.hoisted(() => ({
 const events = vi.hoisted(() => ({
   create: vi.fn(),
   get: vi.fn(),
+  listAll: vi.fn(),
   listForPerson: vi.fn(),
   addParticipant: vi.fn(),
   remove: vi.fn(),
@@ -825,6 +826,36 @@ describe('App', () => {
       }),
     );
     await waitFor(() => expect(screen.getAllByText(/Nantes/).length).toBeGreaterThan(0));
+  });
+
+  it('affiche la chronologie réelle de tous les événements avec lieu et participants', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listAll.mockResolvedValue([
+      {
+        id: 1,
+        type: 'BIRTH',
+        date_text: '12 avril 1850',
+        place_name: 'Nantes',
+        participants: [{ personId: 1, personGivenNames: 'Jean', personFamilyName: 'Dupont' }],
+      },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chronologie' }));
+
+    await waitFor(() => expect(events.listAll).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(/12 avril 1850/)).toBeInTheDocument());
+    expect(screen.getByText(/Nantes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voir Jean' })).toBeInTheDocument();
   });
 
   it('affiche le journal d’audit réel d’une personne', async () => {

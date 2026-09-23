@@ -63,6 +63,7 @@ function createHttpClient() {
     events: {
       create: (data) => fetchJson('/api/events', { method: 'POST', body: data }),
       get: (id) => fetchJson(`/api/events/${id}`),
+      listAll: () => fetchJson('/api/events'),
       listForPerson: (personId) => fetchJson(`/api/events/by-person/${personId}`),
       addParticipant: (id, data) =>
         fetchJson(`/api/events/${id}/participants`, { method: 'POST', body: data }),
@@ -194,6 +195,7 @@ function createIpcClient(bridge) {
     events: {
       create: (data) => bridge.events.create(data),
       get: (id) => bridge.events.get(id),
+      listAll: () => bridge.events.listAll(),
       listForPerson: (personId) => bridge.events.listForPerson(personId),
       addParticipant: (id, data) => bridge.events.addParticipant(id, data),
       remove: (id) => bridge.events.remove(id),

@@ -122,3 +122,53 @@ test('POST /api/events/:id/participants retourne 404 pour un événement inconnu
     await server.close();
   }
 });
+
+test('GET /api/events renvoie tous les événements réels triés chronologiquement, avec lieu et participants', async () => {
+  const server = await startTestServer();
+  try {
+    const ada = await createPerson(server.baseUrl, 'Ada', 'Lovelace');
+    const place = await requestJson(server.baseUrl, '/api/places', {
+      method: 'POST',
+      body: { name: 'Londres' },
+    });
+
+    await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: {
+        type: 'DEATH',
+        dateText: '1852-11-27',
+        datePrecision: 'EXACT',
+        participants: [{ personId: ada, role: 'PRINCIPAL' }],
+      },
+    });
+    await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: {
+        type: 'BIRTH',
+        dateText: '1815-12-10',
+        datePrecision: 'EXACT',
+        placeId: place.body.id,
+        participants: [{ personId: ada, role: 'PRINCIPAL' }],
+      },
+    });
+    await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: { type: 'OTHER', datePrecision: 'UNKNOWN' },
+    });
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/events');
+
+    assert.equal(status, 200);
+    assert.equal(body.length, 3);
+    // Trié par date_text, les événements datés d'abord (naissance avant décès),
+    // l'événement sans date en dernier.
+    assert.deepEqual(
+      body.map((event) => event.type),
+      ['BIRTH', 'DEATH', 'OTHER'],
+    );
+    assert.equal(body[0].place_name, 'Londres');
+    assert.equal(body[0].participants[0].personGivenNames, 'Ada');
+  } finally {
+    await server.close();
+  }
+});

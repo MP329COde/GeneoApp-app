@@ -128,6 +128,20 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   await expect(page.getByText('4 personne(s)')).toBeVisible();
 });
 
+test('la chronologie affiche les événements réels importés par GEDCOM, triés et avec lieu', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Chronologie' }).click();
+
+  // L'import GEDCOM précédent a créé une naissance (Ada, avec lieu) et un
+  // mariage (Charles et Ada) : de vrais événements, pas des données de test
+  // fabriquées pour cet écran.
+  await expect(page.getByText(/BIRTH/)).toBeVisible();
+  await expect(page.getByText(/London/)).toBeVisible();
+  await expect(page.getByText(/MARRIAGE/)).toBeVisible();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {

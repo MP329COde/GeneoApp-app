@@ -15,6 +15,7 @@ export const IPC_CHANNELS = Object.freeze({
 
   EVENTS_CREATE: 'geneoapp:events:create',
   EVENTS_GET: 'geneoapp:events:get',
+  EVENTS_LIST_ALL: 'geneoapp:events:listAll',
   EVENTS_LIST_FOR_PERSON: 'geneoapp:events:listForPerson',
   EVENTS_ADD_PARTICIPANT: 'geneoapp:events:addParticipant',
   EVENTS_REMOVE: 'geneoapp:events:remove',

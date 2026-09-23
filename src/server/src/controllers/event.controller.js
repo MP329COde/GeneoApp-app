@@ -12,6 +12,10 @@ export function createEventController(services) {
       response.json(event);
     },
 
+    listAll(request, response) {
+      response.json(events.listAll());
+    },
+
     listForPerson(request, response) {
       response.json(events.listForPerson(Number(request.params.personId)));
     },

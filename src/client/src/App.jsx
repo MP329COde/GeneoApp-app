@@ -745,6 +745,77 @@ function EventsPanel({ selected }) {
   );
 }
 
+function TimelinePanel({ onNavigate }) {
+  const [events, setEvents] = useState(null);
+  const [timelineError, setTimelineError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    client.events
+      .listAll()
+      .then((list) => {
+        if (!cancelled) setEvents(list);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setTimelineError(loadError.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (timelineError) {
+    return (
+      <p role="alert" className="notice notice--error">
+        {timelineError}
+      </p>
+    );
+  }
+
+  if (events === null) {
+    return <p role="status">Chargement…</p>;
+  }
+
+  if (events.length === 0) {
+    return <p className="notice">Aucun événement enregistré.</p>;
+  }
+
+  return (
+    <ol className="search-results">
+      {events.map((event) => (
+        <li key={event.id}>
+          <Badge tone="neutral">{event.type}</Badge> {event.date_text ?? '(date inconnue)'}
+          {event.place_name ? ` — ${event.place_name}` : ''}
+          {event.participants.length > 0 ? (
+            <span>
+              {' '}
+              (
+              {event.participants
+                .map(
+                  (participant) =>
+                    `${participant.personGivenNames} ${participant.personFamilyName}`,
+                )
+                .join(', ')}
+              )
+            </span>
+          ) : null}
+          {event.participants.map((participant) => (
+            <Button
+              key={participant.personId}
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => onNavigate(participant.personId)}
+            >
+              Voir {participant.personGivenNames}
+            </Button>
+          ))}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -1943,6 +2014,13 @@ function App() {
                 Événements
               </button>
               <button
+                className={view === 'timeline' ? 'is-active' : ''}
+                onClick={() => setView('timeline')}
+                type="button"
+              >
+                Chronologie
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -2000,6 +2078,13 @@ function App() {
               <SourcesPanel selected={selected} />
             ) : view === 'events' ? (
               <EventsPanel selected={selected} />
+            ) : view === 'timeline' ? (
+              <TimelinePanel
+                onNavigate={(id) => {
+                  setSelectedId(id);
+                  setView('tree');
+                }}
+              />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}

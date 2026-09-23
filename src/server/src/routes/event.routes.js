@@ -6,6 +6,7 @@ export function eventRoutes(services) {
   const router = Router();
 
   router.post('/', controller.create);
+  router.get('/', controller.listAll);
   router.get('/:id', controller.get);
   router.get('/by-person/:personId', controller.listForPerson);
   router.post('/:id/participants', controller.addParticipant);

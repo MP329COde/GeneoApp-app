@@ -86,6 +86,42 @@ export class EventRepository {
     return event;
   }
 
+  // Tous les événements réels de l'arbre, triés chronologiquement (au sens
+  // textuel de date_text, faute de dates structurées) — alimente la vue
+  // chronologie. Chaque événement porte ses participants et le nom du lieu
+  // déjà résolu, pour éviter des allers-retours N+1 côté appelant.
+  listAll({ includeDeleted = false } = {}) {
+    const clause = includeDeleted ? '' : 'WHERE e.deleted_at IS NULL';
+    const events = this.database
+      .prepare(
+        `SELECT e.*, p.name AS place_name
+         FROM events e
+         LEFT JOIN places p ON p.id = e.place_id
+         ${clause}
+         ORDER BY e.date_text IS NULL, e.date_text`,
+      )
+      .all();
+
+    const participantsByEvent = this.database
+      .prepare(
+        `SELECT ep.event_id, ep.person_id AS personId, ep.role,
+                pe.given_names AS personGivenNames, pe.family_name AS personFamilyName
+         FROM event_participants ep
+         JOIN persons pe ON pe.id = ep.person_id
+         WHERE ep.deleted_at IS NULL`,
+      )
+      .all()
+      .reduce((byEvent, row) => {
+        (byEvent[row.event_id] ??= []).push(row);
+        return byEvent;
+      }, {});
+
+    return events.map((event) => ({
+      ...event,
+      participants: participantsByEvent[event.id] ?? [],
+    }));
+  }
+
   findForPerson(personId, { includeDeleted = false } = {}) {
     const clause = includeDeleted ? '' : 'AND e.deleted_at IS NULL';
     return this.database

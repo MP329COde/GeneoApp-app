@@ -85,6 +85,28 @@ test('EVENTS_ADD_PARTICIPANT relie un événement et une personne existants', as
   assert.equal(response.ok, true);
 });
 
+test('EVENTS_LIST_ALL renvoie tous les événements réels avec lieu et participants', async () => {
+  const handlers = createHandlers();
+
+  const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  await handlers[IPC_CHANNELS.EVENTS_CREATE]({
+    data: {
+      type: 'BIRTH',
+      dateText: '1815-12-10',
+      participants: [{ personId: person.data.id, role: 'PRINCIPAL' }],
+    },
+  });
+
+  const response = await handlers[IPC_CHANNELS.EVENTS_LIST_ALL]();
+
+  assert.equal(response.ok, true);
+  assert.equal(response.data.length, 1);
+  assert.equal(response.data[0].type, 'BIRTH');
+  assert.equal(response.data[0].participants[0].personGivenNames, 'Ada');
+});
+
 test('UNIONS_CREATE rejette une union à un seul partenaire via l’enveloppe d’erreur', async () => {
   const handlers = createHandlers();
   const person = await handlers[IPC_CHANNELS.PERSONS_CREATE]({

@@ -38,6 +38,7 @@ const api = {
   events: {
     create: (data, performedBy) => invoke(IPC_CHANNELS.EVENTS_CREATE, { data, performedBy }),
     get: (id) => invoke(IPC_CHANNELS.EVENTS_GET, { id }),
+    listAll: () => invoke(IPC_CHANNELS.EVENTS_LIST_ALL),
     listForPerson: (personId) => invoke(IPC_CHANNELS.EVENTS_LIST_FOR_PERSON, { personId }),
     addParticipant: (id, data, performedBy) =>
       invoke(IPC_CHANNELS.EVENTS_ADD_PARTICIPANT, { id, data, performedBy }),

@@ -18,6 +18,10 @@ export class EventService {
     return event;
   }
 
+  listAll() {
+    return this.repository.listAll();
+  }
+
   listForPerson(personId) {
     assertId(personId, 'personId');
     return this.repository.findForPerson(personId);
