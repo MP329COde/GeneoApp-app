@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import {
@@ -9,6 +9,7 @@ import {
 import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import { buildLifespans } from './genealogy/lifespans.js';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -128,7 +129,11 @@ const NAV_GROUPS = [
   },
 ];
 
+// Années de vie partagées par toutes les fiches (calculées depuis les événements).
+const LifespanContext = createContext(new Map());
+
 function PersonCard({ person, selected, onSelect, onKeyDown }) {
+  const years = useContext(LifespanContext).get(person.id)?.label;
   return (
     <button
       className={`person-card${selected ? ' person-card--selected' : ''}`}
@@ -137,6 +142,7 @@ function PersonCard({ person, selected, onSelect, onKeyDown }) {
       type="button"
     >
       <span className="person-card__name">{personLabel(person)}</span>
+      {years ? <span className="person-card__years">{years}</span> : null}
     </button>
   );
 }
@@ -2760,6 +2766,7 @@ function AppContent() {
   const [history, setHistory] = useState({ canUndo: false, canRedo: false });
   const [historyMessage, setHistoryMessage] = useState('');
   const [dataVersion, setDataVersion] = useState(0);
+  const [lifespans, setLifespans] = useState(() => new Map());
 
   const handleLogin = async (name, pin) => {
     setLoginError(null);
@@ -2803,6 +2810,20 @@ function AppContent() {
       .then(setActiveTree)
       .catch(() => setActiveTree(null));
   }, []);
+
+  const refreshLifespans = useCallback(async () => {
+    try {
+      setLifespans(buildLifespans((await client.events.listAll()) ?? []));
+    } catch {
+      // les années de vie sont un confort d'affichage, jamais bloquantes
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshLifespans();
+    writeListeners.add(refreshLifespans);
+    return () => writeListeners.delete(refreshLifespans);
+  }, [refreshLifespans, dataVersion, activeTree?.id]);
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -2946,359 +2967,372 @@ function AppContent() {
   const currentView = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === view);
 
   return (
-    <main className="genealogy-app" aria-labelledby="app-title">
-      <aside className="sidenav" aria-label="Navigation principale">
-        <div className="sidenav__brand">
-          <img src={appIcon} alt="" width="32" height="32" />
-          <h1 id="app-title">GeneoApp</h1>
-        </div>
-        <div className="sidenav__scroll">
-          <div className="view-switcher" role="group" aria-label="Vues">
-            {NAV_GROUPS.map((group) => (
-              <div className="sidenav__group" key={group.label}>
-                <p className="sidenav__label" aria-hidden="true">
-                  {group.label}
-                </p>
-                {group.items.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`sidenav__item${view === item.id ? ' is-active' : ''}`}
-                    aria-current={view === item.id ? 'page' : undefined}
-                    onClick={() => setView(item.id)}
-                    type="button"
-                  >
-                    <Icon name={item.icon} />
-                    <span className="sidenav__text">{item.label}</span>
-                    {item.shortcut && settings.showShortcuts ? (
-                      <kbd className="sidenav__kbd" aria-hidden="true">
-                        {item.shortcut}
-                      </kbd>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            ))}
+    <LifespanContext.Provider value={lifespans}>
+      <main className="genealogy-app" aria-labelledby="app-title">
+        <aside className="sidenav" aria-label="Navigation principale">
+          <div className="sidenav__brand">
+            <img src={appIcon} alt="" width="32" height="32" />
+            <h1 id="app-title">GeneoApp</h1>
           </div>
+          <div className="sidenav__scroll">
+            <div className="view-switcher" role="group" aria-label="Vues">
+              {NAV_GROUPS.map((group) => (
+                <div className="sidenav__group" key={group.label}>
+                  <p className="sidenav__label" aria-hidden="true">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      className={`sidenav__item${view === item.id ? ' is-active' : ''}`}
+                      aria-current={view === item.id ? 'page' : undefined}
+                      onClick={() => setView(item.id)}
+                      type="button"
+                    >
+                      <Icon name={item.icon} />
+                      <span className="sidenav__text">{item.label}</span>
+                      {item.shortcut && settings.showShortcuts ? (
+                        <kbd className="sidenav__kbd" aria-hidden="true">
+                          {item.shortcut}
+                        </kbd>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
 
-          <div className="sidenav__group sidenav__persons">
-            <h2 className="sidenav__label">
-              Personnes · <span>{persons.length} personne(s)</span>
-            </h2>
-            <CreatePersonForm onCreate={handleCreate} creating={creating} />
-            <nav className="person-list" aria-label="Personnes">
-              {persons.length === 0 ? (
-                <p className="notice">
-                  Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
-                  votre arbre.
-                </p>
-              ) : (
-                persons.map((person, index) => (
-                  <PersonCard
-                    key={person.id}
-                    person={person}
-                    selected={person.id === selectedId}
-                    onSelect={setSelectedId}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-                      event.preventDefault();
-                      const delta = event.key === 'ArrowDown' ? 1 : -1;
-                      const nextIndex = (index + delta + persons.length) % persons.length;
-                      setSelectedId(persons[nextIndex].id);
-                      const buttons =
-                        event.currentTarget.parentElement.querySelectorAll('.person-card');
-                      buttons[nextIndex]?.focus();
-                    }}
-                  />
-                ))
-              )}
-            </nav>
+            <div className="sidenav__group sidenav__persons">
+              <h2 className="sidenav__label">
+                Personnes · <span>{persons.length} personne(s)</span>
+              </h2>
+              <CreatePersonForm onCreate={handleCreate} creating={creating} />
+              <nav className="person-list" aria-label="Personnes">
+                {persons.length === 0 ? (
+                  <p className="notice">
+                    Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour
+                    démarrer votre arbre.
+                  </p>
+                ) : (
+                  persons.map((person, index) => (
+                    <PersonCard
+                      key={person.id}
+                      person={person}
+                      selected={person.id === selectedId}
+                      onSelect={setSelectedId}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                        event.preventDefault();
+                        const delta = event.key === 'ArrowDown' ? 1 : -1;
+                        const nextIndex = (index + delta + persons.length) % persons.length;
+                        setSelectedId(persons[nextIndex].id);
+                        const buttons =
+                          event.currentTarget.parentElement.querySelectorAll('.person-card');
+                        buttons[nextIndex]?.focus();
+                      }}
+                    />
+                  ))
+                )}
+              </nav>
+            </div>
           </div>
-        </div>
-        <div className="sidenav__footer">
-          <p>
-            <Icon name="chip" /> IA locale
-          </p>
-          <p>
-            <Icon name="offline" /> Hors ligne · 100 % local
-          </p>
-        </div>
-      </aside>
+          <div className="sidenav__footer">
+            <p>
+              <Icon name="chip" /> IA locale
+            </p>
+            <p>
+              <Icon name="offline" /> Hors ligne · 100 % local
+            </p>
+          </div>
+        </aside>
 
-      <header className="topbar">
-        <p className="topbar__crumbs">
-          <button type="button" className="topbar__tree" onClick={() => setView('trees')}>
-            {activeTree?.name ?? 'Arbre local'}
-          </button>
-          <span aria-hidden="true">›</span>
-          <strong>{currentView?.label ?? 'Arbre'}</strong>
-        </p>
-        {selected ? (
-          <p className="topbar__context">
-            <Icon name="person" />
-            <span>Contexte :</span>
-            <strong className="person-name">{personLabel(selected)}</strong>
-            <span className="data-id">#{selected.id}</span>
+        <header className="topbar">
+          <p className="topbar__crumbs">
+            <button type="button" className="topbar__tree" onClick={() => setView('trees')}>
+              {activeTree?.name ?? 'Arbre local'}
+            </button>
+            <span aria-hidden="true">›</span>
+            <strong>{currentView?.label ?? 'Arbre'}</strong>
+          </p>
+          {selected ? (
+            <p className="topbar__context">
+              <Icon name="person" />
+              <span>Contexte :</span>
+              <strong className="person-name">{personLabel(selected)}</strong>
+              {lifespans.get(selected.id) ? (
+                <span className="data-id">{lifespans.get(selected.id).label}</span>
+              ) : null}
+              <span className="data-id">#{selected.id}</span>
+            </p>
+          ) : null}
+          <div className="topbar__actions">
+            <div className="history-controls" role="group" aria-label="Historique">
+              <button
+                type="button"
+                className="icon-button"
+                disabled={!history.canUndo}
+                aria-label={history.canUndo ? `Annuler : ${history.undoLabel}` : 'Rien à annuler'}
+                title={
+                  history.canUndo ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Rien à annuler'
+                }
+                onClick={() => applyHistory('undo')}
+              >
+                <Icon name="undo" />
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                disabled={!history.canRedo}
+                aria-label={history.canRedo ? `Rétablir : ${history.redoLabel}` : 'Rien à rétablir'}
+                title={
+                  history.canRedo
+                    ? `Rétablir : ${history.redoLabel} (Ctrl+Maj+Z)`
+                    : 'Rien à rétablir'
+                }
+                onClick={() => applyHistory('redo')}
+              >
+                <Icon name="redo" />
+              </button>
+            </div>
+            <p className="gds-visually-hidden" role="status" aria-live="polite">
+              {historyMessage}
+            </p>
+            <Badge tone="success">Hors ligne</Badge>
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
+        </header>
+
+        {error ? (
+          <p role="alert" className="notice notice--error app-error">
+            {error}
           </p>
         ) : null}
-        <div className="topbar__actions">
-          <div className="history-controls" role="group" aria-label="Historique">
-            <button
-              type="button"
-              className="icon-button"
-              disabled={!history.canUndo}
-              aria-label={history.canUndo ? `Annuler : ${history.undoLabel}` : 'Rien à annuler'}
-              title={history.canUndo ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Rien à annuler'}
-              onClick={() => applyHistory('undo')}
-            >
-              <Icon name="undo" />
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              disabled={!history.canRedo}
-              aria-label={history.canRedo ? `Rétablir : ${history.redoLabel}` : 'Rien à rétablir'}
-              title={
-                history.canRedo ? `Rétablir : ${history.redoLabel} (Ctrl+Maj+Z)` : 'Rien à rétablir'
-              }
-              onClick={() => applyHistory('redo')}
-            >
-              <Icon name="redo" />
-            </button>
-          </div>
-          <p className="gds-visually-hidden" role="status" aria-live="polite">
-            {historyMessage}
-          </p>
-          <Badge tone="success">Hors ligne</Badge>
-          <ThemeToggle />
-          <LanguageSwitcher />
-        </div>
-      </header>
 
-      {error ? (
-        <p role="alert" className="notice notice--error app-error">
-          {error}
-        </p>
-      ) : null}
-
-      <section className="workspace" aria-label="Espace de généalogie">
-        <section className="canvas-panel" aria-label="Vue de l'arbre">
-          <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
-            {view === 'search' ? (
-              <SearchPanel />
-            ) : view === 'gedcom' ? (
-              <GedcomPanel onImported={loadPersons} selected={selected} />
-            ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
-              <BackupsPanel
-                section={view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'}
-                session={session}
-                onLogin={handleLogin}
-                loginError={loginError}
-                onLogout={() => setSession(null)}
-              />
-            ) : view === 'duplicates' ? (
-              <DuplicatesPanel
-                onSelect={(id) => {
-                  setSelectedId(id);
-                  setView('tree');
-                }}
-                onMerged={async () => {
-                  await loadPersons();
-                  await loadRelations();
-                }}
-              />
-            ) : view === 'families' ? (
-              <FamiliesPanel
-                persons={persons}
-                selected={selected}
-                onNavigate={setSelectedId}
-                onChange={loadRelations}
-              />
-            ) : view === 'notes' ? (
-              <NotesPanel selected={selected} />
-            ) : view === 'audit' ? (
-              <AuditPanel selected={selected} />
-            ) : view === 'media' ? (
-              <MediaPanel selected={selected} persons={persons} />
-            ) : view === 'sources' ? (
-              <SourcesPanel selected={selected} />
-            ) : view === 'events' ? (
-              <EventsPanel selected={selected} />
-            ) : view === 'timeline' ? (
-              <TimelinePanel
-                onNavigate={(id) => {
-                  setSelectedId(id);
-                  setView('tree');
-                }}
-              />
-            ) : view === 'map' ? (
-              <MapPanel />
-            ) : view === 'consistency' ? (
-              <ConsistencyPanel
-                personLabelById={personLabelById}
-                onNavigate={(id) => {
-                  setSelectedId(id);
-                  setView('tree');
-                }}
-              />
-            ) : view === 'notebook' ? (
-              <NotebookPanel
-                client={client}
-                persons={persons}
-                onNavigate={(id) => {
-                  setSelectedId(id);
-                  setView('tree');
-                }}
-              />
-            ) : view === 'statistics' ? (
-              <StatisticsPanel />
-            ) : view === 'ai' ? (
-              <AiPanel />
-            ) : view === 'trees' ? (
-              <TreesPanel client={client} onActivated={handleTreeActivated} />
-            ) : view === 'settings' ? (
-              <SettingsPanel />
-            ) : view === 'person' && selected ? (
-              <PersonSheet
-                selected={selected}
-                relations={relations}
-                onUpdated={loadPersons}
-                persons={persons}
-              />
-            ) : view === 'relations' ? (
-              <RelationshipPanel
-                client={client}
-                persons={persons}
-                selected={selected}
-                onNavigate={setSelectedId}
-              />
-            ) : !selected ? (
-              <div className="empty-state">
-                <img src={appIcon} alt="" width="56" height="56" />
-                <h2>Profil prêt, arbre vide</h2>
-                <p className="notice">
-                  Sélectionnez ou créez une personne pour afficher son arbre.
-                </p>
-              </div>
-            ) : !relations ? (
-              <p role="status" className="loading-line">
-                Chargement des relations…
-              </p>
-            ) : (
-              <TreeExplorer
-                client={client}
-                defaultMode={settings.treeMode}
-                defaultDepth={settings.treeDepth}
-                showSosa={settings.showSosa}
-                selected={selected}
-                onSelect={setSelectedId}
-                familyView={
-                  <div className="tree-layout">
-                    <div className="tree-row">
-                      {relations.parents.map((person) => (
-                        <PersonCard
-                          key={person.id}
-                          person={person}
-                          selected={false}
-                          onSelect={setSelectedId}
-                        />
-                      ))}
-                    </div>
-                    {relations.parents.length > 0 ? (
-                      <div className="tree-connector" aria-hidden="true" />
-                    ) : null}
-                    <div className="tree-row tree-row--focus">
-                      <PersonCard person={selected} selected onSelect={setSelectedId} />
-                      {relations.spouses.map((person) => (
-                        <PersonCard
-                          key={person.id}
-                          person={person}
-                          selected={false}
-                          onSelect={setSelectedId}
-                        />
-                      ))}
-                    </div>
-                    {relations.children.length > 0 ? (
-                      <div className="tree-connector" aria-hidden="true" />
-                    ) : null}
-                    <div className="tree-row">
-                      {relations.children.map((person) => (
-                        <PersonCard
-                          key={person.id}
-                          person={person}
-                          selected={false}
-                          onSelect={setSelectedId}
-                        />
-                      ))}
-                    </div>
-                    <ul className="tree-legend" aria-label="Légende">
-                      <li>
-                        <span className="tree-legend__line tree-legend__line--bio" /> Biologique
-                      </li>
-                      <li>
-                        <span className="tree-legend__line tree-legend__line--adoptive" /> Adoptive
-                      </li>
-                      <li>
-                        <span className="tree-legend__line tree-legend__line--unknown" /> Inconnue
-                      </li>
-                    </ul>
-                  </div>
-                }
-              />
-            )}
-          </div>
-        </section>
-
-        <aside className="details-panel" aria-labelledby="person-title">
-          {selected ? (
-            <>
-              <div className="details-panel__top">
-                <span className="avatar" aria-hidden="true">
-                  <Icon name="person" />
-                </span>
-                <div>
-                  <p className="eyebrow">Personne sélectionnée</p>
-                  <h2 id="person-title">{personLabel(selected)}</h2>
-                  <p className="data-id">#{selected.id}</p>
-                </div>
-              </div>
-              <IdentityTool selected={selected} onUpdated={loadPersons} />
-              {relations ? (
-                <div className="detail-section">
-                  <h3>Relations</h3>
-                  <dl>
-                    <div>
-                      <dt>Parents</dt>
-                      <dd>{relations.parents.length}</dd>
-                    </div>
-                    <div>
-                      <dt>Enfants</dt>
-                      <dd>{relations.children.length}</dd>
-                    </div>
-                    <div>
-                      <dt>Fratrie</dt>
-                      <dd>{relations.siblings.length}</dd>
-                    </div>
-                    <div>
-                      <dt>Conjoints</dt>
-                      <dd>{relations.spouses.length}</dd>
-                    </div>
-                  </dl>
-                </div>
-              ) : null}
-              {persons.length > 1 ? (
-                <CommonAncestorsTool
-                  selected={selected}
+        <section className="workspace" aria-label="Espace de généalogie">
+          <section className="canvas-panel" aria-label="Vue de l'arbre">
+            <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
+              {view === 'search' ? (
+                <SearchPanel />
+              ) : view === 'gedcom' ? (
+                <GedcomPanel onImported={loadPersons} selected={selected} />
+              ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
+                <BackupsPanel
+                  section={view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'}
+                  session={session}
+                  onLogin={handleLogin}
+                  loginError={loginError}
+                  onLogout={() => setSession(null)}
+                />
+              ) : view === 'duplicates' ? (
+                <DuplicatesPanel
+                  onSelect={(id) => {
+                    setSelectedId(id);
+                    setView('tree');
+                  }}
+                  onMerged={async () => {
+                    await loadPersons();
+                    await loadRelations();
+                  }}
+                />
+              ) : view === 'families' ? (
+                <FamiliesPanel
                   persons={persons}
+                  selected={selected}
+                  onNavigate={setSelectedId}
+                  onChange={loadRelations}
+                />
+              ) : view === 'notes' ? (
+                <NotesPanel selected={selected} />
+              ) : view === 'audit' ? (
+                <AuditPanel selected={selected} />
+              ) : view === 'media' ? (
+                <MediaPanel selected={selected} persons={persons} />
+              ) : view === 'sources' ? (
+                <SourcesPanel selected={selected} />
+              ) : view === 'events' ? (
+                <EventsPanel selected={selected} />
+              ) : view === 'timeline' ? (
+                <TimelinePanel
+                  onNavigate={(id) => {
+                    setSelectedId(id);
+                    setView('tree');
+                  }}
+                />
+              ) : view === 'map' ? (
+                <MapPanel />
+              ) : view === 'consistency' ? (
+                <ConsistencyPanel
+                  personLabelById={personLabelById}
+                  onNavigate={(id) => {
+                    setSelectedId(id);
+                    setView('tree');
+                  }}
+                />
+              ) : view === 'notebook' ? (
+                <NotebookPanel
+                  client={client}
+                  persons={persons}
+                  onNavigate={(id) => {
+                    setSelectedId(id);
+                    setView('tree');
+                  }}
+                />
+              ) : view === 'statistics' ? (
+                <StatisticsPanel />
+              ) : view === 'ai' ? (
+                <AiPanel />
+              ) : view === 'trees' ? (
+                <TreesPanel client={client} onActivated={handleTreeActivated} />
+              ) : view === 'settings' ? (
+                <SettingsPanel />
+              ) : view === 'person' && selected ? (
+                <PersonSheet
+                  selected={selected}
+                  relations={relations}
+                  onUpdated={loadPersons}
+                  persons={persons}
+                />
+              ) : view === 'relations' ? (
+                <RelationshipPanel
+                  client={client}
+                  persons={persons}
+                  selected={selected}
                   onNavigate={setSelectedId}
                 />
-              ) : null}
-            </>
-          ) : (
-            <p className="notice">Aucune personne sélectionnée.</p>
-          )}
-        </aside>
-      </section>
-    </main>
+              ) : !selected ? (
+                <div className="empty-state">
+                  <img src={appIcon} alt="" width="56" height="56" />
+                  <h2>Profil prêt, arbre vide</h2>
+                  <p className="notice">
+                    Sélectionnez ou créez une personne pour afficher son arbre.
+                  </p>
+                </div>
+              ) : !relations ? (
+                <p role="status" className="loading-line">
+                  Chargement des relations…
+                </p>
+              ) : (
+                <TreeExplorer
+                  client={client}
+                  lifespans={lifespans}
+                  defaultMode={settings.treeMode}
+                  defaultDepth={settings.treeDepth}
+                  showSosa={settings.showSosa}
+                  selected={selected}
+                  onSelect={setSelectedId}
+                  familyView={
+                    <div className="tree-layout">
+                      <div className="tree-row">
+                        {relations.parents.map((person) => (
+                          <PersonCard
+                            key={person.id}
+                            person={person}
+                            selected={false}
+                            onSelect={setSelectedId}
+                          />
+                        ))}
+                      </div>
+                      {relations.parents.length > 0 ? (
+                        <div className="tree-connector" aria-hidden="true" />
+                      ) : null}
+                      <div className="tree-row tree-row--focus">
+                        <PersonCard person={selected} selected onSelect={setSelectedId} />
+                        {relations.spouses.map((person) => (
+                          <PersonCard
+                            key={person.id}
+                            person={person}
+                            selected={false}
+                            onSelect={setSelectedId}
+                          />
+                        ))}
+                      </div>
+                      {relations.children.length > 0 ? (
+                        <div className="tree-connector" aria-hidden="true" />
+                      ) : null}
+                      <div className="tree-row">
+                        {relations.children.map((person) => (
+                          <PersonCard
+                            key={person.id}
+                            person={person}
+                            selected={false}
+                            onSelect={setSelectedId}
+                          />
+                        ))}
+                      </div>
+                      <ul className="tree-legend" aria-label="Légende">
+                        <li>
+                          <span className="tree-legend__line tree-legend__line--bio" /> Biologique
+                        </li>
+                        <li>
+                          <span className="tree-legend__line tree-legend__line--adoptive" />{' '}
+                          Adoptive
+                        </li>
+                        <li>
+                          <span className="tree-legend__line tree-legend__line--unknown" /> Inconnue
+                        </li>
+                      </ul>
+                    </div>
+                  }
+                />
+              )}
+            </div>
+          </section>
+
+          <aside className="details-panel" aria-labelledby="person-title">
+            {selected ? (
+              <>
+                <div className="details-panel__top">
+                  <span className="avatar" aria-hidden="true">
+                    <Icon name="person" />
+                  </span>
+                  <div>
+                    <p className="eyebrow">Personne sélectionnée</p>
+                    <h2 id="person-title">{personLabel(selected)}</h2>
+                    <p className="data-id">
+                      {lifespans.get(selected.id)?.label ?? 'Dates inconnues'} · #{selected.id}
+                    </p>
+                  </div>
+                </div>
+                <IdentityTool selected={selected} onUpdated={loadPersons} />
+                {relations ? (
+                  <div className="detail-section">
+                    <h3>Relations</h3>
+                    <dl>
+                      <div>
+                        <dt>Parents</dt>
+                        <dd>{relations.parents.length}</dd>
+                      </div>
+                      <div>
+                        <dt>Enfants</dt>
+                        <dd>{relations.children.length}</dd>
+                      </div>
+                      <div>
+                        <dt>Fratrie</dt>
+                        <dd>{relations.siblings.length}</dd>
+                      </div>
+                      <div>
+                        <dt>Conjoints</dt>
+                        <dd>{relations.spouses.length}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : null}
+                {persons.length > 1 ? (
+                  <CommonAncestorsTool
+                    selected={selected}
+                    persons={persons}
+                    onNavigate={setSelectedId}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <p className="notice">Aucune personne sélectionnée.</p>
+            )}
+          </aside>
+        </section>
+      </main>
+    </LifespanContext.Provider>
   );
 }
 

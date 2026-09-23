@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   buildTreeSvg,
   downloadBlob,
@@ -20,16 +28,37 @@ function clampZoom(value) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
 }
 
+// Réglages d'affichage partagés par tous les nœuds (années, repli, période).
+const TreeViewContext = createContext({
+  lifespans: new Map(),
+  collapsed: new Set(),
+  toggle: () => {},
+  period: null,
+});
+
+function outsidePeriod(lifespan, period) {
+  if (!period || !lifespan?.birthYear) return false;
+  return (
+    (period.from !== null && lifespan.birthYear < period.from) ||
+    (period.to !== null && lifespan.birthYear > period.to)
+  );
+}
+
 function TreeNode({ person, sosa, branch, focus, onSelect }) {
+  const { lifespans, period } = useContext(TreeViewContext);
+  const lifespan = lifespans.get(person.id);
+  const dimmed = outsidePeriod(lifespan, period);
   return (
     <button
       type="button"
-      className={`tree-node${focus ? ' tree-node--focus' : ''}${branch ? ` tree-node--${branch}` : ''}`}
+      className={`tree-node${focus ? ' tree-node--focus' : ''}${branch ? ` tree-node--${branch}` : ''}${dimmed ? ' tree-node--dimmed' : ''}`}
       onClick={() => onSelect(person.id)}
     >
       <span className="person-card__name">
         {person.given_names} {person.family_name}
       </span>
+      {lifespan ? <span className="person-card__years">{lifespan.label}</span> : null}
+      {dimmed ? <span className="gds-visually-hidden"> (hors de la période filtrée)</span> : null}
       <span className="tree-node__meta">
         {branch ? (
           <span
@@ -45,16 +74,42 @@ function TreeNode({ person, sosa, branch, focus, onSelect }) {
   );
 }
 
-// Arbre récursif horizontal : la personne à gauche, ses parents (ou enfants) à droite.
-function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa, showSosa = true }) {
+// Arbre récursif horizontal : la personne à gauche, ses parents (ou enfants) à
+// droite. Chaque nœud ayant des proches affichés peut être replié / déplié.
+function Branch({
+  person,
+  linksOf,
+  sosa,
+  branch,
+  focus,
+  onSelect,
+  withSosa,
+  showSosa = true,
+  relation,
+}) {
+  const { collapsed, toggle } = useContext(TreeViewContext);
   const linked = linksOf.get(person.id) ?? [];
   const ordered = withSosa
     ? [...linked].sort((a, b) => (a.sex === 'F' ? 1 : 0) - (b.sex === 'F' ? 1 : 0))
     : linked;
+  const isCollapsed = collapsed.has(person.id);
+  const name = `${person.given_names} ${person.family_name}`;
   return (
     <div className="tree-branch">
       <TreeNode person={person} sosa={sosa} branch={branch} focus={focus} onSelect={onSelect} />
       {ordered.length > 0 ? (
+        <button
+          type="button"
+          className="tree-branch__toggle"
+          aria-expanded={!isCollapsed}
+          aria-label={`${isCollapsed ? 'Déplier' : 'Replier'} les ${relation} de ${name}`}
+          title={isCollapsed ? `Déplier (${ordered.length})` : 'Replier'}
+          onClick={() => toggle(person.id)}
+        >
+          {isCollapsed ? `+${ordered.length}` : '−'}
+        </button>
+      ) : null}
+      {ordered.length > 0 && !isCollapsed ? (
         <div className="tree-branch__children">
           {ordered.map((relative, index) => {
             const childSosa =
@@ -73,6 +128,7 @@ function Branch({ person, linksOf, sosa, branch, focus, onSelect, withSosa, show
                 onSelect={onSelect}
                 withSosa={withSosa}
                 showSosa={showSosa}
+                relation={relation}
               />
             );
           })}
@@ -226,9 +282,30 @@ export function TreeExplorer({
   defaultMode = 'family',
   defaultDepth = 4,
   showSosa = true,
+  lifespans = new Map(),
 }) {
   const [mode, setMode] = useState(defaultMode);
   const [depth, setDepth] = useState(defaultDepth);
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const [branchFilter, setBranchFilter] = useState('all');
+  const [periodFrom, setPeriodFrom] = useState('');
+  const [periodTo, setPeriodTo] = useState('');
+  const toggleCollapsed = useCallback((id) => {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const [layout, setLayout] = useState(null);
+  const period =
+    periodFrom || periodTo
+      ? {
+          from: periodFrom ? Number(periodFrom) : null,
+          to: periodTo ? Number(periodTo) : null,
+        }
+      : null;
   const [items, setItems] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -359,8 +436,20 @@ export function TreeExplorer({
     }
   };
 
+  // Isolation d'une branche : Sosa 2 (père) et ses ascendants, ou Sosa 3 (mère).
+  let visibleItems = items ?? [];
+  if (selected && branchFilter !== 'all' && (mode === 'ancestors' || mode === 'fan')) {
+    const sosa = computeSosa(selected.id, visibleItems);
+    const wanted = branchFilter === 'paternal' ? 2 : 3;
+    visibleItems = visibleItems.filter((item) => {
+      const number = sosa.get(item.id);
+      if (!number) return false;
+      const generation = Math.floor(Math.log2(number));
+      return number >> (generation - 1) === wanted;
+    });
+  }
   const linksOf = new Map();
-  for (const item of items ?? []) {
+  for (const item of visibleItems) {
     if (!linksOf.has(item.viaId)) linksOf.set(item.viaId, []);
     linksOf.get(item.viaId).push(item);
   }
@@ -381,7 +470,7 @@ export function TreeExplorer({
       </p>
     );
   } else if (mode === 'fan') {
-    content = <FanChart root={selected} items={items} onSelect={onSelect} />;
+    content = <FanChart root={selected} items={visibleItems} onSelect={onSelect} />;
   } else {
     content = (
       <>
@@ -398,10 +487,59 @@ export function TreeExplorer({
           onSelect={onSelect}
           withSosa={mode === 'ancestors'}
           showSosa={showSosa}
+          relation={mode === 'ancestors' ? 'parents' : 'enfants'}
         />
       </>
     );
   }
+
+  // Mesure de l'arbre pour la minicarte (coordonnées non zoomées).
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const viewport = viewportRef.current;
+    if (!stage || !viewport) return;
+    const origin = stage.getBoundingClientRect();
+    const scale = zoom || 1;
+    const boxes = [...stage.querySelectorAll('.tree-node, .person-card, .fan-chart')].map(
+      (node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          x: (rect.left - origin.left) / scale,
+          y: (rect.top - origin.top) / scale,
+          width: rect.width / scale,
+          height: rect.height / scale,
+          focus:
+            node.classList.contains('tree-node--focus') ||
+            node.classList.contains('person-card--selected'),
+        };
+      },
+    );
+    const width = Math.max(stage.scrollWidth, ...boxes.map((box) => box.x + box.width), 1);
+    const height = Math.max(stage.scrollHeight, ...boxes.map((box) => box.y + box.height), 1);
+    const next = {
+      boxes,
+      width,
+      height,
+      viewWidth: viewport.clientWidth,
+      viewHeight: viewport.clientHeight,
+    };
+    setLayout((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+  });
+
+  const MINIMAP = { width: 180, height: 120 };
+  const miniScale = layout
+    ? Math.min(MINIMAP.width / layout.width, MINIMAP.height / layout.height)
+    : 1;
+  const moveFromMinimap = (event) => {
+    if (!layout) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const targetX = (event.clientX - rect.left) / miniScale;
+    const targetY = (event.clientY - rect.top) / miniScale;
+    setOffset({
+      x: layout.viewWidth / 2 - targetX * zoom,
+      y: layout.viewHeight / 2 - targetY * zoom,
+    });
+  };
 
   return (
     <div className="tree-explorer">
@@ -430,6 +568,51 @@ export function TreeExplorer({
             />
           </label>
         ) : null}
+        {mode === 'ancestors' || mode === 'fan' ? (
+          <label className="tree-toolbar__depth">
+            <span>Branche</span>
+            <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
+              <option value="all">Toutes</option>
+              <option value="paternal">Paternelle</option>
+              <option value="maternal">Maternelle</option>
+            </select>
+          </label>
+        ) : null}
+        {mode !== 'family' ? (
+          <fieldset className="tree-toolbar__period">
+            <legend>Période de naissance</legend>
+            <label>
+              <span className="gds-visually-hidden">Née à partir de l’année</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="1700"
+                value={periodFrom}
+                onChange={(event) => setPeriodFrom(event.target.value)}
+              />
+            </label>
+            <span aria-hidden="true">→</span>
+            <label>
+              <span className="gds-visually-hidden">Née jusqu’à l’année</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="1950"
+                value={periodTo}
+                onChange={(event) => setPeriodTo(event.target.value)}
+              />
+            </label>
+          </fieldset>
+        ) : null}
+        {collapsed.size > 0 ? (
+          <button
+            type="button"
+            className="tree-toolbar__plain"
+            onClick={() => setCollapsed(new Set())}
+          >
+            Tout déplier
+          </button>
+        ) : null}
         <div className="tree-toolbar__zoom" role="group" aria-label="Zoom">
           <button
             type="button"
@@ -450,32 +633,35 @@ export function TreeExplorer({
             Recentrer
           </button>
         </div>
-        <div className="tree-toolbar__export" role="group" aria-label="Exporter l’arbre">
-          <button type="button" onClick={() => runExport('svg')}>
-            SVG
-          </button>
-          <button type="button" onClick={() => runExport('png')}>
-            PNG
-          </button>
-          <button type="button" onClick={() => window.print?.()}>
-            Imprimer / PDF
-          </button>
-          <button
-            type="button"
-            aria-expanded={giant !== null}
-            onClick={() => {
-              setExportError(null);
-              try {
-                const svg = currentSvg();
-                setGiant({ svg, ...tileSvg(svg, giantOptions) });
-              } catch (error) {
-                setExportError(error.message);
-              }
-            }}
-          >
-            Impression géante
-          </button>
-        </div>
+        <details className="tree-toolbar__menu">
+          <summary>Exporter</summary>
+          <div className="tree-toolbar__export" role="group" aria-label="Exporter l’arbre">
+            <button type="button" onClick={() => runExport('svg')}>
+              SVG
+            </button>
+            <button type="button" onClick={() => runExport('png')}>
+              PNG
+            </button>
+            <button type="button" onClick={() => window.print?.()}>
+              Imprimer / PDF
+            </button>
+            <button
+              type="button"
+              aria-expanded={giant !== null}
+              onClick={() => {
+                setExportError(null);
+                try {
+                  const svg = currentSvg();
+                  setGiant({ svg, ...tileSvg(svg, giantOptions) });
+                } catch (error) {
+                  setExportError(error.message);
+                }
+              }}
+            >
+              Impression géante
+            </button>
+          </div>
+        </details>
       </div>
       {exportError ? (
         <p role="alert" className="notice notice--error tree-explorer__notice">
@@ -577,10 +763,55 @@ export function TreeExplorer({
           className="tree-stage"
           style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
         >
-          {content}
+          <TreeViewContext.Provider
+            value={{ lifespans, collapsed, toggle: toggleCollapsed, period }}
+          >
+            {content}
+          </TreeViewContext.Provider>
         </div>
       </div>
       {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
+      {layout && layout.boxes.length > 0 ? (
+        <div className="minimap" aria-hidden="true">
+          <p className="minimap__title">Minicarte</p>
+          <div
+            className="minimap__canvas"
+            style={{
+              width: Math.ceil(layout.width * miniScale),
+              height: Math.ceil(layout.height * miniScale),
+            }}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              moveFromMinimap(event);
+            }}
+            onPointerMove={(event) => {
+              if (event.buttons === 1) moveFromMinimap(event);
+            }}
+          >
+            {layout.boxes.map((box, index) => (
+              <span
+                key={index}
+                className={`minimap__node${box.focus ? ' minimap__node--focus' : ''}`}
+                style={{
+                  left: box.x * miniScale,
+                  top: box.y * miniScale,
+                  width: Math.max(2, box.width * miniScale),
+                  height: Math.max(2, box.height * miniScale),
+                }}
+              />
+            ))}
+            <span
+              className="minimap__view"
+              style={{
+                left: (-offset.x / zoom) * miniScale,
+                top: (-offset.y / zoom) * miniScale,
+                width: (layout.viewWidth / zoom) * miniScale,
+                height: (layout.viewHeight / zoom) * miniScale,
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

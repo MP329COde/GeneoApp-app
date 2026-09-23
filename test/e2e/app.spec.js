@@ -361,6 +361,7 @@ test('exporte réellement l’arbre en SVG et prépare une impression géante d�
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
   await page.getByRole('button', { name: 'Ascendant' }).click();
 
+  await page.getByText('Exporter', { exact: true }).click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'SVG', exact: true }).click();
   const download = await downloadPromise;

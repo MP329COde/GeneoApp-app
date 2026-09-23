@@ -1608,4 +1608,47 @@ describe('App', () => {
     expect(screen.getByText(/Date non reconnue/)).toBeInTheDocument();
     expect(screen.getByLabelText('Précision de date')).toHaveValue('UNKNOWN');
   });
+  it('affiche les années de vie, replie une branche et isole la branche maternelle', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listAll.mockResolvedValue([
+      { type: 'BIRTH', date_text: 'vers 1760', participants: [{ personId: 2, role: 'PRINCIPAL' }] },
+      { type: 'DEATH', date_text: '1822', participants: [{ personId: 2, role: 'PRINCIPAL' }] },
+      { type: 'BIRTH', date_text: '1764', participants: [{ personId: 3, role: 'PRINCIPAL' }] },
+    ]);
+    graph.ancestors.mockResolvedValue([
+      { id: 2, given_names: 'Pierre', family_name: 'Dupont', sex: 'M', generation: 1, viaId: 1 },
+      { id: 3, given_names: 'Anne', family_name: 'Morel', sex: 'F', generation: 1, viaId: 1 },
+      { id: 4, given_names: 'Jacques', family_name: 'Dupont', sex: 'M', generation: 2, viaId: 2 },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
+
+    expect(await screen.findByText('vers 1760 – 1822')).toBeInTheDocument();
+    expect(screen.getByText('° 1764')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Replier les parents de Pierre Dupont' }));
+    expect(screen.queryByText('Jacques Dupont')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tout déplier' }));
+    expect(screen.getByText('Jacques Dupont')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Branche'), { target: { value: 'maternal' } });
+    expect(screen.queryByText('Pierre Dupont')).not.toBeInTheDocument();
+    expect(screen.getByText('Anne Morel')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Branche'), { target: { value: 'all' } });
+    fireEvent.change(screen.getByLabelText('Née à partir de l’année'), {
+      target: { value: '1762' },
+    });
+    expect(screen.getByText('Pierre Dupont').closest('button')).toHaveClass('tree-node--dimmed');
+    expect(screen.getByText('Anne Morel').closest('button')).not.toHaveClass('tree-node--dimmed');
+  });
 });
