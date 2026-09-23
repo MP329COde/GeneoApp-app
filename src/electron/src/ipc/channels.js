@@ -72,6 +72,17 @@ export const IPC_CHANNELS = Object.freeze({
 
   RESEARCH_CREATE: 'geneoapp:research:create',
   RESEARCH_LIST: 'geneoapp:research:list',
+  RESEARCH_GET: 'geneoapp:research:get',
+  RESEARCH_UPDATE: 'geneoapp:research:update',
+  RESEARCH_REMOVE: 'geneoapp:research:remove',
+  RESEARCH_ADD_HYPOTHESIS: 'geneoapp:research:addHypothesis',
+  RESEARCH_UPDATE_HYPOTHESIS: 'geneoapp:research:updateHypothesis',
+  RESEARCH_REMOVE_HYPOTHESIS: 'geneoapp:research:removeHypothesis',
+  RESEARCH_ADD_EVIDENCE: 'geneoapp:research:addEvidence',
+  RESEARCH_REMOVE_EVIDENCE: 'geneoapp:research:removeEvidence',
+  RESEARCH_ADD_TASK: 'geneoapp:research:addTask',
+  RESEARCH_UPDATE_TASK: 'geneoapp:research:updateTask',
+  RESEARCH_REMOVE_TASK: 'geneoapp:research:removeTask',
 
   STATISTICS_TOTALS: 'geneoapp:statistics:totals',
 

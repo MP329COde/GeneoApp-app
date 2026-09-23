@@ -4,6 +4,7 @@ import { createGeneoAppClient } from './api/geneoapp-client.js';
 import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
 import { SettingsPanel } from './views/SettingsPanel.jsx';
 import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
@@ -1693,148 +1694,6 @@ function NotesPanel({ selected }) {
   );
 }
 
-const RESEARCH_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'ABANDONED'];
-const RESEARCH_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
-
-function NotebookPanel({ persons, onNavigate }) {
-  const [entries, setEntries] = useState(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [status, setStatus] = useState('TODO');
-  const [priority, setPriority] = useState('MEDIUM');
-  const [personId, setPersonId] = useState('');
-  const [notebookError, setNotebookError] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const personLabelById = (id) => {
-    const person = persons.find((candidate) => candidate.id === id);
-    return person ? personLabel(person) : `Personne #${id}`;
-  };
-
-  const loadEntries = useCallback(async () => {
-    try {
-      setEntries(await client.research.list());
-    } catch (loadError) {
-      setNotebookError(loadError.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!title.trim() || !content.trim()) return;
-    setBusy(true);
-    setNotebookError(null);
-    try {
-      await client.research.create({
-        title: title.trim(),
-        content: content.trim(),
-        status,
-        priority,
-        personId: personId ? Number(personId) : null,
-      });
-      setTitle('');
-      setContent('');
-      setPersonId('');
-      await loadEntries();
-    } catch (createError) {
-      setNotebookError(createError.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="search-panel">
-      <h3>Carnet de recherche</h3>
-      {notebookError ? (
-        <p role="alert" className="notice notice--error">
-          {notebookError}
-        </p>
-      ) : null}
-
-      <form className="create-person-form" onSubmit={handleSubmit}>
-        <label>
-          <span>Titre</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <label>
-          <span>Note</span>
-          <input value={content} onChange={(event) => setContent(event.target.value)} />
-        </label>
-        <label>
-          <span>Statut</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            {RESEARCH_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Priorité</span>
-          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-            {RESEARCH_PRIORITIES.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Personne liée (optionnel)</span>
-          <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
-            <option value="">— Aucune —</option>
-            {persons.map((person) => (
-              <option key={person.id} value={person.id}>
-                {personLabel(person)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" size="sm" disabled={busy}>
-          Ajouter une piste de recherche
-        </Button>
-      </form>
-
-      {entries === null ? (
-        <p role="status">Chargement…</p>
-      ) : entries.length === 0 ? (
-        <p className="notice">Aucune piste de recherche pour l’instant.</p>
-      ) : (
-        <ul className="search-results">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Badge tone="neutral">{entry.status}</Badge>{' '}
-              <Badge tone="neutral">{entry.priority}</Badge> <strong>{entry.title}</strong> —{' '}
-              {entry.content}
-              {entry.person_id ? (
-                <>
-                  {' '}
-                  (
-                  <button
-                    type="button"
-                    className="person-card"
-                    style={{ display: 'inline', padding: 0, border: 0 }}
-                    onClick={() => onNavigate(entry.person_id)}
-                  >
-                    {personLabelById(entry.person_id)}
-                  </button>
-                  )
-                </>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function StatisticsPanel() {
   const [totals, setTotals] = useState(null);
   const [statsError, setStatsError] = useState(null);
@@ -2959,6 +2818,7 @@ function AppContent() {
               />
             ) : view === 'notebook' ? (
               <NotebookPanel
+                client={client}
                 persons={persons}
                 onNavigate={(id) => {
                   setSelectedId(id);

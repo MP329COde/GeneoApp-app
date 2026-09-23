@@ -130,6 +130,19 @@ const api = {
   research: {
     create: (data, performedBy) => invoke(IPC_CHANNELS.RESEARCH_CREATE, { data, performedBy }),
     list: () => invoke(IPC_CHANNELS.RESEARCH_LIST),
+    get: (id) => invoke(IPC_CHANNELS.RESEARCH_GET, { id }),
+    update: (id, data) => invoke(IPC_CHANNELS.RESEARCH_UPDATE, { id, data }),
+    remove: (id) => invoke(IPC_CHANNELS.RESEARCH_REMOVE, { id }),
+    addHypothesis: (researchId, data) =>
+      invoke(IPC_CHANNELS.RESEARCH_ADD_HYPOTHESIS, { researchId, data }),
+    updateHypothesis: (id, data) => invoke(IPC_CHANNELS.RESEARCH_UPDATE_HYPOTHESIS, { id, data }),
+    removeHypothesis: (id) => invoke(IPC_CHANNELS.RESEARCH_REMOVE_HYPOTHESIS, { id }),
+    addEvidence: (hypothesisId, data) =>
+      invoke(IPC_CHANNELS.RESEARCH_ADD_EVIDENCE, { hypothesisId, data }),
+    removeEvidence: (id) => invoke(IPC_CHANNELS.RESEARCH_REMOVE_EVIDENCE, { id }),
+    addTask: (researchId, data) => invoke(IPC_CHANNELS.RESEARCH_ADD_TASK, { researchId, data }),
+    updateTask: (id, data) => invoke(IPC_CHANNELS.RESEARCH_UPDATE_TASK, { id, data }),
+    removeTask: (id) => invoke(IPC_CHANNELS.RESEARCH_REMOVE_TASK, { id }),
   },
 
   statistics: {

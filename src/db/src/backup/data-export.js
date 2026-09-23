@@ -17,6 +17,7 @@ export const EXPORTABLE_TABLES = [
   'research_notebook',
   'research_hypotheses',
   'research_tasks',
+  'research_evidence',
   'search_index',
   'local_accounts',
   'audit_log',

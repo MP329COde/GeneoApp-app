@@ -44,7 +44,7 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
 
   // Sélectionne Ada, puis ajoute Byron comme enfant via l'onglet Familles.
   await page.getByRole('button', { name: 'Ada Lovelace' }).click();
-  await page.getByRole('button', { name: 'Familles' }).click();
+  await page.getByRole('button', { name: 'Familles', exact: true }).click();
   await page.getByLabel('Ajouter un enfant').selectOption({ label: 'Byron Lovelace' });
   await page.getByRole('button', { name: 'Ajouter l’enfant' }).click();
 
@@ -59,7 +59,7 @@ test('les statistiques reflètent les données réelles créées durant le parco
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Statistiques' }).click();
+  await page.getByRole('button', { name: 'Statistiques', exact: true }).click();
   const personsRow = page.locator('dl div', { hasText: 'persons' });
   await expect(personsRow.locator('dd')).toHaveText('2');
 });
@@ -68,7 +68,7 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'GEDCOM' }).click();
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
   await page.getByLabel('Contenu GEDCOM').fill(sampleGedcom);
 
   const importButton = page.getByRole('button', { name: 'Importer' });
@@ -87,7 +87,7 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
 
 test('exporte réellement l’arbre au format GEDCOM (téléchargement déclenché)', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'GEDCOM' }).click();
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exporter l’arbre complet' }).click();
@@ -99,7 +99,7 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sauvegardes' }).click();
+  await page.getByRole('button', { name: 'Sauvegardes', exact: true }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
   await page.getByLabel('Profil local').fill('Généalogiste E2E');
@@ -111,7 +111,7 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
 
 test('permet de se déconnecter puis de supprimer réellement le profil local', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sauvegardes' }).click();
+  await page.getByRole('button', { name: 'Sauvegardes', exact: true }).click();
 
   // Toujours connecté depuis le test précédent (état React réinitialisé par
   // page.goto, la session locale doit donc être rétablie).
@@ -143,7 +143,7 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   // L'import GEDCOM précédent a recréé "Ada Lovelace" et "Byron Lovelace" en
   // plus des fiches déjà saisies manuellement : un vrai doublon exact exploité
   // ici plutôt que d'en fabriquer un artificiellement.
-  await page.getByRole('button', { name: 'Doublons' }).click();
+  await page.getByRole('button', { name: 'Doublons', exact: true }).click();
   await page.getByRole('button', { name: 'Analyser les doublons potentiels' }).click();
 
   const pair = page.locator('.search-results li', { hasText: 'Ada Lovelace' }).first();
@@ -164,7 +164,7 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Chronologie' }).click();
+  await page.getByRole('button', { name: 'Chronologie', exact: true }).click();
 
   // L'import GEDCOM précédent a créé une naissance (Ada, avec lieu) et un
   // mariage (Charles et Ada) : de vrais événements, pas des données de test
@@ -179,7 +179,7 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
-  await page.getByRole('button', { name: 'Événements' }).click();
+  await page.getByRole('button', { name: 'Événements', exact: true }).click();
 
   await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Nantes');
   await page.getByLabel('Latitude (optionnel)').fill('47.2184');
@@ -187,7 +187,7 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
   await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Carte' }).click();
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
   await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
 });
@@ -227,7 +227,7 @@ test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohére
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Cohérence' }).click();
+  await page.getByRole('button', { name: 'Cohérence', exact: true }).click();
   await page.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }).click();
 
   await expect(page.getByText('Aucun cycle détecté.')).toBeVisible();
@@ -248,7 +248,7 @@ test('calcule les ancêtres communs réels (ou leur absence) entre deux personne
 
 test('attache un document réel à une source citée et le liste', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sources' }).click();
+  await page.getByRole('button', { name: 'Sources', exact: true }).click();
 
   await page.getByLabel('Titre de la source').fill('Registre paroissial de Sainte-Anne');
   await page.getByRole('button', { name: 'Ajouter et citer la source' }).click();
@@ -262,7 +262,7 @@ test('le carnet de recherche persiste réellement une piste entre deux navigatio
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Carnet' }).click();
+  await page.getByRole('button', { name: 'Carnet', exact: true }).click();
   await page.getByLabel('Titre', { exact: true }).fill('Vérifier acte de naissance');
   await page.getByLabel('Note').fill('Mairie de Nantes, 1815.');
   await page.getByRole('button', { name: 'Ajouter une piste de recherche' }).click();
@@ -270,7 +270,7 @@ test('le carnet de recherche persiste réellement une piste entre deux navigatio
 
   // Recharge la page : la donnée doit venir du serveur, pas d'un état local.
   await page.reload();
-  await page.getByRole('button', { name: 'Carnet' }).click();
+  await page.getByRole('button', { name: 'Carnet', exact: true }).click();
   await expect(page.getByText('Vérifier acte de naissance')).toBeVisible();
 });
 
@@ -319,4 +319,35 @@ test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la ré
 
   await page.keyboard.press('ControlOrMeta+Shift+z');
   await expect(counter).toHaveText(`${before + 1} personne(s)`);
+});
+
+test('mène une recherche complète : hypothèse étayée, tâche faite, persistées au rechargement', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Carnet', exact: true }).click();
+  await page.getByLabel('Titre', { exact: true }).fill('Naissance de Jean Dupont');
+  await page.getByLabel('Note').fill('Deux lieux possibles');
+  await page.getByRole('button', { name: 'Ajouter une piste de recherche' }).click();
+  await page.getByRole('button', { name: 'Naissance de Jean Dupont' }).click();
+
+  await page.getByLabel('Nouvelle hypothèse').fill('Né à Nantes');
+  await page.getByRole('button', { name: 'Ajouter l’hypothèse' }).click();
+  await page.getByLabel('Preuve pour « Né à Nantes »').fill('Recensement 1836');
+  await page.getByRole('button', { name: 'Ajouter la preuve' }).click();
+  await page.getByLabel('Statut de l’hypothèse Né à Nantes').selectOption('SUPPORTED');
+
+  await page.getByLabel('Nouvelle tâche').fill('Consulter les registres de Nantes');
+  await page.getByRole('button', { name: 'Ajouter la tâche' }).click();
+  const done = page.getByRole('checkbox', { name: 'Consulter les registres de Nantes' });
+  await done.click();
+  await expect(done).toBeChecked();
+  await expect(page.getByRole('heading', { name: 'Tâches (1/1)' })).toBeVisible();
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Carnet', exact: true }).click();
+  await expect(page.getByText('1 hypothèse(s) · 1/1 tâche(s)')).toBeVisible();
+  await page.getByRole('button', { name: 'Naissance de Jean Dupont' }).click();
+  await expect(page.getByText('Recensement 1836')).toBeVisible();
+  await expect(page.getByLabel('Statut de l’hypothèse Né à Nantes')).toHaveValue('SUPPORTED');
 });

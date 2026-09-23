@@ -154,6 +154,25 @@ function createHttpClient() {
     research: {
       create: (data) => fetchJson('/api/notebook', { method: 'POST', body: data }),
       list: () => fetchJson('/api/notebook'),
+      get: (id) => fetchJson(`/api/notebook/${id}`),
+      update: (id, data) => fetchJson(`/api/notebook/${id}`, { method: 'PATCH', body: data }),
+      remove: (id) => fetchJson(`/api/notebook/${id}`, { method: 'DELETE' }),
+      addHypothesis: (researchId, data) =>
+        fetchJson(`/api/notebook/${researchId}/hypotheses`, { method: 'POST', body: data }),
+      updateHypothesis: (id, data) =>
+        fetchJson(`/api/notebook/hypotheses/${id}`, { method: 'PATCH', body: data }),
+      removeHypothesis: (id) => fetchJson(`/api/notebook/hypotheses/${id}`, { method: 'DELETE' }),
+      addEvidence: (hypothesisId, data) =>
+        fetchJson(`/api/notebook/hypotheses/${hypothesisId}/evidence`, {
+          method: 'POST',
+          body: data,
+        }),
+      removeEvidence: (id) => fetchJson(`/api/notebook/evidence/${id}`, { method: 'DELETE' }),
+      addTask: (researchId, data) =>
+        fetchJson(`/api/notebook/${researchId}/tasks`, { method: 'POST', body: data }),
+      updateTask: (id, data) =>
+        fetchJson(`/api/notebook/tasks/${id}`, { method: 'PATCH', body: data }),
+      removeTask: (id) => fetchJson(`/api/notebook/tasks/${id}`, { method: 'DELETE' }),
     },
     statistics: {
       totals: () => fetchJson('/api/statistics'),
@@ -293,6 +312,17 @@ function createIpcClient(bridge) {
     research: {
       create: (data) => bridge.research.create(data),
       list: () => bridge.research.list(),
+      get: (id) => bridge.research.get(id),
+      update: (id, data) => bridge.research.update(id, data),
+      remove: (id) => bridge.research.remove(id),
+      addHypothesis: (researchId, data) => bridge.research.addHypothesis(researchId, data),
+      updateHypothesis: (id, data) => bridge.research.updateHypothesis(id, data),
+      removeHypothesis: (id) => bridge.research.removeHypothesis(id),
+      addEvidence: (hypothesisId, data) => bridge.research.addEvidence(hypothesisId, data),
+      removeEvidence: (id) => bridge.research.removeEvidence(id),
+      addTask: (researchId, data) => bridge.research.addTask(researchId, data),
+      updateTask: (id, data) => bridge.research.updateTask(id, data),
+      removeTask: (id) => bridge.research.removeTask(id),
     },
     statistics: {
       totals: () => bridge.statistics.totals(),

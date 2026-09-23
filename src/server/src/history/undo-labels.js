@@ -9,7 +9,7 @@ const RESOURCES = {
   media: 'média',
   notes: 'note',
   notebook: 'carnet de recherche',
-  gedcom: 'import GEDCOM',
+  gedcom: 'fichier GEDCOM',
   search: 'fusion de doublons',
   trash: 'corbeille',
 };
@@ -19,6 +19,9 @@ const SPECIAL = [
   [/\/import$/, 'Import'],
   [/\/participants$/, 'Ajout de participant'],
   [/\/citations$/, 'Ajout de citation'],
+  [/\/hypotheses$/, 'Ajout d’hypothèse'],
+  [/\/evidence$/, 'Ajout de preuve'],
+  [/\/tasks$/, 'Ajout de tâche'],
 ];
 
 // Libellé lisible d'une action, affiché dans « Annuler … » / « Rétablir … ».

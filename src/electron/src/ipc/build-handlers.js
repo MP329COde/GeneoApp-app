@@ -60,7 +60,7 @@ const DOMAIN_LABELS = {
   media: 'média',
   notes: 'note',
   research: 'carnet de recherche',
-  gedcom: 'import GEDCOM',
+  gedcom: 'fichier GEDCOM',
   search: 'fusion de doublons',
   trash: 'corbeille',
 };
@@ -75,15 +75,20 @@ const ACTION_LABELS = {
   addCitation: 'Ajout de citation',
   upload: 'Ajout',
   purge: 'Suppression définitive',
+  add: 'Ajout',
 };
 
 function withUndoGroup(services, channel, handler) {
   const [, domain, action] = channel.split(':');
   if (NON_UNDOABLE_DOMAINS.has(domain) || !WRITE_ACTIONS.test(action ?? '')) return handler;
+  const verb =
+    ACTION_LABELS[action] ??
+    ACTION_LABELS[action.match(/^(add|update|remove)/)?.[1]] ??
+    'Modification';
   return async (payload) => {
     const history = services.history;
     const groupId = history?.begin(
-      `${ACTION_LABELS[action]} · ${DOMAIN_LABELS[domain] ?? domain}`,
+      `${verb} · ${DOMAIN_LABELS[domain] ?? domain}`,
       payload?.performedBy ?? null,
     );
     try {
@@ -296,6 +301,41 @@ function buildRawHandlers(services, workspace) {
       research.create(data, { performedBy: actorOf(performedBy) }),
     ),
     [IPC_CHANNELS.RESEARCH_LIST]: wrap(() => research.list()),
+    [IPC_CHANNELS.RESEARCH_GET]: wrap(({ id }) => research.get(id)),
+    [IPC_CHANNELS.RESEARCH_UPDATE]: wrap(({ id, data, performedBy }) =>
+      research.update(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_REMOVE]: wrap(({ id, performedBy }) => {
+      research.remove(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
+    [IPC_CHANNELS.RESEARCH_ADD_HYPOTHESIS]: wrap(({ researchId, data, performedBy }) =>
+      research.addHypothesis(researchId, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_UPDATE_HYPOTHESIS]: wrap(({ id, data, performedBy }) =>
+      research.updateHypothesis(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_REMOVE_HYPOTHESIS]: wrap(({ id, performedBy }) => {
+      research.removeHypothesis(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
+    [IPC_CHANNELS.RESEARCH_ADD_EVIDENCE]: wrap(({ hypothesisId, data, performedBy }) =>
+      research.addEvidence(hypothesisId, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_REMOVE_EVIDENCE]: wrap(({ id, performedBy }) => {
+      research.removeEvidence(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
+    [IPC_CHANNELS.RESEARCH_ADD_TASK]: wrap(({ researchId, data, performedBy }) =>
+      research.addTask(researchId, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_UPDATE_TASK]: wrap(({ id, data, performedBy }) =>
+      research.updateTask(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.RESEARCH_REMOVE_TASK]: wrap(({ id, performedBy }) => {
+      research.removeTask(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
 
     [IPC_CHANNELS.STATISTICS_TOTALS]: wrap(() => ({
       totals: statistics.totals(),

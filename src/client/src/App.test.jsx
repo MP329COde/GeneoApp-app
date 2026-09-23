@@ -49,6 +49,16 @@ const unions = vi.hoisted(() => ({
 const research = vi.hoisted(() => ({
   create: vi.fn(),
   list: vi.fn(),
+  get: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
+  addHypothesis: vi.fn(),
+  updateHypothesis: vi.fn(),
+  addEvidence: vi.fn(),
+  removeEvidence: vi.fn(),
+  addTask: vi.fn(),
+  updateTask: vi.fn(),
+  removeTask: vi.fn(),
 }));
 const statistics = vi.hoisted(() => ({
   totals: vi.fn(),
@@ -1378,5 +1388,80 @@ describe('App', () => {
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
     await waitFor(() => expect(history.redo).toHaveBeenCalledTimes(1));
     history.status.mockResolvedValue({ canUndo: false, canRedo: false });
+  });
+  it('ouvre une recherche et y ajoute hypothèse, preuve et tâche', async () => {
+    persons.list.mockResolvedValue([]);
+    const base = {
+      id: 7,
+      title: 'Mariage de Jean',
+      content: 'Recherche #42',
+      status: 'IN_PROGRESS',
+      priority: 'HIGH',
+      due_date: null,
+      objective: 'Trouver l’acte',
+      archives: null,
+      result: null,
+      person_id: null,
+    };
+    research.list.mockResolvedValue([
+      { ...base, task_count: 0, done_task_count: 0, hypothesis_count: 0 },
+    ]);
+    research.get.mockResolvedValueOnce({ ...base, hypotheses: [], tasks: [] }).mockResolvedValue({
+      ...base,
+      hypotheses: [
+        {
+          id: 3,
+          title: 'Né à Nantes',
+          content: '',
+          status: 'OPEN',
+          evidence: [{ id: 9, stance: 'CONTRADICTS', content: 'Aucun acte' }],
+        },
+      ],
+      tasks: [
+        {
+          id: 5,
+          title: 'Écrire à la mairie',
+          status: 'TODO',
+          priority: 'HIGH',
+          due_date: '2020-01-01',
+        },
+      ],
+    });
+    research.addHypothesis.mockResolvedValue({ id: 3 });
+    research.addTask.mockResolvedValue({ id: 5 });
+    research.addEvidence.mockResolvedValue({ id: 9 });
+    research.updateTask.mockResolvedValue({ id: 5 });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mariage de Jean' }));
+
+    fireEvent.change(await screen.findByLabelText('Nouvelle hypothèse'), {
+      target: { value: 'Né à Nantes' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter l’hypothèse' }));
+    await waitFor(() =>
+      expect(research.addHypothesis).toHaveBeenCalledWith(7, { title: 'Né à Nantes', content: '' }),
+    );
+
+    fireEvent.change(await screen.findByLabelText('Preuve pour « Né à Nantes »'), {
+      target: { value: 'Registre 1836' },
+    });
+    fireEvent.change(screen.getByLabelText('Sens'), { target: { value: 'SUPPORTS' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter la preuve' }));
+    await waitFor(() =>
+      expect(research.addEvidence).toHaveBeenCalledWith(3, {
+        stance: 'SUPPORTS',
+        content: 'Registre 1836',
+      }),
+    );
+    expect(screen.getByText('Aucun acte')).toBeInTheDocument();
+    expect(screen.getByText(/En retard/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Écrire à la mairie' }));
+    await waitFor(() => expect(research.updateTask).toHaveBeenCalledWith(5, { status: 'DONE' }));
   });
 });
