@@ -14,6 +14,7 @@ import { PersonTimeline } from './views/PersonTimeline.jsx';
 import { ComparePanel } from './views/ComparePanel.jsx';
 import { AdvancedSearch } from './views/AdvancedSearch.jsx';
 import { QualityCard } from './views/QualityCard.jsx';
+import { SiteSearch } from './views/SiteSearch.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -181,7 +182,7 @@ function CreatePersonForm({ onCreate, creating }) {
   );
 }
 
-function SearchPanel({ onNavigate }) {
+function SearchPanel({ onNavigate, selected, lifespan }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState(null);
   const [searchError, setSearchError] = useState(null);
@@ -231,6 +232,7 @@ function SearchPanel({ onNavigate }) {
         </ul>
       )}
       <AdvancedSearch client={client} onNavigate={onNavigate} />
+      <SiteSearch key={selected?.id ?? 'none'} person={selected} lifespan={lifespan} />
     </div>
   );
 }
@@ -3347,6 +3349,8 @@ function AppContent() {
             <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
               {view === 'search' ? (
                 <SearchPanel
+                  selected={selected}
+                  lifespan={selected ? lifespans.get(selected.id) : null}
                   onNavigate={(id) => {
                     setSelectedId(id);
                     setView('person');

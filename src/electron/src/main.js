@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
+import { isSafeExternalUrl } from './external-links.js';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -51,6 +52,20 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  // Aucune fenêtre ni navigation vers l'extérieur dans l'application : les
+  // liens https (sites de recherche généalogique) s'ouvrent dans le navigateur
+  // du système, tout le reste est refusé.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isSafeExternalUrl(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) {
+      event.preventDefault();
+      if (isSafeExternalUrl(url)) shell.openExternal(url);
+    }
   });
 
   await window.loadFile(new URL('../../client/dist/index.html', import.meta.url).pathname);

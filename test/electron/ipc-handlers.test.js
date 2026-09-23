@@ -626,3 +626,17 @@ test('une écriture IPC forme une action annulable puis rétablissable', async (
   await handlers[IPC_CHANNELS.HISTORY_REDO]({});
   assert.equal((await handlers[IPC_CHANNELS.PERSONS_LIST]({})).data.length, 1);
 });
+
+test('seules les adresses https sans identifiants peuvent être ouvertes à l’extérieur', async () => {
+  const { isSafeExternalUrl } = await import('../../src/electron/src/external-links.js');
+  assert.equal(isSafeExternalUrl('https://www.geneanet.org/fonds/individus/?nom=Dupont'), true);
+  for (const url of [
+    'http://exemple.org',
+    'file:///etc/passwd',
+    'javascript:alert(1)',
+    'https://user:secret@exemple.org',
+    'pas une url',
+  ]) {
+    assert.equal(isSafeExternalUrl(url), false, url);
+  }
+});

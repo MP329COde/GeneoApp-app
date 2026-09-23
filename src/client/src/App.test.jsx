@@ -1850,4 +1850,39 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'examiner' }));
     expect(screen.getByRole('button', { name: 'Cohérence' })).toHaveClass('is-active');
   });
+  it('ouvre les recherches de la personne sur les sites choisis, sans les contacter', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Lefèvre' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    localStorage.removeItem('geneoapp.searchSites');
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Gallica (BnF)' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Recherche web' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les recherches' }));
+
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(open.mock.calls[0][0]).toBe(
+      'https://www.geneanet.org/fonds/individus/?nom=Lef%C3%A8vre&prenom=Jean&go=1',
+    );
+    expect(open.mock.calls[0][2]).toBe('noopener,noreferrer');
+
+    fireEvent.click(screen.getByText(/Ajouter un site/));
+    fireEvent.change(screen.getByLabelText('Nom du site'), { target: { value: 'AD76' } });
+    fireEvent.change(screen.getByLabelText(/Adresse de recherche/), {
+      target: { value: 'http://archives.exemple.fr/?q={nom}' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter le site' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('https://');
+    open.mockRestore();
+    localStorage.clear();
+  });
 });
