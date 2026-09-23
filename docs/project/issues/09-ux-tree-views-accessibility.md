@@ -184,3 +184,22 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   répertoire temporaire partagé de la machine (aucun répertoire dédié aux tests) — `playwright.config.js`
   isole désormais chaque exécution via `GENEOAPP_BACKUP_DIR` pointant vers un répertoire temporaire créé et
   propre à cette exécution.
+- 2026-09-23 (suite) : ajout d'un assistant de fusion de doublons réel, jusque-là absent (l'écran « Doublons »
+  ne faisait que détecter et permettre de consulter les deux fiches, sans action de fusion — limite documentée
+  explicitement plus haut). Nouveau `MergeService` (`src/server/src/services/merge.service.js`) :
+  réattribue au survivant toutes les données réelles portées par le doublon (filiations, appartenance à une
+  union, participation à un événement, citations, notes, médias) avant de supprimer la fiche du doublon en
+  douceur (jamais définitivement) ; quand une réattribution créerait un doublon de lien (ex. le même enfant
+  déjà relié aux deux fiches), le lien du doublon est supprimé en douceur plutôt que réattribué, pour ne
+  jamais violer les contraintes d'unicité des tables de jonction. Toute la fusion s'exécute dans une seule
+  transaction et journalise deux entrées d'audit (`MERGE` sur le survivant, `DELETE` sur le doublon) — la
+  contrainte CHECK de `audit_log.operation` a dû être étendue pour accepter `MERGE`
+  (migration `0009_expand_audit_operations.sql`, reconstruction de table selon la procédure SQLite standard,
+  comme déjà fait pour `events` en migration 0008). Exposé via `POST /api/search/merge` et le canal IPC
+  `SEARCH_MERGE` (les deux transports, avec test dédié pour chacun). L'écran « Doublons » propose désormais
+  deux boutons « Fusionner (garder A/B) » par paire détectée. Testé : 4 cas API (réattribution réelle,
+  résolution de conflit d'unicité, rejet id identique, 404), 1 cas IPC, 1 cas client (Vitest), 1 scénario E2E
+  Playwright (fusionne un vrai doublon créé par l'import GEDCOM précédent, vérifie la disparition de la fiche
+  et la mise à jour du compte réel de personnes). Limite restante : aucune prévisualisation des changements
+  avant confirmation (pas de `previewPersons` exposé côté API/IPC pour l'instant, seule la méthode existe
+  côté service) — à exposer si un écran de confirmation détaillée est demandé.

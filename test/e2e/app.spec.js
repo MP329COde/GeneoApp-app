@@ -108,6 +108,26 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   await expect(page.getByText(/\.json/).first()).toBeVisible();
 });
 
+test('fusionne un doublon réel : les données du doublon rejoignent le survivant', async ({
+  page,
+}) => {
+  await page.goto('/');
+  // L'import GEDCOM précédent a recréé "Ada Lovelace" et "Byron Lovelace" en
+  // plus des fiches déjà saisies manuellement : un vrai doublon exact exploité
+  // ici plutôt que d'en fabriquer un artificiellement.
+  await page.getByRole('button', { name: 'Doublons' }).click();
+  await page.getByRole('button', { name: 'Analyser les doublons potentiels' }).click();
+
+  const pair = page.locator('.search-results li', { hasText: 'Ada Lovelace' }).first();
+  await expect(pair).toBeVisible();
+  await pair.getByRole('button', { name: 'Fusionner (garder A)' }).click();
+
+  await expect(pair).not.toBeVisible();
+
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  await expect(page.getByText('4 personne(s)')).toBeVisible();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {

@@ -13,6 +13,7 @@ const graph = vi.hoisted(() => ({
 const search = vi.hoisted(() => ({
   query: vi.fn(),
   duplicates: vi.fn(),
+  merge: vi.fn(),
 }));
 const gedcom = vi.hoisted(() => ({
   preview: vi.fn(),
@@ -381,6 +382,46 @@ describe('App', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Voir la fiche B' })[0]);
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
+  });
+
+  it('fusionne un doublon via le client API et rafraîchit la liste réelle', async () => {
+    persons.list.mockResolvedValueOnce([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    search.duplicates.mockResolvedValue([
+      {
+        persons: [
+          { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+          { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
+        ],
+        score: 92,
+        requiresValidation: true,
+      },
+    ]);
+    search.merge.mockResolvedValue({ id: 1, given_names: 'Jean', family_name: 'Dupont' });
+    persons.list.mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
+    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fusionner (garder A)' }));
+
+    await waitFor(() => expect(search.merge).toHaveBeenCalledWith(1, 2));
+    await waitFor(() =>
+      expect(screen.getByText('Aucun doublon potentiel détecté.')).toBeInTheDocument(),
+    );
   });
 
   it('gère les familles (unions) d’une personne via le client API', async () => {

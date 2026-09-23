@@ -148,6 +148,42 @@ test('SEARCH_QUERY expose la recherche locale au renderer', async () => {
   assert.equal(response.data[0].entity_type, 'SOURCE');
 });
 
+test('SEARCH_MERGE réattribue les données réelles du doublon puis le supprime en douceur', async () => {
+  const handlers = createHandlers();
+
+  const survivor = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  const duplicate = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  const child = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Byron', familyName: 'Lovelace' },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: child.data.id, parentId: duplicate.data.id, parentRole: 'MOTHER' },
+  });
+
+  const merged = await handlers[IPC_CHANNELS.SEARCH_MERGE]({
+    survivorId: survivor.data.id,
+    duplicateId: duplicate.data.id,
+  });
+  assert.equal(merged.ok, true);
+  assert.equal(merged.data.id, survivor.data.id);
+
+  const parentsOfChild = await handlers[IPC_CHANNELS.PARENTAGES_LIST_PARENTS_OF]({
+    personId: child.data.id,
+  });
+  assert.deepEqual(
+    parentsOfChild.data.map((p) => p.parent_id),
+    [survivor.data.id],
+  );
+
+  const removed = await handlers[IPC_CHANNELS.PERSONS_GET]({ id: duplicate.data.id });
+  assert.equal(removed.ok, false);
+  assert.equal(removed.error.status, 404);
+});
+
 test('GEDCOM_PREVIEW puis GEDCOM_IMPORT/GEDCOM_EXPORT exposent le pipeline GEDCOM au renderer', async () => {
   const handlers = createHandlers();
   const gedcom = [

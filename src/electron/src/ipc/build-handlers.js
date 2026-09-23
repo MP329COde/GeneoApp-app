@@ -65,6 +65,7 @@ export function buildIpcHandlers(services) {
     localAi,
     notes,
     media,
+    merge,
   } = services;
 
   return {
@@ -161,6 +162,9 @@ export function buildIpcHandlers(services) {
     ),
     [IPC_CHANNELS.SEARCH_DUPLICATES]: wrap(({ limit } = {}) =>
       search.potentialDuplicates({ limit }),
+    ),
+    [IPC_CHANNELS.SEARCH_MERGE]: wrap(({ survivorId, duplicateId, performedBy }) =>
+      merge.mergePersons(survivorId, duplicateId, { performedBy: actorOf(performedBy) }),
     ),
 
     [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),

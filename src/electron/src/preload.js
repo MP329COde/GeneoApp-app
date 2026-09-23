@@ -84,6 +84,8 @@ const api = {
   search: {
     query: (q, entityTypes) => invoke(IPC_CHANNELS.SEARCH_QUERY, { q, entityTypes }),
     duplicates: (limit) => invoke(IPC_CHANNELS.SEARCH_DUPLICATES, { limit }),
+    merge: (survivorId, duplicateId, performedBy) =>
+      invoke(IPC_CHANNELS.SEARCH_MERGE, { survivorId, duplicateId, performedBy }),
   },
 
   gedcom: {

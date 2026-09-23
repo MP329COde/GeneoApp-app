@@ -1,5 +1,5 @@
 export function createSearchController(services) {
-  const { search } = services;
+  const { search, merge } = services;
 
   return {
     search(request, response) {
@@ -13,6 +13,14 @@ export function createSearchController(services) {
 
     duplicates(request, response) {
       response.json(search.potentialDuplicates({ limit: Number(request.query.limit) || 100 }));
+    },
+
+    mergePersons(request, response) {
+      const { survivorId, duplicateId } = request.body ?? {};
+      const merged = merge.mergePersons(Number(survivorId), Number(duplicateId), {
+        performedBy: request.performedBy,
+      });
+      response.json(merged);
     },
   };
 }

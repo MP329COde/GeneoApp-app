@@ -103,7 +103,7 @@ function SearchPanel() {
   );
 }
 
-function DuplicatesPanel({ onSelect }) {
+function DuplicatesPanel({ onSelect, onMerged }) {
   const [pairs, setPairs] = useState(null);
   const [duplicatesError, setDuplicatesError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -115,6 +115,22 @@ function DuplicatesPanel({ onSelect }) {
       setPairs(await client.search.duplicates());
     } catch (scanError) {
       setDuplicatesError(scanError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleMerge = async (survivorId, duplicateId) => {
+    setBusy(true);
+    setDuplicatesError(null);
+    try {
+      await client.search.merge(survivorId, duplicateId);
+      setPairs((current) =>
+        (current ?? []).filter((pair) => !pair.persons.some((person) => person.id === duplicateId)),
+      );
+      await onMerged?.();
+    } catch (mergeError) {
+      setDuplicatesError(mergeError.message);
     } finally {
       setBusy(false);
     }
@@ -157,6 +173,22 @@ function DuplicatesPanel({ onSelect }) {
                   onClick={() => onSelect(right.id)}
                 >
                   Voir la fiche B
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleMerge(left.id, right.id)}
+                  disabled={busy}
+                >
+                  Fusionner (garder A)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleMerge(right.id, left.id)}
+                  disabled={busy}
+                >
+                  Fusionner (garder B)
                 </Button>
               </li>
             );
@@ -1945,6 +1977,10 @@ function App() {
                 onSelect={(id) => {
                   setSelectedId(id);
                   setView('tree');
+                }}
+                onMerged={async () => {
+                  await loadPersons();
+                  await loadRelations();
                 }}
               />
             ) : view === 'families' ? (
