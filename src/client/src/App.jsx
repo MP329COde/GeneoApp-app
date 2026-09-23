@@ -1,5 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, LanguageSwitcher, useI18n } from './design-system/index.js';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Badge, Button, useI18n } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import {
   formatGenealogyDate,
@@ -16,6 +24,7 @@ import { AdvancedSearch } from './views/AdvancedSearch.jsx';
 import { QualityCard } from './views/QualityCard.jsx';
 import { SiteSearch } from './views/SiteSearch.jsx';
 import { AnnotationsHub, AnnotationsPanel } from './views/AnnotationsPanel.jsx';
+import { QuickSearch } from './views/QuickSearch.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -99,7 +108,6 @@ const NAV_GROUPS = [
       { id: 'families', label: 'Familles', icon: 'family', shortcut: '⌘3' },
       { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
       { id: 'relations', label: 'Parenté', icon: 'family' },
-      { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
     ],
   },
   {
@@ -111,7 +119,6 @@ const NAV_GROUPS = [
       { id: 'events', label: 'Événements', icon: 'event' },
       { id: 'timeline', label: 'Chronologie', icon: 'timeline' },
       { id: 'map', label: 'Carte', icon: 'map' },
-      { id: 'notes', label: 'Notes', icon: 'note' },
       { id: 'annotations', label: 'Annotations', icon: 'notebook' },
     ],
   },
@@ -120,10 +127,10 @@ const NAV_GROUPS = [
     label: 'Vérifier',
     items: [
       { id: 'duplicates', label: 'Doublons', icon: 'duplicate' },
+      { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
       { id: 'consistency', label: 'Cohérence', icon: 'warning' },
       { id: 'notebook', label: 'Carnet', icon: 'notebook' },
       { id: 'statistics', label: 'Statistiques', icon: 'stats' },
-      { id: 'audit', label: 'Journal', icon: 'history' },
     ],
   },
   {
@@ -1245,82 +1252,6 @@ function ConsistencyPanel({ onNavigate, personLabelById }) {
   );
 }
 
-// Outil ponctuel de comparaison de deux personnes — s'appuie sur
-// `GenealogyGraphService#findCommonAncestors`, jusque-là testé côté API mais
-// jamais exposé à l'utilisateur.
-function CommonAncestorsTool({ selected, persons, onNavigate }) {
-  const [otherId, setOtherId] = useState('');
-  const [result, setResult] = useState(null);
-  const [toolError, setToolError] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const otherPersons = persons.filter((person) => person.id !== selected.id);
-
-  const handleCompare = async (event) => {
-    event.preventDefault();
-    if (!otherId) return;
-    setBusy(true);
-    setToolError(null);
-    try {
-      setResult(await client.graph.commonAncestors(selected.id, Number(otherId)));
-    } catch (compareError) {
-      setToolError(compareError.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="detail-section">
-      <h3>Ancêtres communs</h3>
-      <form className="create-person-form" onSubmit={handleCompare}>
-        <label>
-          <span>Comparer avec</span>
-          <select value={otherId} onChange={(event) => setOtherId(event.target.value)}>
-            <option value="">— choisir une personne —</option>
-            {otherPersons.map((person) => (
-              <option key={person.id} value={person.id}>
-                {personLabel(person)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" size="sm" disabled={busy || !otherId}>
-          Comparer
-        </Button>
-      </form>
-      {toolError ? (
-        <p role="alert" className="notice notice--error">
-          {toolError}
-        </p>
-      ) : null}
-      {result === null ? null : result.length === 0 ? (
-        <p className="notice">Aucun ancêtre commun trouvé.</p>
-      ) : (
-        <ul className="search-results">
-          {result.map((entry) => (
-            <li key={entry.person.id}>
-              {personLabel(entry.person)} (génération {entry.generationFromA} /{' '}
-              {entry.generationFromB})
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => onNavigate(entry.person.id)}
-              >
-                Voir la fiche
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// Documents (scans, PDF, photos) réellement attachés à une source précise —
-// distincts des médias attachés à une personne : `MediaService#listForSource`
-// existait côté moteur (testé côté API) mais n'était consommé par aucun écran.
 function SourceMediaTool({ sourceId }) {
   const [items, setItems] = useState(null);
   const [mediaError, setMediaError] = useState(null);
@@ -2921,6 +2852,8 @@ function AppContent() {
   const [historyMessage, setHistoryMessage] = useState('');
   const [dataVersion, setDataVersion] = useState(0);
   const [lifespans, setLifespans] = useState(() => new Map());
+  const [personFilter, setPersonFilter] = useState('');
+  const quickSearchRef = useRef(null);
 
   const handleLogin = async (name, pin) => {
     setLoginError(null);
@@ -3070,6 +3003,11 @@ function AppContent() {
     const shortcuts = NAV_GROUPS.flatMap((group) => group.items).filter((item) => item.shortcut);
     const handleKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        quickSearchRef.current?.focus();
+        return;
+      }
       const item = shortcuts[Number(event.key) - 1];
       if (!item) return;
       event.preventDefault();
@@ -3119,6 +3057,15 @@ function AppContent() {
   }
 
   const currentView = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === view);
+  // Filtre de la liste latérale (accents et casse ignorés).
+  const fold = (value) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  const visiblePersons = personFilter.trim()
+    ? persons.filter((person) => fold(personLabel(person)).includes(fold(personFilter.trim())))
+    : persons;
 
   return (
     <LifespanContext.Provider value={lifespans}>
@@ -3127,6 +3074,52 @@ function AppContent() {
           <div className="sidenav__brand">
             <img src={appIcon} alt="" width="32" height="32" />
             <h1 id="app-title">GeneoApp</h1>
+          </div>
+          <div className="sidenav__people sidenav__persons">
+            <h2 className="sidenav__label">
+              {t('shell.persons')} ·{' '}
+              <span>{t('shell.personCount', { count: persons.length })}</span>
+            </h2>
+            <CreatePersonForm onCreate={handleCreate} creating={creating} />
+            {persons.length > 5 ? (
+              <label className="person-filter">
+                <span className="gds-visually-hidden">Filtrer les personnes</span>
+                <input
+                  type="search"
+                  placeholder="Filtrer les personnes…"
+                  value={personFilter}
+                  onChange={(event) => setPersonFilter(event.target.value)}
+                />
+              </label>
+            ) : null}
+            <nav className="person-list" aria-label="Personnes">
+              {persons.length === 0 ? (
+                <p className="notice">
+                  Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour démarrer
+                  votre arbre.
+                </p>
+              ) : (
+                visiblePersons.map((person, index) => (
+                  <PersonCard
+                    key={person.id}
+                    person={person}
+                    selected={person.id === selectedId}
+                    onSelect={setSelectedId}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                      event.preventDefault();
+                      const delta = event.key === 'ArrowDown' ? 1 : -1;
+                      const nextIndex =
+                        (index + delta + visiblePersons.length) % visiblePersons.length;
+                      setSelectedId(visiblePersons[nextIndex].id);
+                      const buttons =
+                        event.currentTarget.parentElement.querySelectorAll('.person-card');
+                      buttons[nextIndex]?.focus();
+                    }}
+                  />
+                ))
+              )}
+            </nav>
           </div>
           <div className="sidenav__scroll">
             <div className="view-switcher" role="group" aria-label={t('nav.views', 'Vues')}>
@@ -3155,46 +3148,8 @@ function AppContent() {
                 </div>
               ))}
             </div>
-
-            <div className="sidenav__group sidenav__persons">
-              <h2 className="sidenav__label">
-                {t('shell.persons')} ·{' '}
-                <span>{t('shell.personCount', { count: persons.length })}</span>
-              </h2>
-              <CreatePersonForm onCreate={handleCreate} creating={creating} />
-              <nav className="person-list" aria-label="Personnes">
-                {persons.length === 0 ? (
-                  <p className="notice">
-                    Aucune personne enregistrée. Ajoutez la première personne ci-dessus pour
-                    démarrer votre arbre.
-                  </p>
-                ) : (
-                  persons.map((person, index) => (
-                    <PersonCard
-                      key={person.id}
-                      person={person}
-                      selected={person.id === selectedId}
-                      onSelect={setSelectedId}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-                        event.preventDefault();
-                        const delta = event.key === 'ArrowDown' ? 1 : -1;
-                        const nextIndex = (index + delta + persons.length) % persons.length;
-                        setSelectedId(persons[nextIndex].id);
-                        const buttons =
-                          event.currentTarget.parentElement.querySelectorAll('.person-card');
-                        buttons[nextIndex]?.focus();
-                      }}
-                    />
-                  ))
-                )}
-              </nav>
-            </div>
           </div>
           <div className="sidenav__footer">
-            <p>
-              <Icon name="chip" /> {t('shell.localAi')}
-            </p>
             <p>
               <Icon name="offline" /> {t('shell.offlineLocal')}
             </p>
@@ -3222,6 +3177,12 @@ function AppContent() {
               <span className="data-id">#{selected.id}</span>
             </p>
           ) : null}
+          <QuickSearch
+            ref={quickSearchRef}
+            persons={persons}
+            lifespans={lifespans}
+            onPick={setSelectedId}
+          />
           <div className="topbar__actions">
             <div className="history-controls" role="group" aria-label="Historique">
               <button
@@ -3264,7 +3225,6 @@ function AppContent() {
             </p>
             <Badge tone="success">{t('shell.offline')}</Badge>
             <ThemeToggle />
-            <LanguageSwitcher />
           </div>
         </header>
 
@@ -3384,10 +3344,38 @@ function AppContent() {
               ) : !selected ? (
                 <div className="empty-state">
                   <img src={appIcon} alt="" width="56" height="56" />
-                  <h2>Profil prêt, arbre vide</h2>
-                  <p className="notice">
-                    Sélectionnez ou créez une personne pour afficher son arbre.
-                  </p>
+                  {persons.length === 0 ? (
+                    <>
+                      <h2>Profil prêt, arbre vide</h2>
+                      <p>
+                        Commencez par une personne que vous connaissez bien, souvent vous-même ou un
+                        parent.
+                      </p>
+                      <div className="empty-state__actions">
+                        <Button
+                          onClick={() =>
+                            document.querySelector('.create-person-form input')?.focus()
+                          }
+                        >
+                          Ajouter la première personne
+                        </Button>
+                        <Button variant="secondary" onClick={() => setView('gedcom')}>
+                          Importer un fichier GEDCOM
+                        </Button>
+                        <Button variant="secondary" onClick={() => setView('backups')}>
+                          Restaurer une sauvegarde
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2>Choisissez une personne</h2>
+                      <p className="notice">
+                        Sélectionnez une personne dans la liste ou avec la recherche rapide (Ctrl+K)
+                        pour afficher son arbre.
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : !relations ? (
                 <p role="status" className="loading-line">
@@ -3476,6 +3464,48 @@ function AppContent() {
                     </p>
                   </div>
                 </div>
+                <div className="inspector-actions">
+                  <Button size="sm" onClick={() => setView('person')}>
+                    Ouvrir la fiche
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setView('relations')}>
+                    Calculer une parenté
+                  </Button>
+                </div>
+                {relations ? (
+                  <div className="detail-section">
+                    <h3>Relations</h3>
+                    <dl className="inspector-relations">
+                      {[
+                        ['Parents', relations.parents],
+                        ['Conjoints', relations.spouses],
+                        ['Enfants', relations.children],
+                        ['Fratrie', relations.siblings],
+                      ].map(([label, list]) => (
+                        <div key={label}>
+                          <dt>{label}</dt>
+                          <dd>
+                            {list.length}
+                            {list.length > 0 ? (
+                              <span className="inspector-relations__names">
+                                {list.map((relative) => (
+                                  <button
+                                    key={relative.id}
+                                    type="button"
+                                    className="link-button link-button--small"
+                                    onClick={() => setSelectedId(relative.id)}
+                                  >
+                                    {personLabel(relative)}
+                                  </button>
+                                ))}
+                              </span>
+                            ) : null}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null}
                 <QualityCard
                   client={client}
                   personId={selected.id}
@@ -3483,37 +3513,10 @@ function AppContent() {
                   onOpenCoherence={() => setView('consistency')}
                   onOpenSources={() => setView('sources')}
                 />
-                <IdentityTool selected={selected} onUpdated={loadPersons} />
-                {relations ? (
-                  <div className="detail-section">
-                    <h3>Relations</h3>
-                    <dl>
-                      <div>
-                        <dt>Parents</dt>
-                        <dd>{relations.parents.length}</dd>
-                      </div>
-                      <div>
-                        <dt>Enfants</dt>
-                        <dd>{relations.children.length}</dd>
-                      </div>
-                      <div>
-                        <dt>Fratrie</dt>
-                        <dd>{relations.siblings.length}</dd>
-                      </div>
-                      <div>
-                        <dt>Conjoints</dt>
-                        <dd>{relations.spouses.length}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                ) : null}
-                {persons.length > 1 ? (
-                  <CommonAncestorsTool
-                    selected={selected}
-                    persons={persons}
-                    onNavigate={setSelectedId}
-                  />
-                ) : null}
+                <details className="inspector-edit">
+                  <summary>Modifier l’identité</summary>
+                  <IdentityTool selected={selected} onUpdated={loadPersons} />
+                </details>
               </>
             ) : (
               <p className="notice">Aucune personne sélectionnée.</p>

@@ -210,6 +210,10 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+  // L'identité se modifie depuis l'inspecteur, section repliable.
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
 
   await page.getByLabel('Surnom / alias').fill('Le petit Byron');
   await page.getByLabel('Titre honorifique').fill('Lord');
@@ -220,6 +224,10 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   // quelles depuis l'API, pas depuis un état local optimiste.
   await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
   await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+  // L'identité se modifie depuis l'inspecteur, section repliable.
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
   await expect(page.getByLabel('Surnom / alias')).toHaveValue('Le petit Byron');
   await expect(page.getByLabel('Titre honorifique')).toHaveValue('Lord');
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
@@ -245,10 +253,11 @@ test('calcule les ancêtres communs réels (ou leur absence) entre deux personne
   await page.goto('/');
   await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
 
-  await page.getByLabel('Comparer avec').selectOption({ label: 'Charles Babbage' });
-  await page.getByRole('button', { name: 'Comparer' }).click();
+  await page.getByRole('button', { name: 'Parenté', exact: true }).click();
+  await page.getByLabel('Seconde personne').selectOption({ label: 'Charles Babbage' });
+  await page.getByRole('button', { name: 'Calculer la parenté' }).click();
 
-  await expect(page.getByText('Aucun ancêtre commun trouvé.')).toBeVisible();
+  await expect(page.getByText('Aucun ancêtre commun enregistré.')).toBeVisible();
 });
 
 test('attache un document réel à une source citée et le liste', async ({ page }) => {

@@ -2335,3 +2335,124 @@ input[type='radio'] {
   display: grid;
   gap: var(--space-1);
 }
+
+/* ---------- Menu latéral : personnes toujours visibles ---------- */
+.sidenav__people {
+  flex: 0 1 auto;
+  max-height: 44vh;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: var(--border-hairline) solid var(--border);
+}
+.sidenav__people .create-person-form {
+  grid-template-columns: 1fr 1fr;
+  margin: var(--space-2);
+}
+.sidenav__people .create-person-form .gds-button {
+  grid-column: 1 / -1;
+}
+.person-filter input {
+  width: calc(100% - var(--space-4));
+  min-height: var(--control-md);
+  margin: 0 var(--space-2) var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.sidenav__scroll .sidenav__group:first-child {
+  margin-top: var(--space-2);
+}
+.sidenav__people.sidenav__persons {
+  padding-top: var(--space-2);
+  border-top: 0;
+}
+
+/* ---------- Inspecteur allégé ---------- */
+.inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.inspector-relations div {
+  align-items: baseline;
+}
+.inspector-relations dd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
+  text-align: right;
+}
+.inspector-relations__names {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
+  flex-basis: 100%;
+}
+.inspector-edit {
+  padding: var(--space-3) 0;
+  border-top: var(--border-hairline) solid var(--border-subtle);
+}
+.inspector-edit summary {
+  cursor: pointer;
+  font: var(--type-heading);
+}
+
+/* ---------- Recherche rapide ---------- */
+.quick-search {
+  position: relative;
+  flex: 0 1 340px;
+  min-width: 200px;
+}
+.quick-search input {
+  width: 100%;
+  min-height: var(--control-md);
+  padding: 0 var(--space-8) 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.quick-search__kbd {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 var(--space-1);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.quick-search__results {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-2);
+}
+.quick-search__results li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.quick-search__results li.is-active,
+.quick-search__results li:hover {
+  background: var(--surface-selected);
+}
+.empty-state__actions {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+}

@@ -781,7 +781,10 @@ export function TreeExplorer({
         </div>
       </div>
       {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
-      {layout && layout.boxes.length > 0 ? (
+      {/* Minicarte seulement quand l'arbre dépasse la zone visible. */}
+      {layout &&
+      layout.boxes.length > 0 &&
+      (layout.width * zoom > layout.viewWidth || layout.height * zoom > layout.viewHeight) ? (
         <div className="minimap" aria-hidden="true">
           <p className="minimap__title">Minicarte</p>
           <div

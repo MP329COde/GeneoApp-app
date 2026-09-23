@@ -815,7 +815,8 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
     await waitFor(() => expect(notes.listForEntity).toHaveBeenCalledWith('PERSON', 1));
     await waitFor(() => expect(screen.getByText(/Aucune note/)).toBeInTheDocument());
 
@@ -1158,8 +1159,19 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText('Comparer avec'), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Comparer' }));
+    graph.relationship.mockResolvedValue({
+      relationship: 'CONNECTED',
+      distance: 5,
+      branch: null,
+      label: 'cousin',
+      path: [
+        { personId: 1, via: 'SELF' },
+        { personId: 2, via: 'PARENT' },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Parenté' }));
+    fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Calculer la parenté' }));
 
     await waitFor(() => expect(graph.commonAncestors).toHaveBeenCalledWith(1, 2));
     await waitFor(() => expect(screen.getByText(/Aïeul Commun/)).toBeInTheDocument());
@@ -1181,7 +1193,8 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Journal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Historique' }));
 
     await waitFor(() => expect(audit.listForEntity).toHaveBeenCalledWith('persons', 1));
     await waitFor(() => expect(screen.getByText('INSERT')).toBeInTheDocument());
@@ -1938,15 +1951,17 @@ describe('App', () => {
 
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
     fireEvent.change(screen.getByLabelText('Langue'), { target: { value: 'en' } });
 
     expect(await screen.findByText('1 person')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Tree' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ancestors' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }));
+    expect(await screen.findByRole('button', { name: 'Ancestors' })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en');
     expect(localStorage.getItem('geneoapp.locale')).toBe('en');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
     expect(await screen.findByText('1 personne(s)')).toBeInTheDocument();
     localStorage.clear();
@@ -1978,7 +1993,8 @@ describe('App', () => {
 
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
     expect(await screen.findByText('à Nantes', { selector: 'strong' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
@@ -2004,5 +2020,32 @@ describe('App', () => {
         contradictionsOnly: false,
       }),
     );
+  });
+  it('ouvre une personne avec la recherche rapide Ctrl+K au clavier', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Élise', family_name: 'Caron' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    const box = screen.getByRole('combobox', { name: /Rechercher une personne/ });
+    expect(box).toHaveFocus();
+    fireEvent.change(box, { target: { value: 'elise' } });
+    expect(screen.getByRole('option', { name: /Élise Caron/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    fireEvent.keyDown(box, { key: 'Enter' });
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
+    expect(box).toHaveValue('');
   });
 });
