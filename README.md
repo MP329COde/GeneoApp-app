@@ -134,6 +134,30 @@ Points d'attention de la configuration :
 - **Aucune synchronisation cloud** : toutes ces opérations sont strictement locales (fichiers sur disque,
   sessions en mémoire), conformément à l'ADR 0006.
 
+### Carnet de recherche, statistiques et rapports
+
+- **Carnet de recherche** (`/api/notebook`) : bloc-notes local pour les recherches généalogiques, stocké
+  en SQLite. Le contenu est libre et local ; aucune donnée n'est envoyée vers un service tiers.
+- **Statistiques** (`/api/statistics`) : calcul local de totaux de base pour les tables principales
+  (`persons`, `places`, `events`, `unions`, `parentages`, `sources`, `media`).
+- **Rapports** (`/api/reports/summary`) : synthèse descriptive de l'état de la base locale, avec un
+  horodatage ISO ; aucun jugement de vérité métier n'est émis.
+- **Erreurs et limites** : les entrées invalides déclenchent des réponses `400`, les ressources absentes
+  `404`, et les conflits/contraintes `409`. Les données sont traitées localement et sans inférence externe.
+
+### Adaptateur IA locale optionnel (désactivable, local, cloisonné)
+
+- **Par défaut** : l'IA locale reste désactivée tant que `GENEOAPP_LOCAL_AI=true` n'est pas défini.
+- **Localité** : l'adaptateur ne cible qu'un endpoint local compatible Ollama (par défaut
+  `http://127.0.0.1:11434`) et ne tente jamais d'appeler un service distant.
+- **Cloisonnement** : il n'envoie qu'un `prompt` libre sans contexte métier complet ni vérité de base.
+  L'adaptateur ne délègue jamais la validation généalogique ni la conclusion sur des faits.
+- **Réponses d'erreur** : si l'IA est désactivée, indisponible ou en échec HTTP, l'API répond `503` avec un
+  message explicite (`L’IA locale est désactivée`, `Le serveur IA locale (...) est injoignable`, etc.).
+- **Limite de responsabilité** : l'IA ne constitue pas une source de vérité ; elle n'est qu'un assistant
+  local d'aide à la recherche, dont les conclusions doivent être confirmées par les documents, sources et
+  l'utilisateur.
+
 ## Site de présentation
 
 Le dossier `/site` contient une vitrine statique du projet (Vite + React), indépendante de
