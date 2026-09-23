@@ -93,7 +93,7 @@ function duplicateScore(left, right) {
   return Math.min(1, nameScore * 0.85 + birthNameScore * 0.15);
 }
 
-function normalize(value) {
+export function normalize(value) {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -103,7 +103,7 @@ function normalize(value) {
     .trim();
 }
 
-function phonetic(value) {
+export function phonetic(value) {
   return normalize(value)
     .replace(/[aeiouy]/g, '')
     .replace(/[bp]/g, 'p')
@@ -112,7 +112,7 @@ function phonetic(value) {
     .replace(/[sz]/g, 's');
 }
 
-function similarity(left, right) {
+export function similarity(left, right) {
   if (left === right) return 1;
   const distance = levenshtein(left, right);
   return 1 - distance / Math.max(left.length, right.length, 1);

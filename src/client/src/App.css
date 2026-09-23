@@ -2090,3 +2090,18 @@ input[type='radio'] {
   background: var(--surface-sunken);
   color: var(--text-secondary);
 }
+
+/* ---------- Recherche avancée ---------- */
+.advanced-search {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--border-hairline) solid var(--border);
+}
+.search-panel form.advanced-search__form {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.advanced-search__actions {
+  display: flex;
+  gap: var(--space-2);
+  grid-column: 1 / -1;
+}

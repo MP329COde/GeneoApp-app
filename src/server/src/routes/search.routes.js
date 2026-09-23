@@ -9,6 +9,9 @@ export function searchRoutes(services) {
   router.get('/merge/preview', controller.previewMerge);
   router.post('/merge', controller.mergePersons);
   router.get('/', controller.search);
+  router.post('/advanced', (request, response) =>
+    response.json(services.advancedSearch.search(request.body ?? {})),
+  );
 
   return router;
 }

@@ -1,4 +1,5 @@
 import { PhotoService } from './photo.service.js';
+import { AdvancedSearchService } from './advanced-search.service.js';
 import { UndoHistory } from '../../../db/src/history/undo-history.js';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -83,6 +84,7 @@ export function createServices(
     localAi: new LocalAiService(),
     merge: new MergeService(database),
     history: new UndoHistory(database),
+    advancedSearch: new AdvancedSearchService(database),
     photos: new PhotoService(new PhotoRepository(database), database),
   };
 }

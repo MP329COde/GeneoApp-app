@@ -12,6 +12,7 @@ import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { buildLifespans } from './genealogy/lifespans.js';
 import { PersonTimeline } from './views/PersonTimeline.jsx';
 import { ComparePanel } from './views/ComparePanel.jsx';
+import { AdvancedSearch } from './views/AdvancedSearch.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -179,7 +180,7 @@ function CreatePersonForm({ onCreate, creating }) {
   );
 }
 
-function SearchPanel() {
+function SearchPanel({ onNavigate }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState(null);
   const [searchError, setSearchError] = useState(null);
@@ -228,6 +229,7 @@ function SearchPanel() {
           ))}
         </ul>
       )}
+      <AdvancedSearch client={client} onNavigate={onNavigate} />
     </div>
   );
 }
@@ -3343,7 +3345,12 @@ function AppContent() {
           <section className="canvas-panel" aria-label="Vue de l'arbre">
             <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
               {view === 'search' ? (
-                <SearchPanel />
+                <SearchPanel
+                  onNavigate={(id) => {
+                    setSelectedId(id);
+                    setView('person');
+                  }}
+                />
               ) : view === 'gedcom' ? (
                 <GedcomPanel onImported={loadPersons} selected={selected} />
               ) : view === 'backups' || view === 'trash' || view === 'profile' ? (

@@ -138,6 +138,8 @@ const trees = vi.hoisted(() => ({
   restore: vi.fn(),
 }));
 
+const advancedSearch = vi.hoisted(() => vi.fn());
+
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
     persons,
@@ -161,6 +163,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     trees,
     history,
     storage,
+    advancedSearch,
   }),
 }));
 
@@ -1773,5 +1776,47 @@ describe('App', () => {
     expect(within(birthRow).getByText('Compatible')).toBeInTheDocument();
     const nameRow = screen.getByRole('rowheader', { name: 'Nom' }).closest('tr');
     expect(within(nameRow).getByText('Identique')).toBeInTheDocument();
+  });
+  it('filtre par nom approchant, lieu et période puis ouvre la fiche trouvée', async () => {
+    persons.list.mockResolvedValue([{ id: 5, given_names: 'Jeanne', family_name: 'Dupond' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 5 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    advancedSearch.mockResolvedValue({
+      total: 1,
+      results: [
+        {
+          person: { id: 5, given_names: 'Jeanne', family_name: 'Dupond' },
+          score: 0.83,
+          matchedEvents: [{ id: 1, type: 'BIRTH', dateText: '3 MAR 1850', place: 'Rouen' }],
+        },
+      ],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
+    const form = screen.getByRole('heading', { name: 'Filtres avancés' }).parentElement;
+    fireEvent.change(within(form).getByLabelText('Nom'), { target: { value: 'Dupont' } });
+    fireEvent.change(within(form).getByLabelText('Lieu'), { target: { value: 'Rouen' } });
+    fireEvent.change(within(form).getByLabelText('Année de début'), { target: { value: '1840' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Filtrer' }));
+
+    await waitFor(() =>
+      expect(advancedSearch).toHaveBeenCalledWith({
+        familyName: 'Dupont',
+        place: 'Rouen',
+        yearFrom: '1840',
+        fuzzy: true,
+      }),
+    );
+    expect(await within(form).findByText('proximité 83 %')).toBeInTheDocument();
+    expect(within(form).getByText('Naissance 3 mars 1850 · Rouen')).toBeInTheDocument();
+    fireEvent.click(within(form).getByRole('button', { name: 'Jeanne Dupond' }));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Identité' })).toBeInTheDocument());
   });
 });

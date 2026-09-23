@@ -196,6 +196,8 @@ function createHttpClient() {
     ai: {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
     },
+    advancedSearch: (filters) =>
+      fetchJson('/api/search/advanced', { method: 'POST', body: filters }),
     history: {
       status: (limit) => fetchJson(`/api/history${limit ? `?limit=${limit}` : ''}`),
       undo: () => fetchJson('/api/history/undo', { method: 'POST' }),
@@ -366,6 +368,7 @@ function createIpcClient(bridge) {
     ai: {
       analyze: (prompt) => bridge.ai.analyze(prompt),
     },
+    advancedSearch: (filters) => bridge.advancedSearch(filters),
     history: {
       status: (limit) => bridge.history.status(limit),
       undo: () => bridge.history.undo(),

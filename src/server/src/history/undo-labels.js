@@ -47,4 +47,5 @@ export const NON_UNDOABLE_PREFIXES = [
   '/ai',
   '/gedcom/export',
   '/gedcom/preview',
+  '/search/advanced',
 ];

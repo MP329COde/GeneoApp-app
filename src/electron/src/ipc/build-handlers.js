@@ -412,6 +412,9 @@ function buildRawHandlers(services, workspace, storage) {
       return { removed: true };
     }),
 
+    [IPC_CHANNELS.SEARCH_ADVANCED]: wrap(({ filters }) =>
+      services.advancedSearch.search(filters ?? {}),
+    ),
     [IPC_CHANNELS.HISTORY_STATUS]: wrap(({ limit }) => ({
       ...services.history.status(),
       actions: services.history.list(Math.min(Math.max(Number(limit) || 50, 1), 200)),
