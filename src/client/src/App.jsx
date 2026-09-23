@@ -2008,7 +2008,12 @@ function GedcomPanel({ onImported, selected }) {
         format: exportFormat,
         ...exportOptions(scope, selected?.id),
       });
-      downloadText(`geneoapp-export-${scope}-${exportFormat}.ged`, result.gedcom);
+      downloadText(
+        scope === 'all'
+          ? `geneoapp-export-${exportFormat}.ged`
+          : `geneoapp-export-${scope}-${exportFormat}.ged`,
+        result.gedcom,
+      );
       if (result.summary) setExportSummary(result.summary);
     } catch (exportError) {
       setGedcomError(exportError.message);
