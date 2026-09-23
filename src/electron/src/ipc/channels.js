@@ -85,5 +85,6 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_GET: 'geneoapp:media:get',
   MEDIA_DOWNLOAD: 'geneoapp:media:download',
   MEDIA_LIST_FOR_ENTITY: 'geneoapp:media:listForEntity',
+  MEDIA_LIST_FOR_SOURCE: 'geneoapp:media:listForSource',
   MEDIA_REMOVE: 'geneoapp:media:remove',
 });

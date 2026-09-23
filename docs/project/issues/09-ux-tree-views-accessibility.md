@@ -277,3 +277,16 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   distincte. Testé : 1 cas IPC (session requise, suppression réelle vérifiée via la liste des profils), 1 cas
   client (Vitest, déconnexion puis reconnexion puis suppression), 1 scénario E2E Playwright (parcours complet
   déconnexion → reconnexion → suppression → re-création via le repli 401 de premier lancement).
+- 2026-09-23 (suite) : exposition de `MediaService#listForSource` (même angle mort que les précédents —
+  testé côté API mais jamais consommé). Canal IPC `MEDIA_LIST_FOR_SOURCE` ajouté (les deux transports).
+  Nouvel outil intégré à l'écran Sources : pour chaque source citée, upload d'un document réel (scan,
+  photo, PDF) rattaché à cette source précise (distinct des médias rattachés à une personne), liste des
+  documents déjà attachés et téléchargement réel. Testé : 1 cas IPC, 1 cas client (Vitest), 1 scénario E2E
+  Playwright (upload réel d'un fichier via `setInputFiles`, fixture `test/fixtures/sample.png` ajoutée).
+  **Bug réel découvert en écrivant ce scénario E2E** (capture d'écran à l'appui) : avec 16 onglets de vue
+  désormais dans la barre `.view-switcher` (`display: flex` sans retour à la ligne), les derniers onglets
+  (Sources, Événements, Chronologie, Carte, Cohérence...) débordaient sous le panneau de détails à droite et
+  devenaient cliquables nulle part — un vrai défaut d'utilisabilité pour toute résolution d'écran, pas
+  seulement en E2E. Corrigé : `flex-wrap: wrap` sur `.canvas-toolbar`/`.view-switcher`/`.canvas-tools`,
+  `white-space: nowrap` sur les boutons pour un rendu propre. Suite E2E complète repassée (16/16) après
+  correction pour confirmer.

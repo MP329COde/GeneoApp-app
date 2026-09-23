@@ -60,6 +60,7 @@ const media = vi.hoisted(() => ({
   upload: vi.fn(),
   download: vi.fn(),
   listForEntity: vi.fn(),
+  listForSource: vi.fn().mockResolvedValue([]),
   remove: vi.fn(),
 }));
 const sources = vi.hoisted(() => ({
@@ -831,6 +832,40 @@ describe('App', () => {
       }),
     );
     await waitFor(() => expect(screen.getByText(/Registre paroissial 1815/)).toBeInTheDocument());
+  });
+
+  it('liste et permet de télécharger les documents réels attachés à une source citée', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    sources.listCitationsForEntity.mockResolvedValue([
+      { id: 1, source_id: 7, page: 'p.42', confidence: 'HIGH' },
+    ]);
+    sources.get.mockResolvedValue({ id: 7, title: 'Registre paroissial 1815' });
+    media.listForSource.mockResolvedValue([{ id: 9, original_filename: 'scan-registre.png' }]);
+    media.download.mockResolvedValue({ filename: 'scan-registre.png', blob: new Blob() });
+    const clickSpy = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:mock', revokeObjectURL: vi.fn() });
+    HTMLAnchorElement.prototype.click = clickSpy;
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+
+    await waitFor(() => expect(media.listForSource).toHaveBeenCalledWith(7));
+    await waitFor(() => expect(screen.getByText('scan-registre.png')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Télécharger' }));
+    await waitFor(() => expect(media.download).toHaveBeenCalledWith(9));
+    expect(clickSpy).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
   });
 
   it('ajoute un parent et un enfant réels à une personne, avec navigation', async () => {

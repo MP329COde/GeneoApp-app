@@ -1145,6 +1145,90 @@ function CommonAncestorsTool({ selected, persons, onNavigate }) {
   );
 }
 
+// Documents (scans, PDF, photos) réellement attachés à une source précise —
+// distincts des médias attachés à une personne : `MediaService#listForSource`
+// existait côté moteur (testé côté API) mais n'était consommé par aucun écran.
+function SourceMediaTool({ sourceId }) {
+  const [items, setItems] = useState(null);
+  const [mediaError, setMediaError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadMedia = useCallback(async () => {
+    try {
+      setItems(await client.media.listForSource(sourceId));
+    } catch (loadError) {
+      setMediaError(loadError.message);
+    }
+  }, [sourceId]);
+
+  useEffect(() => {
+    setItems(null);
+    loadMedia();
+  }, [loadMedia]);
+
+  const handleUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setMediaError(null);
+    try {
+      const contentBase64 = await readFileAsBase64(file);
+      await client.media.upload({ filename: file.name, contentBase64, sourceId });
+      await loadMedia();
+    } catch (uploadError) {
+      setMediaError(uploadError.message);
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDownload = async (id) => {
+    setMediaError(null);
+    try {
+      const { filename, blob } = await client.media.download(id);
+      downloadBlob(filename, blob);
+    } catch (downloadError) {
+      setMediaError(downloadError.message);
+    }
+  };
+
+  return (
+    <div className="source-media-tool">
+      {mediaError ? (
+        <p role="alert" className="notice notice--error">
+          {mediaError}
+        </p>
+      ) : null}
+      <label className="gedcom-panel__file">
+        <span>Ajouter un document à cette source</span>
+        <input type="file" onChange={handleUpload} disabled={busy} />
+      </label>
+      {items === null ? (
+        <p role="status">Chargement…</p>
+      ) : items.length === 0 ? (
+        <p className="notice">Aucun document attaché à cette source.</p>
+      ) : (
+        <ul className="search-results">
+          {items.map((item) => (
+            <li key={item.id}>
+              {item.original_filename}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleDownload(item.id)}
+              >
+                Télécharger
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -1257,6 +1341,7 @@ function SourcesPanel({ selected }) {
                 {sourcesById[citation.source_id]?.title ?? `Source #${citation.source_id}`}
               </strong>
               {citation.page ? ` — ${citation.page}` : ''}
+              <SourceMediaTool sourceId={citation.source_id} />
             </li>
           ))}
         </ul>

@@ -173,13 +173,16 @@ h3 {
 .canvas-toolbar {
   padding: 15px 20px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--line);
   font-family: var(--font-family-base);
 }
 .view-switcher,
 .canvas-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
 }
@@ -189,6 +192,7 @@ h3 {
   border: 0;
   background: transparent;
   color: var(--muted);
+  white-space: nowrap;
 }
 .view-switcher button.is-active {
   border-bottom: 2px solid var(--accent);

@@ -181,6 +181,7 @@ function createHttpClient() {
       },
       listForEntity: (entityType, entityId) =>
         fetchJson(`/api/media/by-entity/${entityType}/${entityId}`),
+      listForSource: (sourceId) => fetchJson(`/api/media/by-source/${sourceId}`),
       remove: (id) => fetchJson(`/api/media/${id}`, { method: 'DELETE' }),
     },
   };
@@ -292,6 +293,7 @@ function createIpcClient(bridge) {
         return { filename, blob: base64ToBlob(contentBase64, mimeType) };
       },
       listForEntity: (entityType, entityId) => bridge.media.listForEntity(entityType, entityId),
+      listForSource: (sourceId) => bridge.media.listForSource(sourceId),
       remove: (id) => bridge.media.remove(id),
     },
   };

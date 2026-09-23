@@ -6,6 +6,7 @@ const sampleGedcom = readFileSync(
   fileURLToPath(new URL('../fixtures/sample.ged', import.meta.url)),
   'utf8',
 );
+const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.meta.url));
 
 // Suite E2E navigateur : pilote l'application réelle (React + Vite + Express
 // + SQLite en mémoire), sans mock d'API — vérifie le parcours métier de
@@ -223,6 +224,18 @@ test('calcule les ancêtres communs réels (ou leur absence) entre deux personne
   await page.getByRole('button', { name: 'Comparer' }).click();
 
   await expect(page.getByText('Aucun ancêtre commun trouvé.')).toBeVisible();
+});
+
+test('attache un document réel à une source citée et le liste', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Sources' }).click();
+
+  await page.getByLabel('Titre de la source').fill('Registre paroissial de Sainte-Anne');
+  await page.getByRole('button', { name: 'Ajouter et citer la source' }).click();
+  await expect(page.getByText('Registre paroissial de Sainte-Anne')).toBeVisible();
+
+  await page.getByLabel('Ajouter un document à cette source').setInputFiles(samplePngPath);
+  await expect(page.getByText('sample.png')).toBeVisible();
 });
 
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({

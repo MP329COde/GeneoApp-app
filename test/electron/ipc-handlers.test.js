@@ -533,3 +533,26 @@ test('MEDIA_UPLOAD, MEDIA_LIST_FOR_ENTITY, MEDIA_DOWNLOAD et MEDIA_REMOVE gèren
   assert.equal(removed.ok, true);
   assert.equal(removed.data.removed, true);
 });
+
+test('MEDIA_LIST_FOR_SOURCE liste les documents réellement associés à une source', async () => {
+  const handlers = createHandlers();
+
+  const source = await handlers[IPC_CHANNELS.SOURCES_CREATE]({
+    data: { title: 'Registre paroissial de Sainte-Anne 1815' },
+  });
+
+  const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const uploaded = await handlers[IPC_CHANNELS.MEDIA_UPLOAD]({
+    data: {
+      filename: 'scan-registre.png',
+      contentBase64: pngBytes.toString('base64'),
+      sourceId: source.data.id,
+    },
+  });
+  assert.equal(uploaded.ok, true);
+
+  const listed = await handlers[IPC_CHANNELS.MEDIA_LIST_FOR_SOURCE]({ sourceId: source.data.id });
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.length, 1);
+  assert.equal(listed.data[0].original_filename, 'scan-registre.png');
+});

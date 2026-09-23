@@ -153,6 +153,7 @@ const api = {
     download: (id) => invoke(IPC_CHANNELS.MEDIA_DOWNLOAD, { id }),
     listForEntity: (entityType, entityId) =>
       invoke(IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY, { entityType, entityId }),
+    listForSource: (sourceId) => invoke(IPC_CHANNELS.MEDIA_LIST_FOR_SOURCE, { sourceId }),
     remove: (id, performedBy) => invoke(IPC_CHANNELS.MEDIA_REMOVE, { id, performedBy }),
   },
 };

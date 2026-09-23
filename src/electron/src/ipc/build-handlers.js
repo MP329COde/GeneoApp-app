@@ -268,6 +268,7 @@ export function buildIpcHandlers(services) {
     [IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY]: wrap(({ entityType, entityId }) =>
       media.listForEntity(entityType, entityId),
     ),
+    [IPC_CHANNELS.MEDIA_LIST_FOR_SOURCE]: wrap(({ sourceId }) => media.listForSource(sourceId)),
     [IPC_CHANNELS.MEDIA_REMOVE]: wrap(({ id, performedBy }) => {
       media.remove(id, { performedBy: actorOf(performedBy) });
       return { removed: true };
