@@ -9,3 +9,6 @@ storybook-static/
 *.sqlite-wal
 .DS_Store
 .playwright-cli/
+test-results/
+playwright-report/
+blob-report/

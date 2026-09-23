@@ -158,3 +158,13 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   vue listée au cahier des charges de cette issue sans écran fonctionnel, même minimal ; les vues avancées
   (carte, chronologie graphique, radiale/éventail, minimap/zoom/pan) restent des versions simplifiées de leur
   ambition initiale.
+- 2026-09-23 : mise en place d'une suite E2E navigateur réelle (Playwright, `playwright.config.js`,
+  `test/e2e/app.spec.js`) — pilote l'application sans mock (serveur Express + client Vite + SQLite en mémoire),
+  contrairement à `App.test.jsx` qui simule le client API. A immédiatement révélé un vrai bug fonctionnel :
+  après ajout d'un parent/enfant via l'onglet Familles, la vue Arbre ne se rafraîchissait pas (les relations
+  n'étaient rechargées que sur changement de `selectedId`). Corrigé : `loadRelations` extrait en callback
+  partagé, propagé aux mutations d'union et de parenté via une prop `onChange`. `vite.config.js` : cible du
+  proxy `/api` rendue configurable (`GENEOAPP_API_PORT`, défaut 3000 inchangé) pour isoler le port du serveur
+  de test. `npm run test:e2e` ajouté, exécuté en CI dans un job dédié (`ci.yml`) avec upload du rapport HTML en
+  cas d'échec. 5 scénarios couverts : état vide honnête, création de personne, liaison parent/enfant reflétée
+  dans l'arbre, statistiques réelles, persistance du carnet de recherche après rechargement de page.

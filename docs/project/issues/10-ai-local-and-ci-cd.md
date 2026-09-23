@@ -102,3 +102,7 @@ Un projet mature, testable, documenté, publieable et prêt à évoluer sans per
     l'utilisateur sur sa machine) ; LM Studio (mentionné au périmètre) n'est pas testé, seul le protocole
     Ollama `/api/generate` l'est. Les workflows CI/CD (`ci.yml`, `release.yml`, `pages.yml`) existaient déjà
     et n'ont pas été modifiés dans cette passe — à auditer séparément.
+- 2026-09-23 : ajout d'un job CI dédié `e2e` (`ci.yml`) exécutant `npm run test:e2e` (suite Playwright, voir
+  issue 09 suivi post-livraison) avec installation de Chromium et upload du rapport HTML en cas d'échec — la
+  CI valide désormais aussi le parcours utilisateur réel dans un navigateur, pas seulement les tests unitaires
+  et d'intégration HTTP.

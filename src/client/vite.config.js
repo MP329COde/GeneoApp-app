@@ -13,7 +13,7 @@ export default defineConfig({
     // pas. Ce proxy permet au client d'appeler l'API locale via de simples
     // requêtes relatives /api/..., comme en production via Electron/IPC.
     proxy: {
-      '/api': 'http://127.0.0.1:3000',
+      '/api': `http://127.0.0.1:${process.env.GENEOAPP_API_PORT ?? 3000}`,
     },
   },
 });

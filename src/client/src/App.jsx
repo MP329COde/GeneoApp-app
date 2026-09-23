@@ -171,7 +171,7 @@ const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
 
 const PARENT_ROLES = ['FATHER', 'MOTHER', 'PARENT'];
 
-function ParentageSection({ persons, selected, onNavigate }) {
+function ParentageSection({ persons, selected, onNavigate, onChange }) {
   const [parents, setParents] = useState(null);
   const [children, setChildren] = useState(null);
   const [parentId, setParentId] = useState('');
@@ -222,6 +222,7 @@ function ParentageSection({ persons, selected, onNavigate }) {
       });
       setParentId('');
       await loadParentage();
+      await onChange?.();
     } catch (createError) {
       setParentageError(createError.message);
     } finally {
@@ -242,6 +243,7 @@ function ParentageSection({ persons, selected, onNavigate }) {
       });
       setChildId('');
       await loadParentage();
+      await onChange?.();
     } catch (createError) {
       setParentageError(createError.message);
     } finally {
@@ -255,6 +257,7 @@ function ParentageSection({ persons, selected, onNavigate }) {
     try {
       await client.parentages.remove(id);
       await loadParentage();
+      await onChange?.();
     } catch (removeError) {
       setParentageError(removeError.message);
     } finally {
@@ -375,7 +378,7 @@ function ParentageSection({ persons, selected, onNavigate }) {
   );
 }
 
-function FamiliesPanel({ persons, selected, onNavigate }) {
+function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   const [unions, setUnions] = useState(null);
   const [type, setType] = useState('MARRIAGE');
   const [partnerId, setPartnerId] = useState('');
@@ -417,6 +420,7 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
       });
       setPartnerId('');
       await loadUnions();
+      await onChange?.();
     } catch (createError) {
       setFamiliesError(createError.message);
     } finally {
@@ -430,6 +434,7 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
     try {
       await client.unions.remove(unionId);
       await loadUnions();
+      await onChange?.();
     } catch (removeError) {
       setFamiliesError(removeError.message);
     } finally {
@@ -514,7 +519,12 @@ function FamiliesPanel({ persons, selected, onNavigate }) {
         </ul>
       )}
 
-      <ParentageSection persons={persons} selected={selected} onNavigate={onNavigate} />
+      <ParentageSection
+        persons={persons}
+        selected={selected}
+        onNavigate={onNavigate}
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -1721,24 +1731,22 @@ function App() {
     loadPersons();
   }, [loadPersons]);
 
-  useEffect(() => {
+  const loadRelations = useCallback(async () => {
     if (selectedId === null) {
       setRelations(null);
       return;
     }
-    let cancelled = false;
-    client.graph
-      .relations(selectedId)
-      .then((data) => {
-        if (!cancelled) setRelations(data);
-      })
-      .catch((relationsError) => {
-        if (!cancelled) setError(relationsError.message);
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      setRelations(await client.graph.relations(selectedId));
+    } catch (relationsError) {
+      setError(relationsError.message);
+    }
   }, [selectedId]);
+
+  useEffect(() => {
+    setRelations(null);
+    loadRelations();
+  }, [loadRelations]);
 
   const handleCreate = async (data) => {
     setCreating(true);
@@ -1940,7 +1948,12 @@ function App() {
                 }}
               />
             ) : view === 'families' ? (
-              <FamiliesPanel persons={persons} selected={selected} onNavigate={setSelectedId} />
+              <FamiliesPanel
+                persons={persons}
+                selected={selected}
+                onNavigate={setSelectedId}
+                onChange={loadRelations}
+              />
             ) : view === 'notes' ? (
               <NotesPanel selected={selected} />
             ) : view === 'audit' ? (

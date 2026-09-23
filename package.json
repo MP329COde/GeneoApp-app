@@ -30,12 +30,14 @@
     "test:electron": "node --test test/electron/*.test.js",
     "test:packaging": "node --test test/packaging/*.test.js",
     "test:client": "npm run test --workspace @geneoapp/client",
+    "test:e2e": "playwright test",
     "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:client",
     "storybook": "npm run storybook --workspace @geneoapp/client",
     "build-storybook": "npm run build-storybook --workspace @geneoapp/client"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
+    "@playwright/test": "^1.63.0",
     "concurrently": "^9.2.1",
     "electron": "^38.1.0",
     "electron-builder": "^26.15.3",
