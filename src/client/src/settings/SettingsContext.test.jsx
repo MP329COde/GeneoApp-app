@@ -28,3 +28,24 @@ describe('sanitizeSettings', () => {
     });
   });
 });
+
+describe('sanitizeSettings — personnalisation', () => {
+  it('garde l’arbre et les réglages toujours visibles et valide largeurs et listes', () => {
+    const result = sanitizeSettings({
+      hiddenViews: ['tree', 'settings', 'map', '../x', 42],
+      homeView: 'map',
+      inspectorWidth: 9999,
+      sidebarWidth: 250,
+      accent: 'violet',
+      personTabs: ['events', 'inconnu'],
+      inspectorSections: ['quality', 'piratage'],
+    });
+    expect(result.hiddenViews).toEqual(['map']);
+    expect(result.homeView).toBe('tree');
+    expect(result.inspectorWidth).toBe(DEFAULT_SETTINGS.inspectorWidth);
+    expect(result.sidebarWidth).toBe(250);
+    expect(result.accent).toBe('blue');
+    expect(result.personTabs).toEqual(['identity', 'events']);
+    expect(result.inspectorSections).toEqual(['quality']);
+  });
+});

@@ -13,14 +13,42 @@ export const DEFAULT_SETTINGS = {
   treeDepth: 4,
   showSosa: true,
   showShortcuts: true,
+  // Personnalisation de l'interface.
+  accent: 'blue',
+  homeView: 'tree',
+  hiddenViews: [],
+  navOrder: [],
+  showInspector: true,
+  inspectorWidth: 360,
+  sidebarWidth: 232,
+  inspectorSections: ['actions', 'relations', 'quality', 'identity'],
+  personTabs: ['identity', 'events', 'sources', 'media', 'notes', 'timeline', 'history'],
 };
+
+export const ACCENTS = ['blue', 'teal', 'green', 'slate', 'ink'];
+export const INSPECTOR_SECTIONS = ['actions', 'relations', 'quality', 'identity'];
+export const PERSON_TAB_IDS = [
+  'identity',
+  'events',
+  'sources',
+  'media',
+  'notes',
+  'timeline',
+  'history',
+];
+const VIEW_ID = /^[a-z]{2,20}$/;
+// Vues toujours accessibles (on ne peut pas se priver de l'arbre ni des réglages).
+export const ALWAYS_VISIBLE_VIEWS = ['tree', 'settings'];
+
+const ACCENTS_OPTIONS = ['blue', 'teal', 'green', 'slate', 'ink'];
 
 const OPTIONS = {
   theme: ['system', 'light', 'dark'],
   textSize: ['standard', 'large', 'xlarge'],
   density: ['standard', 'compact', 'comfortable'],
   reduceMotion: ['system', 'reduce', 'allow'],
-  treeMode: ['family', 'ancestors', 'descendants', 'fan'],
+  treeMode: ['family', 'ancestors', 'descendants', 'fan', 'graph'],
+  accent: ACCENTS_OPTIONS,
 };
 
 // Valide chaque valeur lue : une préférence corrompue retombe sur la valeur
@@ -33,9 +61,38 @@ export function sanitizeSettings(raw) {
   }
   const depth = Number(raw.treeDepth);
   if (Number.isInteger(depth) && depth >= 1 && depth <= 30) result.treeDepth = depth;
-  for (const key of ['showSosa', 'showShortcuts']) {
+  for (const key of ['showSosa', 'showShortcuts', 'showInspector']) {
     if (typeof raw[key] === 'boolean') result[key] = raw[key];
   }
+  const width = (value, min, max) => {
+    const number = Number(value);
+    return Number.isInteger(number) && number >= min && number <= max ? number : null;
+  };
+  result.inspectorWidth = width(raw.inspectorWidth, 280, 520) ?? DEFAULT_SETTINGS.inspectorWidth;
+  result.sidebarWidth = width(raw.sidebarWidth, 200, 360) ?? DEFAULT_SETTINGS.sidebarWidth;
+  const ids = (value) =>
+    Array.isArray(value)
+      ? [...new Set(value.filter((id) => typeof id === 'string' && VIEW_ID.test(id)))]
+      : null;
+  if (typeof raw.homeView === 'string' && VIEW_ID.test(raw.homeView))
+    result.homeView = raw.homeView;
+  result.hiddenViews = (ids(raw.hiddenViews) ?? []).filter(
+    (id) => !ALWAYS_VISIBLE_VIEWS.includes(id),
+  );
+  if (result.hiddenViews.includes(result.homeView)) result.homeView = 'tree';
+  result.navOrder = ids(raw.navOrder) ?? [];
+  const subset = (value, allowed, fallback) => {
+    const list = ids(value);
+    return list ? list.filter((id) => allowed.includes(id)) : fallback;
+  };
+  result.inspectorSections = subset(
+    raw.inspectorSections,
+    INSPECTOR_SECTIONS,
+    DEFAULT_SETTINGS.inspectorSections,
+  );
+  const tabs = subset(raw.personTabs, PERSON_TAB_IDS, DEFAULT_SETTINGS.personTabs);
+  // L'onglet Identité reste toujours disponible.
+  result.personTabs = tabs.includes('identity') ? tabs : ['identity', ...tabs];
   return result;
 }
 
@@ -66,6 +123,9 @@ export function SettingsProvider({ children }) {
     apply('textSize', settings.textSize, 'standard');
     apply('density', settings.density, 'standard');
     apply('motion', settings.reduceMotion, 'system');
+    apply('accent', settings.accent, 'blue');
+    root.style.setProperty('--panel-inspector', `${settings.inspectorWidth}px`);
+    root.style.setProperty('--sidenav', `${settings.sidebarWidth}px`);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     } catch {

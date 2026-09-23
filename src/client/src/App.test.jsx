@@ -2056,4 +2056,40 @@ describe('App', () => {
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
     expect(box).toHaveValue('');
   });
+  it('personnalise le menu, l’accent, les panneaux et la fiche', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
+
+    const documentGroup = screen.getByRole('group', { name: 'Documenter' });
+    fireEvent.click(within(documentGroup).getByRole('checkbox', { name: 'Carte' }));
+    expect(screen.queryByRole('button', { name: 'Carte' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /^Arbre\s*\(toujours/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Monter Familles' }));
+    const explorer = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(explorer.indexOf('Familles⌘3')).toBeLessThan(explorer.indexOf('Personne⌘2'));
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Sarcelle' }));
+    expect(document.documentElement.dataset.accent).toBe('teal');
+
+    const tabsGroup = screen.getByRole('group', { name: 'Onglets de la fiche' });
+    fireEvent.click(within(tabsGroup).getByRole('checkbox', { name: 'Chronologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Masquer le panneau de la personne' }));
+    expect(screen.queryByText('Personne sélectionnée')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
+    expect(screen.queryByRole('tab', { name: 'Chronologie' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Identité' })).toBeInTheDocument();
+    localStorage.clear();
+  });
 });

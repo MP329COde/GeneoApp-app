@@ -68,6 +68,7 @@ const ICON_PATHS = {
   undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3',
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+  panel: 'M3 4h18v16H3zM15 4v16',
   print: 'M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6z',
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
@@ -2730,14 +2731,16 @@ const PERSON_TABS = [
 // Fiche personne complète : un en-tête d'identité puis des onglets réutilisant
 // les outils déjà branchés sur l'API locale.
 function PersonSheet({ selected, relations, onUpdated, persons = [] }) {
+  const { settings } = useSettings();
+  const visibleTabs = PERSON_TABS.filter((item) => settings.personTabs.includes(item.id));
   const [tab, setTab] = useState('identity');
 
   const handleTabKeyDown = (event) => {
-    const index = PERSON_TABS.findIndex((item) => item.id === tab);
+    const index = visibleTabs.findIndex((item) => item.id === tab);
     const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     if (!delta) return;
     event.preventDefault();
-    const next = PERSON_TABS[(index + delta + PERSON_TABS.length) % PERSON_TABS.length];
+    const next = visibleTabs[(index + delta + visibleTabs.length) % visibleTabs.length];
     setTab(next.id);
     event.currentTarget.parentElement.querySelector(`#person-tab-${next.id}`)?.focus();
   };
@@ -2771,7 +2774,7 @@ function PersonSheet({ selected, relations, onUpdated, persons = [] }) {
         </button>
       </header>
       <div className="tabs" role="tablist" aria-label="Sections de la fiche">
-        {PERSON_TABS.map((item) => (
+        {visibleTabs.map((item) => (
           <button
             key={item.id}
             id={`person-tab-${item.id}`}
@@ -2855,13 +2858,55 @@ function ThemeToggle() {
   );
 }
 
+// Poignée de redimensionnement de l'inspecteur (souris, pavé tactile, clavier).
+function InspectorResizer() {
+  const { settings, update } = useSettings();
+  const clamp = (width) => Math.min(520, Math.max(280, Math.round(width)));
+  // Motif ARIA « window splitter » : séparateur focusable réglé au clavier.
+  return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <div
+      className="inspector-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Largeur du panneau de la personne"
+      aria-valuemin={280}
+      aria-valuemax={520}
+      aria-valuenow={settings.inspectorWidth}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 40 : 10;
+        if (event.key === 'ArrowLeft')
+          update({ inspectorWidth: clamp(settings.inspectorWidth + step) });
+        if (event.key === 'ArrowRight')
+          update({ inspectorWidth: clamp(settings.inspectorWidth - step) });
+      }}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        const startX = event.clientX;
+        const startWidth = settings.inspectorWidth;
+        const move = (moveEvent) =>
+          update({ inspectorWidth: clamp(startWidth + startX - moveEvent.clientX) });
+        const stop = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', stop);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop);
+      }}
+    />
+  );
+}
+
 function AppContent() {
-  const { settings } = useSettings();
+  const { settings, update: updateSettings } = useSettings();
   const { t } = useI18n();
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
-  const [view, setView] = useState('tree');
+  const { settings: initialSettings } = useSettings();
+  const [view, setView] = useState(() => initialSettings.homeView ?? 'tree');
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [session, setSession] = useState(null);
@@ -3080,6 +3125,19 @@ function AppContent() {
   }
 
   const currentView = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === view);
+  // Menu personnalisé : entrées masquées (sauf la vue ouverte) et ordre choisi.
+  const orderOf = (id, fallback) => {
+    const index = settings.navOrder.indexOf(id);
+    return index >= 0 ? index : 1000 + fallback;
+  };
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.id === view || !settings.hiddenViews.includes(item.id))
+      .sort((a, b) => orderOf(a.item.id, a.index) - orderOf(b.item.id, b.index))
+      .map(({ item }) => item),
+  })).filter((group) => group.items.length > 0);
   // Filtre de la liste latérale (accents et casse ignorés).
   const fold = (value) =>
     value
@@ -3157,7 +3215,7 @@ function AppContent() {
           </div>
           <div className="sidenav__scroll">
             <div className="view-switcher" role="group" aria-label={t('nav.views', 'Vues')}>
-              {NAV_GROUPS.map((group) => (
+              {navGroups.map((group) => (
                 <div className="sidenav__group" key={group.label}>
                   <p className="sidenav__label" aria-hidden="true">
                     {t(`nav.group.${group.key}`, group.label)}
@@ -3258,6 +3316,20 @@ function AppContent() {
               {historyMessage}
             </p>
             <Badge tone="success">{t('shell.offline')}</Badge>
+            <button
+              type="button"
+              className="icon-button"
+              aria-pressed={settings.showInspector}
+              aria-label={
+                settings.showInspector
+                  ? 'Masquer le panneau de la personne'
+                  : 'Afficher le panneau de la personne'
+              }
+              title="Panneau de la personne"
+              onClick={() => updateSettings({ showInspector: !settings.showInspector })}
+            >
+              <Icon name="panel" />
+            </button>
             <ThemeToggle />
           </div>
         </header>
@@ -3268,7 +3340,10 @@ function AppContent() {
           </p>
         ) : null}
 
-        <section className="workspace" aria-label="Espace de généalogie">
+        <section
+          className={`workspace${settings.showInspector ? '' : ' workspace--no-inspector'}`}
+          aria-label="Espace de généalogie"
+        >
           <section className="canvas-panel" aria-label="Vue de l'arbre">
             <div key={dataVersion} className={`genealogy-canvas genealogy-canvas--${view}`}>
               {view === 'search' ? (
@@ -3353,7 +3428,7 @@ function AppContent() {
               ) : view === 'trees' ? (
                 <TreesPanel client={client} onActivated={handleTreeActivated} />
               ) : view === 'settings' ? (
-                <SettingsPanel />
+                <SettingsPanel navGroups={NAV_GROUPS} />
               ) : view === 'person' && selected ? (
                 <PersonSheet
                   selected={selected}
@@ -3478,80 +3553,90 @@ function AppContent() {
             </div>
           </section>
 
-          <aside className="details-panel" aria-labelledby="person-title">
-            {selected ? (
-              <>
-                <div className="details-panel__top">
-                  <span className="avatar" aria-hidden="true">
-                    <Icon name="person" />
-                  </span>
-                  <div>
-                    <p className="eyebrow">{t('shell.selectedPerson')}</p>
-                    <h2 id="person-title">{personLabel(selected)}</h2>
-                    <p className="data-id">
-                      {lifespans.get(selected.id)?.label ?? t('shell.unknownDates')} · #
-                      {selected.id}
-                    </p>
+          {settings.showInspector ? <InspectorResizer /> : null}
+
+          {settings.showInspector ? (
+            <aside className="details-panel" aria-labelledby="person-title">
+              {selected ? (
+                <>
+                  <div className="details-panel__top">
+                    <span className="avatar" aria-hidden="true">
+                      <Icon name="person" />
+                    </span>
+                    <div>
+                      <p className="eyebrow">{t('shell.selectedPerson')}</p>
+                      <h2 id="person-title">{personLabel(selected)}</h2>
+                      <p className="data-id">
+                        {lifespans.get(selected.id)?.label ?? t('shell.unknownDates')} · #
+                        {selected.id}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="inspector-actions">
-                  <Button size="sm" onClick={() => setView('person')}>
-                    Ouvrir la fiche
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setView('relations')}>
-                    Calculer une parenté
-                  </Button>
-                </div>
-                {relations ? (
-                  <div className="detail-section">
-                    <h3>Relations</h3>
-                    <dl className="inspector-relations">
-                      {[
-                        ['Parents', relations.parents],
-                        ['Conjoints', relations.spouses],
-                        ['Enfants', relations.children],
-                        ['Fratrie', relations.siblings],
-                      ].map(([label, list]) => (
-                        <div key={label}>
-                          <dt>{label}</dt>
-                          <dd>
-                            {list.length}
-                            {list.length > 0 ? (
-                              <span className="inspector-relations__names">
-                                {list.map((relative) => (
-                                  <button
-                                    key={relative.id}
-                                    type="button"
-                                    className="link-button link-button--small"
-                                    onClick={() => setSelectedId(relative.id)}
-                                  >
-                                    {personLabel(relative)}
-                                  </button>
-                                ))}
-                              </span>
-                            ) : null}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                ) : null}
-                <QualityCard
-                  client={client}
-                  personId={selected.id}
-                  version={`${dataVersion}-${lifespans.size}-${history.undoLabel ?? ''}`}
-                  onOpenCoherence={() => setView('consistency')}
-                  onOpenSources={() => setView('sources')}
-                />
-                <details className="inspector-edit">
-                  <summary>Modifier l’identité</summary>
-                  <IdentityTool selected={selected} onUpdated={loadPersons} />
-                </details>
-              </>
-            ) : (
-              <p className="notice">Aucune personne sélectionnée.</p>
-            )}
-          </aside>
+                  {settings.inspectorSections.includes('actions') ? (
+                    <div className="inspector-actions">
+                      <Button size="sm" onClick={() => setView('person')}>
+                        Ouvrir la fiche
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setView('relations')}>
+                        Calculer une parenté
+                      </Button>
+                    </div>
+                  ) : null}
+                  {relations && settings.inspectorSections.includes('relations') ? (
+                    <div className="detail-section">
+                      <h3>Relations</h3>
+                      <dl className="inspector-relations">
+                        {[
+                          ['Parents', relations.parents],
+                          ['Conjoints', relations.spouses],
+                          ['Enfants', relations.children],
+                          ['Fratrie', relations.siblings],
+                        ].map(([label, list]) => (
+                          <div key={label}>
+                            <dt>{label}</dt>
+                            <dd>
+                              {list.length}
+                              {list.length > 0 ? (
+                                <span className="inspector-relations__names">
+                                  {list.map((relative) => (
+                                    <button
+                                      key={relative.id}
+                                      type="button"
+                                      className="link-button link-button--small"
+                                      onClick={() => setSelectedId(relative.id)}
+                                    >
+                                      {personLabel(relative)}
+                                    </button>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ) : null}
+                  {settings.inspectorSections.includes('quality') ? (
+                    <QualityCard
+                      client={client}
+                      personId={selected.id}
+                      version={`${dataVersion}-${lifespans.size}-${history.undoLabel ?? ''}`}
+                      onOpenCoherence={() => setView('consistency')}
+                      onOpenSources={() => setView('sources')}
+                    />
+                  ) : null}
+                  {settings.inspectorSections.includes('identity') ? (
+                    <details className="inspector-edit">
+                      <summary>Modifier l’identité</summary>
+                      <IdentityTool selected={selected} onUpdated={loadPersons} />
+                    </details>
+                  ) : null}
+                </>
+              ) : (
+                <p className="notice">Aucune personne sélectionnée.</p>
+              )}
+            </aside>
+          ) : null}
         </section>
       </main>
     </LifespanContext.Provider>
