@@ -92,6 +92,8 @@ function createHttpClient() {
       duplicates: (limit) => fetchJson(`/api/search/duplicates?limit=${limit ?? 100}`),
       merge: (survivorId, duplicateId) =>
         fetchJson('/api/search/merge', { method: 'POST', body: { survivorId, duplicateId } }),
+      previewMerge: (survivorId, duplicateId) =>
+        fetchJson(`/api/search/merge/preview?${new URLSearchParams({ survivorId, duplicateId })}`),
     },
     unions: {
       create: (data) => fetchJson('/api/unions', { method: 'POST', body: data }),
@@ -213,6 +215,8 @@ function createIpcClient(bridge) {
       query: (q, entityTypes) => bridge.search.query(q, entityTypes),
       duplicates: (limit) => bridge.search.duplicates(limit),
       merge: (survivorId, duplicateId) => bridge.search.merge(survivorId, duplicateId),
+      previewMerge: (survivorId, duplicateId) =>
+        bridge.search.previewMerge(survivorId, duplicateId),
     },
     unions: {
       create: (data) => bridge.unions.create(data),

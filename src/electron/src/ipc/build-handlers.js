@@ -167,6 +167,9 @@ export function buildIpcHandlers(services) {
     [IPC_CHANNELS.SEARCH_MERGE]: wrap(({ survivorId, duplicateId, performedBy }) =>
       merge.mergePersons(survivorId, duplicateId, { performedBy: actorOf(performedBy) }),
     ),
+    [IPC_CHANNELS.SEARCH_MERGE_PREVIEW]: wrap(({ survivorId, duplicateId }) =>
+      merge.previewPersons(survivorId, duplicateId),
+    ),
 
     [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),
     [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>

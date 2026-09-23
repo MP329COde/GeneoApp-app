@@ -122,6 +122,10 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   await expect(pair).toBeVisible();
   await pair.getByRole('button', { name: 'Fusionner (garder A)' }).click();
 
+  // L'aperçu de fusion bloque tant que l'utilisateur n'a pas confirmé.
+  await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirmer la fusion' }).click();
+
   await expect(pair).not.toBeVisible();
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();

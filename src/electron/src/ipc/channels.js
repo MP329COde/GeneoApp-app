@@ -46,6 +46,7 @@ export const IPC_CHANNELS = Object.freeze({
   SEARCH_QUERY: 'geneoapp:search:query',
   SEARCH_DUPLICATES: 'geneoapp:search:duplicates',
   SEARCH_MERGE: 'geneoapp:search:merge',
+  SEARCH_MERGE_PREVIEW: 'geneoapp:search:mergePreview',
 
   GEDCOM_PREVIEW: 'geneoapp:gedcom:preview',
   GEDCOM_IMPORT: 'geneoapp:gedcom:import',

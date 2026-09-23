@@ -6,6 +6,7 @@ export function searchRoutes(services) {
   const router = Router();
 
   router.get('/duplicates', controller.duplicates);
+  router.get('/merge/preview', controller.previewMerge);
   router.post('/merge', controller.mergePersons);
   router.get('/', controller.search);
 

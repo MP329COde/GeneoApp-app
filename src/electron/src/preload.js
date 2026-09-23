@@ -87,6 +87,8 @@ const api = {
     duplicates: (limit) => invoke(IPC_CHANNELS.SEARCH_DUPLICATES, { limit }),
     merge: (survivorId, duplicateId, performedBy) =>
       invoke(IPC_CHANNELS.SEARCH_MERGE, { survivorId, duplicateId, performedBy }),
+    previewMerge: (survivorId, duplicateId) =>
+      invoke(IPC_CHANNELS.SEARCH_MERGE_PREVIEW, { survivorId, duplicateId }),
   },
 
   gedcom: {

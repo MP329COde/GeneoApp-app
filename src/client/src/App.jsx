@@ -103,10 +103,21 @@ function SearchPanel() {
   );
 }
 
+const MERGE_REASSIGNMENT_LABELS = {
+  parentagesAsParent: 'lien(s) parent → enfant',
+  parentagesAsChild: 'lien(s) enfant → parent',
+  unionPartnerships: 'union(s)',
+  eventParticipations: 'participation(s) à un événement',
+  citations: 'citation(s) de source',
+  notes: 'note(s)',
+  media: 'média(s)',
+};
+
 function DuplicatesPanel({ onSelect, onMerged }) {
   const [pairs, setPairs] = useState(null);
   const [duplicatesError, setDuplicatesError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [pendingMerge, setPendingMerge] = useState(null);
 
   const handleScan = async () => {
     setBusy(true);
@@ -120,7 +131,21 @@ function DuplicatesPanel({ onSelect, onMerged }) {
     }
   };
 
-  const handleMerge = async (survivorId, duplicateId) => {
+  const handlePreviewMerge = async (survivorId, duplicateId) => {
+    setBusy(true);
+    setDuplicatesError(null);
+    try {
+      const preview = await client.search.previewMerge(survivorId, duplicateId);
+      setPendingMerge({ survivorId, duplicateId, preview });
+    } catch (previewError) {
+      setDuplicatesError(previewError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfirmMerge = async () => {
+    const { survivorId, duplicateId } = pendingMerge;
     setBusy(true);
     setDuplicatesError(null);
     try {
@@ -128,6 +153,7 @@ function DuplicatesPanel({ onSelect, onMerged }) {
       setPairs((current) =>
         (current ?? []).filter((pair) => !pair.persons.some((person) => person.id === duplicateId)),
       );
+      setPendingMerge(null);
       await onMerged?.();
     } catch (mergeError) {
       setDuplicatesError(mergeError.message);
@@ -147,6 +173,41 @@ function DuplicatesPanel({ onSelect, onMerged }) {
         <p role="alert" className="notice notice--error">
           {duplicatesError}
         </p>
+      ) : null}
+      {pendingMerge ? (
+        <div className="notice" role="alertdialog" aria-label="Confirmer la fusion">
+          <p>
+            Fusionner {personLabel(pendingMerge.preview.duplicate)} dans{' '}
+            {personLabel(pendingMerge.preview.survivor)} ? Cette action réattribue :
+          </p>
+          <ul>
+            {Object.entries(pendingMerge.preview.reassignments)
+              .filter(([, count]) => count > 0)
+              .map(([key, count]) => (
+                <li key={key}>
+                  {count} {MERGE_REASSIGNMENT_LABELS[key] ?? key}
+                </li>
+              ))}
+            {Object.values(pendingMerge.preview.reassignments).every((count) => count === 0) ? (
+              <li>Aucune donnée liée à réattribuer.</li>
+            ) : null}
+          </ul>
+          <p>
+            La fiche de {personLabel(pendingMerge.preview.duplicate)} sera supprimée en douceur.
+          </p>
+          <Button type="button" size="sm" onClick={handleConfirmMerge} disabled={busy}>
+            Confirmer la fusion
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setPendingMerge(null)}
+            disabled={busy}
+          >
+            Annuler
+          </Button>
+        </div>
       ) : null}
       {pairs === null ? null : pairs.length === 0 ? (
         <p className="notice">Aucun doublon potentiel détecté.</p>
@@ -177,7 +238,7 @@ function DuplicatesPanel({ onSelect, onMerged }) {
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => handleMerge(left.id, right.id)}
+                  onClick={() => handlePreviewMerge(left.id, right.id)}
                   disabled={busy}
                 >
                   Fusionner (garder A)
@@ -185,7 +246,7 @@ function DuplicatesPanel({ onSelect, onMerged }) {
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => handleMerge(right.id, left.id)}
+                  onClick={() => handlePreviewMerge(right.id, left.id)}
                   disabled={busy}
                 >
                   Fusionner (garder B)

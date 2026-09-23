@@ -206,6 +206,34 @@ test('SEARCH_MERGE réattribue les données réelles du doublon puis le supprime
   assert.equal(removed.error.status, 404);
 });
 
+test('SEARCH_MERGE_PREVIEW décrit les réattributions réelles sans rien modifier', async () => {
+  const handlers = createHandlers();
+
+  const survivor = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  const duplicate = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace' },
+  });
+  const child = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Byron', familyName: 'Lovelace' },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: child.data.id, parentId: duplicate.data.id, parentRole: 'MOTHER' },
+  });
+
+  const preview = await handlers[IPC_CHANNELS.SEARCH_MERGE_PREVIEW]({
+    survivorId: survivor.data.id,
+    duplicateId: duplicate.data.id,
+  });
+
+  assert.equal(preview.ok, true);
+  assert.equal(preview.data.reassignments.parentagesAsParent, 1);
+
+  const stillThere = await handlers[IPC_CHANNELS.PERSONS_GET]({ id: duplicate.data.id });
+  assert.equal(stillThere.ok, true);
+});
+
 test('GEDCOM_PREVIEW puis GEDCOM_IMPORT/GEDCOM_EXPORT exposent le pipeline GEDCOM au renderer', async () => {
   const handlers = createHandlers();
   const gedcom = [

@@ -22,5 +22,11 @@ export function createSearchController(services) {
       });
       response.json(merged);
     },
+
+    previewMerge(request, response) {
+      const survivorId = Number(request.query.survivorId);
+      const duplicateId = Number(request.query.duplicateId);
+      response.json(merge.previewPersons(survivorId, duplicateId));
+    },
   };
 }

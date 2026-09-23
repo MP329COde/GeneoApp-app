@@ -203,6 +203,17 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   et la mise à jour du compte réel de personnes). Limite restante : aucune prévisualisation des changements
   avant confirmation (pas de `previewPersons` exposé côté API/IPC pour l'instant, seule la méthode existe
   côté service) — à exposer si un écran de confirmation détaillée est demandé.
+  **Fait le jour même** (voir entrée suivante) : `previewPersons` est désormais exposé et consommé par un
+  écran de confirmation avant fusion.
+- 2026-09-23 (suite) : exposition de `MergeService#previewPersons` (jusque-là non branché) via
+  `GET /api/search/merge/preview` et le canal IPC `SEARCH_MERGE_PREVIEW`. L'écran « Doublons » affiche
+  désormais un aperçu chiffré (nombre de filiations, unions, participations à un événement, citations, notes
+  et médias réellement réattribués) avant toute confirmation explicite — la fusion elle-même ne se déclenche
+  qu'au clic sur « Confirmer la fusion » ; « Annuler » referme l'aperçu sans rien modifier. Testé : 1 cas API
+  (aperçu sans effet de bord, fusion réelle toujours possible ensuite), 1 cas IPC (vérifie qu'aucune donnée
+  n'est modifiée par le seul aperçu), 1 cas client (Vitest) et le scénario E2E de fusion mis à jour pour
+  couvrir le nouveau garde-fou de confirmation.
+
 - 2026-09-23 (suite) : ajout d'une vue « Chronologie » réelle, jusque-là absente (seule une vue par personne
   existait via l'onglet « Événements » ; aucune vue transverse triant tous les événements de l'arbre).
   `EventRepository#listAll`/`EventService#listAll` renvoient tous les événements réels (non supprimés),

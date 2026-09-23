@@ -14,6 +14,7 @@ const search = vi.hoisted(() => ({
   query: vi.fn(),
   duplicates: vi.fn(),
   merge: vi.fn(),
+  previewMerge: vi.fn(),
 }));
 const gedcom = vi.hoisted(() => ({
   preview: vi.fn(),
@@ -407,6 +408,19 @@ describe('App', () => {
         requiresValidation: true,
       },
     ]);
+    search.previewMerge.mockResolvedValue({
+      survivor: { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      duplicate: { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
+      reassignments: {
+        parentagesAsParent: 0,
+        parentagesAsChild: 1,
+        unionPartnerships: 0,
+        eventParticipations: 0,
+        citations: 0,
+        notes: 0,
+        media: 0,
+      },
+    });
     search.merge.mockResolvedValue({ id: 1, given_names: 'Jean', family_name: 'Dupont' });
     persons.list.mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
 
@@ -418,6 +432,12 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Fusionner (garder A)' }));
+
+    await waitFor(() => expect(search.previewMerge).toHaveBeenCalledWith(1, 2));
+    await waitFor(() => expect(screen.getByText(/lien\(s\) enfant → parent/)).toBeInTheDocument());
+    expect(search.merge).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer la fusion' }));
 
     await waitFor(() => expect(search.merge).toHaveBeenCalledWith(1, 2));
     await waitFor(() =>

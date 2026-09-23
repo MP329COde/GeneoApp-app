@@ -211,6 +211,56 @@ test('POST /api/search/merge rejette un survivorId identique au duplicateId', as
   }
 });
 
+test('GET /api/search/merge/preview décrit les réattributions réelles avant fusion', async () => {
+  const server = await startTestServer();
+  try {
+    const survivor = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const duplicate = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const child = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Byron', familyName: 'Lovelace' },
+    });
+    await requestJson(server.baseUrl, '/api/parentages', {
+      method: 'POST',
+      body: { childId: child.body.id, parentId: duplicate.body.id, parentRole: 'MOTHER' },
+    });
+    await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: { entityType: 'PERSON', entityId: duplicate.body.id, body: 'Note réelle' },
+    });
+
+    const { status, body } = await requestJson(
+      server.baseUrl,
+      `/api/search/merge/preview?${new URLSearchParams({
+        survivorId: survivor.body.id,
+        duplicateId: duplicate.body.id,
+      })}`,
+    );
+
+    assert.equal(status, 200);
+    assert.equal(body.survivor.id, survivor.body.id);
+    assert.equal(body.duplicate.id, duplicate.body.id);
+    assert.equal(body.reassignments.parentagesAsParent, 1);
+    assert.equal(body.reassignments.notes, 1);
+    assert.equal(body.reassignments.unionPartnerships, 0);
+
+    // La prévisualisation ne modifie rien : la fusion réelle reste possible ensuite.
+    const merged = await requestJson(server.baseUrl, '/api/search/merge', {
+      method: 'POST',
+      body: { survivorId: survivor.body.id, duplicateId: duplicate.body.id },
+    });
+    assert.equal(merged.status, 200);
+  } finally {
+    await server.close();
+  }
+});
+
 test('POST /api/search/merge renvoie 404 pour une personne introuvable', async () => {
   const server = await startTestServer();
   try {
