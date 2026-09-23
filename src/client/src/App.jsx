@@ -10,6 +10,8 @@ import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { buildLifespans } from './genealogy/lifespans.js';
+import { PersonTimeline } from './views/PersonTimeline.jsx';
+import { ComparePanel } from './views/ComparePanel.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -92,6 +94,7 @@ const NAV_GROUPS = [
       { id: 'families', label: 'Familles', icon: 'family', shortcut: '⌘3' },
       { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
       { id: 'relations', label: 'Parenté', icon: 'family' },
+      { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
     ],
   },
   {
@@ -2848,6 +2851,7 @@ const PERSON_TABS = [
   { id: 'sources', label: 'Sources' },
   { id: 'media', label: 'Médias' },
   { id: 'notes', label: 'Notes' },
+  { id: 'timeline', label: 'Chronologie' },
   { id: 'history', label: 'Historique' },
 ];
 
@@ -2949,6 +2953,8 @@ function PersonSheet({ selected, relations, onUpdated, persons = [] }) {
           <MediaPanel selected={selected} persons={persons} />
         ) : tab === 'notes' ? (
           <NotesPanel selected={selected} />
+        ) : tab === 'timeline' ? (
+          <PersonTimeline client={client} person={selected} relations={relations} />
         ) : (
           <AuditPanel selected={selected} />
         )}
@@ -3416,6 +3422,13 @@ function AppContent() {
                   relations={relations}
                   onUpdated={loadPersons}
                   persons={persons}
+                />
+              ) : view === 'compare' ? (
+                <ComparePanel
+                  client={client}
+                  persons={persons}
+                  selected={selected}
+                  onOpenDuplicates={() => setView('duplicates')}
                 />
               ) : view === 'relations' ? (
                 <RelationshipPanel

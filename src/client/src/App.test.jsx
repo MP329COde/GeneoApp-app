@@ -1746,4 +1746,32 @@ describe('App', () => {
     );
     expect(await screen.findByText('Miroir branché et accessible')).toBeInTheDocument();
   });
+  it('compare deux personnes et distingue dates compatibles et différences nettes', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', sex: 'M' },
+      { id: 2, given_names: 'Jean', family_name: 'DUPONT', sex: 'M' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [{ id: 9, given_names: 'Pierre', family_name: 'Dupont' }],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listAll.mockResolvedValue([
+      { type: 'BIRTH', date_text: 'vers 1760', participants: [{ personId: 1, role: 'PRINCIPAL' }] },
+      { type: 'BIRTH', date_text: '1761', participants: [{ personId: 2, role: 'PRINCIPAL' }] },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Comparaison' }));
+    fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
+
+    expect(await screen.findByText(/Aucune contradiction/)).toBeInTheDocument();
+    const birthRow = screen.getByRole('rowheader', { name: 'Naissance' }).closest('tr');
+    expect(within(birthRow).getByText('Compatible')).toBeInTheDocument();
+    const nameRow = screen.getByRole('rowheader', { name: 'Nom' }).closest('tr');
+    expect(within(nameRow).getByText('Identique')).toBeInTheDocument();
+  });
 });

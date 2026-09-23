@@ -1993,3 +1993,100 @@ input[type='radio'] {
 .storage-form .data-id {
   grid-column: 1 / -1;
 }
+
+/* ---------- Chronologie personnelle ---------- */
+.life-timeline {
+  display: grid;
+  gap: 0;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  border-left: var(--border-thick) solid var(--border);
+}
+.life-timeline li {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  position: relative;
+}
+.life-timeline li::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 14px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--text-secondary);
+}
+.life-timeline__own::before {
+  background: var(--action) !important;
+}
+.life-timeline__family {
+  color: var(--text-secondary);
+}
+.life-timeline__date {
+  font: var(--type-date);
+}
+.life-timeline__age {
+  font: var(--type-date);
+  color: var(--text-secondary);
+}
+
+/* ---------- Comparaison ---------- */
+.compare-panel__pickers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.compare-panel__pickers label {
+  display: grid;
+  gap: var(--space-1);
+}
+.compare-table {
+  width: 100%;
+  margin-bottom: var(--space-4);
+  border-collapse: collapse;
+  border: var(--border-hairline) solid var(--border);
+  background: var(--surface-raised);
+}
+.compare-table th,
+.compare-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+  text-align: left;
+  vertical-align: top;
+}
+.compare-table thead th {
+  background: var(--surface-sunken);
+  font: var(--type-label);
+}
+.compare-table tbody th {
+  font: var(--type-label);
+  color: var(--text-secondary);
+}
+.compare-verdict {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  font: var(--type-caption);
+}
+.compare-verdict--same {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+.compare-verdict--compatible {
+  background: var(--info-subtle);
+  color: var(--info);
+}
+.compare-verdict--different {
+  background: var(--coherence-subtle);
+  color: var(--coherence);
+}
+.compare-verdict--partial,
+.compare-verdict--empty {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
