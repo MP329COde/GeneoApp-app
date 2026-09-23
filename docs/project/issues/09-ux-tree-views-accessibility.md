@@ -215,3 +215,14 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   structurées en base), donc l'ordre chronologique n'est fiable que pour des dates au format comparable
   lexicographiquement (ex. AAAA-MM-JJ) — cohérent avec le reste de l'application qui traite déjà la date
   comme texte libre à précision variable (EXACT/ABOUT/BEFORE/AFTER/BETWEEN/UNKNOWN).
+- 2026-09-23 (suite) : ajout d'une vue « Carte » réelle. Les colonnes `latitude`/`longitude` de la table
+  `places` existaient déjà côté modèle et validation mais aucune interface ne permettait de les saisir ni de
+  les visualiser. Le formulaire de création de lieu (dans l'écran Événements) porte désormais des champs
+  latitude/longitude optionnels, envoyés tels quels à `client.places.create`. La carte elle-même est un SVG
+  statique en projection équirectangulaire simple (aucune tuile chargée depuis un service en ligne — rester
+  strictement hors ligne sans ouvrir de dérogation ADR 0006) : chaque lieu réel avec coordonnées devient un
+  point nommé ; les lieux sans coordonnées sont listés séparément plutôt que masqués silencieusement. Testé :
+  1 cas client (Vitest, points géolocalisés + lieux non localisés), 1 scénario E2E Playwright (saisie réelle
+  de coordonnées via le formulaire d'événement, vérification du point sur la carte). Limite assumée : pas de
+  zoom/pan/tuiles satellite — une carte-croquis fonctionnelle et déjà bien plus qu'un espace réservé vide,
+  conforme à l'ambition « version simplifiée » déjà actée pour cette vue.

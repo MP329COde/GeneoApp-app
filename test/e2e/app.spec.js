@@ -142,6 +142,24 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   await expect(page.getByText(/MARRIAGE/)).toBeVisible();
 });
 
+test('place un lieu réel avec coordonnées sur la carte après création via un événement', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Événements' }).click();
+
+  await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Nantes');
+  await page.getByLabel('Latitude (optionnel)').fill('47.2184');
+  await page.getByLabel('Longitude (optionnel)').fill('-1.5536');
+  await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
+  await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carte' }).click();
+  await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
+  await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {

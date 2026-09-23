@@ -592,6 +592,8 @@ function EventsPanel({ selected }) {
   const [datePrecision, setDatePrecision] = useState('EXACT');
   const [placeId, setPlaceId] = useState('');
   const [newPlaceName, setNewPlaceName] = useState('');
+  const [newPlaceLatitude, setNewPlaceLatitude] = useState('');
+  const [newPlaceLongitude, setNewPlaceLongitude] = useState('');
   const [eventsError, setEventsError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -629,7 +631,11 @@ function EventsPanel({ selected }) {
     try {
       let resolvedPlaceId = placeId ? Number(placeId) : null;
       if (newPlaceName.trim()) {
-        const place = await client.places.create({ name: newPlaceName.trim() });
+        const place = await client.places.create({
+          name: newPlaceName.trim(),
+          latitude: newPlaceLatitude.trim() ? Number(newPlaceLatitude) : undefined,
+          longitude: newPlaceLongitude.trim() ? Number(newPlaceLongitude) : undefined,
+        });
         resolvedPlaceId = place.id;
         setPlaces((current) => [...current, place]);
       }
@@ -642,6 +648,8 @@ function EventsPanel({ selected }) {
       });
       setDateText('');
       setNewPlaceName('');
+      setNewPlaceLatitude('');
+      setNewPlaceLongitude('');
       setPlaceId('');
       await loadEvents();
     } catch (createError) {
@@ -712,6 +720,22 @@ function EventsPanel({ selected }) {
         <label>
           <span>Ou nouveau lieu (optionnel)</span>
           <input value={newPlaceName} onChange={(event) => setNewPlaceName(event.target.value)} />
+        </label>
+        <label>
+          <span>Latitude (optionnel)</span>
+          <input
+            value={newPlaceLatitude}
+            onChange={(event) => setNewPlaceLatitude(event.target.value)}
+            inputMode="decimal"
+          />
+        </label>
+        <label>
+          <span>Longitude (optionnel)</span>
+          <input
+            value={newPlaceLongitude}
+            onChange={(event) => setNewPlaceLongitude(event.target.value)}
+            inputMode="decimal"
+          />
         </label>
         <Button type="submit" size="sm" disabled={busy}>
           Ajouter l’événement
@@ -813,6 +837,85 @@ function TimelinePanel({ onNavigate }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+// Carte des lieux, rendue en SVG statique (projection équirectangulaire
+// simple) : aucune tuile de carte chargée depuis un service en ligne, pour
+// rester strictement hors ligne sans dérogation ADR — chaque point est un
+// lieu réel (latitude/longitude saisies via l'écran Événements), jamais une
+// coordonnée fictive.
+function MapPanel() {
+  const [places, setPlaces] = useState(null);
+  const [mapError, setMapError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    client.places
+      .list()
+      .then((list) => {
+        if (!cancelled) setPlaces(list);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setMapError(loadError.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (mapError) {
+    return (
+      <p role="alert" className="notice notice--error">
+        {mapError}
+      </p>
+    );
+  }
+
+  if (places === null) {
+    return <p role="status">Chargement…</p>;
+  }
+
+  const located = places.filter((place) => place.latitude !== null && place.longitude !== null);
+  const unlocated = places.filter((place) => place.latitude === null || place.longitude === null);
+
+  if (places.length === 0) {
+    return <p className="notice">Aucun lieu enregistré.</p>;
+  }
+
+  return (
+    <div className="map-panel">
+      {located.length === 0 ? (
+        <p className="notice">Aucun lieu ne porte de coordonnées géographiques pour l’instant.</p>
+      ) : (
+        <svg
+          role="img"
+          aria-label="Carte des lieux enregistrés"
+          viewBox="-180 -90 360 180"
+          className="map-panel__svg"
+        >
+          <rect x="-180" y="-90" width="360" height="180" className="map-panel__ocean" />
+          {located.map((place) => (
+            <g key={place.id} transform={`translate(${place.longitude}, ${-place.latitude})`}>
+              <circle r="2" className="map-panel__point" />
+              <text x="3" y="1" className="map-panel__label">
+                {place.name}
+              </text>
+            </g>
+          ))}
+        </svg>
+      )}
+      {unlocated.length > 0 ? (
+        <div>
+          <h3>Lieux sans coordonnées</h3>
+          <ul className="search-results">
+            {unlocated.map((place) => (
+              <li key={place.id}>{place.name}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -2021,6 +2124,13 @@ function App() {
                 Chronologie
               </button>
               <button
+                className={view === 'map' ? 'is-active' : ''}
+                onClick={() => setView('map')}
+                type="button"
+              >
+                Carte
+              </button>
+              <button
                 className={view === 'notebook' ? 'is-active' : ''}
                 onClick={() => setView('notebook')}
                 type="button"
@@ -2085,6 +2195,8 @@ function App() {
                   setView('tree');
                 }}
               />
+            ) : view === 'map' ? (
+              <MapPanel />
             ) : view === 'notebook' ? (
               <NotebookPanel
                 persons={persons}

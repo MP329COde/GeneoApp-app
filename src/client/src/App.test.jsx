@@ -858,6 +858,32 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Voir Jean' })).toBeInTheDocument();
   });
 
+  it('affiche la carte réelle des lieux avec coordonnées et sépare ceux sans coordonnées', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    places.list.mockResolvedValueOnce([
+      { id: 1, name: 'Nantes', latitude: 47.2184, longitude: -1.5536 },
+      { id: 2, name: 'Lieu inconnu', latitude: null, longitude: null },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('img', { name: /Carte des lieux/ })).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Nantes')).toBeInTheDocument();
+    expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
+  });
+
   it('affiche le journal d’audit réel d’une personne', async () => {
     persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
     graph.relations.mockResolvedValue({
