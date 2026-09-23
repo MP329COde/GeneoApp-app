@@ -1,5 +1,6 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
 import { parseGedcom, validateGedcom } from './parser.js';
+import { ValidationError } from '../errors.js';
 
 // Tags GEDCOM 5.5.1 individuels (INDIVIDUAL_EVENT_STRUCTURE / INDIVIDUAL_ATTRIBUTE_STRUCTURE)
 // mappés vers les types métier. Sans équivalent standard direct dans la norme (ex. événement
@@ -65,26 +66,75 @@ export class GedcomService {
     return { ...report, imported: true, ids: result.ids };
   }
 
-  export({ format = '7', personIds = null, ancestorsOf = null, descendantsOf = null } = {}) {
+  /**
+   * Export par périmètre : arbre complet (défaut), sélection (`personIds`),
+   * personne seule (`personOnly`), ancêtres / descendants d'une personne, ou
+   * branche paternelle / maternelle (`branchOf` + `side`). Les périmètres se
+   * cumulent ; sans aucun, tout l'arbre est exporté.
+   */
+  export({
+    format = '7',
+    personIds = null,
+    personOnly = null,
+    ancestorsOf = null,
+    descendantsOf = null,
+    branchOf = null,
+    side = null,
+  } = {}) {
     if (!['5.5.1', '7'].includes(format)) {
-      throw new Error(`Format GEDCOM non supporté pour l’export : ${format}`);
+      throw new ValidationError(`Format GEDCOM non supporté pour l’export : ${format}`, {
+        format: 'invalide',
+      });
+    }
+    const asId = (value, field) => {
+      if (value === null || value === undefined) return null;
+      const id = Number(value);
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new ValidationError(`${field} invalide`, { [field]: 'invalide' });
+      }
+      return id;
+    };
+    const onlyId = asId(personOnly, 'personOnly');
+    const ancestorsId = asId(ancestorsOf, 'ancestorsOf');
+    const descendantsId = asId(descendantsOf, 'descendantsOf');
+    const branchId = asId(branchOf, 'branchOf');
+    if (branchId !== null && !['PATERNAL', 'MATERNAL'].includes(side)) {
+      throw new ValidationError('side doit valoir PATERNAL ou MATERNAL', { side: 'invalide' });
+    }
+    if (personIds !== null && !Array.isArray(personIds)) {
+      throw new ValidationError('personIds doit être une liste', { personIds: 'invalide' });
     }
 
     const allPersons = this.database
       .prepare('SELECT * FROM persons WHERE deleted_at IS NULL ORDER BY id')
       .all();
+    const scoped =
+      (personIds?.length ?? 0) > 0 ||
+      [onlyId, ancestorsId, descendantsId, branchId].some((id) => id !== null);
     const selectedIds = new Set(
-      Array.isArray(personIds) && personIds.length > 0
-        ? personIds.map(Number)
-        : allPersons.map((person) => person.id),
+      scoped ? (personIds ?? []).map((id) => asId(id, 'personIds')) : allPersons.map((p) => p.id),
     );
-    if (ancestorsOf !== null) {
-      selectedIds.add(Number(ancestorsOf));
-      this.collectParents(Number(ancestorsOf), selectedIds);
+    if (onlyId !== null) selectedIds.add(onlyId);
+    if (ancestorsId !== null) {
+      selectedIds.add(ancestorsId);
+      this.collectParents(ancestorsId, selectedIds);
     }
-    if (descendantsOf !== null) {
-      selectedIds.add(Number(descendantsOf));
-      this.collectChildren(Number(descendantsOf), selectedIds);
+    if (descendantsId !== null) {
+      selectedIds.add(descendantsId);
+      this.collectChildren(descendantsId, selectedIds);
+    }
+    if (branchId !== null) {
+      const role = side === 'PATERNAL' ? 'FATHER' : 'MOTHER';
+      const parent = this.database
+        .prepare(
+          `SELECT parent_id FROM parentages
+           WHERE child_id = ? AND parent_role = ? AND deleted_at IS NULL`,
+        )
+        .get(branchId, role);
+      if (parent) {
+        selectedIds.add(parent.parent_id);
+        this.collectParents(parent.parent_id, selectedIds);
+      }
     }
     const persons = allPersons.filter((person) => selectedIds.has(person.id));
     const families = this.database

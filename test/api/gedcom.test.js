@@ -207,3 +207,83 @@ test('GEDCOM importe et réexporte un événement militaire via le tag génériq
     await server.close();
   }
 });
+
+async function createFamilyTree(baseUrl) {
+  const person = async (givenNames, familyName, sex = 'U') =>
+    (
+      await requestJson(baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName, sex },
+      })
+    ).body;
+  const link = (child, parent, parentRole) =>
+    requestJson(baseUrl, '/api/parentages', {
+      method: 'POST',
+      body: { childId: child.id, parentId: parent.id, parentRole },
+    });
+  const jean = await person('Jean', 'Centre', 'M');
+  const pere = await person('Pierre', 'Paternel', 'M');
+  const mere = await person('Anne', 'Maternel', 'F');
+  const grandPere = await person('Jacques', 'Paternel', 'M');
+  const enfant = await person('Paul', 'Centre', 'M');
+  const inconnu = await person('Hors', 'Perimetre');
+  await link(jean, pere, 'FATHER');
+  await link(jean, mere, 'MOTHER');
+  await link(pere, grandPere, 'FATHER');
+  await link(enfant, jean, 'FATHER');
+  return { jean, pere, mere, grandPere, enfant, inconnu };
+}
+
+function exportedNames(gedcom) {
+  return [...gedcom.matchAll(/^1 NAME (.+)$/gm)].map((match) => match[1]).sort();
+}
+
+test('POST /api/gedcom/export respecte le périmètre (ancêtres, descendants, branche, personne)', async () => {
+  const server = await startTestServer();
+  try {
+    const tree = await createFamilyTree(server.baseUrl);
+    const exportWith = async (body) =>
+      (await requestJson(server.baseUrl, '/api/gedcom/export', { method: 'POST', body })).body;
+
+    const ancestors = await exportWith({ ancestorsOf: tree.jean.id });
+    assert.equal(ancestors.summary.persons, 4);
+    assert.ok(!exportedNames(ancestors.gedcom).some((name) => name.includes('Perimetre')));
+
+    const descendants = await exportWith({ descendantsOf: tree.jean.id });
+    assert.equal(descendants.summary.persons, 2);
+
+    const paternal = await exportWith({ branchOf: tree.jean.id, side: 'PATERNAL' });
+    assert.deepEqual(exportedNames(paternal.gedcom), ['Jacques /Paternel/', 'Pierre /Paternel/']);
+
+    const maternal = await exportWith({ branchOf: tree.jean.id, side: 'MATERNAL' });
+    assert.deepEqual(exportedNames(maternal.gedcom), ['Anne /Maternel/']);
+
+    const single = await exportWith({ personOnly: tree.inconnu.id, format: '5.5.1' });
+    assert.equal(single.summary.persons, 1);
+
+    const complete = await exportWith({});
+    assert.equal(complete.summary.persons, 6);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/gedcom/export refuse un format ou un périmètre invalide (400, pas 500)', async () => {
+  const server = await startTestServer();
+  try {
+    for (const body of [
+      { format: '6' },
+      { ancestorsOf: 'abc' },
+      { branchOf: 1, side: 'GAUCHE' },
+      { personIds: 'tout' },
+    ]) {
+      const { status } = await requestJson(server.baseUrl, '/api/gedcom/export', {
+        method: 'POST',
+        body,
+      });
+      assert.equal(status, 400, JSON.stringify(body));
+    }
+  } finally {
+    await server.close();
+  }
+});

@@ -1475,4 +1475,39 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Écrire à la mairie' }));
     await waitFor(() => expect(research.updateTask).toHaveBeenCalledWith(5, { status: 'DONE' }));
   });
+  it('exporte la branche maternelle de la personne de contexte', async () => {
+    persons.list.mockResolvedValue([{ id: 4, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 4 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    gedcom.export.mockResolvedValue({
+      format: '5.5.1',
+      gedcom: '0 HEAD\n0 TRLR\n',
+      summary: { persons: 3, families: 1 },
+    });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
+    fireEvent.change(screen.getByLabelText('Format d’export'), { target: { value: '5.5.1' } });
+    fireEvent.change(screen.getByLabelText('Périmètre'), { target: { value: 'maternal' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter le périmètre' }));
+
+    await waitFor(() =>
+      expect(gedcom.export).toHaveBeenCalledWith({
+        format: '5.5.1',
+        branchOf: 4,
+        side: 'MATERNAL',
+      }),
+    );
+    expect(await screen.findByText('Exporté : 3 personne(s), 1 famille(s)')).toBeInTheDocument();
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });

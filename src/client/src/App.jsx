@@ -1928,13 +1928,41 @@ function MediaPanel({ selected }) {
   );
 }
 
-function GedcomPanel({ onImported }) {
+const EXPORT_SCOPES = {
+  all: 'Arbre complet',
+  ancestors: 'Ancêtres de la personne de contexte',
+  descendants: 'Descendants de la personne de contexte',
+  paternal: 'Branche paternelle',
+  maternal: 'Branche maternelle',
+  person: 'Personne de contexte seule',
+};
+
+function exportOptions(scope, personId) {
+  switch (scope) {
+    case 'ancestors':
+      return { ancestorsOf: personId };
+    case 'descendants':
+      return { descendantsOf: personId };
+    case 'paternal':
+      return { branchOf: personId, side: 'PATERNAL' };
+    case 'maternal':
+      return { branchOf: personId, side: 'MATERNAL' };
+    case 'person':
+      return { personOnly: personId };
+    default:
+      return {};
+  }
+}
+
+function GedcomPanel({ onImported, selected }) {
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
   const [report, setReport] = useState(null);
   const [gedcomError, setGedcomError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [exportFormat, setExportFormat] = useState('7');
+  const [exportScope, setExportScope] = useState('all');
+  const [exportSummary, setExportSummary] = useState(null);
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -1975,8 +2003,13 @@ function GedcomPanel({ onImported }) {
     setGedcomError(null);
     setBusy(true);
     try {
-      const result = await client.gedcom.export({ format: exportFormat });
-      downloadText(`geneoapp-export-${exportFormat}.ged`, result.gedcom);
+      const scope = selected ? exportScope : 'all';
+      const result = await client.gedcom.export({
+        format: exportFormat,
+        ...exportOptions(scope, selected?.id),
+      });
+      downloadText(`geneoapp-export-${scope}-${exportFormat}.ged`, result.gedcom);
+      if (result.summary) setExportSummary(result.summary);
     } catch (exportError) {
       setGedcomError(exportError.message);
     } finally {
@@ -2042,9 +2075,29 @@ function GedcomPanel({ onImported }) {
             <option value="5.5.1">GEDCOM 5.5.1</option>
           </select>
         </label>
+        <label>
+          <span>Périmètre</span>
+          <select value={exportScope} onChange={(event) => setExportScope(event.target.value)}>
+            {Object.entries(EXPORT_SCOPES).map(([value, label]) => (
+              <option key={value} value={value} disabled={value !== 'all' && !selected}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
         <Button type="button" size="sm" variant="secondary" onClick={handleExport} disabled={busy}>
-          Exporter l’arbre complet
+          {exportScope === 'all' || !selected
+            ? 'Exporter l’arbre complet'
+            : 'Exporter le périmètre'}
         </Button>
+        {selected && exportScope !== 'all' ? (
+          <p className="settings-hint">Personne de contexte : {personLabel(selected)}</p>
+        ) : null}
+        {exportSummary ? (
+          <p role="status" className="data-id">
+            Exporté : {exportSummary.persons} personne(s), {exportSummary.families} famille(s)
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -2858,7 +2911,7 @@ function AppContent() {
             {view === 'search' ? (
               <SearchPanel />
             ) : view === 'gedcom' ? (
-              <GedcomPanel onImported={loadPersons} />
+              <GedcomPanel onImported={loadPersons} selected={selected} />
             ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
               <BackupsPanel
                 section={view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'}
