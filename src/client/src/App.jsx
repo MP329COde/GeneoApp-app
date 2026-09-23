@@ -9,11 +9,12 @@ function personLabel(person) {
   return `${person.given_names} ${person.family_name}`;
 }
 
-function PersonCard({ person, selected, onSelect }) {
+function PersonCard({ person, selected, onSelect, onKeyDown }) {
   return (
     <button
       className={`person-card${selected ? ' person-card--selected' : ''}`}
       onClick={() => onSelect(person.id)}
+      onKeyDown={onKeyDown}
       type="button"
     >
       <span className="person-card__name">{personLabel(person)}</span>
@@ -2078,12 +2079,22 @@ function App() {
                 votre arbre.
               </p>
             ) : (
-              persons.map((person) => (
+              persons.map((person, index) => (
                 <PersonCard
                   key={person.id}
                   person={person}
                   selected={person.id === selectedId}
                   onSelect={setSelectedId}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                    event.preventDefault();
+                    const delta = event.key === 'ArrowDown' ? 1 : -1;
+                    const nextIndex = (index + delta + persons.length) % persons.length;
+                    setSelectedId(persons[nextIndex].id);
+                    const buttons =
+                      event.currentTarget.parentElement.querySelectorAll('.person-card');
+                    buttons[nextIndex]?.focus();
+                  }}
                 />
               ))
             )}

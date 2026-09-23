@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { axe } from 'jest-axe';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { renderWithProviders } from './test/test-utils.jsx';
 
 const persons = vi.hoisted(() => ({
@@ -169,6 +169,35 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
+  });
+
+  it('navigue entre les personnes au clavier avec les flèches haut/bas', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Louis', family_name: 'Dupont' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
+
+    const nav = screen.getByRole('navigation', { name: 'Personnes' });
+    fireEvent.keyDown(within(nav).getByRole('button', { name: 'Jean Dupont' }), {
+      key: 'ArrowDown',
+    });
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
+
+    fireEvent.keyDown(within(nav).getByRole('button', { name: 'Louis Dupont' }), {
+      key: 'ArrowUp',
+    });
+    await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
   });
 
   it('crée une personne via le client API (aucune logique métier locale)', async () => {

@@ -213,6 +213,15 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   (aperçu sans effet de bord, fusion réelle toujours possible ensuite), 1 cas IPC (vérifie qu'aucune donnée
   n'est modifiée par le seul aperçu), 1 cas client (Vitest) et le scénario E2E de fusion mis à jour pour
   couvrir le nouveau garde-fou de confirmation.
+- 2026-09-23 (suite) : ajout d'un raccourci clavier documenté (Phase J du cahier des charges — « raccourcis
+  documentés » restait non prouvé). Dans la liste des personnes, `↓`/`↑` déplacent la sélection vers la
+  personne suivante/précédente (avec bouclage), déplacent le focus clavier en conséquence et rafraîchissent
+  aussitôt les relations affichées — géré au niveau de chaque bouton (`PersonCard`) plutôt que sur l'élément
+  `<nav>` conteneur, pour rester conforme à la règle d'accessibilité `jsx-a11y/no-noninteractive-element-
+  interactions` (jamais de gestionnaire clavier/souris sur un élément non interactif). Documenté dans
+  `README.md`. Testé : 1 cas client (Vitest, `ArrowDown`/`ArrowUp` déclenchent bien le rechargement des
+  relations de la personne suivante/précédente) et 1 scénario E2E Playwright (focus clavier réel qui se
+  déplace effectivement au bouton suivant).
 
 - 2026-09-23 (suite) : ajout d'une vue « Chronologie » réelle, jusque-là absente (seule une vue par personne
   existait via l'onglet « Événements » ; aucune vue transverse triant tous les événements de l'arbre).

@@ -49,6 +49,10 @@ Checkbox, Modal, Badge, LanguageSwitcher), sans aucune logique métier :
 - **Storybook** : `npm run storybook` (dev) ou `npm run build-storybook`, avec l'addon `a11y` (axe-core) actif sur
   chaque story.
 - **Tests** : `npm run test:client` (Vitest + Testing Library + jest-axe), couvrant clavier, focus et accessibilité.
+- **Raccourcis clavier documentés** : dans la liste des personnes (panneau latéral gauche), `↓`/`↑` déplacent la
+  sélection vers la personne suivante/précédente et rafraîchissent aussitôt ses relations affichées ; en dehors de
+  ce raccourci, la navigation repose sur `Tab`/`Maj+Tab` (parcours des éléments focusables) et `Entrée`/`Espace`
+  (activation), le comportement natif des éléments HTML utilisés (`button`, `select`, champs de formulaire).
 
 ### Commandes
 

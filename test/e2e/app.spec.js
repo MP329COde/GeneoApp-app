@@ -164,6 +164,17 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
 });
 
+test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
+  await page.goto('/');
+  const list = page.getByRole('navigation', { name: 'Personnes' });
+  const firstButton = list.getByRole('button').first();
+  await firstButton.focus();
+  await page.keyboard.press('ArrowDown');
+
+  await expect(list.locator('.person-card--selected')).not.toHaveCount(0);
+  await expect(list.getByRole('button').nth(1)).toBeFocused();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {
