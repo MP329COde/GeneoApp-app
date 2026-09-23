@@ -4,6 +4,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { TreeWorkspace } from '../server/src/trees/tree-workspace.js';
 import { configuredDataDir } from '../server/src/storage/storage-config.js';
 import { formatGenealogyDate } from '../db/src/dates/genealogy-date.js';
@@ -344,9 +345,8 @@ export async function main(argv = process.argv.slice(2), io = {}) {
   }
 }
 
-const isMain =
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname);
+// Comparaison de chemins de fichiers (et non d'URL) : fiable sous Windows aussi.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   main().then((code) => {
     process.exitCode = code;
