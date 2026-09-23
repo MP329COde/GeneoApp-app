@@ -1072,6 +1072,79 @@ function ConsistencyPanel({ onNavigate, personLabelById }) {
   );
 }
 
+// Outil ponctuel de comparaison de deux personnes — s'appuie sur
+// `GenealogyGraphService#findCommonAncestors`, jusque-là testé côté API mais
+// jamais exposé à l'utilisateur.
+function CommonAncestorsTool({ selected, persons, onNavigate }) {
+  const [otherId, setOtherId] = useState('');
+  const [result, setResult] = useState(null);
+  const [toolError, setToolError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const otherPersons = persons.filter((person) => person.id !== selected.id);
+
+  const handleCompare = async (event) => {
+    event.preventDefault();
+    if (!otherId) return;
+    setBusy(true);
+    setToolError(null);
+    try {
+      setResult(await client.graph.commonAncestors(selected.id, Number(otherId)));
+    } catch (compareError) {
+      setToolError(compareError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="detail-section">
+      <h3>Ancêtres communs</h3>
+      <form className="create-person-form" onSubmit={handleCompare}>
+        <label>
+          <span>Comparer avec</span>
+          <select value={otherId} onChange={(event) => setOtherId(event.target.value)}>
+            <option value="">— choisir une personne —</option>
+            {otherPersons.map((person) => (
+              <option key={person.id} value={person.id}>
+                {personLabel(person)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" size="sm" disabled={busy || !otherId}>
+          Comparer
+        </Button>
+      </form>
+      {toolError ? (
+        <p role="alert" className="notice notice--error">
+          {toolError}
+        </p>
+      ) : null}
+      {result === null ? null : result.length === 0 ? (
+        <p className="notice">Aucun ancêtre commun trouvé.</p>
+      ) : (
+        <ul className="search-results">
+          {result.map((entry) => (
+            <li key={entry.person.id}>
+              {personLabel(entry.person)} (génération {entry.generationFromA} /{' '}
+              {entry.generationFromB})
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => onNavigate(entry.person.id)}
+              >
+                Voir la fiche
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function SourcesPanel({ selected }) {
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
@@ -2468,6 +2541,13 @@ function App() {
                     </div>
                   </dl>
                 </div>
+              ) : null}
+              {persons.length > 1 ? (
+                <CommonAncestorsTool
+                  selected={selected}
+                  persons={persons}
+                  onNavigate={setSelectedId}
+                />
               ) : null}
             </>
           ) : (

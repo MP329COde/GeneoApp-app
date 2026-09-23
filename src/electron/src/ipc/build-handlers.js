@@ -157,6 +157,10 @@ export function buildIpcHandlers(services) {
       graph.assertPair(personA, personB);
       return graph.findRelationship(personA, personB);
     }),
+    [IPC_CHANNELS.GRAPH_COMMON_ANCESTORS]: wrap(({ personA, personB }) => {
+      graph.assertPair(personA, personB);
+      return graph.findCommonAncestors(personA, personB);
+    }),
     [IPC_CHANNELS.GRAPH_CYCLES]: wrap(() => graph.detectCycles()),
     [IPC_CHANNELS.GRAPH_TIMELINE]: wrap(() => graph.validateTimeline()),
 

@@ -256,3 +256,10 @@ Une excellente expérience de navigation généalogique locale, accessible et li
   vers la fiche concernée) — signalement seul, jamais de correction ni de fusion automatique, conformément à
   la Phase F du cahier des charges. Testé : 1 cas IPC, 1 cas client (Vitest), 1 scénario E2E Playwright
   (vérifie l'absence de faux positif sur les données réelles déjà créées par le reste de la suite).
+- 2026-09-23 (suite) : exposition de `GenealogyGraphService#findCommonAncestors` (Phase C — même angle mort
+  que `detectCycles`/`validateTimeline` : testé côté API depuis longtemps, jamais exposé via IPC ni consommé
+  par un écran). Canal IPC `GRAPH_COMMON_ANCESTORS` ajouté (les deux transports). Nouvel outil « Ancêtres
+  communs » dans la fiche personne : sélection d'une deuxième personne, affichage des ancêtres partagés avec
+  leur génération respective depuis chacune des deux personnes, et lien direct vers leur fiche. Testé : 1 cas
+  IPC (ancêtre commun réel calculé par filiation), 1 cas client (Vitest), 1 scénario E2E Playwright (absence
+  réelle d'ancêtre commun entre deux personnes sans lien de filiation).

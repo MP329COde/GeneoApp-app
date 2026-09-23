@@ -80,6 +80,8 @@ const api = {
     relations: (personId) => invoke(IPC_CHANNELS.GRAPH_RELATIONS, { personId }),
     relationship: (personA, personB) =>
       invoke(IPC_CHANNELS.GRAPH_RELATIONSHIP, { personA, personB }),
+    commonAncestors: (personA, personB) =>
+      invoke(IPC_CHANNELS.GRAPH_COMMON_ANCESTORS, { personA, personB }),
     cycles: () => invoke(IPC_CHANNELS.GRAPH_CYCLES),
     timeline: () => invoke(IPC_CHANNELS.GRAPH_TIMELINE),
   },

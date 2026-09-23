@@ -80,6 +80,8 @@ function createHttpClient() {
       relations: (personId) => fetchJson(`/api/persons/${personId}/relations`),
       relationship: (personA, personB) =>
         fetchJson(`/api/graph/relationship?personA=${personA}&personB=${personB}`),
+      commonAncestors: (personA, personB) =>
+        fetchJson(`/api/graph/common-ancestors?personA=${personA}&personB=${personB}`),
       cycles: () => fetchJson('/api/graph/cycles'),
       timeline: () => fetchJson('/api/graph/timeline'),
     },
@@ -212,6 +214,7 @@ function createIpcClient(bridge) {
       descendants: (personId, depth) => bridge.graph.descendants(personId, depth),
       relations: (personId) => bridge.graph.relations(personId),
       relationship: (personA, personB) => bridge.graph.relationship(personA, personB),
+      commonAncestors: (personA, personB) => bridge.graph.commonAncestors(personA, personB),
       cycles: () => bridge.graph.cycles(),
       timeline: () => bridge.graph.timeline(),
     },

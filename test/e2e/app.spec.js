@@ -186,6 +186,18 @@ test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune incohére
   await expect(page.getByText('Aucune incohérence de date détectée.')).toBeVisible();
 });
 
+test('calcule les ancêtres communs réels (ou leur absence) entre deux personnes', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+
+  await page.getByLabel('Comparer avec').selectOption({ label: 'Charles Babbage' });
+  await page.getByRole('button', { name: 'Comparer' }).click();
+
+  await expect(page.getByText('Aucun ancêtre commun trouvé.')).toBeVisible();
+});
+
 test('le carnet de recherche persiste réellement une piste entre deux navigations', async ({
   page,
 }) => {

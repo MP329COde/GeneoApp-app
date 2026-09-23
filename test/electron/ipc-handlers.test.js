@@ -153,6 +153,47 @@ test('GRAPH_ANCESTORS et GRAPH_RELATIONSHIP exposent le moteur de relations au r
   assert.equal(relationship.data.relationship, 'ANCESTOR_1');
 });
 
+test('GRAPH_COMMON_ANCESTORS calcule les ancêtres communs réels entre deux personnes', async () => {
+  const handlers = createHandlers();
+
+  const ancestor = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Aïeul', familyName: 'Commun' },
+  });
+  const parentA = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Parent', familyName: 'A' },
+  });
+  const parentB = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Parent', familyName: 'B' },
+  });
+  const personA = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Personne', familyName: 'A' },
+  });
+  const personB = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Personne', familyName: 'B' },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: parentA.data.id, parentId: ancestor.data.id },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: parentB.data.id, parentId: ancestor.data.id },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: personA.data.id, parentId: parentA.data.id },
+  });
+  await handlers[IPC_CHANNELS.PARENTAGES_CREATE]({
+    data: { childId: personB.data.id, parentId: parentB.data.id },
+  });
+
+  const common = await handlers[IPC_CHANNELS.GRAPH_COMMON_ANCESTORS]({
+    personA: personA.data.id,
+    personB: personB.data.id,
+  });
+
+  assert.equal(common.ok, true);
+  assert.equal(common.data.length, 1);
+  assert.equal(common.data[0].person.id, ancestor.data.id);
+});
+
 test('GRAPH_CYCLES et GRAPH_TIMELINE exposent les détections d’incohérences au renderer', async () => {
   const handlers = createHandlers();
 

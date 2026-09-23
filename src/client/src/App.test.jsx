@@ -11,6 +11,7 @@ const graph = vi.hoisted(() => ({
   relations: vi.fn(),
   cycles: vi.fn(),
   timeline: vi.fn(),
+  commonAncestors: vi.fn(),
 }));
 const search = vi.hoisted(() => ({
   query: vi.fn(),
@@ -963,6 +964,36 @@ describe('App', () => {
       expect(screen.getByText(/Naissance enregistrée après le décès/)).toBeInTheDocument(),
     );
     expect(screen.getByText(/Jean Dupont → Marie Curie → Jean Dupont/)).toBeInTheDocument();
+  });
+
+  it('calcule les ancêtres communs réels entre la fiche sélectionnée et une autre personne', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Marie', family_name: 'Curie' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.commonAncestors.mockResolvedValue([
+      {
+        person: { id: 3, given_names: 'Aïeul', family_name: 'Commun' },
+        generationFromA: 2,
+        generationFromB: 3,
+      },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Comparer avec'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Comparer' }));
+
+    await waitFor(() => expect(graph.commonAncestors).toHaveBeenCalledWith(1, 2));
+    await waitFor(() => expect(screen.getByText(/Aïeul Commun/)).toBeInTheDocument());
   });
 
   it('affiche le journal d’audit réel d’une personne', async () => {

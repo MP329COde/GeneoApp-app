@@ -42,6 +42,7 @@ export const IPC_CHANNELS = Object.freeze({
   GRAPH_DESCENDANTS: 'geneoapp:graph:descendants',
   GRAPH_RELATIONS: 'geneoapp:graph:relations',
   GRAPH_RELATIONSHIP: 'geneoapp:graph:relationship',
+  GRAPH_COMMON_ANCESTORS: 'geneoapp:graph:commonAncestors',
   GRAPH_CYCLES: 'geneoapp:graph:cycles',
   GRAPH_TIMELINE: 'geneoapp:graph:timeline',
 
