@@ -7,8 +7,8 @@ import { buildIpcHandlers } from './build-handlers.js';
  * validation d'entrée et les règles métier ne sont écrites qu'une fois.
  * Retourne une fonction de nettoyage (à appeler à la fermeture de l'app).
  */
-export function registerIpcHandlers(services, workspace = null) {
-  const handlers = buildIpcHandlers(services, workspace);
+export function registerIpcHandlers(services, workspace = null, storage = null) {
+  const handlers = buildIpcHandlers(services, workspace, storage);
 
   for (const [channel, handler] of Object.entries(handlers)) {
     ipcMain.handle(channel, (_event, payload) => handler(payload));

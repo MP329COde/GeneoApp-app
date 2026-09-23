@@ -41,6 +41,7 @@ export function labelForRequest(method, path) {
 export const NON_UNDOABLE_PREFIXES = [
   '/history',
   '/trees',
+  '/storage',
   '/accounts',
   '/backups',
   '/ai',

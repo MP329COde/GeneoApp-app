@@ -187,6 +187,12 @@ const api = {
     redo: () => invoke(IPC_CHANNELS.HISTORY_REDO),
   },
 
+  storage: {
+    status: () => invoke(IPC_CHANNELS.STORAGE_STATUS),
+    setMirror: (mirrorDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_MIRROR, { mirrorDir, token }),
+    setDataDir: (dataDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_DATA_DIR, { dataDir, token }),
+  },
+
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),
     active: () => invoke(IPC_CHANNELS.TREES_ACTIVE),

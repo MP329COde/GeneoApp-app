@@ -47,7 +47,7 @@ export const DEFAULT_BACKUP_DIR =
 
 export function createServices(
   database,
-  { mediaRoot = DEFAULT_MEDIA_ROOT, backupDir = DEFAULT_BACKUP_DIR } = {},
+  { mediaRoot = DEFAULT_MEDIA_ROOT, backupDir = DEFAULT_BACKUP_DIR, mirrorDir = () => null } = {},
 ) {
   const sources = new SourceService(new SourceRepository(database));
   const entityServices = {
@@ -65,7 +65,7 @@ export function createServices(
   };
 
   const accounts = new AccountService(new AccountRepository(database), new SessionStore());
-  const backups = new BackupService(database, { backupDir });
+  const backups = new BackupService(database, { backupDir, mirrorDir });
 
   return {
     ...entityServices,

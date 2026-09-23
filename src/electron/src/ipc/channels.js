@@ -112,6 +112,10 @@ export const IPC_CHANNELS = Object.freeze({
   HISTORY_UNDO: 'geneoapp:history:undo',
   HISTORY_REDO: 'geneoapp:history:redo',
 
+  STORAGE_STATUS: 'geneoapp:storage:status',
+  STORAGE_SET_MIRROR: 'geneoapp:storage:setMirror',
+  STORAGE_SET_DATA_DIR: 'geneoapp:storage:setDataDir',
+
   TREES_LIST: 'geneoapp:trees:list',
   TREES_ACTIVE: 'geneoapp:trees:active',
   TREES_LIST_DELETED: 'geneoapp:trees:listDeleted',

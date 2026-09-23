@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { copyFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createDatabase } from '../db.js';
 import { DEFAULT_BACKUP_DIR, createServices } from '../services/index.js';
 import { NotFoundError, ValidationError } from '../errors.js';
+import { copyDirectoryIfExists } from '../storage/storage-config.js';
 
 const CATALOG_FILE = 'trees.json';
 const NAME_MAX_LENGTH = 80;
@@ -47,10 +49,15 @@ export class TreeWorkspace {
     mediaRoot,
     backupDir,
     openDatabase = createDatabase,
+    portable = false,
+    mirrorDir = () => null,
   }) {
     this.dataDir = dataDir;
     this.mediaRoot = mediaRoot;
     this.backupDir = backupDir;
+    // Dossier de travail choisi (ex. clé USB) : tout est rangé sous dataDir.
+    this.portable = portable;
+    this.mirrorDir = mirrorDir;
     this.openDatabase = openDatabase;
     this.catalogPath = path.join(dataDir, CATALOG_FILE);
     this.listeners = new Set();
@@ -113,9 +120,10 @@ export class TreeWorkspace {
   // perdre aucune sauvegarde ni aucun média existant ; chaque nouvel arbre a
   // ses propres sous-répertoires.
   pathsFor(tree) {
-    const legacy = tree.id === 'default';
+    const legacy = tree.id === 'default' && !this.portable;
     const scoped = (base, fallbackName) => {
       if (legacy) return base ?? (fallbackName === 'backups' ? DEFAULT_BACKUP_DIR : undefined);
+      if (this.portable) return path.join(this.dataDir, fallbackName, tree.id);
       return path.join(base ?? path.join(this.dataDir, fallbackName), tree.id);
     };
     return {
@@ -139,6 +147,10 @@ export class TreeWorkspace {
     this.services = createServices(this.database, {
       ...(paths.media ? { mediaRoot: paths.media } : {}),
       ...(paths.backups ? { backupDir: paths.backups } : {}),
+      mirrorDir: () => {
+        const base = this.mirrorDir();
+        return base ? path.join(base, tree.id) : null;
+      },
     });
   }
 
@@ -244,6 +256,31 @@ export class TreeWorkspace {
     return this.catalog.trees
       .filter((tree) => tree.deletedAt)
       .map((tree) => ({ id: tree.id, name: tree.name, deletedAt: tree.deletedAt }));
+  }
+
+  /**
+   * Copie tous les arbres (bases, médias, sauvegardes) vers un dossier de
+   * travail portable, au format attendu par `portable: true`.
+   */
+  async copyTo(target) {
+    mkdirSync(target, { recursive: true });
+    const catalog = structuredClone(this.catalog);
+    for (const tree of catalog.trees) {
+      const source = this.pathsFor(tree);
+      const file = tree.file === ':memory:' ? `tree-${tree.id}.sqlite` : tree.file;
+      const destination = path.join(target, file);
+      if (tree.id === this.catalog.activeId) {
+        await this.database.backup(destination);
+      } else if (source.database !== ':memory:' && existsSync(source.database)) {
+        await copyFile(source.database, destination);
+      }
+      tree.file = file;
+      await copyDirectoryIfExists(source.media, path.join(target, 'media', tree.id));
+      await copyDirectoryIfExists(source.backups, path.join(target, 'backups', tree.id));
+    }
+    await writeFile(path.join(target, 'trees.json'), JSON.stringify(catalog, null, 2), {
+      mode: 0o600,
+    });
   }
 
   onChange(listener) {

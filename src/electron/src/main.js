@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createApp } from '../../server/src/app.js';
 import { TreeWorkspace, createLiveServices } from '../../server/src/trees/tree-workspace.js';
+import {
+  StorageService,
+  configuredDataDir,
+  readStorageConfig,
+} from '../../server/src/storage/storage-config.js';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
 
 const host = '127.0.0.1';
@@ -16,8 +21,12 @@ let unregisterIpcHandlers;
 
 async function createWindow() {
   const userData = app.getPath('userData');
+  // Dossier de travail choisi (clé USB…) s'il est branché, sinon le dossier de l'app.
+  const portableDir = configuredDataDir(userData);
   workspace = new TreeWorkspace({
-    dataDir: userData,
+    dataDir: portableDir ?? userData,
+    portable: Boolean(portableDir),
+    mirrorDir: () => readStorageConfig(userData).mirrorDir,
     defaultDatabaseFile: path.join(userData, process.env.GENEOAPP_DATABASE ?? 'geneoapp.sqlite'),
     // Sauvegardes durables dans le dossier de l'application (jamais le
     // dossier temporaire du système, qui peut être vidé).
@@ -25,13 +34,14 @@ async function createWindow() {
   });
   // Services résolus à chaque appel : un changement d'arbre est suivi par
   // l'IPC et par l'API HTTP sans ré-enregistrer les handlers.
-  unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace);
+  const storage = new StorageService({ configDir: userData, workspace });
+  unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace, storage);
   // Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
   workspace.services.backups.createAutomatic('lancement').catch((error) => {
     console.error('Sauvegarde de lancement impossible :', error.message);
   });
 
-  server = createServer(createApp({ workspace })).listen(port, host);
+  server = createServer(createApp({ workspace, storage })).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
 
   const window = new BrowserWindow({

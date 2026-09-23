@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { encryptBuffer, decryptBuffer } from '../security/crypto-box.js';
+import { mirrorBackup } from '../storage/storage-config.js';
 import path from 'node:path';
 import {
   createSqliteFileBackup,
@@ -25,12 +26,13 @@ import { validateBackupCreate } from '../validation/schemas.js';
  * refusées plutôt que d'être exécutées en parallèle sur le même fichier.
  */
 export class BackupService {
-  constructor(database, { backupDir }) {
+  constructor(database, { backupDir, mirrorDir = () => null }) {
     if (!backupDir) {
       throw new Error('BackupService requiert un répertoire de sauvegarde ("backupDir")');
     }
     this.database = database;
     this.backupDir = backupDir;
+    this.mirrorDir = mirrorDir;
     this.busy = false;
   }
 
@@ -48,13 +50,14 @@ export class BackupService {
 
   async create(payload) {
     const { kind, label } = validateBackupCreate(payload);
-    return this.#run(async () => {
+    const meta = await this.#run(async () => {
       if (kind === 'sqlite') {
         return createSqliteFileBackup(this.database, this.backupDir, { label });
       }
       const dump = exportDatabaseToJson(this.database);
       return writeJsonFileBackup(this.backupDir, dump, { label });
     });
+    return { ...meta, mirror: await mirrorBackup(this.backupDir, meta.filename, this.mirrorDir()) };
   }
 
   async list() {
@@ -117,7 +120,8 @@ export class BackupService {
     for (const old of sameReason.slice(AUTOMATIC_RETENTION)) {
       await deleteBackup(this.backupDir, old.filename);
     }
-    return meta;
+    // Copie miroir (clé USB, disque externe) si le dossier est disponible.
+    return { ...meta, mirror: await mirrorBackup(this.backupDir, meta.filename, this.mirrorDir()) };
   }
 
   async verify(filename) {

@@ -201,6 +201,13 @@ function createHttpClient() {
       undo: () => fetchJson('/api/history/undo', { method: 'POST' }),
       redo: () => fetchJson('/api/history/redo', { method: 'POST' }),
     },
+    storage: {
+      status: () => fetchJson('/api/storage'),
+      setMirror: (mirrorDir, token) =>
+        fetchJson('/api/storage/mirror', { method: 'PUT', body: { mirrorDir }, token }),
+      setDataDir: (dataDir, token) =>
+        fetchJson('/api/storage/data-dir', { method: 'PUT', body: { dataDir }, token }),
+    },
     trees: {
       list: () => fetchJson('/api/trees'),
       active: () => fetchJson('/api/trees/active'),
@@ -363,6 +370,11 @@ function createIpcClient(bridge) {
       status: (limit) => bridge.history.status(limit),
       undo: () => bridge.history.undo(),
       redo: () => bridge.history.redo(),
+    },
+    storage: {
+      status: () => bridge.storage.status(),
+      setMirror: (mirrorDir, token) => bridge.storage.setMirror(mirrorDir, token),
+      setDataDir: (dataDir, token) => bridge.storage.setDataDir(dataDir, token),
     },
     trees: {
       list: () => bridge.trees.list(),

@@ -122,6 +122,11 @@ const history = vi.hoisted(() => ({
   undo: vi.fn(),
   redo: vi.fn(),
 }));
+const storage = vi.hoisted(() => ({
+  status: vi.fn(),
+  setMirror: vi.fn(),
+  setDataDir: vi.fn(),
+}));
 const trees = vi.hoisted(() => ({
   list: vi.fn(),
   active: vi.fn().mockResolvedValue({ id: 'default', name: 'Mon arbre', active: true }),
@@ -155,6 +160,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     audit,
     trees,
     history,
+    storage,
   }),
 }));
 
@@ -1703,5 +1709,41 @@ describe('App', () => {
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
+  });
+  it('configure la copie miroir des sauvegardes sur une clé USB', async () => {
+    persons.list.mockResolvedValue([]);
+    accounts.login.mockResolvedValue({ token: 'tok-5', account: { id: 1, name: 'Alice' } });
+    backups.list.mockResolvedValue([]);
+    trash.list.mockResolvedValue([]);
+    const base = {
+      activeDataDir: '/Users/alice/GeneoApp',
+      dataDir: null,
+      mirrorDir: null,
+      mirrorAvailable: false,
+      restartRequired: false,
+    };
+    storage.status.mockResolvedValue(base);
+    storage.setMirror.mockResolvedValue({
+      ...base,
+      mirrorDir: '/Volumes/CLE/GeneoApp',
+      mirrorAvailable: true,
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    fireEvent.change(await screen.findByLabelText(/Copie miroir des sauvegardes/), {
+      target: { value: '/Volumes/CLE/GeneoApp' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le miroir' }));
+    await waitFor(() =>
+      expect(storage.setMirror).toHaveBeenCalledWith('/Volumes/CLE/GeneoApp', 'tok-5'),
+    );
+    expect(await screen.findByText('Miroir branché et accessible')).toBeInTheDocument();
   });
 });

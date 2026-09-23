@@ -99,8 +99,8 @@ function withUndoGroup(services, channel, handler) {
   };
 }
 
-export function buildIpcHandlers(services, workspace = null) {
-  const handlers = buildRawHandlers(services, workspace);
+export function buildIpcHandlers(services, workspace = null, storage = null) {
+  const handlers = buildRawHandlers(services, workspace, storage);
   return Object.fromEntries(
     Object.entries(handlers).map(([channel, handler]) => [
       channel,
@@ -109,7 +109,7 @@ export function buildIpcHandlers(services, workspace = null) {
   );
 }
 
-function buildRawHandlers(services, workspace) {
+function buildRawHandlers(services, workspace, storage) {
   const {
     persons,
     places,
@@ -418,6 +418,20 @@ function buildRawHandlers(services, workspace) {
     })),
     [IPC_CHANNELS.HISTORY_UNDO]: wrap(() => services.history.undo()),
     [IPC_CHANNELS.HISTORY_REDO]: wrap(() => services.history.redo()),
+
+    ...(storage
+      ? {
+          [IPC_CHANNELS.STORAGE_STATUS]: wrap(() => storage.status()),
+          [IPC_CHANNELS.STORAGE_SET_MIRROR]: wrap(({ mirrorDir, token }) => {
+            services.accounts.requireSession(token);
+            return storage.setMirrorDir(mirrorDir ?? null);
+          }),
+          [IPC_CHANNELS.STORAGE_SET_DATA_DIR]: wrap(({ dataDir, token }) => {
+            services.accounts.requireSession(token);
+            return storage.setDataDir(dataDir ?? null);
+          }),
+        }
+      : {}),
 
     ...(workspace
       ? {

@@ -2320,6 +2320,116 @@ function LoginForm({ onLogin, loginError }) {
   );
 }
 
+// Emplacements : copie miroir des sauvegardes et dossier de travail portable (clé USB).
+function StorageSection({ token }) {
+  const [status, setStatus] = useState(null);
+  const [mirrorDir, setMirrorDir] = useState('');
+  const [dataDir, setDataDir] = useState('');
+  const [message, setMessage] = useState(null);
+  const [storageError, setStorageError] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const loaded = await client.storage?.status();
+      if (!loaded) return;
+      setStatus(loaded);
+      setMirrorDir(loaded.mirrorDir ?? '');
+      setDataDir(loaded.dataDir ?? '');
+    } catch (loadError) {
+      setStorageError(loadError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (!client.storage || !status) return null;
+
+  const run = async (action, success) => {
+    setStorageError(null);
+    setMessage(null);
+    try {
+      const result = await action();
+      setStatus(result);
+      setMessage(success(result));
+    } catch (actionError) {
+      setStorageError(actionError.message);
+    }
+  };
+
+  return (
+    <section className="storage-section" aria-labelledby="storage-title">
+      <h3 id="storage-title">Clé USB et emplacement des données</h3>
+      {storageError ? (
+        <p role="alert" className="notice notice--error">
+          {storageError}
+        </p>
+      ) : null}
+      {message ? (
+        <p role="status" className="notice">
+          {message}
+        </p>
+      ) : null}
+      <p className="data-id">Données actuelles : {status.activeDataDir}</p>
+
+      <form
+        className="storage-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          run(
+            () => client.storage.setMirror(mirrorDir.trim() || null, token),
+            (result) =>
+              result.mirrorDir
+                ? 'Chaque sauvegarde sera aussi copiée sur ce dossier dès qu’il est branché.'
+                : 'Copie miroir désactivée.',
+          );
+        }}
+      >
+        <label>
+          <span>Copie miroir des sauvegardes (ex. /Volumes/CLE_USB/GeneoApp)</span>
+          <input value={mirrorDir} onChange={(event) => setMirrorDir(event.target.value)} />
+        </label>
+        <Button type="submit" size="sm" variant="secondary">
+          Enregistrer le miroir
+        </Button>
+        {status.mirrorDir ? (
+          <p className="data-id">
+            {status.mirrorAvailable
+              ? 'Miroir branché et accessible'
+              : 'Miroir absent (clé débranchée ?)'}
+          </p>
+        ) : null}
+      </form>
+
+      <form
+        className="storage-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          run(
+            () => client.storage.setDataDir(dataDir.trim() || null, token),
+            (result) =>
+              result.dataDir
+                ? `${result.copied ? 'Arbres, médias et sauvegardes copiés. ' : 'Données GeneoApp trouvées sur ce dossier. '}Redémarrez GeneoApp pour travailler directement dessus.`
+                : 'Retour au dossier de l’application au prochain démarrage.',
+          );
+        }}
+      >
+        <label>
+          <span>Travailler directement sur un dossier (clé USB)</span>
+          <input value={dataDir} onChange={(event) => setDataDir(event.target.value)} />
+        </label>
+        <Button type="submit" size="sm" variant="secondary">
+          Utiliser ce dossier de travail
+        </Button>
+        {status.restartRequired ? (
+          <p className="data-id">Changement en attente : effectif au prochain démarrage.</p>
+        ) : null}
+      </form>
+    </section>
+  );
+}
+
 function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backups' }) {
   const [backups, setBackups] = useState(null);
   const [confirming, setConfirming] = useState(null);
@@ -2661,6 +2771,8 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
           )}
         </section>
       ) : null}
+
+      {section === 'backups' ? <StorageSection token={session.token} /> : null}
 
       {section === 'trash' ? (
         <section>
