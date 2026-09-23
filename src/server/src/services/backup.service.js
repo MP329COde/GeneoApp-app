@@ -8,7 +8,12 @@ import {
   restoreSqliteFileBackup,
   exportDatabaseToJson,
   importDatabaseFromJson,
+  deleteBackup,
 } from '../../../db/src/index.js';
+
+// Sauvegardes automatiques conservées par motif (les manuelles ne sont jamais purgées).
+export const AUTOMATIC_RETENTION = 10;
+const AUTOMATIC_REASONS = new Set(['lancement', 'avant-import-gedcom', 'avant-restauration']);
 import { ConflictError, ValidationError } from '../errors.js';
 import { validateBackupCreate } from '../validation/schemas.js';
 
@@ -52,6 +57,27 @@ export class BackupService {
 
   async list() {
     return listBackups(this.backupDir);
+  }
+
+  /**
+   * Sauvegarde automatique (lancement, avant import GEDCOM, avant
+   * restauration). JSON pour une base en mémoire, SQLite sinon. Rétention :
+   * les `AUTOMATIC_RETENTION` plus récentes par motif.
+   */
+  async createAutomatic(reason) {
+    if (!AUTOMATIC_REASONS.has(reason)) throw new ValidationError('Motif de sauvegarde inconnu');
+    const label = `auto:${reason}`;
+    const meta = await this.#run(async () => {
+      if (this.database.name !== ':memory:') {
+        return createSqliteFileBackup(this.database, this.backupDir, { label });
+      }
+      return writeJsonFileBackup(this.backupDir, exportDatabaseToJson(this.database), { label });
+    });
+    const sameReason = (await listBackups(this.backupDir)).filter((item) => item.label === label);
+    for (const old of sameReason.slice(AUTOMATIC_RETENTION)) {
+      await deleteBackup(this.backupDir, old.filename);
+    }
+    return meta;
   }
 
   async verify(filename) {

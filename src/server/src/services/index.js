@@ -42,7 +42,7 @@ import { LocalAiService } from './local-ai.service.js';
 import { MergeService } from './merge.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
-const DEFAULT_BACKUP_DIR =
+export const DEFAULT_BACKUP_DIR =
   process.env.GENEOAPP_BACKUP_DIR ?? path.join(tmpdir(), 'geneoapp-backups');
 
 export function createServices(
@@ -65,16 +65,17 @@ export function createServices(
   };
 
   const accounts = new AccountService(new AccountRepository(database), new SessionStore());
+  const backups = new BackupService(database, { backupDir });
 
   return {
     ...entityServices,
     sources,
     search: new SearchService(new SearchRepository(database), database),
     audit: new AuditService(new AuditRepository(database)),
-    gedcom: new GedcomService(database, { media: entityServices.media }),
+    gedcom: new GedcomService(database, { media: entityServices.media, backups }),
     accounts,
     trash: new TrashService(new TrashRepository(database), entityServices),
-    backups: new BackupService(database, { backupDir }),
+    backups,
     graph: new GenealogyGraphService(database),
     notes: new NoteService(new NoteRepository(database)),
     research: new ResearchService(new ResearchRepository(database)),

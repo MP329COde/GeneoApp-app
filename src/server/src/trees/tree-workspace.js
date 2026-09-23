@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createDatabase } from '../db.js';
-import { createServices } from '../services/index.js';
+import { DEFAULT_BACKUP_DIR, createServices } from '../services/index.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
 const CATALOG_FILE = 'trees.json';
@@ -115,7 +115,7 @@ export class TreeWorkspace {
   pathsFor(tree) {
     const legacy = tree.id === 'default';
     const scoped = (base, fallbackName) => {
-      if (legacy) return base;
+      if (legacy) return base ?? (fallbackName === 'backups' ? DEFAULT_BACKUP_DIR : undefined);
       return path.join(base ?? path.join(this.dataDir, fallbackName), tree.id);
     };
     return {
@@ -134,7 +134,7 @@ export class TreeWorkspace {
       }
       this.database = this.memoryDatabases.get(tree.id);
     } else {
-      this.database = this.openDatabase(paths.database);
+      this.database = this.openDatabase(paths.database, { backupDir: paths.backups });
     }
     this.services = createServices(this.database, {
       ...(paths.media ? { mediaRoot: paths.media } : {}),

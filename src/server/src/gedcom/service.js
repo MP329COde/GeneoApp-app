@@ -66,9 +66,10 @@ function mediaPath(media) {
 }
 
 export class GedcomService {
-  constructor(database, { media = null } = {}) {
+  constructor(database, { media = null, backups = null } = {}) {
     this.database = database;
     this.media = media;
+    this.backups = backups;
   }
 
   /**
@@ -104,7 +105,7 @@ export class GedcomService {
       entries.find((entry) => entry.name.toLowerCase().endsWith('.ged'));
     if (!gedcomEntry) throw new ValidationError('Aucun fichier .ged dans l’archive');
     const text = gedcomEntry.content.toString('utf8');
-    const report = this.import(text, { performedBy });
+    const report = await this.importSafely(text, { performedBy });
     if (!report.imported) return { ...report, media: { attached: 0, missing: [], rejected: [] } };
 
     const files = new Map(entries.map((entry) => [entry.name, entry.content]));
@@ -141,6 +142,17 @@ export class GedcomService {
     const records = parseGedcom(input);
     const validation = validateGedcom(records);
     return { ...validation, mapping: buildMappingPreview(records) };
+  }
+
+  /**
+   * Import sans casser la base : sauvegarde automatique si le fichier est
+   * valide, puis import transactionnel (tout ou rien).
+   */
+  async importSafely(input, { performedBy = null } = {}) {
+    if (this.backups && this.preview(input).valid) {
+      await this.backups.createAutomatic('avant-import-gedcom');
+    }
+    return this.import(input, { performedBy });
   }
 
   import(input, { performedBy = null } = {}) {

@@ -22,6 +22,11 @@ const workspace =
         ...(process.env.GENEOAPP_BACKUP_DIR ? { backupDir: process.env.GENEOAPP_BACKUP_DIR } : {}),
       });
 
+// Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
+workspace.services.backups.createAutomatic('lancement').catch((error) => {
+  console.error('Sauvegarde de lancement impossible :', error.message);
+});
+
 createApp({ workspace }).listen(port, host, () => {
   console.log(`GeneoApp server listening on http://${host}:${port}`);
 });

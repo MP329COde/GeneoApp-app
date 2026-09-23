@@ -6,9 +6,15 @@ export function createGedcomController(services) {
       response.json(gedcom.preview(request.body?.gedcom));
     },
 
-    import(request, response) {
-      const report = gedcom.import(request.body?.gedcom, { performedBy: request.performedBy });
-      response.status(report.imported ? 201 : 422).json(report);
+    async import(request, response, next) {
+      try {
+        const report = await gedcom.importSafely(request.body?.gedcom, {
+          performedBy: request.performedBy,
+        });
+        response.status(report.imported ? 201 : 422).json(report);
+      } catch (error) {
+        next(error);
+      }
     },
 
     export(request, response) {

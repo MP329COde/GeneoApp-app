@@ -243,7 +243,7 @@ function buildRawHandlers(services, workspace) {
 
     [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),
     [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>
-      gedcom.import(input, { performedBy: actorOf(performedBy) }),
+      gedcom.importSafely(input, { performedBy: actorOf(performedBy) }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(
       ({ format, personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>

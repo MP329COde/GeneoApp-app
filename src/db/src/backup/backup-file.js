@@ -183,3 +183,12 @@ export async function restoreSqliteFileBackup(backupDir, filename, targetDbPath)
 
   return verification.meta;
 }
+
+/** Supprime une sauvegarde et sa métadonnée (rétention des sauvegardes automatiques). */
+export async function deleteBackup(backupDir, filename) {
+  if (!/^[\w.-]+$/.test(filename) || filename.includes('..')) {
+    throw new Error('Nom de sauvegarde invalide');
+  }
+  await rm(path.join(backupDir, filename), { force: true });
+  await rm(path.join(backupDir, `${filename}.meta.json`), { force: true });
+}

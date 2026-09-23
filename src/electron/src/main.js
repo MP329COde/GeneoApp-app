@@ -19,10 +19,17 @@ async function createWindow() {
   workspace = new TreeWorkspace({
     dataDir: userData,
     defaultDatabaseFile: path.join(userData, process.env.GENEOAPP_DATABASE ?? 'geneoapp.sqlite'),
+    // Sauvegardes durables dans le dossier de l'application (jamais le
+    // dossier temporaire du système, qui peut être vidé).
+    backupDir: process.env.GENEOAPP_BACKUP_DIR ?? path.join(userData, 'backups'),
   });
   // Services résolus à chaque appel : un changement d'arbre est suivi par
   // l'IPC et par l'API HTTP sans ré-enregistrer les handlers.
   unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace);
+  // Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
+  workspace.services.backups.createAutomatic('lancement').catch((error) => {
+    console.error('Sauvegarde de lancement impossible :', error.message);
+  });
 
   server = createServer(createApp({ workspace })).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));

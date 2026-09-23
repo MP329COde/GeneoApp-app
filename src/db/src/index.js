@@ -29,4 +29,5 @@ export {
   verifyBackup,
   restoreSqliteFileBackup,
   sha256File,
+  deleteBackup,
 } from './backup/backup-file.js';
