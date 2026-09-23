@@ -16,3 +16,4 @@ screenshots/
 # Catalogue local des arbres (données utilisateur)
 trees.json
 trees.json.tmp
+storage.json

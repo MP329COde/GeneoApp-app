@@ -5,6 +5,9 @@
   "description": "Application de généalogie locale et hors ligne (React, Node.js/Express, SQLite, Electron)",
   "type": "module",
   "main": "src/electron/src/main.js",
+  "bin": {
+    "geneoapp": "src/cli/geneoapp.js"
+  },
   "workspaces": [
     "src/client",
     "src/server",
@@ -29,10 +32,12 @@
     "test:api": "node --test test/api/*.test.js",
     "test:electron": "node --test test/electron/*.test.js",
     "test:packaging": "node --test test/packaging/*.test.js",
+    "test:cli": "node --test test/cli/*.test.js",
+    "cli": "node src/cli/geneoapp.js",
     "test:client": "npm run test --workspace @geneoapp/client",
     "test:e2e": "playwright test",
     "screenshots": "node scripts/capture-screenshots.js",
-    "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:client",
+    "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:cli && npm run test:client",
     "storybook": "npm run storybook --workspace @geneoapp/client",
     "build-storybook": "npm run build-storybook --workspace @geneoapp/client"
   },
