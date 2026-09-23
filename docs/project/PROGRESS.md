@@ -27,3 +27,44 @@ aucun transport client malgré son canal IPC — corrigé avec un nouvel outil �
 personne. Limite restante majeure et non traitée : un seul arbre global, aucune notion de `tree_id`.
 
 \*\* 10 : un audit du 2026-09-22 a constaté que `LocalAiService` était une frontière purement symbolique (toujours 503, aucun fournisseur). Corrigé (voir « Suivi post-livraison » dans `docs/project/issues/10-ai-local-and-ci-cd.md`) : intégration HTTP réelle vers un serveur Ollama local, exposée via IPC et un écran dédié. Les workflows CI/CD (`ci.yml`, `release.yml`, `pages.yml`) ont été audités le même jour et sont déjà conformes au cahier des charges (lint/format/tests/build sur PR, matrice multi-OS, packaging + checksums + release GitHub en brouillon, déploiement du site) — aucune correction nécessaire.
+
+
+## Refonte design et compléments fonctionnels (2026-09-23)
+
+Chaque lot a fait l'objet d'un commit dédié, validé par `npm run lint`, `npm run format:check`,
+`npm test` (base, serveur, API, Electron, CLI, client) et la suite E2E Playwright.
+
+| Lot | Commit |
+|---|---|
+| Design système « cabinet d'archives », arbre ascendant/descendant, fiche personne, parenté | `bdf870b` |
+| Paramètres, bascule de thème, éventail | `bc14a2c` |
+| Arbres multiples isolés | `49f669f` |
+| Annuler / rétablir | `9fb2a26` |
+| Carnet de recherche complet | `bbaf78e` |
+| Export SVG/PNG, impression, impression géante | `b592d7f` |
+| Corbeille et Profil local, confirmations | `a6d8750` |
+| Export GEDCOM par périmètre (correctif) | `2edd113`, `49c516f` |
+| GEDZIP et filiations GEDCOM fidèles | `f18f5b9` |
+| Photos : identification des personnes | `cc1dd67` |
+| Dates généalogiques et cohérence | `2be4af5` |
+| Arbre : années, repli, branche, période, minicarte | `d235dd0` |
+| Sauvegardes automatiques | `a0294d1` |
+| Sauvegardes chiffrées | `90f26d9` |
+| Clé USB (miroir, dossier portable) | `a4591b8` |
+| Ligne de commande | `6ab3f24` |
+| Chronologie personnelle, comparaison | `d0c08ab` |
+| Recherche avancée | `d8fb5d7` |
+| Qualité des données | `fe29585` |
+| Recherche multi-sites, verrouillage de la navigation Electron | `6b6e2a2` |
+| Graphe radial, statut « vivant » cohérent | `bd8e57c` |
+| Internationalisation extensible | `8ad0674` |
+| Annotations en texte riche | `2f59f95` |
+
+Défauts existants découverts et corrigés en chemin : tri chronologique alphabétique, export GEDCOM
+(périmètre ignoré, `CHIL` en double, filiations sans union perdues, HUSB/WIFE par ordre), restauration
+toujours en JSON, sauvegardes Electron dans le dossier temporaire, perte des bases mémoire au changement
+d'arbre, personnes décédées restant « vivantes ».
+
+Limites restantes : les écrans métier ne sont traduits qu'en partie (la coque l'est), l'identification sur
+photo est uniquement manuelle (volontairement, pas de biométrie), la recherche multi-sites ouvre le navigateur
+sans indexer les pages distantes, la carte reste un fond SVG hors ligne sans tuiles.

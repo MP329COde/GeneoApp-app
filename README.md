@@ -30,10 +30,31 @@ Les dix premières issues du plan de développement sont livrées et validées (
 - `src/db` : modèle de données SQLite, migrations et dépôts (repositories) ;
 - `src/electron` : processus principal Electron avec allowlist IPC stricte et isolation du renderer.
 
-Ce socle métier reste perfectible : certaines capacités du cahier des charges complet (nommage du degré de
-parenté au-delà de « cousin issu de germain », vues graphiques additionnelles — carte, chronologie graphique,
-radiale/éventail, assistant de fusion de doublons, IA locale limitée au protocole Ollama) sont partielles ou à
-compléter — voir les limites documentées dans chaque issue de `docs/project/issues/`.
+### Fonctionnalités ajoutées (septembre 2026)
+
+- **Design système « cabinet d'archives lumineux »** : thèmes Clair — Papier et Sombre — Salle
+  d'archives, polices embarquées, navigation en 4 groupes, inspecteur, écran Paramètres (thème, densité,
+  taille du texte, animations, vue et profondeur d'arbre).
+- **Arbres multiples** isolés (un fichier SQLite par arbre), **annuler / rétablir** (Ctrl+Z, Ctrl+Maj+Z)
+  sur toutes les données.
+- **Arbre** : familial, ascendant (Sosa, branches P/M), descendant, éventail, graphe radial ; années de vie,
+  repli/dépliage, isolation de branche, filtre de période, zoom/déplacement (souris, pavé, clavier),
+  minicarte ; export SVG/PNG, impression/PDF, impression géante découpée.
+- **Fiche personne** à onglets, **chronologie** personnelle et familiale, **comparaison** de deux personnes,
+  **calcul de parenté**, **qualité des données** (faits sourcés, confiance, incohérences).
+- **Dates généalogiques** (vers, avant, après, entre, « ? », GEDCOM, anglais) et **cohérence** certaine /
+  inhabituelle (âges, décès, baptêmes, posthumes, statut vivant…).
+- **Carnet de recherche** complet (objectif, archives, résultat, hypothèses étayées par des preuves pour/contre,
+  tâches avec priorité et échéance) ; **annotations** en texte riche sur toutes les cibles.
+- **Photos** : description et identification manuelle des personnes présentes.
+- **Recherche avancée** (nom flou/phonétique, lieu, période, événement, source) et recherche simultanée
+  sur plusieurs sites (ouverts dans le navigateur, l'application ne contacte aucun site).
+- **GEDCOM** : export par périmètre (branche, ancêtres, descendants, personne), GEDZIP avec médias,
+  filiations fidèles (adoptions, filiations sans union).
+- **Sauvegardes** automatiques (lancement, avant import, avant migration), copies chiffrées AES-256-GCM,
+  miroir et dossier de travail sur clé USB.
+- **Ligne de commande** (`npm run cli -- --help`, voir [`docs/CLI.md`](docs/CLI.md)) et **traductions**
+  extensibles (voir [`docs/I18N.md`](docs/I18N.md)).
 
 ### Design system
 
