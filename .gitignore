@@ -17,3 +17,10 @@ screenshots/
 trees.json
 trees.json.tmp
 storage.json
+
+# Données locales produites à l'exécution (sauvegardes, médias, arbres)
+**/backups/
+**/media/*/
+*.sqlite.meta.json
+*.gnapenc
+*.gdz
