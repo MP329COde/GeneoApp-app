@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
+import { Badge, Button, LanguageSwitcher, useI18n } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import {
   formatGenealogyDate,
@@ -90,6 +90,7 @@ function Icon({ name }) {
 // Documenter, Vérifier, Données locales), comme dans les maquettes.
 const NAV_GROUPS = [
   {
+    key: 'explore',
     label: 'Explorer',
     items: [
       { id: 'tree', label: 'Arbre', icon: 'tree', shortcut: '⌘1' },
@@ -101,6 +102,7 @@ const NAV_GROUPS = [
     ],
   },
   {
+    key: 'document',
     label: 'Documenter',
     items: [
       { id: 'sources', label: 'Sources', icon: 'source' },
@@ -112,6 +114,7 @@ const NAV_GROUPS = [
     ],
   },
   {
+    key: 'verify',
     label: 'Vérifier',
     items: [
       { id: 'duplicates', label: 'Doublons', icon: 'duplicate' },
@@ -122,6 +125,7 @@ const NAV_GROUPS = [
     ],
   },
   {
+    key: 'local',
     label: 'Données locales',
     items: [
       { id: 'trees', label: 'Arbres', icon: 'tree' },
@@ -2973,6 +2977,7 @@ function PersonSheet({ selected, relations, onUpdated, persons = [] }) {
 // Bascule rapide Clair ↔ Sombre ; le réglage complet est dans Paramètres.
 function ThemeToggle() {
   const { settings, update } = useSettings();
+  const { t } = useI18n();
   const prefersDark =
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
   const isDark = settings.theme === 'dark' || (settings.theme === 'system' && prefersDark);
@@ -2980,7 +2985,7 @@ function ThemeToggle() {
     <button
       type="button"
       className="icon-button"
-      aria-label={isDark ? 'Passer au thème clair' : 'Passer au thème sombre'}
+      aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}
       title={isDark ? 'Thème clair' : 'Thème sombre'}
       onClick={() => update({ theme: isDark ? 'light' : 'dark' })}
     >
@@ -2991,6 +2996,7 @@ function ThemeToggle() {
 
 function AppContent() {
   const { settings } = useSettings();
+  const { t } = useI18n();
   const [persons, setPersons] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
@@ -3206,17 +3212,17 @@ function AppContent() {
   return (
     <LifespanContext.Provider value={lifespans}>
       <main className="genealogy-app" aria-labelledby="app-title">
-        <aside className="sidenav" aria-label="Navigation principale">
+        <aside className="sidenav" aria-label={t('nav.main', 'Navigation principale')}>
           <div className="sidenav__brand">
             <img src={appIcon} alt="" width="32" height="32" />
             <h1 id="app-title">GeneoApp</h1>
           </div>
           <div className="sidenav__scroll">
-            <div className="view-switcher" role="group" aria-label="Vues">
+            <div className="view-switcher" role="group" aria-label={t('nav.views', 'Vues')}>
               {NAV_GROUPS.map((group) => (
                 <div className="sidenav__group" key={group.label}>
                   <p className="sidenav__label" aria-hidden="true">
-                    {group.label}
+                    {t(`nav.group.${group.key}`, group.label)}
                   </p>
                   {group.items.map((item) => (
                     <button
@@ -3227,7 +3233,7 @@ function AppContent() {
                       type="button"
                     >
                       <Icon name={item.icon} />
-                      <span className="sidenav__text">{item.label}</span>
+                      <span className="sidenav__text">{t(`nav.${item.id}`, item.label)}</span>
                       {item.shortcut && settings.showShortcuts ? (
                         <kbd className="sidenav__kbd" aria-hidden="true">
                           {item.shortcut}
@@ -3241,7 +3247,8 @@ function AppContent() {
 
             <div className="sidenav__group sidenav__persons">
               <h2 className="sidenav__label">
-                Personnes · <span>{persons.length} personne(s)</span>
+                {t('shell.persons')} ·{' '}
+                <span>{t('shell.personCount', { count: persons.length })}</span>
               </h2>
               <CreatePersonForm onCreate={handleCreate} creating={creating} />
               <nav className="person-list" aria-label="Personnes">
@@ -3275,10 +3282,10 @@ function AppContent() {
           </div>
           <div className="sidenav__footer">
             <p>
-              <Icon name="chip" /> IA locale
+              <Icon name="chip" /> {t('shell.localAi')}
             </p>
             <p>
-              <Icon name="offline" /> Hors ligne · 100 % local
+              <Icon name="offline" /> {t('shell.offlineLocal')}
             </p>
           </div>
         </aside>
@@ -3289,12 +3296,14 @@ function AppContent() {
               {activeTree?.name ?? 'Arbre local'}
             </button>
             <span aria-hidden="true">›</span>
-            <strong>{currentView?.label ?? 'Arbre'}</strong>
+            <strong>
+              {currentView ? t(`nav.${currentView.id}`, currentView.label) : t('nav.tree')}
+            </strong>
           </p>
           {selected ? (
             <p className="topbar__context">
               <Icon name="person" />
-              <span>Contexte :</span>
+              <span>{t('shell.context')}</span>
               <strong className="person-name">{personLabel(selected)}</strong>
               {lifespans.get(selected.id) ? (
                 <span className="data-id">{lifespans.get(selected.id).label}</span>
@@ -3308,7 +3317,11 @@ function AppContent() {
                 type="button"
                 className="icon-button"
                 disabled={!history.canUndo}
-                aria-label={history.canUndo ? `Annuler : ${history.undoLabel}` : 'Rien à annuler'}
+                aria-label={
+                  history.canUndo
+                    ? t('shell.undo', { label: history.undoLabel })
+                    : t('shell.nothingToUndo')
+                }
                 title={
                   history.canUndo ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Rien à annuler'
                 }
@@ -3320,7 +3333,11 @@ function AppContent() {
                 type="button"
                 className="icon-button"
                 disabled={!history.canRedo}
-                aria-label={history.canRedo ? `Rétablir : ${history.redoLabel}` : 'Rien à rétablir'}
+                aria-label={
+                  history.canRedo
+                    ? t('shell.redo', { label: history.redoLabel })
+                    : t('shell.nothingToRedo')
+                }
                 title={
                   history.canRedo
                     ? `Rétablir : ${history.redoLabel} (Ctrl+Maj+Z)`
@@ -3334,7 +3351,7 @@ function AppContent() {
             <p className="gds-visually-hidden" role="status" aria-live="polite">
               {historyMessage}
             </p>
-            <Badge tone="success">Hors ligne</Badge>
+            <Badge tone="success">{t('shell.offline')}</Badge>
             <ThemeToggle />
             <LanguageSwitcher />
           </div>
@@ -3538,10 +3555,11 @@ function AppContent() {
                     <Icon name="person" />
                   </span>
                   <div>
-                    <p className="eyebrow">Personne sélectionnée</p>
+                    <p className="eyebrow">{t('shell.selectedPerson')}</p>
                     <h2 id="person-title">{personLabel(selected)}</h2>
                     <p className="data-id">
-                      {lifespans.get(selected.id)?.label ?? 'Dates inconnues'} · #{selected.id}
+                      {lifespans.get(selected.id)?.label ?? t('shell.unknownDates')} · #
+                      {selected.id}
                     </p>
                   </div>
                 </div>

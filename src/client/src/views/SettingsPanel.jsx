@@ -1,4 +1,4 @@
-import { Button, LanguageSwitcher } from '../design-system/index.js';
+import { Button, LanguageSwitcher, useI18n } from '../design-system/index.js';
 import { useSettings } from '../settings/SettingsContext.jsx';
 
 function Choice({ legend, name, value, options, onChange, hint }) {
@@ -43,22 +43,23 @@ function Toggle({ label, checked, onChange, hint }) {
 // Paramètres de l'application : apparence, accessibilité, arbre, comportement.
 export function SettingsPanel() {
   const { settings, update, reset } = useSettings();
+  const { t } = useI18n();
 
   return (
     <div className="search-panel settings-panel">
-      <h3>Paramètres</h3>
+      <h3>{t('settings.title')}</h3>
 
       <section aria-labelledby="settings-appearance">
-        <h4 id="settings-appearance">Apparence</h4>
+        <h4 id="settings-appearance">{t('settings.appearance')}</h4>
         <Choice
-          legend="Thème"
+          legend={t('settings.theme')}
           name="theme"
           value={settings.theme}
           onChange={(theme) => update({ theme })}
           options={[
-            { value: 'system', label: 'Suivre le système' },
-            { value: 'light', label: 'Clair — Papier' },
-            { value: 'dark', label: 'Sombre — Salle d’archives' },
+            { value: 'system', label: t('settings.theme.system') },
+            { value: 'light', label: t('settings.theme.light') },
+            { value: 'dark', label: t('settings.theme.dark') },
           ]}
         />
         <div className="theme-previews" aria-hidden="true">
@@ -72,14 +73,14 @@ export function SettingsPanel() {
           </span>
         </div>
         <Choice
-          legend="Densité"
+          legend={t('settings.density')}
           name="density"
           value={settings.density}
           onChange={(density) => update({ density })}
           options={[
-            { value: 'compact', label: 'Compacte' },
-            { value: 'standard', label: 'Standard' },
-            { value: 'comfortable', label: 'Confortable' },
+            { value: 'compact', label: t('settings.density.compact') },
+            { value: 'standard', label: t('settings.density.standard') },
+            { value: 'comfortable', label: t('settings.density.comfortable') },
           ]}
         />
         <div className="settings-field">
@@ -88,52 +89,52 @@ export function SettingsPanel() {
       </section>
 
       <section aria-labelledby="settings-a11y">
-        <h4 id="settings-a11y">Accessibilité</h4>
+        <h4 id="settings-a11y">{t('settings.a11y')}</h4>
         <Choice
-          legend="Taille du texte"
+          legend={t('settings.textSize')}
           name="textSize"
           value={settings.textSize}
           onChange={(textSize) => update({ textSize })}
           options={[
-            { value: 'standard', label: 'Standard' },
-            { value: 'large', label: 'Grande' },
-            { value: 'xlarge', label: 'Très grande' },
+            { value: 'standard', label: t('settings.textSize.standard') },
+            { value: 'large', label: t('settings.textSize.large') },
+            { value: 'xlarge', label: t('settings.textSize.xlarge') },
           ]}
         />
         <Choice
-          legend="Animations"
+          legend={t('settings.motion')}
           name="reduceMotion"
           value={settings.reduceMotion}
           onChange={(reduceMotion) => update({ reduceMotion })}
           options={[
-            { value: 'system', label: 'Suivre le système' },
-            { value: 'reduce', label: 'Réduire' },
-            { value: 'allow', label: 'Autoriser' },
+            { value: 'system', label: t('settings.motion.system') },
+            { value: 'reduce', label: t('settings.motion.reduce') },
+            { value: 'allow', label: t('settings.motion.allow') },
           ]}
         />
         <Toggle
-          label="Afficher les raccourcis clavier dans la navigation"
+          label={t('settings.shortcuts')}
           checked={settings.showShortcuts}
           onChange={(showShortcuts) => update({ showShortcuts })}
         />
       </section>
 
       <section aria-labelledby="settings-tree">
-        <h4 id="settings-tree">Arbre</h4>
+        <h4 id="settings-tree">{t('settings.tree')}</h4>
         <Choice
-          legend="Vue d’arbre par défaut"
+          legend={t('settings.treeMode')}
           name="treeMode"
           value={settings.treeMode}
           onChange={(treeMode) => update({ treeMode })}
           options={[
-            { value: 'family', label: 'Familial' },
-            { value: 'ancestors', label: 'Ascendant' },
-            { value: 'descendants', label: 'Descendant' },
-            { value: 'fan', label: 'Éventail' },
+            { value: 'family', label: t('tree.family') },
+            { value: 'ancestors', label: t('tree.ancestors') },
+            { value: 'descendants', label: t('tree.descendants') },
+            { value: 'fan', label: t('tree.fan') },
           ]}
         />
         <label className="settings-field">
-          <span>Générations affichées par défaut</span>
+          <span>{t('settings.treeDepth')}</span>
           <input
             type="number"
             min="1"
@@ -143,17 +144,15 @@ export function SettingsPanel() {
           />
         </label>
         <Toggle
-          label="Afficher les numéros Sosa"
+          label={t('settings.showSosa')}
           checked={settings.showSosa}
           onChange={(showSosa) => update({ showSosa })}
         />
       </section>
 
-      <p className="settings-hint">
-        Ces préférences sont enregistrées sur cet appareil uniquement.
-      </p>
+      <p className="settings-hint">{t('settings.localOnly')}</p>
       <Button variant="secondary" onClick={reset}>
-        Rétablir les valeurs par défaut
+        {t('settings.reset')}
       </Button>
     </div>
   );

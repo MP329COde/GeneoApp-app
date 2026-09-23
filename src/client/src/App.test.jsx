@@ -1923,4 +1923,29 @@ describe('App', () => {
     });
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
   });
+  it('bascule toute la coque en anglais et mémorise la langue', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Langue'), { target: { value: 'en' } });
+
+    expect(await screen.findByText('1 person')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tree' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ancestors' })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe('en');
+    expect(localStorage.getItem('geneoapp.locale')).toBe('en');
+
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
+    expect(await screen.findByText('1 personne(s)')).toBeInTheDocument();
+    localStorage.clear();
+  });
 });

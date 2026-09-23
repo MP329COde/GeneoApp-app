@@ -14,6 +14,7 @@ import {
   svgToPngBlob,
   tileSvg,
 } from '../export/tree-export.js';
+import { useI18n } from '../design-system/index.js';
 import { RadialGraph } from './RadialGraph.jsx';
 
 const MODES = [
@@ -286,6 +287,7 @@ export function TreeExplorer({
   showSosa = true,
   lifespans = new Map(),
 }) {
+  const { t } = useI18n();
   const [mode, setMode] = useState(defaultMode);
   const [depth, setDepth] = useState(defaultDepth);
   const [collapsed, setCollapsed] = useState(() => new Set());
@@ -560,7 +562,7 @@ export function TreeExplorer({
               aria-pressed={mode === item.id}
               onClick={() => setMode(item.id)}
             >
-              {item.label}
+              {t(`tree.${item.id}`, item.label)}
             </button>
           ))}
         </div>

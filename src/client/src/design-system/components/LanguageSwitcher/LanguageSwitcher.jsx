@@ -1,8 +1,6 @@
 import { useId } from 'react';
-import { SUPPORTED_LOCALES, useI18n } from '../../i18n/I18nProvider.jsx';
+import { SUPPORTED_LOCALES, languageName, useI18n } from '../../i18n/I18nProvider.jsx';
 import './LanguageSwitcher.css';
-
-const LOCALE_NAMES = { fr: 'Français', en: 'English' };
 
 /**
  * Change la langue de toute l'application. Utilise un `select` natif :
@@ -26,7 +24,7 @@ export function LanguageSwitcher() {
       >
         {SUPPORTED_LOCALES.map((code) => (
           <option key={code} value={code}>
-            {LOCALE_NAMES[code]}
+            {languageName(code)}
           </option>
         ))}
       </select>
