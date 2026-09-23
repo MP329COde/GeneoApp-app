@@ -407,3 +407,36 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   await page.getByRole('button', { name: 'Arbres', exact: true }).click();
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
 });
+
+test('identifie réellement une personne sur une photo et la retrouve sur sa fiche', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  await page.getByLabel('Prénom(s)').fill('Photographié');
+  await page.getByLabel('Nom', { exact: true }).fill('Présent');
+  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await page.getByLabel('Prénom(s)').fill('Porteur');
+  await page.getByLabel('Nom', { exact: true }).fill('Photo');
+  await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+  await page.getByRole('button', { name: 'Porteur Photo' }).first().click();
+
+  await page.getByRole('button', { name: 'Médias', exact: true }).click();
+  await page.getByLabel('Ajouter un fichier').setInputFiles(samplePngPath);
+  await page.getByRole('button', { name: 'Ouvrir sample.png' }).click();
+  await expect(page.locator('.photo-frame img')).toBeVisible();
+
+  // Tracé réel à la souris sur l'image.
+  const box = await page.locator('.photo-frame').boundingBox();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.6, { steps: 5 });
+  await page.mouse.up();
+  await page.getByLabel('Personne présente').selectOption({ label: 'Photographié Présent' });
+  await page.getByRole('button', { name: 'Enregistrer la zone tracée' }).click();
+  await expect(page.locator('.photo-region__label')).toHaveText('Photographié Présent');
+
+  await page.getByRole('button', { name: '← Retour aux médias' }).click();
+  await page.getByRole('button', { name: 'Photographié Présent' }).first().click();
+  await expect(page.getByText('Apparaît aussi sur')).toBeVisible();
+});

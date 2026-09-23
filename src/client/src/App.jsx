@@ -4,6 +4,7 @@ import { createGeneoAppClient } from './api/geneoapp-client.js';
 import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
+import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
 import { SettingsPanel } from './views/SettingsPanel.jsx';
@@ -1812,8 +1813,10 @@ function readFileAsBase64(file) {
   });
 }
 
-function MediaPanel({ selected }) {
+function MediaPanel({ selected, persons = [] }) {
   const [items, setItems] = useState(null);
+  const [appearsIn, setAppearsIn] = useState([]);
+  const [openMediaId, setOpenMediaId] = useState(null);
   const [mediaError, setMediaError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -1821,6 +1824,8 @@ function MediaPanel({ selected }) {
     if (!selected) return;
     try {
       setItems(await client.media.listForEntity('PERSON', selected.id));
+      const tagged = (await client.media.photosForPerson?.(selected.id)) ?? [];
+      setAppearsIn(tagged.filter((item) => item.entity_id !== selected.id));
     } catch (loadError) {
       setMediaError(loadError.message);
     }
@@ -1880,6 +1885,22 @@ function MediaPanel({ selected }) {
     }
   };
 
+  if (openMediaId !== null) {
+    return (
+      <div className="search-panel">
+        <PhotoViewer
+          client={client}
+          mediaId={openMediaId}
+          persons={persons}
+          onClose={() => {
+            setOpenMediaId(null);
+            loadMedia();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="search-panel">
       <h3>Médias de {personLabel(selected)}</h3>
@@ -1903,6 +1924,15 @@ function MediaPanel({ selected }) {
           {items.map((item) => (
             <li key={item.id}>
               <Badge tone="neutral">{item.ocr_status}</Badge> {item.original_filename}
+              {item.taken_date ? <span className="data-id">{item.taken_date}</span> : null}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setOpenMediaId(item.id)}
+                aria-label={`Ouvrir ${item.original_filename}`}
+              >
+                Ouvrir
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -1924,6 +1954,27 @@ function MediaPanel({ selected }) {
           ))}
         </ul>
       )}
+      {appearsIn.length > 0 ? (
+        <>
+          <h4 className="media-panel__subtitle">Apparaît aussi sur</h4>
+          <ul className="search-results">
+            {appearsIn.map((item) => (
+              <li key={item.id}>
+                {item.original_filename}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setOpenMediaId(item.id)}
+                  aria-label={`Ouvrir ${item.original_filename}`}
+                >
+                  Ouvrir
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -2535,7 +2586,7 @@ const PERSON_TABS = [
 
 // Fiche personne complète : un en-tête d'identité puis des onglets réutilisant
 // les outils déjà branchés sur l'API locale.
-function PersonSheet({ selected, relations, onUpdated }) {
+function PersonSheet({ selected, relations, onUpdated, persons = [] }) {
   const [tab, setTab] = useState('identity');
 
   const handleTabKeyDown = (event) => {
@@ -2628,7 +2679,7 @@ function PersonSheet({ selected, relations, onUpdated }) {
         ) : tab === 'sources' ? (
           <SourcesPanel selected={selected} />
         ) : tab === 'media' ? (
-          <MediaPanel selected={selected} />
+          <MediaPanel selected={selected} persons={persons} />
         ) : tab === 'notes' ? (
           <NotesPanel selected={selected} />
         ) : (
@@ -3030,7 +3081,7 @@ function AppContent() {
             ) : view === 'audit' ? (
               <AuditPanel selected={selected} />
             ) : view === 'media' ? (
-              <MediaPanel selected={selected} />
+              <MediaPanel selected={selected} persons={persons} />
             ) : view === 'sources' ? (
               <SourcesPanel selected={selected} />
             ) : view === 'events' ? (
@@ -3070,7 +3121,12 @@ function AppContent() {
             ) : view === 'settings' ? (
               <SettingsPanel />
             ) : view === 'person' && selected ? (
-              <PersonSheet selected={selected} relations={relations} onUpdated={loadPersons} />
+              <PersonSheet
+                selected={selected}
+                relations={relations}
+                onUpdated={loadPersons}
+                persons={persons}
+              />
             ) : view === 'relations' ? (
               <RelationshipPanel
                 client={client}

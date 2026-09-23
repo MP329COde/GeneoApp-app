@@ -1669,3 +1669,94 @@ input[type='radio'] {
   color: var(--danger);
   font: var(--type-heading);
 }
+
+/* ---------- Photos ---------- */
+.photo-viewer {
+  display: grid;
+  gap: var(--space-4);
+}
+.photo-viewer__header {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+.photo-viewer__header h4 {
+  margin: 0;
+  font: var(--type-heading-lg);
+}
+.photo-viewer__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.photo-frame {
+  position: relative;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.photo-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+.photo-region {
+  position: absolute;
+  border: var(--border-thick) solid var(--action);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+.photo-region--draft {
+  border-style: dashed;
+  border-color: var(--focus-ring);
+  background: color-mix(in srgb, var(--action) 12%, transparent);
+}
+.photo-region__label {
+  position: absolute;
+  left: -2px;
+  top: 100%;
+  margin-top: 2px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--action);
+  color: var(--on-action);
+  font: var(--type-caption);
+  white-space: nowrap;
+}
+.photo-viewer__side {
+  display: grid;
+  gap: var(--space-4);
+}
+.photo-viewer__side label {
+  display: grid;
+  gap: var(--space-1);
+}
+.photo-viewer__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.photo-viewer__manual summary {
+  cursor: pointer;
+  color: var(--text-link);
+}
+.photo-viewer__meta {
+  display: grid;
+  gap: var(--space-3);
+}
+.media-panel__subtitle {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--type-heading);
+}
+@media (max-width: 1024px) {
+  .photo-viewer__layout {
+    grid-template-columns: 1fr;
+  }
+}

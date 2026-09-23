@@ -22,6 +22,9 @@ const SPECIAL = [
   [/\/hypotheses$/, 'Ajout d’hypothèse'],
   [/\/evidence$/, 'Ajout de preuve'],
   [/\/tasks$/, 'Ajout de tâche'],
+  [/\/regions$/, 'Identification sur photo'],
+  [/\/regions\/\d+$/, 'Retrait d’identification'],
+  [/\/photo$/, 'Description de photo'],
 ];
 
 // Libellé lisible d'une action, affiché dans « Annuler … » / « Rétablir … ».

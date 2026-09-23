@@ -1,3 +1,4 @@
+import { PhotoService } from './photo.service.js';
 import { UndoHistory } from '../../../db/src/history/undo-history.js';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,6 +10,7 @@ import {
   ParentageRepository,
   SourceRepository,
   MediaRepository,
+  PhotoRepository,
   SearchRepository,
   AuditRepository,
   AccountRepository,
@@ -80,5 +82,6 @@ export function createServices(
     localAi: new LocalAiService(),
     merge: new MergeService(database),
     history: new UndoHistory(database),
+    photos: new PhotoService(new PhotoRepository(database), database),
   };
 }

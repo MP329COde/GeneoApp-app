@@ -9,6 +9,7 @@ export { EventRepository } from './repositories/event-repository.js';
 export { UnionRepository } from './repositories/union-repository.js';
 export { ParentageRepository } from './repositories/parentage-repository.js';
 export { SourceRepository } from './repositories/source-repository.js';
+export { PhotoRepository } from './repositories/photo-repository.js';
 export { MediaRepository } from './repositories/media-repository.js';
 export { SearchRepository } from './repositories/search-repository.js';
 export { AuditRepository } from './repositories/audit-repository.js';

@@ -170,6 +170,11 @@ const api = {
       invoke(IPC_CHANNELS.MEDIA_LIST_FOR_ENTITY, { entityType, entityId }),
     listForSource: (sourceId) => invoke(IPC_CHANNELS.MEDIA_LIST_FOR_SOURCE, { sourceId }),
     remove: (id, performedBy) => invoke(IPC_CHANNELS.MEDIA_REMOVE, { id, performedBy }),
+    photo: (id) => invoke(IPC_CHANNELS.MEDIA_PHOTO_GET, { id }),
+    updatePhoto: (id, data) => invoke(IPC_CHANNELS.MEDIA_PHOTO_UPDATE, { id, data }),
+    addRegion: (id, data) => invoke(IPC_CHANNELS.MEDIA_REGION_ADD, { id, data }),
+    removeRegion: (regionId) => invoke(IPC_CHANNELS.MEDIA_REGION_REMOVE, { regionId }),
+    photosForPerson: (personId) => invoke(IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON, { personId }),
   },
 
   history: {

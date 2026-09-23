@@ -225,6 +225,13 @@ function createHttpClient() {
         fetchJson(`/api/media/by-entity/${entityType}/${entityId}`),
       listForSource: (sourceId) => fetchJson(`/api/media/by-source/${sourceId}`),
       remove: (id) => fetchJson(`/api/media/${id}`, { method: 'DELETE' }),
+      photo: (id) => fetchJson(`/api/media/${id}/photo`),
+      updatePhoto: (id, data) =>
+        fetchJson(`/api/media/${id}/photo`, { method: 'PATCH', body: data }),
+      addRegion: (id, data) =>
+        fetchJson(`/api/media/${id}/regions`, { method: 'POST', body: data }),
+      removeRegion: (regionId) => fetchJson(`/api/media/regions/${regionId}`, { method: 'DELETE' }),
+      photosForPerson: (personId) => fetchJson(`/api/media/photos/by-person/${personId}`),
     },
   };
 }
@@ -366,6 +373,11 @@ function createIpcClient(bridge) {
       listForEntity: (entityType, entityId) => bridge.media.listForEntity(entityType, entityId),
       listForSource: (sourceId) => bridge.media.listForSource(sourceId),
       remove: (id) => bridge.media.remove(id),
+      photo: (id) => bridge.media.photo(id),
+      updatePhoto: (id, data) => bridge.media.updatePhoto(id, data),
+      addRegion: (id, data) => bridge.media.addRegion(id, data),
+      removeRegion: (regionId) => bridge.media.removeRegion(regionId),
+      photosForPerson: (personId) => bridge.media.photosForPerson(personId),
     },
   };
 }

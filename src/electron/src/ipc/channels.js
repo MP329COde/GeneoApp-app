@@ -100,6 +100,11 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_LIST_FOR_ENTITY: 'geneoapp:media:listForEntity',
   MEDIA_LIST_FOR_SOURCE: 'geneoapp:media:listForSource',
   MEDIA_REMOVE: 'geneoapp:media:remove',
+  MEDIA_PHOTO_GET: 'geneoapp:media:photo',
+  MEDIA_PHOTO_UPDATE: 'geneoapp:media:updatePhoto',
+  MEDIA_REGION_ADD: 'geneoapp:media:addRegion',
+  MEDIA_REGION_REMOVE: 'geneoapp:media:removeRegion',
+  MEDIA_PHOTOS_FOR_PERSON: 'geneoapp:media:photosForPerson',
 
   HISTORY_STATUS: 'geneoapp:history:status',
   HISTORY_UNDO: 'geneoapp:history:undo',

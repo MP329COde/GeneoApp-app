@@ -78,6 +78,11 @@ const media = vi.hoisted(() => ({
   listForEntity: vi.fn(),
   listForSource: vi.fn().mockResolvedValue([]),
   remove: vi.fn(),
+  photo: vi.fn(),
+  updatePhoto: vi.fn(),
+  addRegion: vi.fn(),
+  removeRegion: vi.fn(),
+  photosForPerson: vi.fn().mockResolvedValue([]),
 }));
 const sources = vi.hoisted(() => ({
   create: vi.fn(),
@@ -1508,6 +1513,72 @@ describe('App', () => {
     );
     expect(await screen.findByText('Exporté : 3 personne(s), 1 famille(s)')).toBeInTheDocument();
     clickSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+  it('identifie une personne sur une photo via la saisie clavier de la zone', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont' },
+      { id: 2, given_names: 'Marie', family_name: 'Martin' },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    media.listForEntity.mockResolvedValue([
+      { id: 8, original_filename: 'mariage.png', ocr_status: 'UNAVAILABLE', entity_id: 1 },
+    ]);
+    const photo = {
+      id: 8,
+      original_filename: 'mariage.png',
+      mime_type: 'image/png',
+      size_bytes: 2048,
+      taken_date: null,
+      place_id: null,
+      description: null,
+      tags: null,
+    };
+    media.photo.mockResolvedValueOnce({ ...photo, regions: [] }).mockResolvedValue({
+      ...photo,
+      regions: [
+        {
+          id: 3,
+          person_id: 2,
+          given_names: 'Marie',
+          family_name: 'Martin',
+          x: 0.1,
+          y: 0.1,
+          width: 0.2,
+          height: 0.25,
+        },
+      ],
+    });
+    media.download.mockResolvedValue({ filename: 'mariage.png', blob: new Blob(['x']) });
+    media.addRegion.mockResolvedValue({ id: 3 });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:photo'), revokeObjectURL: vi.fn() });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir mariage.png' }));
+
+    fireEvent.change(await screen.findByLabelText('Personne présente'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la zone saisie' }));
+
+    await waitFor(() =>
+      expect(media.addRegion).toHaveBeenCalledWith(8, {
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.25,
+        personId: 2,
+      }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Retirer Marie Martin de la photo' }),
+    ).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 });

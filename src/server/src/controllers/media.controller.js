@@ -34,5 +34,34 @@ export function createMediaController(services) {
       media.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();
     },
+
+    photo(request, response) {
+      response.json(services.photos.get(request.params.id));
+    },
+
+    updatePhoto(request, response) {
+      response.json(
+        services.photos.updateMetadata(request.params.id, request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    addRegion(request, response) {
+      response.status(201).json(
+        services.photos.addRegion(request.params.id, request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    removeRegion(request, response) {
+      services.photos.removeRegion(request.params.regionId, { performedBy: request.performedBy });
+      response.status(204).end();
+    },
+
+    photosForPerson(request, response) {
+      response.json(services.photos.listForPerson(request.params.personId));
+    },
   };
 }

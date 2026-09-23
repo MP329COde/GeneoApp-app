@@ -13,6 +13,7 @@ export const EXPORTABLE_TABLES = [
   'union_partners',
   'parentages',
   'media',
+  'media_regions',
   'notes',
   'research_notebook',
   'research_hypotheses',

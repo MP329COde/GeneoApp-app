@@ -384,6 +384,20 @@ function buildRawHandlers(services, workspace) {
       media.listForEntity(entityType, entityId),
     ),
     [IPC_CHANNELS.MEDIA_LIST_FOR_SOURCE]: wrap(({ sourceId }) => media.listForSource(sourceId)),
+    [IPC_CHANNELS.MEDIA_PHOTO_GET]: wrap(({ id }) => services.photos.get(id)),
+    [IPC_CHANNELS.MEDIA_PHOTO_UPDATE]: wrap(({ id, data, performedBy }) =>
+      services.photos.updateMetadata(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.MEDIA_REGION_ADD]: wrap(({ id, data, performedBy }) =>
+      services.photos.addRegion(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.MEDIA_REGION_REMOVE]: wrap(({ regionId, performedBy }) => {
+      services.photos.removeRegion(regionId, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
+    [IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON]: wrap(({ personId }) =>
+      services.photos.listForPerson(personId),
+    ),
     [IPC_CHANNELS.MEDIA_REMOVE]: wrap(({ id, performedBy }) => {
       media.remove(id, { performedBy: actorOf(performedBy) });
       return { removed: true };
