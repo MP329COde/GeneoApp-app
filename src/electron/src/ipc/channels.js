@@ -67,6 +67,8 @@ export const IPC_CHANNELS = Object.freeze({
   BACKUPS_LIST: 'geneoapp:backups:list',
   BACKUPS_VERIFY: 'geneoapp:backups:verify',
   BACKUPS_RESTORE: 'geneoapp:backups:restore',
+  BACKUPS_EXPORT_ENCRYPTED: 'geneoapp:backups:exportEncrypted',
+  BACKUPS_IMPORT_ENCRYPTED: 'geneoapp:backups:importEncrypted',
 
   TRASH_LIST: 'geneoapp:trash:list',
   TRASH_RESTORE: 'geneoapp:trash:restore',

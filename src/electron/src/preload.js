@@ -119,6 +119,10 @@ const api = {
     verify: (filename, token) => invoke(IPC_CHANNELS.BACKUPS_VERIFY, { filename, token }),
     restore: (filename, kind, token, performedBy) =>
       invoke(IPC_CHANNELS.BACKUPS_RESTORE, { filename, kind, token, performedBy }),
+    exportEncrypted: (filename, passphrase, token) =>
+      invoke(IPC_CHANNELS.BACKUPS_EXPORT_ENCRYPTED, { filename, passphrase, token }),
+    importEncrypted: (contentBase64, passphrase, token) =>
+      invoke(IPC_CHANNELS.BACKUPS_IMPORT_ENCRYPTED, { contentBase64, passphrase, token }),
   },
 
   trash: {

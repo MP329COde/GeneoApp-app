@@ -37,6 +37,9 @@ const accounts = vi.hoisted(() => ({
 const backups = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),
+  restore: vi.fn(),
+  exportEncrypted: vi.fn(),
+  importEncrypted: vi.fn(),
 }));
 const trash = vi.hoisted(() => ({
   list: vi.fn(),
@@ -1650,5 +1653,55 @@ describe('App', () => {
     });
     expect(screen.getByText('Pierre Dupont').closest('button')).toHaveClass('tree-node--dimmed');
     expect(screen.getByText('Anne Morel').closest('button')).not.toHaveClass('tree-node--dimmed');
+  });
+  it('restaure une sauvegarde SQLite en mode fichier et exporte une copie chiffrée', async () => {
+    persons.list.mockResolvedValue([]);
+    accounts.login.mockResolvedValue({ token: 'tok-9', account: { id: 1, name: 'Alice' } });
+    backups.list.mockResolvedValue([
+      {
+        filename: 'geneoapp-sqlite-a.sqlite',
+        kind: 'sqlite',
+        label: 'auto:lancement',
+        createdAt: '2026-09-23T08:00:00.000Z',
+        sizeBytes: 4096,
+      },
+    ]);
+    backups.restore.mockResolvedValue({ restored: true, restartRequired: true });
+    backups.exportEncrypted.mockResolvedValue({ filename: 'x.gnapenc', contentBase64: 'AAAA' });
+    trash.list.mockResolvedValue([]);
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    renderWithProviders(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
+    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    expect(await screen.findByText(/Automatique · lancement/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restaurer' }));
+    await waitFor(() =>
+      expect(backups.restore).toHaveBeenCalledWith('geneoapp-sqlite-a.sqlite', 'sqlite', 'tok-9'),
+    );
+    expect(await screen.findByText(/redémarrez GeneoApp/)).toBeInTheDocument();
+
+    const exportButton = screen.getByRole('button', { name: /Exporter chiffrée/ });
+    expect(exportButton).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Phrase secrète (12 caractères minimum)'), {
+      target: { value: 'une phrase assez longue' },
+    });
+    fireEvent.click(exportButton);
+    await waitFor(() =>
+      expect(backups.exportEncrypted).toHaveBeenCalledWith(
+        'geneoapp-sqlite-a.sqlite',
+        'une phrase assez longue',
+        'tok-9',
+      ),
+    );
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

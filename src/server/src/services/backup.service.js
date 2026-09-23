@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { encryptBuffer, decryptBuffer } from '../security/crypto-box.js';
 import path from 'node:path';
 import {
   createSqliteFileBackup,
@@ -9,6 +10,7 @@ import {
   exportDatabaseToJson,
   importDatabaseFromJson,
   deleteBackup,
+  importBackupFile,
 } from '../../../db/src/index.js';
 
 // Sauvegardes automatiques conservées par motif (les manuelles ne sont jamais purgées).
@@ -57,6 +59,44 @@ export class BackupService {
 
   async list() {
     return listBackups(this.backupDir);
+  }
+
+  /**
+   * Copie chiffrée et portable d'une sauvegarde (clé USB, disque externe) :
+   * le fichier et sa métadonnée sont scellés ensemble (AES-256-GCM).
+   */
+  async exportEncrypted(filename, passphrase) {
+    assertFilename(filename);
+    const verification = await verifyBackup(this.backupDir, filename);
+    if (!verification.valid) {
+      throw new ConflictError(`Sauvegarde invalide (${verification.reason})`);
+    }
+    const content = await readFile(path.join(this.backupDir, filename));
+    const envelope = Buffer.from(
+      JSON.stringify({ meta: verification.meta, contentBase64: content.toString('base64') }),
+    );
+    return {
+      filename: `${filename}.gnapenc`,
+      contentBase64: encryptBuffer(envelope, passphrase).toString('base64'),
+    };
+  }
+
+  /** Déchiffre une sauvegarde portable et l'ajoute à la liste (puis restaurable). */
+  async importEncrypted(contentBase64, passphrase) {
+    if (typeof contentBase64 !== 'string' || contentBase64 === '') {
+      throw new ValidationError('Fichier chiffré manquant');
+    }
+    const envelope = JSON.parse(
+      decryptBuffer(Buffer.from(contentBase64, 'base64'), passphrase).toString('utf8'),
+    );
+    const content = Buffer.from(envelope.contentBase64, 'base64');
+    return this.#run(async () => {
+      try {
+        return await importBackupFile(this.backupDir, envelope.meta, content);
+      } catch (error) {
+        throw new ValidationError(error.message);
+      }
+    });
   }
 
   /**

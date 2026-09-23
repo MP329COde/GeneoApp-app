@@ -302,6 +302,15 @@ function buildRawHandlers(services, workspace) {
         : backups.restoreLogical(filename, { performedBy: actorOf(performedBy) });
     }),
 
+    [IPC_CHANNELS.BACKUPS_EXPORT_ENCRYPTED]: wrap(({ filename, passphrase, token }) => {
+      accounts.requireSession(token);
+      return backups.exportEncrypted(filename, passphrase);
+    }),
+    [IPC_CHANNELS.BACKUPS_IMPORT_ENCRYPTED]: wrap(({ contentBase64, passphrase, token }) => {
+      accounts.requireSession(token);
+      return backups.importEncrypted(contentBase64, passphrase);
+    }),
+
     [IPC_CHANNELS.TRASH_LIST]: wrap(() => trash.list()),
     [IPC_CHANNELS.TRASH_RESTORE]: wrap(({ table, id, token, performedBy }) => {
       accounts.requireSession(token);

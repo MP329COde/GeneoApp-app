@@ -30,4 +30,5 @@ export {
   restoreSqliteFileBackup,
   sha256File,
   deleteBackup,
+  importBackupFile,
 } from './backup/backup-file.js';

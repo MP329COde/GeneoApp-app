@@ -2323,6 +2323,8 @@ function LoginForm({ onLogin, loginError }) {
 function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backups' }) {
   const [backups, setBackups] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [passphrase, setPassphrase] = useState('');
+  const [backupStatus, setBackupStatus] = useState(null);
   const [trashItems, setTrashItems] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -2357,16 +2359,63 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
     }
   };
 
-  const handleRestore = async (filename) => {
+  const handleRestore = async (backup) => {
     setBusy(true);
     setActionError(null);
+    setBackupStatus(null);
     try {
-      await client.backups.restore(filename, 'logical', session.token);
+      // SQLite : remplacement du fichier (effectif au redémarrage) ; JSON : immédiat.
+      const kind = backup.kind === 'sqlite' ? 'sqlite' : 'logical';
+      const result = await client.backups.restore(backup.filename, kind, session.token);
+      setBackupStatus(
+        result?.restartRequired
+          ? 'Restauration préparée : redémarrez GeneoApp pour retrouver cette version.'
+          : 'Sauvegarde restaurée.',
+      );
       await loadAll();
     } catch (restoreError) {
       setActionError(restoreError.message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleExportEncrypted = async (backup) => {
+    setActionError(null);
+    setBackupStatus(null);
+    try {
+      const result = await client.backups.exportEncrypted(
+        backup.filename,
+        passphrase,
+        session.token,
+      );
+      const bytes = Uint8Array.from(atob(result.contentBase64), (char) => char.charCodeAt(0));
+      downloadBlob(result.filename, new Blob([bytes], { type: 'application/octet-stream' }));
+      setBackupStatus(
+        'Copie chiffrée prête : conservez la phrase secrète, elle est indispensable.',
+      );
+    } catch (exportError) {
+      setActionError(exportError.message);
+    }
+  };
+
+  const handleImportEncrypted = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setActionError(null);
+    setBackupStatus(null);
+    try {
+      await client.backups.importEncrypted(await readFileAsBase64(file), passphrase, session.token);
+      setBackupStatus(
+        'Sauvegarde chiffrée déchiffrée et ajoutée à la liste : vous pouvez la restaurer.',
+      );
+      await loadAll();
+    } catch (importError) {
+      setActionError(importError.message);
+    } finally {
+      setBusy(false);
+      event.target.value = '';
     }
   };
 
@@ -2506,6 +2555,41 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
       {section === 'backups' ? (
         <section>
           <h3>Sauvegardes</h3>
+          <p className="settings-hint">
+            Sauvegardes automatiques au lancement, avant chaque import GEDCOM et avant chaque mise à
+            jour de la base (10 conservées par motif). Les sauvegardes manuelles ne sont jamais
+            supprimées.
+          </p>
+          {backupStatus ? (
+            <p role="status" className="notice">
+              {backupStatus}
+            </p>
+          ) : null}
+          <fieldset className="encrypted-backup">
+            <legend>Copie chiffrée (clé USB, disque externe)</legend>
+            <label>
+              <span>Phrase secrète (12 caractères minimum)</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
+              />
+            </label>
+            <label className="gedcom-panel__file">
+              <span>Importer une sauvegarde chiffrée (.gnapenc)</span>
+              <input
+                type="file"
+                accept=".gnapenc"
+                onChange={handleImportEncrypted}
+                disabled={busy || passphrase.length < 12}
+              />
+            </label>
+            <p className="settings-hint">
+              Chiffrement AES-256-GCM. Sans la phrase secrète, la copie est illisible : elle ne peut
+              pas être récupérée.
+            </p>
+          </fieldset>
           <div className="gedcom-panel__actions">
             <Button
               type="button"
@@ -2533,15 +2617,43 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
             <ul className="search-results">
               {backups.map((backup) => (
                 <li key={backup.filename}>
-                  {backup.filename}
+                  <span className="backup-row__main">
+                    <strong>
+                      {backup.createdAt
+                        ? new Date(backup.createdAt).toLocaleString('fr-FR')
+                        : backup.filename}
+                    </strong>
+                    <span className="data-id">
+                      {backup.kind === 'sqlite' ? 'SQLite' : 'JSON'} ·{' '}
+                      {backup.label?.startsWith('auto:')
+                        ? `Automatique · ${backup.label.slice(5)}`
+                        : (backup.label ?? 'Manuelle')}
+                      {backup.sizeBytes
+                        ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} Ko`
+                        : ''}
+                    </span>
+                    {backup.createdAt ? (
+                      <span className="data-id backup-row__file">{backup.filename}</span>
+                    ) : null}
+                  </span>
                   <Button
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleRestore(backup.filename)}
+                    onClick={() => handleRestore(backup)}
                     disabled={busy}
                   >
                     Restaurer
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleExportEncrypted(backup)}
+                    disabled={busy || passphrase.length < 12}
+                    aria-label={`Exporter chiffrée la sauvegarde du ${backup.createdAt ? new Date(backup.createdAt).toLocaleString('fr-FR') : backup.filename}`}
+                  >
+                    Exporter chiffrée
                   </Button>
                 </li>
               ))}

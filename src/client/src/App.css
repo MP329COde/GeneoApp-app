@@ -1936,3 +1936,32 @@ input[type='radio'] {
 .tree-toolbar__menu:not([open]) > .tree-toolbar__export {
   display: none;
 }
+
+/* ---------- Sauvegardes ---------- */
+.backup-row__main {
+  display: grid;
+  flex: 1;
+  min-width: 220px;
+}
+.backup-row__file {
+  opacity: 0.8;
+  word-break: break-all;
+}
+.encrypted-backup {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.encrypted-backup legend {
+  padding: 0 var(--space-1);
+  font: var(--type-heading);
+}
+.encrypted-backup label {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 420px;
+}

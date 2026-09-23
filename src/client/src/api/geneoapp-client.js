@@ -142,6 +142,18 @@ function createHttpClient() {
       list: (token) => fetchJson('/api/backups', { token }),
       verify: (filename, token) =>
         fetchJson(`/api/backups/${encodeURIComponent(filename)}/verify`, { token }),
+      exportEncrypted: (filename, passphrase, token) =>
+        fetchJson(`/api/backups/${encodeURIComponent(filename)}/export-encrypted`, {
+          method: 'POST',
+          body: { passphrase },
+          token,
+        }),
+      importEncrypted: (contentBase64, passphrase, token) =>
+        fetchJson('/api/backups/import-encrypted', {
+          method: 'POST',
+          body: { contentBase64, passphrase },
+          token,
+        }),
       restore: (filename, kind, token) =>
         fetchJson(
           `/api/backups/${encodeURIComponent(filename)}/restore${kind === 'sqlite' ? '?kind=sqlite' : ''}`,
@@ -316,6 +328,10 @@ function createIpcClient(bridge) {
       list: (token) => bridge.backups.list(token),
       verify: (filename, token) => bridge.backups.verify(filename, token),
       restore: (filename, kind, token) => bridge.backups.restore(filename, kind, token),
+      exportEncrypted: (filename, passphrase, token) =>
+        bridge.backups.exportEncrypted(filename, passphrase, token),
+      importEncrypted: (contentBase64, passphrase, token) =>
+        bridge.backups.importEncrypted(contentBase64, passphrase, token),
     },
     trash: {
       list: (token) => bridge.trash.list(token),

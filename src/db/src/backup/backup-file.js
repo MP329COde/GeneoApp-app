@@ -192,3 +192,36 @@ export async function deleteBackup(backupDir, filename) {
   await rm(path.join(backupDir, filename), { force: true });
   await rm(path.join(backupDir, `${filename}.meta.json`), { force: true });
 }
+
+/**
+ * Ajoute une sauvegarde reçue de l'extérieur (déchiffrée) sous un nouveau
+ * nom, après contrôle de sa somme SHA-256 et de son intégrité SQLite.
+ */
+export async function importBackupFile(backupDir, sourceMeta, content) {
+  const kind = sourceMeta?.kind === SQLITE_KIND ? SQLITE_KIND : JSON_KIND;
+  const checksum = createHash('sha256').update(content).digest('hex');
+  if (sourceMeta?.checksum && sourceMeta.checksum !== checksum) {
+    throw new Error('Somme de contrôle de la sauvegarde importée incorrecte');
+  }
+  await mkdir(backupDir, { recursive: true });
+  const filename = backupFilename(kind);
+  const finalPath = path.join(backupDir, filename);
+  const tmpPath = `${finalPath}.tmp-${process.pid}-${Date.now()}`;
+  await writeFile(tmpPath, content);
+  await rename(tmpPath, finalPath);
+  const meta = {
+    filename,
+    kind,
+    checksum,
+    sizeBytes: content.length,
+    createdAt: new Date().toISOString(),
+    label: `importée${sourceMeta?.createdAt ? ` (sauvegarde du ${sourceMeta.createdAt})` : ''}`,
+  };
+  await writeMetaAtomic(backupDir, filename, meta);
+  const verification = await verifyBackup(backupDir, filename);
+  if (!verification.valid) {
+    await deleteBackup(backupDir, filename);
+    throw new Error(`Sauvegarde importée invalide (${verification.reason})`);
+  }
+  return meta;
+}

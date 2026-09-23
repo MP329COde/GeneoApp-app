@@ -27,6 +27,28 @@ export function createBackupController(services) {
       }
     },
 
+    async exportEncrypted(request, response, next) {
+      try {
+        response.json(
+          await backups.exportEncrypted(request.params.filename, request.body?.passphrase),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+
+    async importEncrypted(request, response, next) {
+      try {
+        response
+          .status(201)
+          .json(
+            await backups.importEncrypted(request.body?.contentBase64, request.body?.passphrase),
+          );
+      } catch (error) {
+        next(error);
+      }
+    },
+
     async restore(request, response, next) {
       try {
         const kind = request.query.kind === 'sqlite' ? 'sqlite' : 'logical';
