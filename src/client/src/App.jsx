@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, LanguageSwitcher } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
+import {
+  formatGenealogyDate,
+  parseGenealogyDate,
+  precisionOf,
+} from '../../db/src/dates/genealogy-date.js';
 import { withWriteNotifications } from './api/with-write-notifications.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
@@ -870,8 +875,23 @@ function EventsPanel({ selected }) {
         </label>
         <label>
           <span>Date (texte libre)</span>
-          <input value={dateText} onChange={(event) => setDateText(event.target.value)} />
+          <input
+            value={dateText}
+            aria-describedby="event-date-reading"
+            onChange={(event) => {
+              setDateText(event.target.value);
+              // La précision suit la saisie (« vers 1812 » → ABOUT) ; elle reste modifiable.
+              if (event.target.value.trim()) setDatePrecision(precisionOf(event.target.value));
+            }}
+          />
         </label>
+        <small id="event-date-reading" className="date-reading" aria-live="polite">
+          {dateText.trim()
+            ? parseGenealogyDate(dateText).valid
+              ? `Lu comme : ${formatGenealogyDate(dateText)}`
+              : 'Date non reconnue : elle sera conservée telle quelle.'
+            : 'Ex. : 25 avril 1998, avril 1998, vers 1998, avant 1998, entre 1995 et 1998, 1998 ?'}
+        </small>
         <label>
           <span>Précision de date</span>
           <select value={datePrecision} onChange={(event) => setDatePrecision(event.target.value)}>
@@ -1098,8 +1118,18 @@ function MapPanel() {
 const TIMELINE_ISSUE_LABELS = {
   BIRTH_AFTER_DEATH: 'Naissance enregistrée après le décès',
   MARRIAGE_AFTER_DEATH: 'Mariage enregistré après le décès',
+  MARRIAGE_BEFORE_BIRTH: 'Mariage enregistré avant la naissance',
+  MARRIAGE_VERY_YOUNG: 'Mariage à un âge très jeune',
+  BAPTISM_BEFORE_BIRTH: 'Baptême enregistré avant la naissance',
+  BURIAL_BEFORE_DEATH: 'Inhumation enregistrée avant le décès',
+  IMPOSSIBLE_AGE: 'Âge au décès exceptionnel',
+  MULTIPLE_BIRTHS: 'Plusieurs naissances enregistrées',
+  CHILD_BORN_BEFORE_PARENT: 'Enfant né avant son parent',
+  PARENT_TOO_YOUNG: 'Parent très jeune à la naissance',
+  PARENT_TOO_OLD: 'Parent âgé à la naissance',
   CHILD_AFTER_PARENT_DEATH: "Naissance de l'enfant enregistrée après le décès du parent",
 };
+const SEVERITY_LABELS = { CERTAIN: 'Erreur certaine', POSSIBLE: 'Inhabituel, à vérifier' };
 
 // Signale les incohérences réellement détectées par le moteur de graphe
 // (`GenealogyGraphService#detectCycles`/`#validateTimeline`) — jamais
@@ -1162,12 +1192,19 @@ function ConsistencyPanel({ onNavigate, personLabelById }) {
           ) : (
             <ul className="search-results">
               {timelineIssues.map((issue, index) => (
-                <li key={index}>
-                  <Badge tone={issue.severity === 'CERTAIN' ? 'danger' : 'neutral'}>
-                    {issue.severity}
-                  </Badge>{' '}
-                  {TIMELINE_ISSUE_LABELS[issue.code] ?? issue.code} —{' '}
+                <li
+                  key={index}
+                  className={`coherence-issue coherence-issue--${issue.severity.toLowerCase()}`}
+                >
+                  <span className="coherence-issue__severity">
+                    {SEVERITY_LABELS[issue.severity] ?? issue.severity}
+                  </span>{' '}
+                  <strong>{TIMELINE_ISSUE_LABELS[issue.code] ?? issue.code}</strong> —{' '}
                   {personLabelById(issue.personId ?? issue.childId)}
+                  {issue.parentId ? ` (parent : ${personLabelById(issue.parentId)})` : ''}
+                  {issue.message ? (
+                    <span className="coherence-issue__detail">{issue.message}</span>
+                  ) : null}
                   <Button
                     type="button"
                     size="sm"

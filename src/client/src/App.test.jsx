@@ -1581,4 +1581,31 @@ describe('App', () => {
     ).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
+  it('lit la date saisie et en déduit la précision (« vers 1812 » → ABOUT)', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    events.listForPerson.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
+
+    fireEvent.change(await screen.findByLabelText('Date (texte libre)'), {
+      target: { value: 'ABT 1812' },
+    });
+    expect(screen.getByText('Lu comme : vers 1812')).toBeInTheDocument();
+    expect(screen.getByLabelText('Précision de date')).toHaveValue('ABOUT');
+
+    fireEvent.change(screen.getByLabelText('Date (texte libre)'), {
+      target: { value: 'le jour de la foire' },
+    });
+    expect(screen.getByText(/Date non reconnue/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Précision de date')).toHaveValue('UNKNOWN');
+  });
 });

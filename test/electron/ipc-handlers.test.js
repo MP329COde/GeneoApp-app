@@ -236,9 +236,10 @@ test('GRAPH_CYCLES et GRAPH_TIMELINE exposent les détections d’incohérences 
 
   const timeline = await handlers[IPC_CHANNELS.GRAPH_TIMELINE]();
   assert.equal(timeline.ok, true);
-  assert.deepEqual(timeline.data, [
-    { personId: person.data.id, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' },
-  ]);
+  assert.deepEqual(
+    timeline.data.map(({ personId, code, severity }) => ({ personId, code, severity })),
+    [{ personId: person.data.id, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' }],
+  );
 
   const cycles = await handlers[IPC_CHANNELS.GRAPH_CYCLES]();
   assert.equal(cycles.ok, true);

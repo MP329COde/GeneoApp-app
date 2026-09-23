@@ -1760,3 +1760,37 @@ input[type='radio'] {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Dates et cohérence ---------- */
+.date-reading {
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+  font-weight: 400;
+}
+.coherence-issue {
+  border-left: var(--border-accent) solid var(--coherence);
+}
+.coherence-issue--possible {
+  border-left-style: dashed;
+  border-left-color: var(--warning);
+}
+.coherence-issue__severity {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--coherence-subtle);
+  color: var(--coherence);
+  font: var(--type-caption);
+}
+.coherence-issue--possible .coherence-issue__severity {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+.coherence-issue__detail {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.search-panel form > .date-reading {
+  grid-column: 1 / -1;
+  margin-top: calc(var(--space-2) * -1);
+}

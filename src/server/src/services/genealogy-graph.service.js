@@ -1,6 +1,5 @@
+import { validateTimeline } from './timeline-validation.js';
 import { NotFoundError, ValidationError } from '../errors.js';
-
-const YEAR_PATTERN = /(?:^|\D)(\d{4})(?:\D|$)/;
 
 export class GenealogyGraphService {
   constructor(database) {
@@ -278,55 +277,7 @@ export class GenealogyGraphService {
   }
 
   validateTimeline() {
-    const persons = this.database.prepare('SELECT id FROM persons WHERE deleted_at IS NULL').all();
-    const events = this.database
-      .prepare(
-        `SELECT ep.person_id, e.type, e.date_text
-         FROM event_participants ep
-         JOIN events e ON e.id = ep.event_id AND e.deleted_at IS NULL
-         WHERE ep.deleted_at IS NULL`,
-      )
-      .all();
-    const byPerson = new Map(persons.map(({ id }) => [id, {}]));
-    for (const event of events) {
-      const year = event.date_text?.match(YEAR_PATTERN)?.[1];
-      if (year && byPerson.has(event.person_id))
-        byPerson.get(event.person_id)[event.type] = Number(year);
-    }
-    const issues = [];
-    for (const [personId, timeline] of byPerson) {
-      if (timeline.BIRTH && timeline.DEATH && timeline.BIRTH > timeline.DEATH) {
-        issues.push({ personId, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' });
-      }
-      if (timeline.MARRIAGE && timeline.DEATH && timeline.MARRIAGE > timeline.DEATH) {
-        issues.push({ personId, code: 'MARRIAGE_AFTER_DEATH', severity: 'CERTAIN' });
-      }
-    }
-    for (const parentage of this.database
-      .prepare(
-        `SELECT pa.parent_id, pa.child_id, child_birth.date_text AS child_birth_date,
-                parent_death.date_text AS parent_death_date
-         FROM parentages pa
-         JOIN persons child ON child.id = pa.child_id AND child.deleted_at IS NULL
-         LEFT JOIN event_participants child_ep ON child_ep.person_id = child.id AND child_ep.deleted_at IS NULL
-         LEFT JOIN events child_birth ON child_birth.id = child_ep.event_id AND child_birth.type = 'BIRTH' AND child_birth.deleted_at IS NULL
-         LEFT JOIN event_participants parent_ep ON parent_ep.person_id = pa.parent_id AND parent_ep.deleted_at IS NULL
-         LEFT JOIN events parent_death ON parent_death.id = parent_ep.event_id AND parent_death.type = 'DEATH' AND parent_death.deleted_at IS NULL
-         WHERE pa.deleted_at IS NULL`,
-      )
-      .all()) {
-      const childYear = parentage.child_birth_date?.match(YEAR_PATTERN)?.[1];
-      const parentDeathYear = parentage.parent_death_date?.match(YEAR_PATTERN)?.[1];
-      if (childYear && parentDeathYear && Number(childYear) > Number(parentDeathYear)) {
-        issues.push({
-          parentId: parentage.parent_id,
-          childId: parentage.child_id,
-          code: 'CHILD_AFTER_PARENT_DEATH',
-          severity: 'CERTAIN',
-        });
-      }
-    }
-    return issues;
+    return validateTimeline(this.database);
   }
 
   assertPair(personA, personB) {

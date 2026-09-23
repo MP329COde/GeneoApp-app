@@ -1,4 +1,11 @@
 import { withTransaction, recordAudit } from './base-repository.js';
+import { compareGenealogyDates } from '../dates/genealogy-date.js';
+
+// Tri chronologique réel (« vers 1812 », « 03 MAR 1788 », intervalles…),
+// dates inconnues en dernier, puis ordre de saisie.
+function byGenealogicalDate(a, b) {
+  return compareGenealogyDates(a.date_text ?? '', b.date_text ?? '') || a.id - b.id;
+}
 
 export class EventRepository {
   constructor(database) {
@@ -86,8 +93,8 @@ export class EventRepository {
     return event;
   }
 
-  // Tous les événements réels de l'arbre, triés chronologiquement (au sens
-  // textuel de date_text, faute de dates structurées) — alimente la vue
+  // Tous les événements réels de l'arbre, triés chronologiquement selon la
+  // lecture généalogique de date_text (voir dates/genealogy-date.js) — alimente la vue
   // chronologie. Chaque événement porte ses participants et le nom du lieu
   // déjà résolu, pour éviter des allers-retours N+1 côté appelant.
   listAll({ includeDeleted = false } = {}) {
@@ -97,10 +104,10 @@ export class EventRepository {
         `SELECT e.*, p.name AS place_name
          FROM events e
          LEFT JOIN places p ON p.id = e.place_id
-         ${clause}
-         ORDER BY e.date_text IS NULL, e.date_text`,
+         ${clause}`,
       )
-      .all();
+      .all()
+      .sort(byGenealogicalDate);
 
     const participantsByEvent = this.database
       .prepare(
@@ -129,10 +136,10 @@ export class EventRepository {
         `SELECT DISTINCT e.*
          FROM events e
          JOIN event_participants ep ON ep.event_id = e.id
-         WHERE ep.person_id = ? AND ep.deleted_at IS NULL ${clause}
-         ORDER BY e.date_text`,
+         WHERE ep.person_id = ? AND ep.deleted_at IS NULL ${clause}`,
       )
-      .all(personId);
+      .all(personId)
+      .sort(byGenealogicalDate);
   }
 
   softDelete(id, { performedBy = null } = {}) {

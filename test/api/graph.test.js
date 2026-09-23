@@ -174,9 +174,11 @@ test('le graphe détecte une incohérence de chronologie', async () => {
     assert.equal(death.status, 201);
 
     const timeline = await requestJson(server.baseUrl, '/api/graph/timeline');
-    assert.deepEqual(timeline.body, [
-      { personId: person, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' },
-    ]);
+    assert.deepEqual(
+      timeline.body.map(({ personId, code, severity }) => ({ personId, code, severity })),
+      [{ personId: person, code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' }],
+    );
+    assert.match(timeline.body[0].message, /Naissance postérieure au décès/);
   } finally {
     await server.close();
   }

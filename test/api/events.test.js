@@ -172,3 +172,32 @@ test('GET /api/events renvoie tous les événements réels triés chronologiquem
     await server.close();
   }
 });
+
+test('la chronologie trie les dates généalogiques, pas le texte', async () => {
+  const server = await startTestServer();
+  try {
+    const { body: person } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Jean', familyName: 'Tri' },
+    });
+    for (const dateText of ['1900', 'vers 1812', '03 MAR 1788', 'inconnue', 'entre 1650 et 1660']) {
+      await requestJson(server.baseUrl, '/api/events', {
+        method: 'POST',
+        body: {
+          type: 'OTHER',
+          dateText,
+          participants: [{ personId: person.id, role: 'PRINCIPAL' }],
+        },
+      });
+    }
+    const { body } = await requestJson(server.baseUrl, '/api/events');
+    assert.deepEqual(
+      body.map((event) => event.date_text),
+      ['entre 1650 et 1660', '03 MAR 1788', 'vers 1812', '1900', 'inconnue'],
+    );
+    const forPerson = await requestJson(server.baseUrl, `/api/events/by-person/${person.id}`);
+    assert.equal(forPerson.body[0].date_text, 'entre 1650 et 1660');
+  } finally {
+    await server.close();
+  }
+});
