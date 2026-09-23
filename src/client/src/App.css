@@ -2245,3 +2245,93 @@ input[type='radio'] {
   font-family: var(--font-mono);
   font-size: 11px;
 }
+
+/* ---------- Annotations ---------- */
+.note-editor {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.search-panel form.note-editor {
+  grid-template-columns: 1fr;
+}
+.note-editor label {
+  display: grid;
+  gap: var(--space-1);
+}
+.note-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.note-editor__toolbar button {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font: var(--type-body-sm);
+}
+.note-editor__toolbar button[aria-pressed='true'] {
+  background: var(--surface-selected);
+  border-color: var(--action);
+}
+.note-editor__preview {
+  min-height: 80px;
+  padding: var(--space-3);
+  border: var(--border-hairline) dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.note-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.note-item {
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.note-item--contradiction {
+  border-left: var(--border-accent) solid var(--coherence);
+}
+.note-item__meta,
+.note-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.note-item__actions {
+  margin-top: var(--space-2);
+}
+.rich-text p,
+.rich-text ul,
+.rich-text blockquote,
+.rich-text h5 {
+  margin: var(--space-1) 0;
+}
+.rich-text h5 {
+  font: var(--type-heading);
+}
+.rich-text blockquote {
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-accent) solid var(--evidence-border);
+  background: var(--evidence-subtle);
+  font: var(--type-quote);
+}
+.annotations-hub__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-3);
+}
+.annotations-hub__filters label {
+  display: grid;
+  gap: var(--space-1);
+}

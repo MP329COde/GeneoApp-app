@@ -95,6 +95,9 @@ export const IPC_CHANNELS = Object.freeze({
   NOTES_CREATE: 'geneoapp:notes:create',
   NOTES_LIST_FOR_ENTITY: 'geneoapp:notes:listForEntity',
   NOTES_GET: 'geneoapp:notes:get',
+  NOTES_LIST_ALL: 'geneoapp:notes:listAll',
+  NOTES_UPDATE: 'geneoapp:notes:update',
+  NOTES_REMOVE: 'geneoapp:notes:remove',
 
   MEDIA_UPLOAD: 'geneoapp:media:upload',
   MEDIA_GET: 'geneoapp:media:get',

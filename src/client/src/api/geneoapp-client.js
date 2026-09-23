@@ -230,6 +230,12 @@ function createHttpClient() {
       create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
       listForEntity: (entityType, entityId) => fetchJson(`/api/notes/${entityType}/${entityId}`),
       get: (id) => fetchJson(`/api/notes/by-id/${id}`),
+      listAll: (filters = {}) =>
+        fetchJson(
+          `/api/notes?${new URLSearchParams(Object.entries(filters).filter(([, v]) => v !== undefined && v !== '' && v !== false))}`,
+        ),
+      update: (id, data) => fetchJson(`/api/notes/by-id/${id}`, { method: 'PATCH', body: data }),
+      remove: (id) => fetchJson(`/api/notes/by-id/${id}`, { method: 'DELETE' }),
     },
     media: {
       upload: (data) => fetchJson('/api/media', { method: 'POST', body: data }),
@@ -398,6 +404,9 @@ function createIpcClient(bridge) {
       create: (data) => bridge.notes.create(data),
       listForEntity: (entityType, entityId) => bridge.notes.listForEntity(entityType, entityId),
       get: (id) => bridge.notes.get(id),
+      listAll: (filters) => bridge.notes.listAll(filters),
+      update: (id, data) => bridge.notes.update(id, data),
+      remove: (id) => bridge.notes.remove(id),
     },
     media: {
       upload: (data) => bridge.media.upload(data),

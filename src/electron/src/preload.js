@@ -165,6 +165,9 @@ const api = {
     listForEntity: (entityType, entityId) =>
       invoke(IPC_CHANNELS.NOTES_LIST_FOR_ENTITY, { entityType, entityId }),
     get: (id) => invoke(IPC_CHANNELS.NOTES_GET, { id }),
+    listAll: (filters) => invoke(IPC_CHANNELS.NOTES_LIST_ALL, { filters }),
+    update: (id, data) => invoke(IPC_CHANNELS.NOTES_UPDATE, { id, data }),
+    remove: (id) => invoke(IPC_CHANNELS.NOTES_REMOVE, { id }),
   },
 
   media: {

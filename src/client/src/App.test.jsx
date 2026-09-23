@@ -75,6 +75,9 @@ const ai = vi.hoisted(() => ({
 const notes = vi.hoisted(() => ({
   create: vi.fn(),
   listForEntity: vi.fn(),
+  listAll: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
 }));
 const media = vi.hoisted(() => ({
   upload: vi.fn(),
@@ -1947,5 +1950,59 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
     expect(await screen.findByText('1 personne(s)')).toBeInTheDocument();
     localStorage.clear();
+  });
+  it('modifie une note en texte riche et liste les annotations de toutes les cibles', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    const note = {
+      id: 7,
+      entity_type: 'PERSON',
+      entity_id: 1,
+      title: null,
+      body: 'Né **à Nantes**',
+      confidence: 'MEDIUM',
+      is_contradiction: 0,
+    };
+    notes.listForEntity.mockResolvedValue([note]);
+    notes.update.mockResolvedValue({ ...note, body: 'Né à Angers' });
+    notes.listAll.mockResolvedValue([
+      note,
+      { ...note, id: 8, entity_type: 'PLACE', entity_id: 3, body: 'Commune fusionnée' },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(await screen.findByText('à Nantes', { selector: 'strong' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+    const editors = screen.getAllByLabelText('Note');
+    fireEvent.change(editors[editors.length - 1], { target: { value: 'Né à Angers' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la note' }));
+    await waitFor(() =>
+      expect(notes.update).toHaveBeenCalledWith(7, {
+        title: null,
+        body: 'Né à Angers',
+        confidence: 'MEDIUM',
+        isContradiction: false,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Annotations' }));
+    expect(await screen.findByText('Lieu #3')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Cible'), { target: { value: 'PLACE' } });
+    await waitFor(() =>
+      expect(notes.listAll).toHaveBeenLastCalledWith({
+        entityType: 'PLACE',
+        q: '',
+        contradictionsOnly: false,
+      }),
+    );
   });
 });

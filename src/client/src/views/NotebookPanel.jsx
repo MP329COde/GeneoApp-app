@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button } from '../design-system/index.js';
+import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 
 export const RESEARCH_STATUS_LABELS = {
   TODO: 'À faire',
@@ -425,6 +426,16 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           </Button>
         </form>
       </section>
+
+      {client.notes ? (
+        <AnnotationsPanel
+          client={client}
+          entityType="SEARCH"
+          entityId={research.id}
+          heading="Notes de recherche"
+          emptyLabel="Aucune note pour cette recherche."
+        />
+      ) : null}
 
       <Button
         variant="secondary"

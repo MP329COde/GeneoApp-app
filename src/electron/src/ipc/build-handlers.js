@@ -376,6 +376,14 @@ function buildRawHandlers(services, workspace, storage) {
       notes.listForEntity(entityType, entityId),
     ),
     [IPC_CHANNELS.NOTES_GET]: wrap(({ id }) => notes.get(id)),
+    [IPC_CHANNELS.NOTES_LIST_ALL]: wrap(({ filters }) => notes.listAll(filters ?? {})),
+    [IPC_CHANNELS.NOTES_UPDATE]: wrap(({ id, data, performedBy }) =>
+      notes.update(id, data, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.NOTES_REMOVE]: wrap(({ id, performedBy }) => {
+      notes.remove(id, { performedBy: actorOf(performedBy) });
+      return { removed: true };
+    }),
 
     [IPC_CHANNELS.MEDIA_UPLOAD]: wrap(({ data, performedBy }) =>
       media.upload(data, { performedBy: actorOf(performedBy) }),

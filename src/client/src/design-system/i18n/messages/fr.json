@@ -85,5 +85,6 @@
   "tree.ancestors": "Ascendant",
   "tree.descendants": "Descendant",
   "tree.fan": "Éventail",
-  "tree.graph": "Graphe"
+  "tree.graph": "Graphe",
+  "nav.annotations": "Annotations"
 }
