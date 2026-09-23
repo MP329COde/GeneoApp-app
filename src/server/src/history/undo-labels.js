@@ -42,6 +42,7 @@ export const NON_UNDOABLE_PREFIXES = [
   '/history',
   '/trees',
   '/storage',
+  '/indexing',
   '/accounts',
   '/backups',
   '/ai',

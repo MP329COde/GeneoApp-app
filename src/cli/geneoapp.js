@@ -39,6 +39,11 @@ Sauvegardes
   backup list                         Liste les sauvegardes
   backup verify <nom>                 Vérifie l'intégrité d'une sauvegarde
 
+Indexation de documents (ADR 0011)
+  index run                           Lance l'indexation (à planifier via cron / Planificateur de tâches)
+  index status                        Sources, réglages et dernières exécutions
+  index search <texte>                Recherche plein texte dans les documents indexés
+
 Historique
   undo | redo                         Annule / rétablit la dernière action
 
@@ -312,6 +317,46 @@ async function run(argv, { stdout = process.stdout } = {}) {
           return result.valid ? 0 : 2;
         } else throw new UsageError(`Sous-commande inconnue : backup ${sub}`);
         return 0;
+      }
+      case 'index': {
+        const indexing = services().indexing;
+        if (sub === 'run') {
+          const run = await indexing.run('CLI');
+          print(
+            `Indexation ${run.status === 'DONE' ? 'terminée' : 'en échec'} : ${run.indexed} indexé(s), ${run.unchanged} inchangé(s), ${run.skipped} ignoré(s), ${run.errors} erreur(s)${run.message ? ` — ${run.message}` : ''}`,
+            run,
+          );
+          return run.status === 'DONE' ? 0 : 2;
+        }
+        if (sub === 'search') {
+          const hits = indexing.search(rest.join(' '));
+          print(
+            hits
+              .map(
+                (hit) =>
+                  `${hit.title}  (${hit.source_label})\n  ${hit.location}\n  ${hit.snippet ?? ''}`,
+              )
+              .join('\n') || 'Aucun document.',
+            hits,
+          );
+          return 0;
+        }
+        if (sub === 'status' || !sub) {
+          const status = indexing.status();
+          print(
+            [
+              `Planification : ${status.settings.scheduleEnabled ? `chaque nuit à ${status.settings.scheduleHour} h` : 'désactivée'}`,
+              `Accès internet : ${status.settings.networkAllowed ? 'autorisé' : 'désactivé'}`,
+              ...status.sources.map(
+                (source) =>
+                  `  [${source.kind}] ${source.label} — ${source.document_count} document(s)`,
+              ),
+            ].join('\n'),
+            status,
+          );
+          return 0;
+        }
+        throw new UsageError(`Sous-commande inconnue : index ${sub}`);
       }
       case 'undo':
       case 'redo': {

@@ -14,6 +14,11 @@ const EXCLUDED_TABLES = new Set([
   'undo_entries',
   'undo_state',
   'sqlite_sequence',
+  // Index de documents : reconstructible, volumineux, hors historique (ADR 0011).
+  'index_sources',
+  'indexed_documents',
+  'index_settings',
+  'index_runs',
 ]);
 
 const HISTORY_LIMIT = 200;
@@ -27,7 +32,8 @@ function undoableTables(database) {
   return database
     .prepare(
       `SELECT name FROM sqlite_master
-       WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'search_index%'`,
+       WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'search_index%'
+         AND name NOT LIKE 'documents_fts%'`,
     )
     .all()
     .map((row) => row.name)

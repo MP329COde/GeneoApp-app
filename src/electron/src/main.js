@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createApp } from '../../server/src/app.js';
 import { TreeWorkspace, createLiveServices } from '../../server/src/trees/tree-workspace.js';
+import { startIndexScheduler } from '../../server/src/indexing/index.service.js';
 import {
   StorageService,
   configuredDataDir,
@@ -36,6 +37,8 @@ async function createWindow() {
   // Services résolus à chaque appel : un changement d'arbre est suivi par
   // l'IPC et par l'API HTTP sans ré-enregistrer les handlers.
   const storage = new StorageService({ configDir: userData, workspace });
+  // Indexation nocturne planifiée tant que l'application est ouverte (ADR 0011).
+  startIndexScheduler(() => workspace.services.indexing);
   unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace, storage);
   // Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
   workspace.services.backups.createAutomatic('lancement').catch((error) => {

@@ -83,3 +83,14 @@ test('refuse une commande ou un identifiant invalide avec le code 64', async () 
     assert.equal(badId.code, 64);
   });
 });
+
+test('index : statut puis exécution (déclenchable par le planificateur du système)', async () => {
+  await withDataDir(async (cli) => {
+    const status = await cli('index', 'status');
+    assert.equal(status.code, 0);
+    assert.match(status.stdout, /Planification : désactivée/);
+    const run = await cli('index', 'run', '--json');
+    assert.equal(run.code, 0);
+    assert.equal(JSON.parse(run.stdout).trigger, 'CLI');
+  });
+});

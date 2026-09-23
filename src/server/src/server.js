@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createApp } from './app.js';
 import { TreeWorkspace } from './trees/tree-workspace.js';
+import { startIndexScheduler } from './indexing/index.service.js';
 import { StorageService, configuredDataDir, readStorageConfig } from './storage/storage-config.js';
 
 const host = '127.0.0.1';
@@ -32,6 +33,9 @@ const storage = new StorageService({ configDir, workspace });
 workspace.services.backups.createAutomatic('lancement').catch((error) => {
   console.error('Sauvegarde de lancement impossible :', error.message);
 });
+
+// Indexation nocturne planifiée (si activée dans l'écran Indexation).
+startIndexScheduler(() => workspace.services.indexing);
 
 createApp({ workspace, storage }).listen(port, host, () => {
   console.log(`GeneoApp server listening on http://${host}:${port}`);

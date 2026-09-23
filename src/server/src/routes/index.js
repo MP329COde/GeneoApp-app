@@ -19,6 +19,7 @@ import { statisticsRoutes } from './statistics.routes.js';
 import { reportsRoutes } from './reports.routes.js';
 import { localAiRoutes } from './local-ai.routes.js';
 import { historyRoutes } from './history.routes.js';
+import { indexingRoutes } from './indexing.routes.js';
 import { undoGroup } from '../middleware/undo-group.js';
 
 export function apiRoutes(services) {
@@ -26,6 +27,7 @@ export function apiRoutes(services) {
 
   router.use(undoGroup(services));
   router.use('/history', historyRoutes(services));
+  router.use('/indexing', indexingRoutes(services));
   router.use('/persons', personRoutes(services));
   router.use('/places', placeRoutes(services));
   router.use('/events', eventRoutes(services));
