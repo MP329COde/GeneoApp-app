@@ -430,7 +430,9 @@ function buildRawHandlers(services, workspace, storage) {
       services.indexing.removeSource(id);
       return { removed: true };
     }),
-    [IPC_CHANNELS.INDEXING_SETTINGS]: wrap(({ data }) => services.indexing.updateSettings(data ?? {})),
+    [IPC_CHANNELS.INDEXING_SETTINGS]: wrap(({ data }) =>
+      services.indexing.updateSettings(data ?? {}),
+    ),
     [IPC_CHANNELS.INDEXING_RUN]: wrap(() => services.indexing.run('MANUAL')),
     [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
       services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
