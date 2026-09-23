@@ -4,7 +4,10 @@ import { test } from 'node:test';
 import { startTestServer, requestJson } from './helpers.js';
 import { parseGedcom, validateGedcom } from '../../src/server/src/gedcom/index.js';
 
-const fixture = await readFile(new URL('../fixtures/sample.ged', import.meta.url), 'utf8');
+// Normalisé en LF : les tests remplacent des fragments de texte (indépendant de l'OS).
+const fixture = (
+  await readFile(new URL('../fixtures/sample.ged', import.meta.url), 'utf8')
+).replace(/\r\n/g, '\n');
 
 test('le parser accepte GEDCOM 5.5, 5.5.1 et 7', () => {
   for (const version of ['5.5', '5.5.1', '7']) {

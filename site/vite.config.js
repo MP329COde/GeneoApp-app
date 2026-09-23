@@ -9,6 +9,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Le design system vit hors de site/ : React doit toujours être résolu
+    // depuis les dépendances du site (la CI n'installe que celles-ci).
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@design-system': fileURLToPath(new URL('../src/client/src/design-system', import.meta.url)),
     },

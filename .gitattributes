@@ -1,0 +1,4 @@
+# Fixtures de test : fins de ligne LF sur tous les OS (tests par comparaison de texte).
+*.ged text eol=lf
+test/fixtures/** text=auto eol=lf
+*.png binary
