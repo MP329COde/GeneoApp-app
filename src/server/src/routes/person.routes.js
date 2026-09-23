@@ -16,6 +16,9 @@ export function personRoutes(services) {
   router.get('/:id/ancestors', graph.ancestors);
   router.get('/:id/descendants', graph.descendants);
   router.get('/:id/relations', graph.relations);
+  router.get('/:id/quality', (request, response) =>
+    response.json(services.quality.forPerson(request.params.id)),
+  );
 
   return router;
 }

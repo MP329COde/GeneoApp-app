@@ -139,6 +139,7 @@ const trees = vi.hoisted(() => ({
 }));
 
 const advancedSearch = vi.hoisted(() => vi.fn());
+const quality = vi.hoisted(() => vi.fn());
 
 vi.mock('./api/geneoapp-client.js', () => ({
   createGeneoAppClient: () => ({
@@ -164,6 +165,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     history,
     storage,
     advancedSearch,
+    quality,
   }),
 }));
 
@@ -1818,5 +1820,34 @@ describe('App', () => {
     expect(within(form).getByText('Naissance 3 mars 1850 · Rouen')).toBeInTheDocument();
     fireEvent.click(within(form).getByRole('button', { name: 'Jeanne Dupond' }));
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Identité' })).toBeInTheDocument());
+  });
+  it('affiche la qualité des données de la personne sélectionnée', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    quality.mockResolvedValue({
+      totals: { facts: 3, sourced: 1, unsourced: 2 },
+      confidence: { HIGH: 1, MEDIUM: 0, LOW: 0 },
+      facts: [
+        { kind: 'IDENTITY', sourced: false },
+        { kind: 'EVENT', type: 'BIRTH', sourced: true, bestConfidence: 'HIGH' },
+        { kind: 'EVENT', type: 'DEATH', sourced: false },
+      ],
+      issues: [{ code: 'BIRTH_AFTER_DEATH', severity: 'CERTAIN' }],
+      score: 1,
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(quality).toHaveBeenCalledWith(1));
+    expect(await screen.findByText('1 / 3')).toBeInTheDocument();
+    expect(screen.getByText(/2 fait\(s\) sans source : identité, décès/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Qualité : 1 sur 4' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'examiner' }));
+    expect(screen.getByRole('button', { name: 'Cohérence' })).toHaveClass('is-active');
   });
 });

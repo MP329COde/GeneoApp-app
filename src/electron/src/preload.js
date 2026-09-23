@@ -181,6 +181,7 @@ const api = {
     photosForPerson: (personId) => invoke(IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON, { personId }),
   },
 
+  quality: (personId) => invoke(IPC_CHANNELS.PERSON_QUALITY, { personId }),
   advancedSearch: (filters) => invoke(IPC_CHANNELS.SEARCH_ADVANCED, { filters }),
 
   history: {

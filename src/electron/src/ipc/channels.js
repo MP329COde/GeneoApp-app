@@ -109,6 +109,7 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_PHOTOS_FOR_PERSON: 'geneoapp:media:photosForPerson',
 
   SEARCH_ADVANCED: 'geneoapp:search:advanced',
+  PERSON_QUALITY: 'geneoapp:quality:forPerson',
   HISTORY_STATUS: 'geneoapp:history:status',
   HISTORY_UNDO: 'geneoapp:history:undo',
   HISTORY_REDO: 'geneoapp:history:redo',

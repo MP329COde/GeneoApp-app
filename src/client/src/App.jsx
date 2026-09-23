@@ -13,6 +13,7 @@ import { buildLifespans } from './genealogy/lifespans.js';
 import { PersonTimeline } from './views/PersonTimeline.jsx';
 import { ComparePanel } from './views/ComparePanel.jsx';
 import { AdvancedSearch } from './views/AdvancedSearch.jsx';
+import { QualityCard } from './views/QualityCard.jsx';
 import { PhotoViewer } from './views/PhotoViewer.jsx';
 import { NotebookPanel } from './views/NotebookPanel.jsx';
 import { TreesPanel } from './views/TreesPanel.jsx';
@@ -3538,6 +3539,13 @@ function AppContent() {
                     </p>
                   </div>
                 </div>
+                <QualityCard
+                  client={client}
+                  personId={selected.id}
+                  version={`${dataVersion}-${lifespans.size}-${history.undoLabel ?? ''}`}
+                  onOpenCoherence={() => setView('consistency')}
+                  onOpenSources={() => setView('sources')}
+                />
                 <IdentityTool selected={selected} onUpdated={loadPersons} />
                 {relations ? (
                   <div className="detail-section">
