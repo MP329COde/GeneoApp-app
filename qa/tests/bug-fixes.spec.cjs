@@ -236,3 +236,76 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
     expect(relationsAfter.children[0].id).toBe(created['QA-BUG006-Gamma']);
   });
 });
+
+// --- Cycle QA round 3 (angle UX / utilisateur non technique) ---
+
+test.describe('QA-015 : libellés français dans le panneau Statistiques', () => {
+  test('les clés techniques (persons, places, events...) sont traduites en français', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    // Ouvre le panneau Statistiques via la barre latérale.
+    const statsLink = page.getByRole('button', { name: /statistiques/i }).first();
+    await statsLink.click();
+
+    const dl = page.locator('.search-panel dl').first();
+    await expect(dl).toBeVisible({ timeout: 10000 });
+
+    const text = await dl.innerText();
+    // Aucune clé technique brute ne doit apparaître comme libellé.
+    expect(text).not.toMatch(/\bpersons\b/);
+    expect(text).not.toMatch(/\bplaces\b/);
+    expect(text).not.toMatch(/\bparentages\b/);
+
+    // Les libellés français attendus doivent être présents.
+    expect(text).toMatch(/Personnes/);
+    expect(text).toMatch(/Lieux/);
+  });
+});
+
+test.describe('QA-016 : message de suppression de personne compréhensible', () => {
+  test('en cas d\'échec, le message affiché est en français clair, sans détail technique brut', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1000);
+
+    // Sélectionne la première personne de la liste, puis ouvre sa fiche complète
+    // (écran "Personne") où se trouve le bouton "Supprimer".
+    const firstPerson = page.locator('.person-list .person-card').first();
+    if (await firstPerson.count()) {
+      await firstPerson.click();
+      await page.waitForTimeout(300);
+    }
+    const personNavLink = page.getByRole('button', { name: /^Personne$/i }).first();
+    if (await personNavLink.count()) {
+      await personNavLink.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Simule une erreur réseau sur la suppression pour vérifier le message affiché.
+    await page.route('**/api/persons/**', (route) => {
+      if (route.request().method() === 'DELETE') {
+        return route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: { message: 'SQLITE_CONSTRAINT: FOREIGN KEY failed' } }),
+        });
+      }
+      return route.continue();
+    });
+
+    const deleteButton = page.getByRole('button', { name: /^Supprimer /i }).first();
+    if (!(await deleteButton.count())) {
+      test.skip(true, 'Aucune personne sélectionnée disponible pour ce scénario.');
+    }
+    await deleteButton.click();
+
+    const confirm = page.getByRole('button', { name: 'Confirmer la suppression' });
+    await confirm.click();
+
+    const alert = page.locator('[role="alertdialog"] .form-error, [role="alert"]').first();
+    await expect(alert).toBeVisible({ timeout: 10000 });
+    const message = await alert.innerText();
+
+    expect(message).not.toMatch(/SQLITE|FOREIGN KEY|Error:|at [A-Za-z]+\./);
+    expect(message.length).toBeGreaterThan(10);
+  });
+});

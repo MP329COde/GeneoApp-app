@@ -3278,8 +3278,10 @@ function PersonSheet({
       await client.persons.remove(selected.id);
       setConfirmingDelete(false);
       onDeleted?.(selected.id);
-    } catch (error) {
-      setDeleteError(error?.message ?? 'Suppression impossible.');
+    } catch {
+      setDeleteError(
+        "La suppression a échoué. Vérifiez votre connexion locale et réessayez, ou contactez le support si le problème persiste.",
+      );
     } finally {
       setDeleting(false);
     }
