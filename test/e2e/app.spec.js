@@ -153,21 +153,27 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   page,
 }) => {
   await page.goto('/');
-  // L'import GEDCOM précédent a recréé "Ada Lovelace" et "Byron Lovelace" en
-  // plus des fiches déjà saisies manuellement : un vrai doublon exact exploité
-  // ici plutôt que d'en fabriquer un artificiellement.
-  await page.getByRole('button', { name: 'Doublons', exact: true }).click();
-  await page.getByRole('button', { name: 'Analyser les doublons potentiels' }).click();
+  // L'import GEDCOM précédent a recréé "Ada Lovelace" en plus de la fiche déjà
+  // saisie manuellement : un vrai doublon exact exploité ici plutôt que d'en
+  // fabriquer un artificiellement. La vérification des doublons n'est plus un
+  // écran séparé : elle est intégrée à la fiche de la personne concernée
+  // (section « À vérifier », cf. App.jsx VerificationSection).
+  await page.getByRole('button', { name: 'Personne', exact: true }).click();
+  await page
+    .locator('.sidenav__persons')
+    .getByText('Ada Lovelace', { exact: false })
+    .first()
+    .click();
 
-  const pair = page.locator('.search-results li', { hasText: 'Ada Lovelace' }).first();
-  await expect(pair).toBeVisible();
-  await pair.getByRole('button', { name: 'Fusionner (garder A)' }).click();
+  const verification = page.locator('#verification-section');
+  await expect(verification.getByText(/Doublon possible/)).toBeVisible();
+  await verification.getByRole('button', { name: 'Fusionner ici' }).click();
 
   // L'aperçu de fusion bloque tant que l'utilisateur n'a pas confirmé.
   await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirmer la fusion' }).click();
 
-  await expect(pair).not.toBeVisible();
+  await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
   await expect(page.getByText('4 personne(s)')).toBeVisible();
