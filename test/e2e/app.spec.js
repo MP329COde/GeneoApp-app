@@ -71,7 +71,7 @@ test('les statistiques reflètent les données réelles créées durant le parco
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Statistiques', exact: true }).click();
-  const personsRow = page.locator('dl div', { hasText: 'persons' });
+  const personsRow = page.locator('dl div', { hasText: 'Personnes' });
   await expect(personsRow.locator('dd')).toHaveText('2');
 });
 
