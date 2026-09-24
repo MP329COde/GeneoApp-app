@@ -108,8 +108,9 @@ function Icon({ name }) {
 }
 
 // Architecture de navigation : vues regroupées en 3 familles (Explorer,
-// Documenter, Données locales). La vérification n'est plus une section à part :
-// elle est intégrée aux fiches, à l'arbre et aux notifications.
+// Documenter, Données locales). La vérification est intégrée aux fiches et à
+// l'arbre au fil de l'édition, et complétée par un écran « Cohérence » dédié
+// pour lancer un contrôle global sur tout l'arbre en un clic.
 const NAV_GROUPS = [
   {
     key: 'explore',
@@ -121,6 +122,7 @@ const NAV_GROUPS = [
       { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
       { id: 'relations', label: 'Parenté', icon: 'family' },
       { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
+      { id: 'consistency', label: 'Cohérence', icon: 'family' },
       { id: 'statistics', label: 'Statistiques', icon: 'stats' },
     ],
   },
