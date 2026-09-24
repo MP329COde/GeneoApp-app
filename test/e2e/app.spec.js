@@ -16,9 +16,14 @@ const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.met
 test.describe.configure({ mode: 'serial' });
 
 // Création d'une personne par la fenêtre « Nouvelle personne ».
+// Sur un arbre vide, l'application ouvre déjà cette fenêtre automatiquement
+// (assistant de départ) : on ne re-clique le bouton que si elle n'est pas
+// déjà affichée, pour refléter le comportement réel de l'UI.
 async function addPerson(page, givenNames, familyName) {
-  await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  if (!(await dialog.isVisible())) {
+    await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
+  }
   await dialog.getByLabel('Prénom(s)').fill(givenNames);
   await dialog.getByLabel('Nom', { exact: true }).fill(familyName);
   await dialog.getByRole('button', { name: 'Ajouter une personne' }).click();
