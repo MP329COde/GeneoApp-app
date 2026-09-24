@@ -677,6 +677,9 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (id) => {
+    if (!window.confirm('Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.')) {
+      return;
+    }
     setBusy(true);
     setParentageError(null);
     try {
@@ -854,6 +857,9 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (unionId) => {
+    if (!window.confirm('Dissoudre / supprimer cette union ? Cette action est irréversible.')) {
+      return;
+    }
     setBusy(true);
     setFamiliesError(null);
     try {
