@@ -687,6 +687,7 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
       await loadParentage();
       await onChange?.();
     } catch (removeError) {
+      console.error('Échec du retrait du lien de parenté', removeError);
       setParentageError(
         'Le retrait du lien de parenté a échoué. Vérifiez votre connexion locale et réessayez.',
       );
@@ -869,6 +870,7 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
       await loadUnions();
       await onChange?.();
     } catch (removeError) {
+      console.error("Échec de la suppression de l'union", removeError);
       setFamiliesError(
         "La suppression de l'union a échoué. Vérifiez votre connexion locale et réessayez.",
       );
