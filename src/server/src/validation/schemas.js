@@ -168,10 +168,11 @@ export function validatePlaceCreate(payload) {
 
 export function validateEventCreate(payload) {
   assertPayload(payload);
-  const { type, dateText, datePrecision, placeId, notes, participants } = payload;
+  const { type, value, dateText, datePrecision, placeId, notes, participants } = payload;
 
   assertValid({
     type: [required(type, 'type'), oneOf(type, EVENT_TYPES, 'type')],
+    value: [isString(value, 'value'), maxLength(value, 500, 'value')],
     dateText: [isString(dateText, 'dateText'), maxLength(dateText, 100, 'dateText')],
     datePrecision: [oneOf(datePrecision, DATE_PRECISIONS, 'datePrecision')],
     placeId: [isInteger(placeId, 'placeId')],
@@ -185,6 +186,7 @@ export function validateEventCreate(payload) {
 
   return {
     type,
+    value: value?.trim() || null,
     dateText: dateText ?? null,
     datePrecision: datePrecision ?? 'UNKNOWN',
     placeId: placeId ?? null,

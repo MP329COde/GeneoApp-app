@@ -1046,6 +1046,7 @@ describe('App', () => {
     await waitFor(() =>
       expect(events.create).toHaveBeenCalledWith({
         type: 'BIRTH',
+        value: null,
         dateText: '12 avril 1850',
         datePrecision: 'EXACT',
         placeId: 9,

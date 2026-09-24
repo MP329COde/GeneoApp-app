@@ -19,6 +19,7 @@ export class EventRepository {
   create(
     {
       type,
+      value = null,
       dateText = null,
       datePrecision = 'UNKNOWN',
       placeId = null,
@@ -34,17 +35,17 @@ export class EventRepository {
     return withTransaction(this.database, () => {
       const info = this.database
         .prepare(
-          `INSERT INTO events (type, date_text, date_precision, place_id, notes)
-           VALUES (@type, @dateText, @datePrecision, @placeId, @notes)`,
+          `INSERT INTO events (type, value, date_text, date_precision, place_id, notes)
+           VALUES (@type, @value, @dateText, @datePrecision, @placeId, @notes)`,
         )
-        .run({ type, dateText, datePrecision, placeId, notes });
+        .run({ type, value, dateText, datePrecision, placeId, notes });
 
       const eventId = info.lastInsertRowid;
       recordAudit(this.database, {
         tableName: 'events',
         rowId: eventId,
         operation: 'INSERT',
-        changes: { type, dateText, datePrecision, placeId, notes },
+        changes: { type, value, dateText, datePrecision, placeId, notes },
         performedBy,
       });
 

@@ -360,7 +360,7 @@ function generateGedcom(database, persons, families, format, media = []) {
       const tag = EXPORT_EVENT_TAGS[event.type];
       const genericLabel = GENERIC_EVENT_LABELS[event.type];
       if (!tag && !genericLabel) continue;
-      lines.push(`1 ${tag ?? 'EVEN'}`);
+      lines.push(`1 ${tag ?? 'EVEN'}${event.value ? ` ${event.value}` : ''}`);
       if (genericLabel) lines.push(`2 TYPE ${genericLabel}`);
       if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
       if (event.place_id) {
@@ -445,7 +445,7 @@ function applyMapping(database, records, performedBy) {
   );
   const insertPlace = database.prepare(`INSERT INTO places (name, normalized_name) VALUES (?, ?)`);
   const insertEvent = database.prepare(
-    `INSERT INTO events (type, date_text, date_precision, place_id, notes) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO events (type, date_text, date_precision, place_id, notes, value) VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const insertParticipant = database.prepare(
     `INSERT INTO event_participants (event_id, person_id, role) VALUES (?, ?, ?)`,
@@ -620,6 +620,7 @@ function insertEventRecord(
     datePrecision(value(record, 'DATE')),
     placeId,
     notes(record),
+    record.value?.trim() || null,
   );
   audit(database, 'events', result.lastInsertRowid, { type }, performedBy);
   return result.lastInsertRowid;

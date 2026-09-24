@@ -995,6 +995,7 @@ function EventsPanel({ selected }) {
   const [events, setEvents] = useState(null);
   const [places, setPlaces] = useState([]);
   const [type, setType] = useState('BIRTH');
+  const [value, setValue] = useState('');
   const [dateText, setDateText] = useState('');
   const [datePrecision, setDatePrecision] = useState('EXACT');
   const [placeId, setPlaceId] = useState('');
@@ -1048,11 +1049,13 @@ function EventsPanel({ selected }) {
       }
       await client.events.create({
         type,
+        value: value.trim() || null,
         dateText: dateText.trim() || null,
         datePrecision,
         placeId: resolvedPlaceId,
         participants: [{ personId: selected.id, role: 'PRINCIPAL' }],
       });
+      setValue('');
       setDateText('');
       setNewPlaceName('');
       setNewPlaceLatitude('');
@@ -1098,6 +1101,10 @@ function EventsPanel({ selected }) {
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          <span>Valeur (optionnel — ex. profession, mention de diplôme, confession…)</span>
+          <input value={value} onChange={(event) => setValue(event.target.value)} />
         </label>
         <label>
           <span>Date (texte libre)</span>
@@ -1172,7 +1179,8 @@ function EventsPanel({ selected }) {
         <ul className="search-results">
           {events.map((item) => (
             <li key={item.id}>
-              <Badge tone="neutral">{item.type}</Badge> {item.date_text ?? '(date inconnue)'}
+              <Badge tone="neutral">{item.type}</Badge>{' '}
+              {item.value ? <strong>{item.value}</strong> : null} {item.date_text ?? '(date inconnue)'}
               {item.place_id ? ` — ${placeLabelById(item.place_id)}` : ''}
               <Button
                 type="button"
@@ -1230,7 +1238,8 @@ function TimelinePanel({ onNavigate }) {
     <ol className="search-results">
       {events.map((event) => (
         <li key={event.id}>
-          <Badge tone="neutral">{event.type}</Badge> {event.date_text ?? '(date inconnue)'}
+          <Badge tone="neutral">{event.type}</Badge>{' '}
+          {event.value ? <strong>{event.value}</strong> : null} {event.date_text ?? '(date inconnue)'}
           {event.place_name ? ` — ${event.place_name}` : ''}
           {event.participants.length > 0 ? (
             <span>
