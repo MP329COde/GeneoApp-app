@@ -79,8 +79,8 @@ export function Modal({ isOpen, title, onClose, children }) {
         type="button"
         className="gds-modal__overlay-dismiss"
         onClick={onClose}
-        aria-label={t('modal.close')}
         tabIndex={-1}
+        aria-hidden="true"
       />
       <div
         ref={dialogRef}

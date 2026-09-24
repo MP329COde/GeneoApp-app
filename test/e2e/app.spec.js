@@ -420,6 +420,14 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   const counter = page.locator('.sidenav__persons .sidenav__label span');
   await expect(counter).toHaveText('0 personne(s)');
 
+  // L'arbre vide ouvre automatiquement l'assistant de départ ("Nouvelle
+  // personne") : on le referme avant de naviguer, comme le ferait un
+  // utilisateur qui choisit plutôt d'importer un GEDCOM.
+  const startAssistant = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  if (await startAssistant.isVisible()) {
+    await page.getByRole('button', { name: 'Fermer' }).click();
+  }
+
   await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
   await page
     .getByLabel('Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)')
