@@ -47,7 +47,7 @@ function outsidePeriod(lifespan, period) {
   );
 }
 
-function TreeNode({ person, sosa, branch, focus, onSelect }) {
+function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
   const { lifespans, period } = useContext(TreeViewContext);
   const lifespan = lifespans.get(person.id);
   const dimmed = outsidePeriod(lifespan, period);
@@ -71,7 +71,13 @@ function TreeNode({ person, sosa, branch, focus, onSelect }) {
             {branch === 'paternal' ? 'P' : 'M'}
           </span>
         ) : null}
-        {sosa ? <span className="data-id">Sosa {sosa}</span> : null}
+        {sosa ? (
+          <span className="data-id">Sosa {sosa}</span>
+        ) : sosaAmbiguous ? (
+          <span className="data-id" title="Filiation père/mère non déterminée pour ce parent (rôle inconnu ou ambigu) : aucun numéro Sosa fiable ne peut être attribué.">
+            Sosa indéterminé
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -83,6 +89,7 @@ function Branch({
   person,
   linksOf,
   sosa,
+  sosaAmbiguous = false,
   branch,
   focus,
   onSelect,
@@ -92,14 +99,22 @@ function Branch({
 }) {
   const { collapsed, toggle } = useContext(TreeViewContext);
   const linked = linksOf.get(person.id) ?? [];
+  const parentSlots = withSosa ? assignParentSlots(linked) : new Map();
   const ordered = withSosa
-    ? [...linked].sort((a, b) => (a.sex === 'F' ? 1 : 0) - (b.sex === 'F' ? 1 : 0))
+    ? [...linked].sort((a, b) => (parentSlots.get(a.id) ?? 2) - (parentSlots.get(b.id) ?? 2))
     : linked;
   const isCollapsed = collapsed.has(person.id);
   const name = `${person.given_names} ${person.family_name}`;
   return (
     <div className="tree-branch">
-      <TreeNode person={person} sosa={sosa} branch={branch} focus={focus} onSelect={onSelect} />
+      <TreeNode
+        person={person}
+        sosa={sosa}
+        sosaAmbiguous={sosaAmbiguous}
+        branch={branch}
+        focus={focus}
+        onSelect={onSelect}
+      />
       {ordered.length > 0 ? (
         <button
           type="button"
@@ -114,19 +129,20 @@ function Branch({
       ) : null}
       {ordered.length > 0 && !isCollapsed ? (
         <div className="tree-branch__children">
-          {ordered.map((relative, index) => {
-            const childSosa =
-              withSosa && showSosa && sosa
-                ? sosa * 2 + (relative.sex === 'F' ? 1 : relative.sex === 'M' ? 0 : index)
-                : null;
+          {ordered.map((relative) => {
+            const slot = parentSlots.get(relative.id);
+            const childSosa = withSosa && showSosa && sosa && slot !== undefined ? sosa * 2 + slot : null;
+            const childAmbiguous = withSosa && showSosa && Boolean(sosa) && slot === undefined;
             const childBranch =
-              branch ?? (withSosa ? (relative.sex === 'F' ? 'maternal' : 'paternal') : null);
+              branch ??
+              (withSosa && slot !== undefined ? (slot === 1 ? 'maternal' : 'paternal') : null);
             return (
               <Branch
                 key={relative.id}
                 person={relative}
                 linksOf={linksOf}
                 sosa={childSosa}
+                sosaAmbiguous={childAmbiguous}
                 branch={childBranch}
                 onSelect={onSelect}
                 withSosa={withSosa}
@@ -141,7 +157,49 @@ function Branch({
   );
 }
 
-// Numérotation Sosa-Stradonitz : père = 2n, mère = 2n + 1.
+// Détermine, pour un groupe de parents d'une même personne, quel parent
+// occupe canoniquement le rang « père » (slot 0) et lequel occupe le rang
+// « mère » (slot 1). Priorité au lien de filiation réel (parent_role :
+// FATHER/MOTHER) ; le sexe ne sert qu'à départager un parent resté au rôle
+// générique « PARENT » (saisie non renseignée), jamais à contredire un rôle
+// explicite (deux pères déclarés FATHER restent deux pères, pas un
+// « père »+« mère » forcés par le sexe). Un parent dont le rang ne peut
+// toujours pas être déterminé sans ambiguïté (rôle générique et sexe non
+// concluant, ou plusieurs parents du même rôle explicite) n'obtient aucun
+// slot plutôt qu'un numéro Sosa inventé.
+function assignParentSlots(parents) {
+  const fathers = parents.filter((p) => p.parent_role === 'FATHER');
+  const mothers = parents.filter((p) => p.parent_role === 'MOTHER');
+  const generic = parents.filter((p) => p.parent_role !== 'FATHER' && p.parent_role !== 'MOTHER');
+
+  const slots = new Map();
+  if (fathers.length === 1) slots.set(fathers[0].id, 0);
+  if (mothers.length === 1) slots.set(mothers[0].id, 1);
+
+  // Repli sur le sexe pour les rôles génériques uniquement, tant qu'un rang
+  // reste ouvert et qu'un seul candidat de ce sexe le réclame.
+  for (const [slot, wantedSex] of [[0, 'M'], [1, 'F']]) {
+    if ([...slots.values()].includes(slot)) continue;
+    const candidates = generic.filter((p) => !slots.has(p.id) && p.sex === wantedSex);
+    if (candidates.length === 1) slots.set(candidates[0].id, slot);
+  }
+
+  // Dernier recours : un seul parent générique restant et un seul rang encore
+  // ouvert — la seule affectation possible, sans ambiguïté.
+  const openSlots = [0, 1].filter((slot) => ![...slots.values()].includes(slot));
+  const stillGeneric = generic.filter((p) => !slots.has(p.id));
+  if (stillGeneric.length === 1 && openSlots.length === 1) {
+    slots.set(stillGeneric[0].id, openSlots[0]);
+  }
+  return slots;
+}
+
+// Numérotation Sosa-Stradonitz : père = 2n, mère = 2n + 1, d'après le rôle de
+// filiation réel de chaque parent (parent_role), jamais son sexe déclaré —
+// deux pères, deux mères ou une filiation au rôle inconnu ne reçoivent un
+// numéro Sosa que lorsque le rang « père »/« mère » est déterminable sans
+// ambiguïté ; sinon ce parent est absent de la carte retournée (pas de faux
+// numéro Sosa).
 export function computeSosa(rootId, items) {
   const sosa = new Map([[rootId, 1]]);
   const byVia = new Map();
@@ -153,12 +211,14 @@ export function computeSosa(rootId, items) {
   while (queue.length > 0) {
     const id = queue.shift();
     const parents = byVia.get(id) ?? [];
-    parents.forEach((parent, index) => {
-      if (sosa.has(parent.id)) return;
-      const offset = parent.sex === 'F' ? 1 : parent.sex === 'M' ? 0 : index % 2;
-      sosa.set(parent.id, sosa.get(id) * 2 + offset);
+    const slots = assignParentSlots(parents);
+    for (const parent of parents) {
+      if (sosa.has(parent.id)) continue;
+      const slot = slots.get(parent.id);
+      if (slot === undefined) continue;
+      sosa.set(parent.id, sosa.get(id) * 2 + slot);
       queue.push(parent.id);
-    });
+    }
   }
   return sosa;
 }
