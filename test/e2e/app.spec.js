@@ -113,7 +113,7 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   await page.getByRole('button', { name: 'Sauvegardes', exact: true }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
 
   await page.getByRole('button', { name: 'Créer une sauvegarde (JSON)' }).click();
@@ -126,14 +126,14 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Toujours connecté depuis le test précédent (état React réinitialisé par
   // page.goto, la session locale doit donc être rétablie).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
@@ -144,7 +144,7 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Le profil supprimé n'existe plus : une nouvelle connexion avec le même
   // nom recrée un profil distinct via le repli 401 (premier lancement).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 });
