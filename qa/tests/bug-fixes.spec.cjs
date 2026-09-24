@@ -53,6 +53,26 @@ test.describe('BUG-005 — menu latéral compact reste identifiable', () => {
   });
 });
 
+test.describe('BUG-003 — avertissement sur nom d’arbre dupliqué', () => {
+  test('la création d’un arbre avec un nom déjà utilisé est refusée avec un message', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.locator('.sidenav__item', { hasText: 'Arbres' }).first().waitFor({ timeout: 20000 });
+    await page.locator('.sidenav__item', { hasText: 'Arbres' }).first().click();
+
+    const firstTreeName = await page.locator('.tree-card__name').first().innerText();
+
+    await page.getByLabel('Nom de l’arbre').fill(firstTreeName);
+    await page.getByRole('button', { name: 'Créer l’arbre' }).click();
+
+    await expect(page.getByRole('alert')).toContainText('existe déjà');
+    // Aucun arbre supplémentaire n'a été créé.
+    const cardCountAfter = await page.locator('.tree-card__name', { hasText: firstTreeName }).count();
+    expect(cardCountAfter).toBe(1);
+  });
+});
+
 test.describe('BUG-004 — contraste du badge de notifications', () => {
   test('le badge respecte un contraste suffisant (fond rouge, texte blanc)', async ({ page }) => {
     await page.goto('/');
