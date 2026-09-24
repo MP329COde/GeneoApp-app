@@ -6,7 +6,7 @@ import { TreeWorkspace } from './trees/tree-workspace.js';
 import { startIndexScheduler } from './indexing/index.service.js';
 import { StorageService, configuredDataDir, readStorageConfig } from './storage/storage-config.js';
 
-const host = '127.0.0.1';
+const host = process.env.GENEOAPP_HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 3000);
 
 const memory = process.env.GENEOAPP_DATABASE === ':memory:';

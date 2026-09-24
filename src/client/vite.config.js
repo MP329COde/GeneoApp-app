@@ -39,6 +39,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: process.env.GENEOAPP_HOST ?? '127.0.0.1',
     // En développement navigateur (npm run dev), le client tourne sur le
     // serveur Vite et non dans Electron : window.geneoapp (IPC) n'existe
     // pas. Ce proxy permet au client d'appeler l'API locale via de simples

@@ -94,6 +94,12 @@ npm run migrate
 Pour lancer le serveur et le client en développement : `npm run dev`.
 Pour lancer la coquille Electron après le build du client : `npm run electron`.
 
+Pour rendre exceptionnellement le front et le back accessibles depuis le réseau local : `npm run dev:lan`.
+Le front est alors disponible sur `http://ADRESSE-IP-DU-MAC:5173/` et l'API sur `http://ADRESSE-IP-DU-MAC:3000/`.
+L'adresse IPv4 du Mac peut être obtenue avec `ipconfig getifaddr en0` (ou `en1`). Ce mode écoute sur toutes les
+interfaces (`0.0.0.0`) et doit être utilisé uniquement sur un réseau de confiance ; le lancement normal reste limité
+à la machine locale.
+
 ### Intégration Electron
 
 Le processus principal (`src/electron/src/main.js`) démarre le serveur Express local sur `127.0.0.1` et un
