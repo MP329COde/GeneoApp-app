@@ -3242,10 +3242,34 @@ const PERSON_TABS = [
 
 // Fiche personne complète : un en-tête d'identité puis des onglets réutilisant
 // les outils déjà branchés sur l'API locale.
-function PersonSheet({ selected, relations, onUpdated, persons = [], verification = null }) {
+function PersonSheet({
+  selected,
+  relations,
+  onUpdated,
+  persons = [],
+  verification = null,
+  onDeleted,
+}) {
   const { settings } = useSettings();
   const visibleTabs = PERSON_TABS.filter((item) => settings.personTabs.includes(item.id));
   const [tab, setTab] = useState('identity');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await client.persons.remove(selected.id);
+      setConfirmingDelete(false);
+      onDeleted?.(selected.id);
+    } catch (error) {
+      setDeleteError(error?.message ?? 'Suppression impossible.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleTabKeyDown = (event) => {
     const index = visibleTabs.findIndex((item) => item.id === tab);
@@ -3282,6 +3306,44 @@ function PersonSheet({ selected, relations, onUpdated, persons = [], verificatio
         >
           <Icon name="print" />
         </button>
+        {confirmingDelete ? (
+          <div className="person-sheet__delete-confirm" role="alertdialog" aria-label="Confirmer la suppression">
+            <p>Supprimer {personLabel(selected)} ? La personne sera déplacée vers la corbeille.</p>
+            {deleteError ? (
+              <p role="alert" className="form-error">
+                {deleteError}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              Confirmer la suppression
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+            >
+              Annuler
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="danger"
+            aria-label={`Supprimer ${personLabel(selected)}`}
+            onClick={() => setConfirmingDelete(true)}
+          >
+            Supprimer
+          </Button>
+        )}
       </header>
       <div className="tabs" role="tablist" aria-label="Sections de la fiche">
         {visibleTabs.map((item) => (
@@ -4025,6 +4087,11 @@ function AppContent() {
                     relations={relations}
                     onUpdated={loadPersons}
                     persons={persons}
+                    onDeleted={async () => {
+                      await loadPersons();
+                      setSelectedId(null);
+                      setView('tree');
+                    }}
                     verification={
                       <VerificationSection
                         selected={selected}

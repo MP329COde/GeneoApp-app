@@ -73,6 +73,42 @@ test.describe('BUG-003 — avertissement sur nom d’arbre dupliqué', () => {
   });
 });
 
+test.describe('BUG-002 — suppression d’une personne depuis la fiche', () => {
+  test('un bouton "Supprimer" retire la personne de l’arbre après confirmation', async ({
+    page,
+  }) => {
+    const uniqueName = `QA-BUG002-${Date.now()}`;
+
+    await page.goto('/');
+    await page.locator('.new-person-button button').first().waitFor({ timeout: 20000 });
+    await page.locator('.new-person-button button').first().click();
+
+    await page.getByLabel('Prénom(s)').fill(uniqueName);
+    await page.getByRole('textbox', { name: 'Nom', exact: true }).fill('Test');
+    await page.getByRole('button', { name: 'Ajouter une personne' }).click();
+    await expect(page.locator('.gds-modal__overlay')).toHaveCount(0, { timeout: 10000 });
+
+    // La personne nouvellement créée est sélectionnée : ouvrir sa fiche complète.
+    await page.getByRole('button', { name: 'Ouvrir la fiche' }).click();
+    await expect(page.locator('.person-sheet__name')).toContainText(uniqueName);
+
+    // Bouton de suppression visible sur la fiche, avec confirmation explicite.
+    const deleteButton = page.getByRole('button', { name: `Supprimer ${uniqueName} Test` });
+    await expect(deleteButton).toBeVisible();
+    await deleteButton.click();
+
+    await expect(page.getByRole('button', { name: 'Confirmer la suppression' })).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmer la suppression' }).click();
+
+    // Après suppression, l'app quitte la fiche et la personne ne réapparaît plus
+    // dans la liste latérale (relations orphelines gérées côté API : pas de crash).
+    await expect(page.locator('.person-sheet__name')).toHaveCount(0, { timeout: 20000 });
+    await expect(page.locator('.sidenav__persons').getByText(uniqueName)).toHaveCount(0);
+    // Aucune erreur JS visible et l'arbre reste utilisable.
+    await expect(page.locator('.genealogy-app')).toBeVisible();
+  });
+});
+
 test.describe('BUG-004 — contraste du badge de notifications', () => {
   test('le badge respecte un contraste suffisant (fond rouge, texte blanc)', async ({ page }) => {
     await page.goto('/');
