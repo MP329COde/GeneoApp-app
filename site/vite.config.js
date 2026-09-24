@@ -8,6 +8,9 @@ import react from '@vitejs/plugin-react';
 // (voir ADR 0009).
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: process.env.GENEOAPP_HOST ?? '127.0.0.1',
+  },
   resolve: {
     // Le design system vit hors de site/ : React doit toujours être résolu
     // depuis les dépendances du site (la CI n'installe que celles-ci).
