@@ -687,7 +687,9 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
       await loadParentage();
       await onChange?.();
     } catch (removeError) {
-      setParentageError(removeError.message);
+      setParentageError(
+        'Le retrait du lien de parenté a échoué. Vérifiez votre connexion locale et réessayez.',
+      );
     } finally {
       setBusy(false);
     }
@@ -867,7 +869,9 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
       await loadUnions();
       await onChange?.();
     } catch (removeError) {
-      setFamiliesError(removeError.message);
+      setFamiliesError(
+        "La suppression de l'union a échoué. Vérifiez votre connexion locale et réessayez.",
+      );
     } finally {
       setBusy(false);
     }
