@@ -25,6 +25,8 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${CLIENT_PORT}`,
     trace: 'retain-on-failure',
+    video: process.env.GENEOAPP_E2E_FORCE_VIDEO ? 'on' : 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   webServer: [
     {
