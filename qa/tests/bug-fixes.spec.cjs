@@ -123,3 +123,116 @@ test.describe('BUG-004 — contraste du badge de notifications', () => {
     expect(styles.background).toBe('rgb(163, 35, 27)');
   });
 });
+
+test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole propre, sans homonyme)', () => {
+  test('un arbre unique avec personnes et relations est intact après suppression puis restauration', async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    const uniqueName = `QA-BUG006-Test-${Date.now()}`;
+
+    const openTrees = async () => {
+      await page.locator('.sidenav__item', { hasText: 'Arbres' }).first().click();
+      await page.locator('.tree-card__name').first().waitFor({ timeout: 20000 });
+    };
+
+    // 1) Créer un arbre de test au nom unique, puis l'ouvrir.
+    await page.goto('/');
+    await openTrees();
+    await page.getByLabel('Nom de l’arbre').fill(uniqueName);
+    await page.getByRole('button', { name: 'Créer l’arbre' }).click();
+    await expect(page.locator('.tree-card__name', { hasText: uniqueName })).toHaveCount(1);
+
+    const testCard = page.locator('.tree-card', { has: page.locator('.tree-card__name', { hasText: uniqueName }) });
+    await testCard.getByRole('button', { name: `Ouvrir ${uniqueName}` }).click();
+    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName })).toBeVisible();
+
+    // 2) Ajouter 3 personnes + 2 relations dans cet arbre fraîchement activé (vide).
+    // Note méthodologique : la création via la modale "Nouvelle personne" s'est
+    // révélée instable en boucle dans cet environnement sandboxé (l'overlay ne
+    // se refermait pas de façon fiable après plusieurs ouvertures successives,
+    // un problème d'outillage distinct de BUG-006). Les données de préparation
+    // sont donc posées via l'API REST du même serveur (contre l'arbre déjà
+    // activé via l'UI) ; le cœur du protocole — activer/désactiver, supprimer et
+    // restaurer l'arbre en l'identifiant par son nom unique — est intégralement
+    // exécuté via l'UI Playwright, ce qui est la partie pertinente pour BUG-006.
+    const names = ['QA-BUG006-Alpha', 'QA-BUG006-Beta', 'QA-BUG006-Gamma'];
+    const created = {};
+    for (const fullName of names) {
+      const response = await page.request.post('/api/persons', {
+        data: { givenNames: fullName, familyName: 'Test' },
+      });
+      expect(response.ok()).toBeTruthy();
+      created[fullName] = (await response.json()).id;
+    }
+    const unionResponse = await page.request.post('/api/unions', {
+      data: { type: 'MARRIAGE', partnerIds: [created['QA-BUG006-Alpha'], created['QA-BUG006-Beta']] },
+    });
+    expect(unionResponse.ok()).toBeTruthy();
+    const parentageResponse = await page.request.post('/api/parentages', {
+      data: {
+        childId: created['QA-BUG006-Gamma'],
+        parentId: created['QA-BUG006-Alpha'],
+        parentRole: 'PARENT',
+      },
+    });
+    expect(parentageResponse.ok()).toBeTruthy();
+
+    await page.reload();
+    await expect(page.locator('.sidenav__persons h2')).toContainText('3 personne');
+
+    // 4) Vérification noeud par noeud avant suppression : 3 personnes connues,
+    // et les 2 relations bien enregistrées côté API.
+    for (const fullName of names) {
+      await expect(page.locator('.sidenav__persons').getByText(`${fullName} Test`)).toBeVisible();
+    }
+    const relationsCheck = await page.request.get(`/api/persons/${created['QA-BUG006-Alpha']}/relations`);
+    const relationsBefore = await relationsCheck.json();
+    expect(relationsBefore.spouses).toHaveLength(1);
+    expect(relationsBefore.children).toHaveLength(1);
+
+    // 5) Désactiver l'arbre de test en ouvrant un autre arbre existant.
+    await openTrees();
+    const otherCard = page
+      .locator('.tree-card')
+      .filter({ hasNot: page.locator('.tree-card__name', { hasText: uniqueName }) })
+      .first();
+    const otherName = await otherCard.locator('.tree-card__name').innerText();
+    await otherCard.getByRole('button', { name: `Ouvrir ${otherName}` }).click();
+    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: otherName })).toBeVisible();
+
+    // 6) Supprimer l'arbre de test, identifié précisément par son nom unique.
+    const inactiveTestCard = page.locator('.tree-card', {
+      has: page.locator('.tree-card__name', { hasText: uniqueName }),
+    });
+    await inactiveTestCard.getByRole('button', { name: `Supprimer ${uniqueName}` }).click();
+    await expect(page.locator('.tree-card__name', { hasText: uniqueName })).toHaveCount(0);
+
+    // 7) Corbeille : restaurer précisément CET arbre (nom unique, aucune ambiguïté possible).
+    const trashRow = page.locator('li', { hasText: uniqueName });
+    await expect(trashRow).toHaveCount(1);
+    await trashRow.getByRole('button', { name: `Restaurer ${uniqueName}` }).click();
+    await expect(page.locator('.tree-card__name', { hasText: uniqueName })).toHaveCount(1);
+
+    // 8) Réactiver l'arbre restauré et vérifier l'intégrité complète.
+    const restoredCard = page.locator('.tree-card', {
+      has: page.locator('.tree-card__name', { hasText: uniqueName }),
+    });
+    await restoredCard.getByRole('button', { name: `Ouvrir ${uniqueName}` }).click();
+    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName })).toBeVisible();
+
+    await expect(page.locator('.sidenav__persons h2')).toContainText('3 personne');
+    for (const fullName of names) {
+      await expect(page.locator('.sidenav__persons').getByText(`${fullName} Test`)).toBeVisible();
+    }
+
+    // Relations toujours présentes après restauration (mêmes ids, même arbre).
+    const relationsAfter = await (
+      await page.request.get(`/api/persons/${created['QA-BUG006-Alpha']}/relations`)
+    ).json();
+    expect(relationsAfter.spouses).toHaveLength(1);
+    expect(relationsAfter.children).toHaveLength(1);
+    expect(relationsAfter.spouses[0].id).toBe(created['QA-BUG006-Beta']);
+    expect(relationsAfter.children[0].id).toBe(created['QA-BUG006-Gamma']);
+  });
+});

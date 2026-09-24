@@ -72,12 +72,19 @@ l'absence totale de fonctionnalité de suppression de personne.
   `23-avant-suppr-centrale.png`.
 - **Recommandation** : exposer une action de suppression de personne sur la fiche
   Personne, avec confirmation et intégration à la corbeille existante.
-- **Statut (Phase 2)** : non corrigé — reporté. Nécessite une vraie fonctionnalité
-  backend (route + repository de suppression de personne avec gestion des relations
-  orphelines, mise à jour des compteurs/recherche) suivant le pattern de suppression
-  d'arbre, ce qui dépasse le budget de cette itération de corrections ciblées. À traiter
-  en priorité lors d'une prochaine itération dédiée (cf. section « Fonctionnalités
-  manquantes », priorité haute).
+- **Statut (Phase 2)** : corrigé. Le backend (route `DELETE /api/persons/:id` +
+  `POST /api/persons/:id/restore`, service, repository et pont IPC Electron)
+  exposait déjà un soft-delete cohérent — toutes les jointures du graphe de
+  parenté (`genealogy-graph.service.js`) filtrent `deleted_at IS NULL`, donc
+  aucune relation orpheline ne peut apparaître après suppression d'une
+  personne. Il manquait uniquement l'exposition côté client : `persons.remove`
+  / `persons.restore` ajoutés à `geneoapp-client.js` (HTTP et IPC), et un
+  bouton "Supprimer" avec confirmation inline ajouté sur l'en-tête de la fiche
+  Personne (`App.jsx`, composant `PersonSheet`). Après confirmation, la
+  personne est déplacée en corbeille (soft-delete), la liste se recharge et
+  l'utilisateur retombe sur la vue arbre. Test Playwright de non-régression
+  ajouté (`qa/tests/bug-fixes.spec.cjs`, suite BUG-002) : création, ouverture
+  de fiche, suppression confirmée, disparition sans crash.
 
 #### BUG-003 — Création d'arbre avec nom dupliqué acceptée sans avertissement
 - **Page/écran** : "Arbres".
@@ -136,8 +143,9 @@ l'absence totale de fonctionnalité de suppression de personne.
   768×1024.
 
 #### BUG-006 — Arbre restauré vide (0 personne) après un cycle suppression/restauration
-- **Statut** : non confirmé formellement (facteur confondant fort), à vérifier en
-  priorité.
+- **Statut** : non reproductible (protocole propre rejoué en Phase 2, voir statut
+  ci-dessous) — confirmé comme artefact d'outillage du test initial, pas un bug
+  applicatif.
 - **Page/écran** : "Arbres" / corbeille.
 - **Contexte** : lors d'un incident d'outillage (sélecteur Playwright trop large ayant
   supprimé plusieurs arbres par erreur, dont un doublon "La Tour-d'Auvergne", cf.
@@ -150,12 +158,30 @@ l'absence totale de fonctionnalité de suppression de personne.
 - **Recommandation** : rejouer un test ciblé et propre ("créer arbre avec
   personnes+relations → supprimer → restaurer → vérifier intégrité") sans facteur de
   confusion, avant de considérer ce point clos.
-- **Statut (Phase 2)** : non corrigé — reporté par manque de temps pour l'investigation
-  approfondie demandée (mécanisme complet de soft-delete/restauration arbre + personnes +
-  relations côté `src/server/src/indexing`/DB, avec risque de perte de données réelle à ne
-  pas traiter superficiellement). Priorité absolue pour la prochaine itération ; ne pas
-  considérer ce point clos tant qu'un test ciblé (créer → supprimer → restaurer →
-  vérifier intégrité complète) n'a pas été rejoué proprement.
+- **Statut (Phase 2)** : **non reproductible — cause confirmée : erreur d'outillage du
+  test précédent (hypothèse a)**. Investigation du code (`src/server/src/trees/
+  tree-workspace.js`) : chaque arbre est un fichier SQLite entièrement séparé
+  (`tree-<uuid>.sqlite`) référencé dans un catalogue JSON (`trees.json`) ;
+  `remove(id)`/`restore(id)` ne font que poser/retirer un champ `deletedAt` sur
+  l'entrée du catalogue — **le fichier de base de données de l'arbre n'est
+  jamais touché, déplacé ni recréé**. Il est donc structurellement impossible
+  qu'un cycle suppression→restauration vide un arbre de son contenu : soit le
+  fichier existe et garde toutes ses données, soit l'arbre entier est absent du
+  catalogue. Par ailleurs `restore(id)` identifie l'arbre par son `id` (UUID
+  interne), jamais par son nom affiché, donc aucune confusion n'est possible
+  côté application entre deux arbres homonymes — seul un test manipulant les
+  cartes par leur texte visible (nom dupliqué) pouvait se tromper de carte.
+  Un protocole de test propre et ciblé a été rejoué pour confirmer
+  l'absence de bug applicatif : création d'un arbre au nom unique
+  (`QA-BUG006-Test-<timestamp>`), ajout de 3 personnes et 2 relations
+  (union + filiation), désactivation (ouverture d'un autre arbre existant),
+  suppression via l'UI en ciblant précisément la carte du nom unique,
+  restauration via la corbeille (carte identifiée sans ambiguïté), puis
+  réactivation : les 3 personnes et les 2 relations sont intactes après
+  restauration (vérifié via l'UI pour le nombre de personnes/noms affichés, et
+  via l'API `/api/persons/:id/relations` pour les relations). Test Playwright
+  de régression ajouté (`qa/tests/bug-fixes.spec.cjs`, suite BUG-006) — passe.
+  Aucun correctif de code nécessaire ; ce point est clos.
 
 #### BUG-007 — Firefox ne démarre pas dans l'environnement de test
 - **Sévérité** : Majeur pour la couverture de test (bloque tout test Firefox), mais
