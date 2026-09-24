@@ -581,7 +581,20 @@ function DuplicatesPanel({ onSelect, onMerged }) {
 
 const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
 
+const UNION_TYPE_LABELS = {
+  MARRIAGE: 'Mariage',
+  CIVIL_PARTNERSHIP: 'Union civile (PACS)',
+  COHABITATION: 'Concubinage',
+  OTHER: 'Autre union',
+};
+
 const PARENT_ROLES = ['FATHER', 'MOTHER', 'PARENT'];
+
+const PARENT_ROLE_LABELS = {
+  FATHER: 'Père',
+  MOTHER: 'Mère',
+  PARENT: 'Parent',
+};
 
 function ParentageSection({ persons, selected, onNavigate, onChange }) {
   const [parents, setParents] = useState(null);
@@ -703,7 +716,7 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
           <select value={parentRole} onChange={(event) => setParentRole(event.target.value)}>
             {PARENT_ROLES.map((role) => (
               <option key={role} value={role}>
-                {role}
+                {PARENT_ROLE_LABELS[role] ?? role}
               </option>
             ))}
           </select>
@@ -719,7 +732,7 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
         <ul className="search-results">
           {parents.map((parentage) => (
             <li key={parentage.id}>
-              <Badge tone="neutral">{parentage.parent_role}</Badge>{' '}
+              <Badge tone="neutral">{PARENT_ROLE_LABELS[parentage.parent_role] ?? parentage.parent_role}</Badge>{' '}
               <button
                 type="button"
                 className="person-card"
@@ -874,7 +887,7 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
           <select value={type} onChange={(event) => setType(event.target.value)}>
             {UNION_TYPES.map((unionType) => (
               <option key={unionType} value={unionType}>
-                {unionType}
+                {UNION_TYPE_LABELS[unionType] ?? unionType}
               </option>
             ))}
           </select>
@@ -903,7 +916,7 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
         <ul className="search-results">
           {unions.map((union) => (
             <li key={union.id}>
-              <Badge tone="neutral">{union.type}</Badge>{' '}
+              <Badge tone="neutral">{UNION_TYPE_LABELS[union.type] ?? union.type}</Badge>{' '}
               {union.partnerIds
                 .filter((id) => id !== selected.id)
                 .map((id) => (
