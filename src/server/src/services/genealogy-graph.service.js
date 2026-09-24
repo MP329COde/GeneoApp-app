@@ -174,6 +174,29 @@ export class GenealogyGraphService {
     return row?.parent_role ?? null;
   }
 
+  getLinkType(childId, parentId) {
+    const row = this.database
+      .prepare(
+        `SELECT link_type FROM parentages
+         WHERE child_id = ? AND parent_id = ? AND deleted_at IS NULL`,
+      )
+      .get(childId, parentId);
+    return row?.link_type ?? null;
+  }
+
+  // Qualifie le libellé « parent »/« enfant » d'après la nature réelle du
+  // lien de filiation (parentages.link_type) : une filiation adoptive,
+  // nourricière ou par recomposition familiale (STEP) n'est jamais présentée
+  // comme biologique par défaut, et un lien resté UNKNOWN le dit explicitement
+  // plutôt que de laisser croire à une filiation biologique certaine.
+  qualifyKinshipLabel(base, linkType) {
+    if (linkType === 'ADOPTIVE') return `${base} adoptif`;
+    if (linkType === 'FOSTER') return `${base} nourricier`;
+    if (linkType === 'STEP') return `${base} par alliance (famille recomposée)`;
+    if (linkType === 'UNKNOWN') return `${base} (lien de filiation non précisé)`;
+    return base;
+  }
+
   branchOf(role) {
     if (role === 'FATHER') return 'PATERNAL';
     if (role === 'MOTHER') return 'MATERNAL';
@@ -225,17 +248,28 @@ export class GenealogyGraphService {
     let relationship = 'CONNECTED';
     let branch = null;
     let label = null;
+    let linkType = null;
     if (edges.length === 1 && edges[0] === 'SPOUSE') {
       relationship = 'SPOUSE';
       label = 'conjoint(e)';
     } else if (edges.every((edge) => edge === 'PARENT')) {
       relationship = `ANCESTOR_${edges.length}`;
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
-      label = edges.length === 1 ? 'parent' : edges.length === 2 ? 'grand-parent' : null;
+      if (edges.length === 1) {
+        linkType = this.getLinkType(personA, path[1].personId);
+        label = this.qualifyKinshipLabel('parent', linkType);
+      } else {
+        label = edges.length === 2 ? 'grand-parent' : null;
+      }
     } else if (edges.every((edge) => edge === 'CHILD')) {
       relationship = `DESCENDANT_${edges.length}`;
       branch = this.branchOf(this.getParentRole(path[1].personId, personA));
-      label = edges.length === 1 ? 'enfant' : edges.length === 2 ? 'petit-enfant' : null;
+      if (edges.length === 1) {
+        linkType = this.getLinkType(path[1].personId, personA);
+        label = this.qualifyKinshipLabel('enfant', linkType);
+      } else {
+        label = edges.length === 2 ? 'petit-enfant' : null;
+      }
     } else if (edges.includes('PARENT') && edges.includes('CHILD')) {
       relationship = 'COLLATERAL';
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
@@ -247,7 +281,7 @@ export class GenealogyGraphService {
         label = this.collateralLabel(up, down, this.getPerson(personB).sex);
       }
     }
-    return { relationship, distance: edges.length, path, branch, label };
+    return { relationship, distance: edges.length, path, branch, label, linkType };
   }
 
   detectCycles() {
