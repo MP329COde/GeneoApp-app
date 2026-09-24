@@ -2062,6 +2062,16 @@ function NotesPanel({ selected }) {
   );
 }
 
+const STATISTICS_LABELS = {
+  persons: 'Personnes',
+  places: 'Lieux',
+  events: 'Événements',
+  unions: 'Unions',
+  parentages: 'Liens de parenté',
+  sources: 'Sources',
+  media: 'Médias',
+};
+
 function StatisticsPanel() {
   const [totals, setTotals] = useState(null);
   const [statsError, setStatsError] = useState(null);
@@ -2070,7 +2080,11 @@ function StatisticsPanel() {
     client.statistics
       .totals()
       .then(setTotals)
-      .catch((loadError) => setStatsError(loadError.message));
+      .catch(() =>
+        setStatsError(
+          "Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.",
+        ),
+      );
   }, []);
 
   return (
@@ -2086,7 +2100,7 @@ function StatisticsPanel() {
         <dl>
           {Object.entries(totals.totals).map(([key, value]) => (
             <div key={key}>
-              <dt>{key}</dt>
+              <dt>{STATISTICS_LABELS[key] ?? key}</dt>
               <dd>{value}</dd>
             </div>
           ))}
