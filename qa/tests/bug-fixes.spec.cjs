@@ -6,7 +6,7 @@ test.describe('BUG-001 — modale "Nouvelle personne" bloque réellement la navi
     page,
   }) => {
     await page.goto('/');
-    await page.waitForTimeout(1200);
+    await page.locator('.new-person-button button').first().waitFor({ timeout: 20000 });
 
     await page.locator('.new-person-button button').first().click();
     await expect(page.locator('.gds-modal__overlay')).toBeVisible();
@@ -32,11 +32,32 @@ test.describe('BUG-001 — modale "Nouvelle personne" bloque réellement la navi
   });
 });
 
+test.describe('BUG-005 — menu latéral compact reste identifiable', () => {
+  test('chaque icône du menu conserve un libellé accessible (title/aria-label) sous 1024px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/');
+    await page.locator('.sidenav__item').first().waitFor({ timeout: 20000 });
+
+    const items = page.locator('.sidenav__item');
+    const count = await items.count();
+    expect(count).toBeGreaterThan(0);
+    for (let index = 0; index < count; index += 1) {
+      const item = items.nth(index);
+      const ariaLabel = await item.getAttribute('aria-label');
+      const title = await item.getAttribute('title');
+      expect(ariaLabel && ariaLabel.trim().length > 0).toBeTruthy();
+      expect(title && title.trim().length > 0).toBeTruthy();
+    }
+  });
+});
+
 test.describe('BUG-004 — contraste du badge de notifications', () => {
   test('le badge respecte un contraste suffisant (fond rouge, texte blanc)', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
     const badge = page.locator('.notification-center__count').first();
+    await badge.waitFor({ timeout: 20000 });
     await expect(badge).toBeVisible();
     const styles = await badge.evaluate((el) => {
       const cs = getComputedStyle(el);

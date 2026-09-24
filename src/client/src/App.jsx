@@ -3797,6 +3797,8 @@ function AppContent() {
                         aria-current={view === item.id ? 'page' : undefined}
                         onClick={() => setView(item.id)}
                         type="button"
+                        title={t(`nav.${item.id}`, item.label)}
+                        aria-label={t(`nav.${item.id}`, item.label)}
                       >
                         <Icon name={item.icon} />
                         <span className="sidenav__text">{t(`nav.${item.id}`, item.label)}</span>
