@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
-// Indexation de documents (ADR 0011) : sources, réglages, exécution, recherche.
+// Indexation de documents (ADR 0011, 0012) : sources, réglages, exécution,
+// annulation, recherche et lecture d'un document indexé.
 export function indexingRoutes(services) {
   const router = Router();
   const handle =
@@ -21,7 +22,19 @@ export function indexingRoutes(services) {
   );
   router.get(
     '/search',
-    handle((request) => indexing().search(request.query.q, request.query.limit)),
+    handle((request) =>
+      request.query.page === '1'
+        ? indexing().searchPage(request.query.q, request.query)
+        : indexing().search(request.query.q, request.query.limit),
+    ),
+  );
+  router.get(
+    '/presets',
+    handle(() => indexing().presets()),
+  );
+  router.get(
+    '/documents/:id',
+    handle((request) => indexing().getDocument(request.params.id)),
   );
   router.post(
     '/sources',
@@ -29,7 +42,15 @@ export function indexingRoutes(services) {
   );
   router.patch(
     '/sources/:id',
-    handle((request) => indexing().setSourceEnabled(request.params.id, request.body?.enabled)),
+    handle((request) => indexing().updateSource(request.params.id, request.body ?? {})),
+  );
+  router.post(
+    '/sources/:id/run',
+    handle((request) => indexing().runSource(request.params.id)),
+  );
+  router.post(
+    '/sources/:id/clear',
+    handle((request) => indexing().clearSource(request.params.id)),
   );
   router.delete(
     '/sources/:id',
@@ -42,6 +63,10 @@ export function indexingRoutes(services) {
   router.post(
     '/run',
     handle(() => indexing().run('MANUAL')),
+  );
+  router.post(
+    '/run/cancel',
+    handle(() => indexing().cancel()),
   );
   return router;
 }

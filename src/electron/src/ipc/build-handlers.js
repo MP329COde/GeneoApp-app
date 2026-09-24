@@ -434,6 +434,16 @@ function buildRawHandlers(services, workspace, storage) {
       services.indexing.updateSettings(data ?? {}),
     ),
     [IPC_CHANNELS.INDEXING_RUN]: wrap(() => services.indexing.run('MANUAL')),
+    [IPC_CHANNELS.INDEXING_SEARCH_PAGE]: wrap(({ q, options }) =>
+      services.indexing.searchPage(q, options ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_DOCUMENT]: wrap(({ id }) => services.indexing.getDocument(id)),
+    [IPC_CHANNELS.INDEXING_UPDATE_SOURCE]: wrap(({ id, data }) =>
+      services.indexing.updateSource(id, data ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_RUN_SOURCE]: wrap(({ id }) => services.indexing.runSource(id)),
+    [IPC_CHANNELS.INDEXING_CLEAR_SOURCE]: wrap(({ id }) => services.indexing.clearSource(id)),
+    [IPC_CHANNELS.INDEXING_CANCEL]: wrap(() => services.indexing.cancel()),
     [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
       services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
     ),
