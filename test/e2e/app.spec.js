@@ -208,7 +208,7 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
 
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
-  await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
 });
 
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
