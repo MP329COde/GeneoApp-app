@@ -1,179 +1,257 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { USER_AGENT, parseRobots } from './robots.js';
+import {
+  CancelledError,
+  fetchResource,
+  normalizeUrl,
+  pause,
+  readLimited,
+  throwIfCancelled,
+  validateStartUrl,
+} from './fetcher.js';
+import { parseRobots } from './robots.js';
+import { SITEMAP_LIMITS, parseSitemap } from './sitemap.js';
 import { extractText, kindOf } from './text-extract.js';
+
+export { validateStartUrl };
 
 export const CRAWL_LIMITS = Object.freeze({
   maxBytes: 20 * 1024 * 1024,
   timeoutMs: 15_000,
   minDelayMs: 1_000,
   maxRedirects: 5,
+  maxRetryWaitMs: 30_000,
 });
 const ALLOWED_TYPES =
-  /^(text\/html|text\/plain|application\/pdf|image\/(png|jpeg|gif|webp|tiff))\b/i;
+  /^(text\/html|application\/xhtml\+xml|text\/plain|application\/pdf|image\/(png|jpeg|gif|webp|tiff))\b/i;
+// Liens jamais suivis : ressources de présentation, archives, audio, vidéo.
+const IGNORED_LINK =
+  /\.(css|js|mjs|map|ico|svg|woff2?|ttf|eot|zip|gz|tgz|rar|7z|exe|dmg|msi|mp3|wav|ogg|mp4|avi|mov|webm|mkv|rss|atom)$/i;
 
-/** Adresse de départ acceptable : http(s), sans identifiants. */
-export function validateStartUrl(value) {
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    return null;
-  }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
-  url.hash = '';
-  return url;
+function robotsHeader(response) {
+  const value = (response.headers.get('x-robots-tag') ?? '').toLowerCase();
+  return {
+    noindex: /\b(noindex|none)\b/.test(value),
+    nofollow: /\b(nofollow|none)\b/.test(value),
+  };
 }
 
-async function readLimited(response, maxBytes) {
-  const declared = Number(response.headers.get('content-length'));
-  if (Number.isFinite(declared) && declared > maxBytes) return null;
-  const chunks = [];
-  let total = 0;
-  for await (const chunk of response.body) {
-    total += chunk.length;
-    if (total > maxBytes) return null;
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
-/**
- * Récupère une adresse en suivant les redirections uniquement sur le même
- * hôte. Aucune donnée envoyée : GET simple, sans cookie.
- */
-async function fetchSameHost(url, host, { fetchImpl, limits }) {
-  let current = url;
-  for (let hop = 0; hop <= limits.maxRedirects; hop += 1) {
-    const response = await fetchImpl(current, {
-      redirect: 'manual',
-      headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/pdf,image/*,text/plain' },
-      signal: AbortSignal.timeout(limits.timeoutMs),
-    });
-    if (response.status >= 300 && response.status < 400) {
-      const next = validateStartUrl(new URL(response.headers.get('location') ?? '', current).href);
-      if (!next || next.host !== host) return { skipped: 'redirection hors du site' };
-      current = next;
-      continue;
+/** Adresses annoncées par les sitemaps du site (robots.txt, sinon /sitemap.xml). */
+async function sitemapUrls(start, robots, { fetchImpl, limits, signal, max }) {
+  const pending = robots.sitemaps.length ? robots.sitemaps : [new URL('/sitemap.xml', start).href];
+  const urls = [];
+  const seen = new Set();
+  for (let index = 0; index < pending.length && seen.size < SITEMAP_LIMITS.maxFiles; index += 1) {
+    const url = normalizeUrl(pending[index], start);
+    if (!url || url.host !== start.host || seen.has(url.href)) continue;
+    seen.add(url.href);
+    try {
+      const result = await fetchResource(url, {
+        fetchImpl,
+        limits,
+        signal,
+        host: start.host,
+        accept: 'application/xml,text/xml;q=0.9',
+      });
+      if (!result.response?.ok) continue;
+      const buffer = await readLimited(result.response, SITEMAP_LIMITS.maxBytes);
+      if (!buffer) continue;
+      const parsed = parseSitemap(buffer);
+      pending.push(...parsed.sitemaps);
+      urls.push(...parsed.urls);
+      if (urls.length >= max) break;
+    } catch (error) {
+      if (error instanceof CancelledError) throw error;
+      // Sitemap illisible : l'exploration par les liens suffit.
     }
-    return { response, url: current };
   }
-  return { skipped: 'trop de redirections' };
+  return urls.slice(0, max);
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * Explore un site listé par l'utilisateur (ADR 0011) : même hôte, robots.txt
- * respecté, délai entre requêtes, profondeur et nombre de documents bornés.
+ * Explore un site listé par l'utilisateur (ADR 0011, 0012) : même hôte,
+ * robots.txt et directives noindex / nofollow respectés, sitemaps, requêtes
+ * conditionnelles, délai entre requêtes, profondeur et nombre bornés.
+ * Retourne { complete } : vrai si le site a été parcouru entièrement (les
+ * pages disparues peuvent alors être retirées de l'index).
  */
 export async function crawlSite(
   source,
-  { repository, media, ocr, counts, fetchImpl = fetch, limits = CRAWL_LIMITS },
+  {
+    repository,
+    media,
+    ocr,
+    counts,
+    fetchImpl = fetch,
+    limits = CRAWL_LIMITS,
+    signal,
+    runId = null,
+    report = () => {},
+  },
 ) {
   const start = validateStartUrl(source.location);
   if (!start) {
     counts.errors += 1;
-    return;
+    return { complete: false, message: 'adresse invalide' };
   }
+  const options = { fetchImpl, limits, signal, host: start.host };
   let robots = parseRobots('');
   try {
-    const { response } = await fetchSameHost(new URL('/robots.txt', start), start.host, {
-      fetchImpl,
-      limits,
+    const { response } = await fetchResource(new URL('/robots.txt', start), {
+      ...options,
+      accept: 'text/plain',
     });
     if (response?.ok) robots = parseRobots(await response.text());
-  } catch {
+  } catch (error) {
+    if (error instanceof CancelledError) throw error;
     // robots.txt absent ou injoignable : règles par défaut (tout autorisé).
   }
-  const delay = Math.max(limits.minDelayMs, (robots.crawlDelaySeconds ?? 0) * 1000);
+  const delay = Math.max(
+    limits.minDelayMs,
+    Math.min((robots.crawlDelaySeconds ?? 0) * 1000, 60_000),
+  );
+
   const queue = [{ url: start, depth: 0 }];
-  const visited = new Set();
+  const queued = new Set([start.href]);
+  const enqueue = (href, base, depth) => {
+    if (depth > source.max_depth) return;
+    const next = normalizeUrl(href, base);
+    if (!next || next.host !== start.host || queued.has(next.href)) return;
+    if (IGNORED_LINK.test(next.pathname)) return;
+    queued.add(next.href);
+    queue.push({ url: next, depth });
+  };
+  if (source.max_depth >= 1) {
+    for (const href of await sitemapUrls(start, robots, {
+      ...options,
+      max: source.max_documents * 2,
+    })) {
+      enqueue(href, start, 1);
+    }
+  }
+
+  const stored = new Set();
   let fetched = 0;
-  while (queue.length > 0 && fetched < source.max_documents) {
-    const { url, depth } = queue.shift();
-    const key = url.href;
-    if (visited.has(key)) continue;
-    visited.add(key);
+  let head = 0;
+  let startFailed = false;
+  for (; head < queue.length && fetched < source.max_documents; head += 1) {
+    throwIfCancelled(signal);
+    const { url, depth } = queue[head];
     if (!robots.isAllowed(url.pathname + url.search)) {
       counts.skipped += 1;
       continue;
     }
-    if (fetched > 0) await sleep(delay);
+    if (fetched > 0) await pause(delay, signal);
     fetched += 1;
+    report({
+      current: url.href,
+      done: fetched,
+      total: Math.min(queue.length, source.max_documents),
+    });
+    const known = repository.findDocument(source.id, url.href);
     try {
-      const result = await fetchSameHost(url, start.host, { fetchImpl, limits });
-      if (!result.response?.ok) {
+      const result = await fetchResource(url, {
+        ...options,
+        conditional: known ? { etag: known.etag, lastModified: known.last_modified } : null,
+      });
+      if (result.notModified && known) {
+        counts.unchanged += 1;
+        repository.touchDocument(known.id, runId);
+        stored.add(known.location);
+        for (const href of JSON.parse(known.links ?? '[]')) enqueue(href, url, depth + 1);
+        continue;
+      }
+      const response = result.response;
+      if (!response?.ok) {
+        // Erreur serveur passagère : le document connu est conservé.
+        if (known && (!response || response.status >= 500))
+          repository.touchDocument(known.id, runId);
+        if (url === start) startFailed = true;
         counts.skipped += 1;
         continue;
       }
-      const type = result.response.headers.get('content-type') ?? '';
+      const type = response.headers.get('content-type') ?? '';
       if (!ALLOWED_TYPES.test(type)) {
+        await response.body?.cancel().catch(() => {});
         counts.skipped += 1;
         continue;
       }
-      const buffer = await readLimited(result.response, limits.maxBytes);
+      const buffer = await readLimited(response, limits.maxBytes);
       if (!buffer) {
         counts.skipped += 1;
         continue;
       }
+      const directives = robotsHeader(response);
       const checksum = createHash('sha256').update(buffer).digest('hex');
-      const location = result.url.href;
       const name = decodeURIComponent(path.basename(result.url.pathname) || 'index.html');
       const kind = kindOf(name, type);
-      let extracted;
-      let mediaId = null;
-      if (repository.findDocument(source.id, location)?.checksum === checksum) {
+      const extracted =
+        kind === 'html' || known?.checksum !== checksum || result.url.href !== url.href
+          ? await extractText({ buffer, filename: name, mimeType: type, ...(ocr ? { ocr } : {}) })
+          : null;
+      const links = extracted && !directives.nofollow ? extracted.links : [];
+      for (const href of links) enqueue(href, result.url, depth + 1);
+
+      // Adresse canonique du même site : une seule entrée pour plusieurs adresses.
+      const canonical = extracted?.canonical ? normalizeUrl(extracted.canonical, result.url) : null;
+      const location =
+        canonical && canonical.host === start.host ? canonical.href : result.url.href;
+      if (directives.noindex || extracted?.noindex || stored.has(location)) {
+        counts.skipped += 1;
+        continue;
+      }
+      stored.add(location);
+      const existing = location === url.href ? known : repository.findDocument(source.id, location);
+      const cache = {
+        etag: response.headers.get('etag'),
+        lastModified: response.headers.get('last-modified'),
+      };
+      if (existing?.checksum === checksum) {
         counts.unchanged += 1;
-        extracted =
-          kind === 'html' ? await extractText({ buffer, filename: name, mimeType: type }) : null;
-      } else {
-        let filePath = null;
-        let directory = null;
-        if (kind === 'ocr') {
-          // PDF et images conservés localement pour une consultation hors ligne.
-          if (media) {
-            const stored = await media.upload({
-              filename: name.slice(0, 200),
-              contentBase64: buffer.toString('base64'),
-              notes: `Récupéré par l'indexation : ${location}`,
-            });
-            mediaId = stored.id;
-          }
-          directory = await mkdtemp(path.join(tmpdir(), 'geneoapp-ocr-'));
-          filePath = path.join(directory, `document${path.extname(name) || '.bin'}`);
-          await writeFile(filePath, buffer);
-        }
-        try {
-          extracted = await extractText({ buffer, filename: name, mimeType: type, filePath, ocr });
-        } finally {
-          if (directory) await rm(directory, { recursive: true, force: true });
-        }
-        repository.upsertDocument({
-          sourceId: source.id,
-          location,
-          title: extracted.title,
-          mimeType: type.split(';')[0],
-          sizeBytes: buffer.length,
-          checksum,
-          status: extracted.status,
-          text: extracted.text,
-          mediaId,
+        repository.touchDocument(existing.id, runId);
+        continue;
+      }
+      let mediaId = null;
+      if ((kind === 'pdf' || kind === 'image') && media) {
+        // PDF et images conservés localement pour une consultation hors ligne.
+        const saved = await media.upload({
+          filename: name.slice(0, 200),
+          contentBase64: buffer.toString('base64'),
+          notes: `Récupéré par l'indexation : ${location}`,
         });
-        counts.indexed += 1;
+        mediaId = saved.id;
       }
-      if (extracted && depth < source.max_depth) {
-        for (const href of extracted.links) {
-          const next = validateStartUrl(new URL(href, result.url).href);
-          if (next && next.host === start.host && !visited.has(next.href)) {
-            queue.push({ url: next, depth: depth + 1 });
-          }
-        }
-      }
-    } catch {
+      repository.upsertDocument({
+        sourceId: source.id,
+        location,
+        title: extracted.title,
+        mimeType: type.split(';')[0],
+        sizeBytes: buffer.length,
+        checksum,
+        status: extracted.status,
+        text: extracted.text,
+        mediaId,
+        ...cache,
+        links: links
+          .map((href) => normalizeUrl(href, result.url)?.href)
+          .filter((href) => href && new URL(href).host === start.host),
+        runId,
+      });
+      counts.indexed += 1;
+    } catch (error) {
+      if (error instanceof CancelledError) throw error;
+      if (known) repository.touchDocument(known.id, runId);
+      if (url === start) startFailed = true;
       counts.errors += 1;
     }
   }
+  const complete = !startFailed && head >= queue.length;
+  return {
+    complete,
+    message: startFailed
+      ? 'site injoignable'
+      : complete
+        ? null
+        : `limite de ${source.max_documents} document(s) atteinte`,
+  };
 }

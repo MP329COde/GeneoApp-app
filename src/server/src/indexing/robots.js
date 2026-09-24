@@ -1,5 +1,5 @@
 // Lecture minimale de robots.txt : groupes « User-agent », règles Allow /
-// Disallow (préfixes, « * » et « $ »), Crawl-delay. La règle la plus longue
+// Disallow (préfixes, « * » et « $ »), Crawl-delay, lignes Sitemap. La règle la plus longue
 // l'emporte ; à égalité, Allow l'emporte (usage courant).
 
 export const USER_AGENT = 'GeneoApp-Indexer';
@@ -12,6 +12,7 @@ function toPattern(rule) {
 
 export function parseRobots(text, agent = USER_AGENT) {
   const groups = [];
+  const sitemaps = [];
   let current = null;
   let lastWasAgent = false;
   for (const raw of String(text ?? '').split(/\r?\n/)) {
@@ -30,6 +31,10 @@ export function parseRobots(text, agent = USER_AGENT) {
       continue;
     }
     lastWasAgent = false;
+    if (key === 'sitemap' && value) {
+      sitemaps.push(value);
+      continue;
+    }
     if (!current) continue;
     if ((key === 'allow' || key === 'disallow') && value) {
       current.rules.push({
@@ -48,6 +53,7 @@ export function parseRobots(text, agent = USER_AGENT) {
     groups.find((candidate) => candidate.agents.includes('*')) ?? { rules: [], delay: null };
   return {
     crawlDelaySeconds: group.delay,
+    sitemaps,
     isAllowed(pathname) {
       let verdict = { allow: true, length: -1 };
       for (const rule of group.rules) {
