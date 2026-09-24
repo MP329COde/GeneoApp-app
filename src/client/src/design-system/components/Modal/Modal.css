@@ -7,7 +7,7 @@
   padding: var(--space-4);
   background-color: var(--overlay);
   backdrop-filter: blur(2px);
-  z-index: 1000;
+  z-index: var(--z-modal, 1200);
   animation: gds-fade-in var(--transition-base);
 }
 
