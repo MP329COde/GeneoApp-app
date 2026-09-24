@@ -1106,10 +1106,31 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
 
     await waitFor(() =>
-      expect(screen.getByRole('img', { name: /Carte des lieux/ })).toBeInTheDocument(),
+      expect(screen.getByRole('img', { name: /lieux enregistrés/ })).toBeInTheDocument(),
     );
-    expect(screen.getByText('Nantes')).toBeInTheDocument();
+    // Par défaut, la carte est locale (hors ligne, sans tuiles externes).
+    expect(screen.getByText(/Carte locale \(hors ligne/)).toBeInTheDocument();
+    expect(screen.getAllByText('Nantes').length).toBeGreaterThan(0);
     expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
+  });
+
+  it("passe la carte en mode en ligne uniquement sur choix explicite dans les réglages", async () => {
+    localStorage.setItem('geneoapp.settings', JSON.stringify({ mapMode: 'online' }));
+    persons.list.mockResolvedValue([]);
+    places.list.mockResolvedValueOnce([
+      { id: 1, name: 'Nantes', latitude: 47.2184, longitude: -1.5536 },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Carte en ligne \(tuiles OpenStreetMap/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeInTheDocument();
+
+    localStorage.clear();
   });
 
   it('signale les incohérences réelles détectées par le moteur (cycle et chronologie)', async () => {

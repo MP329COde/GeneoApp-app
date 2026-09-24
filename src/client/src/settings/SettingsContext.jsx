@@ -13,6 +13,9 @@ export const DEFAULT_SETTINGS = {
   treeDepth: 4,
   showSosa: true,
   showShortcuts: true,
+  // « offline » (par défaut) : aucune requête réseau, carte de position locale.
+  // « online » : tuiles OpenStreetMap téléchargées, choix explicite de l'utilisateur.
+  mapMode: 'offline',
   // Personnalisation de l'interface.
   accent: 'blue',
   homeView: 'tree',
@@ -49,6 +52,7 @@ const OPTIONS = {
   reduceMotion: ['system', 'reduce', 'allow'],
   treeMode: ['family', 'ancestors', 'descendants', 'fan', 'graph'],
   accent: ACCENTS_OPTIONS,
+  mapMode: ['offline', 'online'],
 };
 
 // Valide chaque valeur lue : une préférence corrompue retombe sur la valeur

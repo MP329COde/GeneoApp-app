@@ -1272,6 +1272,7 @@ function TimelinePanel({ onNavigate }) {
 }
 
 function MapPanel() {
+  const { settings } = useSettings();
   const [places, setPlaces] = useState(null);
   const [mapError, setMapError] = useState(null);
   const mapElementRef = useRef(null);
@@ -1312,11 +1313,25 @@ function MapPanel() {
 
   return (
     <div className="map-panel">
+      <p className="map-panel__mode-badge" data-mode={settings.mapMode}>
+        {settings.mapMode === 'online'
+          ? 'Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)'
+          : 'Carte locale (hors ligne, aucune requête réseau)'}
+      </p>
       {located.length === 0 ? (
         <p className="notice">Aucun lieu ne porte de coordonnées géographiques pour l’instant.</p>
-      ) : (
+      ) : settings.mapMode === 'online' ? (
         <>
           <LeafletMap places={located} mapElementRef={mapElementRef} />
+          <ul className="map-panel__places" aria-label="Lieux géolocalisés">
+            {located.map((place) => (
+              <li key={place.id}>{place.name}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <LocalMap places={located} />
           <ul className="map-panel__places" aria-label="Lieux géolocalisés">
             {located.map((place) => (
               <li key={place.id}>{place.name}</li>
@@ -1334,6 +1349,90 @@ function MapPanel() {
           </ul>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// Carte de position 100 % locale : aucune tuile, aucune requête réseau.
+// Projection équirectangulaire simple (longitude → x, latitude → y) sur un
+// SVG, suffisante pour situer des lieux les uns par rapport aux autres sans
+// dépendre d'un fournisseur de cartographie externe.
+function LocalMap({ places }) {
+  const [zoom, setZoom] = useState(1);
+  const [selectedId, setSelectedId] = useState(null);
+
+  const lats = places.map((place) => place.latitude);
+  const lons = places.map((place) => place.longitude);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const spanLat = Math.max(maxLat - minLat, 0.01);
+  const spanLon = Math.max(maxLon - minLon, 0.01);
+  const size = 480;
+  const padding = 40;
+
+  const project = (place) => {
+    const x = padding + ((place.longitude - minLon) / spanLon) * (size - 2 * padding);
+    // L'axe Y d'un SVG croît vers le bas : on inverse la latitude pour garder le nord en haut.
+    const y = padding + ((maxLat - place.latitude) / spanLat) * (size - 2 * padding);
+    return { x, y };
+  };
+
+  return (
+    <div className="local-map">
+      <div className="local-map__controls">
+        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom((z) => Math.min(z * 1.4, 6))}>
+          Zoom +
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom((z) => Math.max(z / 1.4, 1))}>
+          Zoom −
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom(1)}>
+          Recentrer
+        </Button>
+      </div>
+      <svg
+        role="img"
+        aria-label="Carte locale des lieux enregistrés (position relative, sans fond de carte)"
+        viewBox={`0 0 ${size} ${size}`}
+        className="local-map__canvas"
+      >
+        <g transform={`scale(${zoom})`} style={{ transformOrigin: 'center' }}>
+          {places.map((place) => {
+            const { x, y } = project(place);
+            const selected = selectedId === place.id;
+            return (
+              <g
+                key={place.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${place.name}${selected ? ' (sélectionné)' : ''}`}
+                onClick={() => setSelectedId(place.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedId(place.id);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={selected ? 7 : 5}
+                  fill="var(--action)"
+                  stroke={selected ? 'var(--color-text)' : 'none'}
+                  strokeWidth={selected ? 2 : 0}
+                />
+                <text x={x + 8} y={y + 4} fontSize="11" fill="var(--color-text)">
+                  {place.name}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
     </div>
   );
 }

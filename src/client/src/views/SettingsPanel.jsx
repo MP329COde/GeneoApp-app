@@ -385,6 +385,21 @@ export function SettingsPanel({ navGroups = [] }) {
         />
       </section>
 
+      <section aria-labelledby="settings-map">
+        <h4 id="settings-map">{t('settings.map')}</h4>
+        <Choice
+          legend={t('settings.mapMode')}
+          name="mapMode"
+          value={settings.mapMode}
+          onChange={(mapMode) => update({ mapMode })}
+          options={[
+            { value: 'offline', label: t('settings.mapMode.offline') },
+            { value: 'online', label: t('settings.mapMode.online') },
+          ]}
+        />
+        <p className="notice">{t('settings.mapMode.hint')}</p>
+      </section>
+
       <p className="settings-hint">{t('settings.localOnly')}</p>
       <Button variant="secondary" onClick={reset}>
         {t('settings.reset')}
