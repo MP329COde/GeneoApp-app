@@ -197,7 +197,11 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   // mariage (Charles et Ada) : de vrais événements, pas des données de test
   // fabriquées pour cet écran.
   await expect(page.getByText(/BIRTH/)).toBeVisible();
-  await expect(page.getByText(/London/)).toBeVisible();
+  // La liste de personnes affiche aussi désormais le lieu de naissance (pour
+  // distinguer les homonymes), donc « London » y apparaît également : on
+  // cible ici précisément la ligne de la chronologie plutôt qu'un texte
+  // ambigu partagé avec la fiche de la barre latérale.
+  await expect(page.getByText(/BIRTH.*London/)).toBeVisible();
   await expect(page.getByText(/MARRIAGE/)).toBeVisible();
 });
 

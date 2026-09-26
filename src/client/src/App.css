@@ -425,6 +425,7 @@ h3 {
   font: var(--type-person-name);
 }
 .person-card__years,
+.person-card__place,
 .person-card__role {
   color: var(--text-secondary);
   font: var(--type-date);
@@ -2726,7 +2727,8 @@ input[type='radio'] {
   width: 100%;
 }
 
-.new-person-button {
+.new-person-button,
+.verification-rerun-button {
   display: grid;
   margin: var(--space-2) var(--space-2) var(--space-1);
 }

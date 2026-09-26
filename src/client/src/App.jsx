@@ -9,6 +9,7 @@ import {
 } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { List } from 'react-window';
 import { Badge, Button, Modal, useI18n } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
 import {
@@ -160,7 +161,11 @@ const NAV_GROUPS = [
 const LifespanContext = createContext(new Map());
 
 function PersonCard({ person, selected, onSelect, onKeyDown }) {
-  const years = useContext(LifespanContext).get(person.id)?.label;
+  const lifespan = useContext(LifespanContext).get(person.id);
+  const years = lifespan?.label;
+  // Le lieu de naissance est affiché en plus des années pour distinguer deux
+  // personnes homonymes dans une liste : « Jean Martin — 1850 – 1920 (Rouen) ».
+  const birthPlace = lifespan?.birthPlace;
   const issues = useContext(VerificationContext).get(person.id)?.length ?? 0;
   return (
     <button
@@ -174,12 +179,39 @@ function PersonCard({ person, selected, onSelect, onKeyDown }) {
       ) : null}
       <span className="person-card__name">{personLabel(person)}</span>
       {years ? <span className="person-card__years">{years}</span> : null}
+      {birthPlace ? <span className="person-card__place">({birthPlace})</span> : null}
       {issues ? (
         <span className="issue-dot" title={`${issues} point(s) à vérifier`}>
           <span className="gds-visually-hidden">{issues} point(s) à vérifier</span>
         </span>
       ) : null}
     </button>
+  );
+}
+
+// Au-delà de ce nombre de personnes, la liste latérale est virtualisée
+// (react-window) : seules les lignes visibles (+ marge) sont montées dans le
+// DOM, ce qui garde la liste fluide même avec des milliers de fiches.
+const VIRTUALIZATION_THRESHOLD = 150;
+const PERSON_ROW_HEIGHT = 44;
+
+function PersonListRow({ index, style, persons, selectedId, onSelect }) {
+  const person = persons[index];
+  return (
+    <div style={style}>
+      <PersonCard
+        person={person}
+        selected={person.id === selectedId}
+        onSelect={onSelect}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+          event.preventDefault();
+          const delta = event.key === 'ArrowDown' ? 1 : -1;
+          const nextIndex = (index + delta + persons.length) % persons.length;
+          onSelect(persons[nextIndex].id);
+        }}
+      />
+    </div>
   );
 }
 
@@ -1578,8 +1610,19 @@ function verificationNotifications(byPerson, personLabelById) {
   return items;
 }
 
-function useVerification({ persons, dataVersion, personLabelById }) {
+// Analyse doublons/cycles/chronologie : coûteuse sur une grande base (elle
+// parcourt toute la base et bloque le process pendant l'exécution des
+// requêtes synchrones better-sqlite3), elle ne doit donc PAS être relancée
+// après chaque écriture individuelle. Elle ne se déclenche qu'au démarrage
+// (quand `persons` devient disponible), après un import, ou à la demande
+// (bouton « Relancer la vérification »), chacune de ces occasions faisant
+// avancer `runToken`. Un anti-rebond généreux absorbe malgré tout une rafale
+// d'appels rapprochés (ex. plusieurs incréments de `runToken` coup sur coup).
+const VERIFICATION_DEBOUNCE_MS = 1500;
+
+function useVerification({ persons, runToken, personLabelById }) {
   const [issues, setIssues] = useState(() => new Map());
+  const [running, setRunning] = useState(false);
   const labelRef = useRef(personLabelById);
   labelRef.current = personLabelById;
 
@@ -1589,7 +1632,7 @@ function useVerification({ persons, dataVersion, personLabelById }) {
       return undefined;
     }
     let cancelled = false;
-    // Petit délai : une rafale d'écritures ne déclenche qu'une analyse.
+    setRunning(true);
     const timer = setTimeout(async () => {
       const safe = (promise) => Promise.resolve(promise).catch(() => []);
       const [duplicates, cycles, timeline] = await Promise.all([
@@ -1604,6 +1647,7 @@ function useVerification({ persons, dataVersion, personLabelById }) {
         timeline: timeline ?? [],
       });
       setIssues(byPerson);
+      setRunning(false);
       const items = verificationNotifications(byPerson, labelRef.current);
       if (items.length && client.notifications?.publish) {
         try {
@@ -1613,14 +1657,17 @@ function useVerification({ persons, dataVersion, personLabelById }) {
           // les alertes restent visibles dans les fiches même sans notification
         }
       }
-    }, 800);
+    }, VERIFICATION_DEBOUNCE_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [persons, dataVersion]);
+    // Dépendances volontairement réduites : ne pas relancer l'analyse sur
+    // chaque changement de contenu de `persons` (chaque écriture), seulement
+    // à l'apparition de la liste et quand `runToken` avance explicitement.
+  }, [Boolean(persons?.length), runToken]);
 
-  return issues;
+  return { issues, running };
 }
 
 function VerificationSection({ selected, issues, onNavigate, onCompare, onMerged, anchorId }) {
@@ -3897,7 +3944,21 @@ function AppContent() {
     return person ? personLabel(person) : `Personne #${id}`;
   };
 
-  const verificationIssues = useVerification({ persons, dataVersion, personLabelById });
+  // Fait avancer `verificationRunToken` : démarrage (au premier chargement des
+  // personnes, via l'effet de useVerification), après un import GEDCOM, ou à
+  // la demande (bouton « Relancer la vérification »). Jamais après chaque
+  // écriture individuelle (cf. useVerification).
+  const [verificationRunToken, setVerificationRunToken] = useState(0);
+  const rerunVerification = useCallback(() => setVerificationRunToken((token) => token + 1), []);
+  const handleImported = useCallback(async () => {
+    await loadPersons();
+    rerunVerification();
+  }, [loadPersons, rerunVerification]);
+  const { issues: verificationIssues, running: verificationRunning } = useVerification({
+    persons,
+    runToken: verificationRunToken,
+    personLabelById,
+  });
   const [compareTarget, setCompareTarget] = useState(null);
   const openCompare = (otherId) => {
     setCompareTarget(otherId);
@@ -3971,6 +4032,22 @@ function AppContent() {
                   + Nouvelle personne
                 </Button>
               </div>
+              <div className="verification-rerun-button">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={rerunVerification}
+                  disabled={verificationRunning}
+                  title={t(
+                    'verification.rerunHint',
+                    'Recherche à nouveau les doublons, cycles et incohérences de dates',
+                  )}
+                >
+                  {verificationRunning
+                    ? t('verification.running', 'Vérification en cours…')
+                    : t('verification.rerun', 'Relancer la vérification')}
+                </Button>
+              </div>
               <Modal
                 isOpen={creatingOpen}
                 title="Nouvelle personne"
@@ -3995,6 +4072,14 @@ function AppContent() {
                     Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre
                     arbre.
                   </p>
+                ) : visiblePersons.length > VIRTUALIZATION_THRESHOLD ? (
+                  <List
+                    rowComponent={PersonListRow}
+                    rowCount={visiblePersons.length}
+                    rowHeight={PERSON_ROW_HEIGHT}
+                    rowProps={{ persons: visiblePersons, selectedId, onSelect: setSelectedId }}
+                    style={{ height: Math.min(visiblePersons.length * PERSON_ROW_HEIGHT, 480) }}
+                  />
                 ) : (
                   visiblePersons.map((person, index) => (
                     <PersonCard
@@ -4169,7 +4254,7 @@ function AppContent() {
                     }}
                   />
                 ) : view === 'gedcom' ? (
-                  <GedcomPanel onImported={loadPersons} selected={selected} />
+                  <GedcomPanel onImported={handleImported} selected={selected} />
                 ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
                   <BackupsPanel
                     section={

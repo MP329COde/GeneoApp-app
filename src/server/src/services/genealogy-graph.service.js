@@ -284,6 +284,10 @@ export class GenealogyGraphService {
     return { relationship, distance: edges.length, path, branch, label, linkType };
   }
 
+  // Parcours en profondeur ITÉRATIF à trois couleurs (blanc/gris/noir),
+  // linéaire en O(personnes + liens) et sans récursion (donc sans limite de
+  // pile ni ré-exploration redondante d'un sous-arbre déjà validé) : chaque
+  // nœud n'est visité qu'une fois grâce à la mémoire globale `color`.
   detectCycles() {
     const parentages = this.database
       .prepare('SELECT child_id, parent_id FROM parentages WHERE deleted_at IS NULL')
@@ -293,20 +297,44 @@ export class GenealogyGraphService {
       if (!parentsByChild.has(childId)) parentsByChild.set(childId, []);
       parentsByChild.get(childId).push(parentId);
     }
+
+    const WHITE = 0; // jamais visité
+    const GRAY = 1; // sur la pile d'exploration courante (chemin actif)
+    const BLACK = 2; // entièrement exploré, sans cycle possible depuis ce nœud
+    const color = new Map();
     const cycles = [];
-    const visit = (personId, path, active) => {
-      if (active.has(personId)) {
-        cycles.push([...path.slice(path.indexOf(personId)), personId]);
-        return;
+
+    for (const startId of parentsByChild.keys()) {
+      if (color.get(startId) === BLACK) continue;
+      // Pile explicite : { id, parentIndex } où parentIndex est l'index du
+      // prochain parent à explorer pour ce nœud (permet de reprendre après
+      // un appel récursif simulé, sans jamais utiliser la pile d'appel JS).
+      const stack = [{ id: startId, parentIndex: 0 }];
+      color.set(startId, GRAY);
+
+      while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        const parents = parentsByChild.get(frame.id) ?? [];
+        if (frame.parentIndex >= parents.length) {
+          color.set(frame.id, BLACK);
+          stack.pop();
+          continue;
+        }
+        const parentId = parents[frame.parentIndex];
+        frame.parentIndex += 1;
+        const parentColor = color.get(parentId) ?? WHITE;
+        if (parentColor === GRAY) {
+          // Cycle détecté : le chemin actif contient déjà `parentId`.
+          const pathIds = stack.map((f) => f.id);
+          const cycleStart = pathIds.indexOf(parentId);
+          cycles.push([...pathIds.slice(cycleStart), parentId]);
+        } else if (parentColor === WHITE) {
+          color.set(parentId, GRAY);
+          stack.push({ id: parentId, parentIndex: 0 });
+        }
+        // BLACK : sous-arbre déjà validé sans cycle, rien à refaire.
       }
-      if (path.includes(personId)) return;
-      active.add(personId);
-      for (const parentId of parentsByChild.get(personId) ?? []) {
-        visit(parentId, [...path, personId], active);
-      }
-      active.delete(personId);
-    };
-    for (const personId of parentsByChild.keys()) visit(personId, [], new Set());
+    }
     return cycles;
   }
 

@@ -1189,9 +1189,12 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
 
-    await waitFor(() => expect(graph.cycles).toHaveBeenCalled(), { timeout: 3000 });
+    // L'anti-rebond de la vérification a été allongé (cf. Phase 2 audit
+    // performance) pour ne plus relancer l'analyse après chaque écriture ;
+    // le délai d'attente du test suit ce nouvel anti-rebond.
+    await waitFor(() => expect(graph.cycles).toHaveBeenCalled(), { timeout: 4000 });
     expect(
-      await screen.findByText(/Naissance enregistrée après le décès/, {}, { timeout: 3000 }),
+      await screen.findByText(/Naissance enregistrée après le décès/, {}, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(screen.getByText('Cycle de filiation')).toBeInTheDocument();
     await waitFor(() =>

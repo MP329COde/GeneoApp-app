@@ -180,3 +180,58 @@ test('POST /api/persons rejette un isLiving non booléen', async () => {
     await server.close();
   }
 });
+
+test('GET /api/persons sans paramètre renvoie un tableau simple (comportement historique)', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body));
+    assert.equal(body.length, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?limit= pagine avec total et respecte offset/q', async () => {
+  const server = await startTestServer();
+  try {
+    for (const givenNames of ['Ada', 'Byron', 'Charles', 'Diane', 'Ernest']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Lovelace' },
+      });
+    }
+
+    const firstPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '0' })}`,
+    );
+    assert.equal(firstPage.status, 200);
+    assert.equal(firstPage.body.total, 5);
+    assert.equal(firstPage.body.items.length, 2);
+
+    const secondPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '2' })}`,
+    );
+    assert.equal(secondPage.body.items.length, 2);
+    assert.notDeepEqual(
+      firstPage.body.items.map((p) => p.id),
+      secondPage.body.items.map((p) => p.id),
+    );
+
+    const filtered = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '10', q: 'byron' })}`,
+    );
+    assert.equal(filtered.body.total, 1);
+    assert.equal(filtered.body.items[0].given_names, 'Byron');
+  } finally {
+    await server.close();
+  }
+});
