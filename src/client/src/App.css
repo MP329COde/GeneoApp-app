@@ -452,6 +452,38 @@ h3 {
   font: var(--type-date);
 }
 
+/* Liste virtualisée (react-window) : la hauteur de chaque ligne est fixée en
+ * JS (PERSON_ROW_HEIGHT) et doit correspondre EXACTEMENT à cette hauteur
+ * réelle, sinon le texte de deux lignes consécutives se chevauche
+ * visuellement. Une seule ligne, tronquée avec des points de suspension. */
+.person-card--compact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 44px;
+  min-height: 44px;
+  grid-template-columns: unset;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.person-card--compact .person-card__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.person-card--compact .person-card__years {
+  flex: 0 0 auto;
+}
+.person-card--compact .person-card__place {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* ---------- Arbre ---------- */
 .tree-layout {
   min-height: 480px;

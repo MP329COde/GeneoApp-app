@@ -210,7 +210,7 @@ const NAV_GROUPS = [
 // Années de vie partagées par toutes les fiches (calculées depuis les événements).
 const LifespanContext = createContext(new Map());
 
-function PersonCard({ person, selected, onSelect, onKeyDown }) {
+function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) {
   const lifespan = useContext(LifespanContext).get(person.id);
   const years = lifespan?.label;
   // Le lieu de naissance est affiché en plus des années pour distinguer deux
@@ -219,7 +219,7 @@ function PersonCard({ person, selected, onSelect, onKeyDown }) {
   const issues = useContext(VerificationContext).get(person.id)?.length ?? 0;
   return (
     <button
-      className={`person-card${selected ? ' person-card--selected' : ''}${issues ? ' has-issues' : ''}`}
+      className={`person-card${compact ? ' person-card--compact' : ''}${selected ? ' person-card--selected' : ''}${issues ? ' has-issues' : ''}`}
       onClick={() => onSelect(person.id)}
       onKeyDown={onKeyDown}
       type="button"
@@ -253,6 +253,7 @@ function PersonListRow({ index, style, persons, selectedId, onSelect }) {
         person={person}
         selected={person.id === selectedId}
         onSelect={onSelect}
+        compact
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
           event.preventDefault();

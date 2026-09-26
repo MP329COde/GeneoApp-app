@@ -8,6 +8,26 @@ const sampleGedcom = readFileSync(
 );
 const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.meta.url));
 
+// 220 personnes (> VIRTUALIZATION_THRESHOLD = 150), individus isolés sans
+// lien de parenté : suffisant pour déclencher la virtualisation de la liste
+// et rapide à importer/rendre, contrairement à qa/fixtures/gedcom/volumineux.ged
+// (2600 individus, prévu pour les tests de performance côté serveur).
+function largePersonGedcom(count) {
+  const lines = ['0 HEAD', '1 GEDC', '2 VERS 5.5.1'];
+  for (let index = 1; index <= count; index += 1) {
+    lines.push(
+      `0 @I${index}@ INDI`,
+      `1 NAME Personne${String(index).padStart(4, '0')} /Volumineux/`,
+      `1 SEX ${index % 2 === 0 ? 'F' : 'M'}`,
+      '1 BIRT',
+      `2 DATE ${1 + (index % 28)} JAN ${1700 + index}`,
+    );
+  }
+  lines.push('0 TRLR');
+  return lines.join('\n');
+}
+const largeGedcom = largePersonGedcom(220);
+
 // Suite E2E navigateur : pilote l'application réelle (React + Vite + Express
 // + SQLite en mémoire), sans mock d'API — vérifie le parcours métier de
 // bout en bout tel qu'un utilisateur le vivrait, contrairement aux tests
@@ -536,4 +556,50 @@ test('indexe réellement un dossier local et retrouve un document par son conten
   await page.getByLabel('Rechercher dans les documents').fill('saint maclou');
   await page.getByRole('button', { name: 'Chercher' }).click();
   await expect(page.getByText('bapteme.txt').first()).toBeVisible();
+});
+
+test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et défilement complet', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await addPerson(page, 'Jean-Baptiste', 'Lefèvre');
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
+  await page.getByLabel('Contenu GEDCOM').fill(largeGedcom);
+  await page.getByRole('button', { name: 'Aperçu' }).click();
+  await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  await page.getByRole('button', { name: 'Importer' }).click();
+  await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  const rows = page.locator('.person-list .person-card');
+  await expect(rows.first()).toBeVisible();
+
+  // 10 lignes consécutives : aucune boîte englobante ne chevauche la suivante.
+  const boxes = [];
+  for (let index = 0; index < 10; index += 1) {
+    const box = await rows.nth(index).boundingBox();
+    expect(box).not.toBeNull();
+    boxes.push(box);
+  }
+  for (let index = 0; index < boxes.length - 1; index += 1) {
+    const current = boxes[index];
+    const next = boxes[index + 1];
+    expect(next.y).toBeGreaterThanOrEqual(current.y + current.height - 1);
+  }
+
+  // Défilement jusqu'à la dernière personne de la liste virtualisée.
+  const scrollContainer = page.locator('.person-list > div').first();
+  await scrollContainer.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect
+    .poll(() =>
+      scrollContainer.evaluate(
+        (element) => element.scrollTop + element.clientHeight >= element.scrollHeight - 1,
+      ),
+    )
+    .toBe(true);
+  await expect(rows.last()).toBeVisible();
 });
