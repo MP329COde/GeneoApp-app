@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { createApp } from '../../src/server/src/app.js';
 import { TreeWorkspace } from '../../src/server/src/trees/tree-workspace.js';
 import {

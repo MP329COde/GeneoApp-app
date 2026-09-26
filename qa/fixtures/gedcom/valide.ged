@@ -1,0 +1,120 @@
+0 HEAD
+1 SOUR GeneoAppQA
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SUBM @SUB1@
+0 @SUB1@ SUBM
+1 NAME QA GeneoApp
+0 @I1@ INDI
+1 NAME Pierre /Dupont/
+1 SEX M
+1 BIRT
+2 DATE 5 MAY 1730
+2 PLAC Dijon, Bourgogne, France
+1 DEAT
+2 DATE 3 MAR 1795
+2 PLAC Dijon, Bourgogne, France
+1 OCCU Vigneron
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Jeanne /Bernard/
+1 SEX F
+1 BIRT
+2 DATE 8 AUG 1734
+2 PLAC Beaune, Bourgogne, France
+1 DEAT
+2 DATE 12 DEC 1801
+2 PLAC Dijon, Bourgogne, France
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Nicolas /Dupont/
+1 SEX M
+1 BIRT
+2 DATE 1 JAN 1754
+2 PLAC Dijon, Bourgogne, France
+1 DEAT
+2 DATE 1 JAN 1820
+2 PLAC Dijon, Bourgogne, France
+1 OCCU Vigneron
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Marie /Dupond/
+1 SEX F
+1 BIRT
+2 DATE 2 FEB 1756
+2 PLAC Dijon, Bourgogne, France
+1 DEAT
+2 DATE 2 FEB 1830
+2 PLAC Dijon, Bourgogne, France
+1 NOTE Orthographe divergente relevee dans son acte de bapteme (Dupond au lieu de Dupont).
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Louise /Petit/
+1 SEX F
+1 BIRT
+2 DATE 9 SEP 1758
+2 PLAC Beaune, Bourgogne, France
+1 DEAT
+2 DATE 9 SEP 1825
+2 PLAC Dijon, Bourgogne, France
+1 FAMS @F2@
+0 @I6@ INDI
+1 NAME Antoine /Dupont/
+1 SEX M
+1 BIRT
+2 DATE 4 APR 1780
+2 PLAC Dijon, Bourgogne, France
+1 DEAT
+2 DATE 4 APR 1850
+2 PLAC Dijon, Bourgogne, France
+1 OCCU Tonnelier
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I7@ INDI
+1 NAME Catherine /Dupont/
+1 SEX F
+1 BIRT
+2 DATE 6 JUN 1784
+2 PLAC Auxerre, Bourgogne, France
+1 DEAT
+2 DATE 6 JUN 1860
+2 PLAC Dijon, Bourgogne, France
+1 NOTE Homonyme du patronyme de son mari, sans lien de parente connu.
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Emile /Dupont/
+1 SEX M
+1 BIRT
+2 DATE 8 AUG 1804
+2 PLAC Dijon, Bourgogne, France
+1 DEAT
+2 DATE 8 AUG 1875
+2 PLAC Dijon, Bourgogne, France
+1 OCCU Instituteur
+1 FAMC @F3@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 10 OCT 1752
+2 PLAC Dijon, Bourgogne, France
+1 CHIL @I3@
+1 CHIL @I4@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I5@
+1 MARR
+2 DATE 6 JUN 1778
+2 PLAC Dijon, Bourgogne, France
+1 CHIL @I6@
+0 @F3@ FAM
+1 HUSB @I6@
+1 WIFE @I7@
+1 MARR
+2 DATE 5 MAY 1803
+2 PLAC Dijon, Bourgogne, France
+1 CHIL @I8@
+0 TRLR

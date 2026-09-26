@@ -75,6 +75,13 @@ export function Modal({ isOpen, title, onClose, children }) {
 
   return createPortal(
     <div className="gds-modal__overlay">
+      <button
+        type="button"
+        className="gds-modal__overlay-dismiss"
+        onClick={onClose}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
         ref={dialogRef}
         className="gds-modal"

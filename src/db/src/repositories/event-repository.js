@@ -1,5 +1,6 @@
 import { withTransaction, recordAudit } from './base-repository.js';
 import { compareGenealogyDates } from '../dates/genealogy-date.js';
+import { shouldBeDeceased } from '../genealogy/living-status.js';
 
 // Tri chronologique réel (« vers 1812 », « 03 MAR 1788 », intervalles…),
 // dates inconnues en dernier, puis ordre de saisie.
@@ -19,6 +20,7 @@ export class EventRepository {
   create(
     {
       type,
+      value = null,
       dateText = null,
       datePrecision = 'UNKNOWN',
       placeId = null,
@@ -34,17 +36,17 @@ export class EventRepository {
     return withTransaction(this.database, () => {
       const info = this.database
         .prepare(
-          `INSERT INTO events (type, date_text, date_precision, place_id, notes)
-           VALUES (@type, @dateText, @datePrecision, @placeId, @notes)`,
+          `INSERT INTO events (type, value, date_text, date_precision, place_id, notes)
+           VALUES (@type, @value, @dateText, @datePrecision, @placeId, @notes)`,
         )
-        .run({ type, dateText, datePrecision, placeId, notes });
+        .run({ type, value, dateText, datePrecision, placeId, notes });
 
       const eventId = info.lastInsertRowid;
       recordAudit(this.database, {
         tableName: 'events',
         rowId: eventId,
         operation: 'INSERT',
-        changes: { type, dateText, datePrecision, placeId, notes },
+        changes: { type, value, dateText, datePrecision, placeId, notes },
         performedBy,
       });
 
@@ -73,11 +75,18 @@ export class EventRepository {
         performedBy,
       });
 
-      // Un décès ou une inhumation de la personne principale la rend décédée
+      // Un décès/inhumation enregistré, ou une naissance/baptême de plus de
+      // 110 ans sans décès connu, rend la personne présumée non-vivante
       // (le statut « vivant » par défaut ne doit pas contredire les faits).
       if (role === 'PRINCIPAL') {
-        const event = this.database.prepare('SELECT type FROM events WHERE id = ?').get(eventId);
-        if (event && (event.type === 'DEATH' || event.type === 'BURIAL')) {
+        const event = this.database
+          .prepare('SELECT type, date_text AS dateText FROM events WHERE id = ?')
+          .get(eventId);
+        const ownEvents = this.findForPerson(personId).map((row) => ({
+          type: row.type,
+          dateText: row.date_text,
+        }));
+        if (event && shouldBeDeceased([...ownEvents, event])) {
           const updated = this.database
             .prepare('UPDATE persons SET is_living = 0 WHERE id = ? AND is_living = 1')
             .run(personId);
@@ -86,7 +95,10 @@ export class EventRepository {
               tableName: 'persons',
               rowId: personId,
               operation: 'UPDATE',
-              changes: { isLiving: false, reason: 'décès enregistré' },
+              changes: {
+                isLiving: false,
+                reason: 'décès enregistré ou naissance de plus de 110 ans',
+              },
               performedBy,
             });
           }

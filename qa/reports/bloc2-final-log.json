@@ -1,0 +1,17 @@
+[
+  {
+    "s": "ghost-cleanup",
+    "i": "reporte au bloc 2B (suppression d'arbre entier, testera ce cas)",
+    "t": 1790187822901
+  },
+  {
+    "s": "bug-zoom-recentrer",
+    "i": "TimeoutError: locator.click: Timeout 3000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: '+' }).first()\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" class=\"gds-butto",
+    "t": 1790187829319
+  },
+  {
+    "s": "modification-personne",
+    "i": "tentee-sur-Suzanne",
+    "t": 1790187834264
+  }
+]

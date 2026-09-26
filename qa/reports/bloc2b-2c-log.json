@@ -1,0 +1,100 @@
+[
+  {
+    "s": "bug-suppr-feuille",
+    "i": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Supprimer/i }).first()\u001b[22m\n",
+    "t": 1790187905397
+  },
+  {
+    "s": "verif-recherche-apres-suppr-feuille",
+    "i": "capture prise",
+    "t": 1790187907940
+  },
+  {
+    "s": "bug-suppr-centrale",
+    "i": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Supprimer/i }).first()\u001b[22m\n",
+    "t": 1790187913893
+  },
+  {
+    "s": "verif-orphelin-antoine",
+    "i": "capture prise, voir si Parents pointe vers un id inexistant ou proprement retiré",
+    "t": 1790187916140
+  },
+  {
+    "s": "suppression-union",
+    "i": "Antoine/Catherine Dupont",
+    "t": 1790187917496
+  },
+  {
+    "s": "bug-suppr-arbre",
+    "i": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /^Supprimer QA - Famille Dupont-Bernard$/ }).first()\u001b[22m\n",
+    "t": 1790187923148
+  },
+  {
+    "s": "dupont-bernard-visible-apres-suppr-reload",
+    "i": 2,
+    "t": 1790187924993
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "Dupond",
+      "desc": "orthographe proche (Eléonore Dupond)",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187927362
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "dupond",
+      "desc": "casse différente",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187928610
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "Eleonore",
+      "desc": "sans accent (Eléonore)",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187929861
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "N'Diaye",
+      "desc": "apostrophe",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187931109
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "xyzintrouvable",
+      "desc": "résultat vide",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187932345
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "Müller",
+      "desc": "tréma exact",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187934792
+  },
+  {
+    "s": "recherche",
+    "i": {
+      "q": "Muller",
+      "desc": "tréma omis",
+      "resultatsApprox": "inconnu"
+    },
+    "t": 1790187936041
+  }
+]

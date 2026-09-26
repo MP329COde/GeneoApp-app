@@ -114,6 +114,11 @@ test('le statut « vivant » contredit par un décès ou un âge extrême est si
   t.markLiving(mort);
   const ancien = t.person('Ancien');
   t.event('BIRTH', '1850', ancien);
+  // La création dérive désormais `is_living` automatiquement (naissance de
+  // plus de 110 ans => non-vivant) : on force ici le statut « vivant » pour
+  // vérifier que la contradiction est bien signalée quand elle survient
+  // malgré tout (import GEDCOM, correction manuelle...).
+  t.markLiving(ancien);
   const codes = t.codes();
   assert.ok(codes.includes('LIVING_WITH_DEATH:CERTAIN'));
   assert.ok(codes.includes('LIVING_TOO_OLD:POSSIBLE'));

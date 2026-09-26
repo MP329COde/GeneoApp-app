@@ -1,6 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from './ipc/channels.js';
 
+// Jeton du serveur HTTP local embarqué (voir main.js/local-http-guard.js),
+// transmis uniquement via additionalArguments (jamais par le réseau).
+function readHttpToken() {
+  const arg = process.argv.find((value) => value.startsWith('--geneoapp-http-token='));
+  return arg ? arg.slice('--geneoapp-http-token='.length) : null;
+}
+const httpToken = readHttpToken();
+
 /**
  * Invoque un canal de l'allowlist et déballe l'enveloppe { ok, data|error }
  * en une promesse résolue/rejetée classique côté renderer, pour que l'API
@@ -72,6 +80,13 @@ const api = {
   audit: {
     listForEntity: (tableName, rowId) =>
       invoke(IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY, { tableName, rowId }),
+  },
+
+  notifications: {
+    list: (options) => invoke(IPC_CHANNELS.NOTIFICATIONS_LIST, options),
+    markRead: (id) => invoke(IPC_CHANNELS.NOTIFICATIONS_READ, { id }),
+    markAllRead: () => invoke(IPC_CHANNELS.NOTIFICATIONS_READ_ALL),
+    publish: (items) => invoke(IPC_CHANNELS.NOTIFICATIONS_PUBLISH, { items }),
   },
 
   graph: {
@@ -183,6 +198,15 @@ const api = {
     addRegion: (id, data) => invoke(IPC_CHANNELS.MEDIA_REGION_ADD, { id, data }),
     removeRegion: (regionId) => invoke(IPC_CHANNELS.MEDIA_REGION_REMOVE, { regionId }),
     photosForPerson: (personId) => invoke(IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON, { personId }),
+    decode: (id, data) => invoke(IPC_CHANNELS.MEDIA_DECODE, { id, data }),
+    saveTranscription: (id, data) => invoke(IPC_CHANNELS.MEDIA_TRANSCRIPTION_SAVE, { id, data }),
+    owners: (id) => invoke(IPC_CHANNELS.MEDIA_OWNERS, { id }),
+    link: (id, data) => invoke(IPC_CHANNELS.MEDIA_LINK, { id, data }),
+    identify: (data) => invoke(IPC_CHANNELS.MEDIA_IDENTIFY, { data }),
+    setPortrait: (personId, data) =>
+      invoke(IPC_CHANNELS.PERSONS_SET_PORTRAIT, { id: personId, data }),
+    uploadPortrait: (personId, data) =>
+      invoke(IPC_CHANNELS.PERSONS_UPLOAD_PORTRAIT, { id: personId, data }),
   },
 
   indexing: {
@@ -193,6 +217,12 @@ const api = {
     removeSource: (id) => invoke(IPC_CHANNELS.INDEXING_REMOVE_SOURCE, { id }),
     updateSettings: (data) => invoke(IPC_CHANNELS.INDEXING_SETTINGS, { data }),
     run: () => invoke(IPC_CHANNELS.INDEXING_RUN),
+    searchPage: (q, options) => invoke(IPC_CHANNELS.INDEXING_SEARCH_PAGE, { q, options }),
+    document: (id) => invoke(IPC_CHANNELS.INDEXING_DOCUMENT, { id }),
+    updateSource: (id, data) => invoke(IPC_CHANNELS.INDEXING_UPDATE_SOURCE, { id, data }),
+    runSource: (id) => invoke(IPC_CHANNELS.INDEXING_RUN_SOURCE, { id }),
+    clearSource: (id) => invoke(IPC_CHANNELS.INDEXING_CLEAR_SOURCE, { id }),
+    cancel: () => invoke(IPC_CHANNELS.INDEXING_CANCEL),
   },
   quality: (personId) => invoke(IPC_CHANNELS.PERSON_QUALITY, { personId }),
   advancedSearch: (filters) => invoke(IPC_CHANNELS.SEARCH_ADVANCED, { filters }),
@@ -208,6 +238,17 @@ const api = {
     setMirror: (mirrorDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_MIRROR, { mirrorDir, token }),
     setDataDir: (dataDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_DATA_DIR, { dataDir, token }),
   },
+
+  settings: {
+    // Informe le process principal du mode de carte choisi, pour ajuster la
+    // Content-Security-Policy (tuiles OpenStreetMap autorisées uniquement en
+    // mode « en ligne » explicite).
+    setMapMode: (mode) => ipcRenderer.invoke('geneoapp:settings:setMapMode', mode),
+  },
+
+  // Jeton du serveur HTTP local embarqué : requis pour l'appeler directement
+  // (hors IPC) sans être bloqué par local-http-guard.js.
+  httpToken,
 
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),

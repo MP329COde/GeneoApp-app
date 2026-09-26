@@ -1,4 +1,5 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
+import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
 import { PayloadTooLargeError, ValidationError } from '../errors.js';
 import { createZip, readZip } from './zip.js';
@@ -360,7 +361,7 @@ function generateGedcom(database, persons, families, format, media = []) {
       const tag = EXPORT_EVENT_TAGS[event.type];
       const genericLabel = GENERIC_EVENT_LABELS[event.type];
       if (!tag && !genericLabel) continue;
-      lines.push(`1 ${tag ?? 'EVEN'}`);
+      lines.push(`1 ${tag ?? 'EVEN'}${event.value ? ` ${event.value}` : ''}`);
       if (genericLabel) lines.push(`2 TYPE ${genericLabel}`);
       if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
       if (event.place_id) {
@@ -445,7 +446,7 @@ function applyMapping(database, records, performedBy) {
   );
   const insertPlace = database.prepare(`INSERT INTO places (name, normalized_name) VALUES (?, ?)`);
   const insertEvent = database.prepare(
-    `INSERT INTO events (type, date_text, date_precision, place_id, notes) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO events (type, date_text, date_precision, place_id, notes, value) VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const insertParticipant = database.prepare(
     `INSERT INTO event_participants (event_id, person_id, role) VALUES (?, ?, ?)`,
@@ -465,6 +466,18 @@ function applyMapping(database, records, performedBy) {
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
     const name = parseName(value(person, 'NAME'));
+    const ownEvents = [
+      ...children(person, 'DEAT').map(() => ({ type: 'DEATH' })),
+      ...children(person, 'BURI').map(() => ({ type: 'BURIAL' })),
+      ...children(person, 'BIRT').map((record) => ({
+        type: 'BIRTH',
+        dateText: value(record, 'DATE'),
+      })),
+      ...children(person, 'BAPM').map((record) => ({
+        type: 'BAPTISM',
+        dateText: value(record, 'DATE'),
+      })),
+    ];
     const result = insertPerson.run(
       name.givenNames,
       name.familyName,
@@ -473,8 +486,9 @@ function applyMapping(database, records, performedBy) {
       notes(person),
       value(person, 'NICK') ?? null,
       person.xref ?? null,
-      // Décès ou inhumation connus : la personne n'est pas vivante.
-      children(person, 'DEAT').length > 0 || children(person, 'BURI').length > 0 ? 0 : 1,
+      // Décès/inhumation connus, ou naissance/baptême de plus de 110 ans :
+      // la personne est présumée non-vivante.
+      shouldBeDeceased(ownEvents) ? 0 : 1,
     );
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);
@@ -620,6 +634,7 @@ function insertEventRecord(
     datePrecision(value(record, 'DATE')),
     placeId,
     notes(record),
+    record.value?.trim() || null,
   );
   audit(database, 'events', result.lastInsertRowid, { type }, performedBy);
   return result.lastInsertRowid;

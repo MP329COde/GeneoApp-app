@@ -16,9 +16,22 @@ const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.met
 test.describe.configure({ mode: 'serial' });
 
 // Création d'une personne par la fenêtre « Nouvelle personne ».
+// Sur un arbre vide, l'application ouvre déjà cette fenêtre automatiquement
+// (assistant de départ) : on ne re-clique le bouton que si elle n'est pas
+// déjà affichée, pour refléter le comportement réel de l'UI.
 async function addPerson(page, givenNames, familyName) {
-  await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  const openButton = page.getByRole('button', { name: '+ Nouvelle personne' });
+  // Sur un arbre vide, l'application ouvre la modale automatiquement, mais ce
+  // n'est pas instantané : on attend que l'état de l'application se stabilise
+  // (modale déjà visible, ou bouton d'ouverture disponible) avant de décider.
+  await Promise.race([
+    dialog.waitFor({ state: 'visible' }).catch(() => {}),
+    openButton.waitFor({ state: 'visible' }).catch(() => {}),
+  ]);
+  if (!(await dialog.isVisible())) {
+    await openButton.click();
+  }
   await dialog.getByLabel('Prénom(s)').fill(givenNames);
   await dialog.getByLabel('Nom', { exact: true }).fill(familyName);
   await dialog.getByRole('button', { name: 'Ajouter une personne' }).click();
@@ -66,7 +79,7 @@ test('les statistiques reflètent les données réelles créées durant le parco
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Statistiques', exact: true }).click();
-  const personsRow = page.locator('dl div', { hasText: 'persons' });
+  const personsRow = page.locator('dl div', { hasText: 'Personnes' });
   await expect(personsRow.locator('dd')).toHaveText('2');
 });
 
@@ -108,7 +121,7 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   await page.getByRole('button', { name: 'Sauvegardes', exact: true }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
 
   await page.getByRole('button', { name: 'Créer une sauvegarde (JSON)' }).click();
@@ -121,14 +134,14 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Toujours connecté depuis le test précédent (état React réinitialisé par
   // page.goto, la session locale doit donc être rétablie).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
@@ -139,7 +152,7 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Le profil supprimé n'existe plus : une nouvelle connexion avec le même
   // nom recrée un profil distinct via le repli 401 (premier lancement).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 });
@@ -148,21 +161,27 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   page,
 }) => {
   await page.goto('/');
-  // L'import GEDCOM précédent a recréé "Ada Lovelace" et "Byron Lovelace" en
-  // plus des fiches déjà saisies manuellement : un vrai doublon exact exploité
-  // ici plutôt que d'en fabriquer un artificiellement.
-  await page.getByRole('button', { name: 'Doublons', exact: true }).click();
-  await page.getByRole('button', { name: 'Analyser les doublons potentiels' }).click();
+  // L'import GEDCOM précédent a recréé "Ada Lovelace" en plus de la fiche déjà
+  // saisie manuellement : un vrai doublon exact exploité ici plutôt que d'en
+  // fabriquer un artificiellement. La vérification des doublons n'est plus un
+  // écran séparé : elle est intégrée à la fiche de la personne concernée
+  // (section « À vérifier », cf. App.jsx VerificationSection).
+  await page.getByRole('button', { name: 'Personne', exact: true }).click();
+  await page
+    .locator('.sidenav__persons')
+    .getByText('Ada Lovelace', { exact: false })
+    .first()
+    .click();
 
-  const pair = page.locator('.search-results li', { hasText: 'Ada Lovelace' }).first();
-  await expect(pair).toBeVisible();
-  await pair.getByRole('button', { name: 'Fusionner (garder A)' }).click();
+  const verification = page.locator('#verification-section');
+  await expect(verification.getByText(/Doublon possible/)).toBeVisible();
+  await verification.getByRole('button', { name: 'Fusionner ici' }).click();
 
   // L'aperçu de fusion bloque tant que l'utilisateur n'a pas confirmé.
   await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirmer la fusion' }).click();
 
-  await expect(pair).not.toBeVisible();
+  await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
   await expect(page.getByText('4 personne(s)')).toBeVisible();
@@ -178,7 +197,11 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   // mariage (Charles et Ada) : de vrais événements, pas des données de test
   // fabriquées pour cet écran.
   await expect(page.getByText(/BIRTH/)).toBeVisible();
-  await expect(page.getByText(/London/)).toBeVisible();
+  // La liste de personnes affiche aussi désormais le lieu de naissance (pour
+  // distinguer les homonymes), donc « London » y apparaît également : on
+  // cible ici précisément la ligne de la chronologie plutôt qu'un texte
+  // ambigu partagé avec la fiche de la barre latérale.
+  await expect(page.getByText(/BIRTH.*London/)).toBeVisible();
   await expect(page.getByText(/MARRIAGE/)).toBeVisible();
 });
 
@@ -195,9 +218,33 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
   await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
 
+  // Par défaut l'application est en mode carte locale (hors ligne, sans
+  // requête réseau) : voir a9af2bd « sépare réellement le mode hors ligne du
+  // mode en ligne ». On vérifie ce mode d'abord.
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(page.getByText('Carte locale (hors ligne, aucune requête réseau)')).toBeVisible();
+  await expect(
+    page.getByRole('img', {
+      name: 'Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)',
+    }),
+  ).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Bascule explicite vers le mode en ligne (tuiles OpenStreetMap) via les
+  // réglages, puis vérifie que la carte Leaflet s'affiche à la place.
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'En ligne (tuiles OpenStreetMap)' }).check();
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(
+    page.getByText('Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)'),
+  ).toBeVisible();
   await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
-  await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Remet le mode local pour ne pas influencer les tests suivants (suite en
+  // mode `serial`, réglages partagés entre les tests).
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'Locale (hors ligne, sans tuiles)' }).check();
 });
 
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
@@ -408,6 +455,14 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   await page.getByRole('button', { name: 'Ouvrir Réimport GEDZIP' }).click();
   const counter = page.locator('.sidenav__persons .sidenav__label span');
   await expect(counter).toHaveText('0 personne(s)');
+
+  // L'arbre vide ouvre automatiquement l'assistant de départ ("Nouvelle
+  // personne") : on le referme avant de naviguer, comme le ferait un
+  // utilisateur qui choisit plutôt d'importer un GEDCOM.
+  const startAssistant = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  if (await startAssistant.isVisible()) {
+    await page.getByRole('button', { name: 'Fermer' }).click();
+  }
 
   await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
   await page

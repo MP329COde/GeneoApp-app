@@ -1,0 +1,35 @@
+[
+  {
+    "s": "import-tente",
+    "i": "valide",
+    "t": 1790188189309
+  },
+  {
+    "s": "console-error",
+    "i": "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "t": 1790188190363
+  },
+  {
+    "s": "bug-clic-importer",
+    "i": {
+      "c": "malforme",
+      "err": "TimeoutError: locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /^Importer/i }).first()\u001b[22m\n\u001b[2m    -"
+    },
+    "t": 1790188199422
+  },
+  {
+    "s": "import-tente",
+    "i": "malforme",
+    "t": 1790188200982
+  },
+  {
+    "s": "import-volumineux-duree-ms",
+    "i": 93124,
+    "t": 1790188294107
+  },
+  {
+    "s": "import-volumineux-termine-detecte",
+    "i": false,
+    "t": 1790188294107
+  }
+]

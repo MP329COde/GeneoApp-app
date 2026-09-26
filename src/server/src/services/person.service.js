@@ -1,4 +1,4 @@
-import { NotFoundError } from '../errors.js';
+import { NotFoundError, ValidationError } from '../errors.js';
 import { assertId, validatePersonCreate, validatePersonUpdate } from '../validation/schemas.js';
 
 export class PersonService {
@@ -27,6 +27,20 @@ export class PersonService {
     const patch = validatePersonUpdate(payload);
     const existing = this.repository.findById(id);
     if (!existing) throw new NotFoundError(`Personne introuvable : ${id}`);
+
+    const nextGivenNames = 'givenNames' in patch ? patch.givenNames : existing.given_names;
+    const nextFamilyName = 'familyName' in patch ? patch.familyName : existing.family_name;
+    const hasGivenNames = typeof nextGivenNames === 'string' && nextGivenNames.trim() !== '';
+    const hasFamilyName = typeof nextFamilyName === 'string' && nextFamilyName.trim() !== '';
+    if (!hasGivenNames && !hasFamilyName) {
+      throw new ValidationError('Validation échouée', {
+        fields: {
+          givenNames: 'givenNames ou familyName doit être renseigné',
+          familyName: 'givenNames ou familyName doit être renseigné',
+        },
+      });
+    }
+
     return this.repository.update(id, patch, options);
   }
 

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { openDatabase } from '../../src/db/src/database.js';
 import { runMigrations } from '../../src/db/src/migrate.js';
 import { createServices } from '../../src/server/src/services/index.js';
@@ -38,7 +41,11 @@ test('PERSONS_CREATE crée une personne et journalise l’acteur transmis', asyn
 test('PERSONS_CREATE renvoie une enveloppe d’erreur 400 pour un payload invalide, sans lever', async () => {
   const handlers = createHandlers();
 
-  const response = await handlers[IPC_CHANNELS.PERSONS_CREATE]({ data: { givenNames: 'Ada' } });
+  // givenNames et familyName vides tous les deux : seul cas désormais rejeté
+  // (un prénom OU un nom suffit, voir validatePersonCreate).
+  const response = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: '', familyName: '' },
+  });
 
   assert.equal(response.ok, false);
   assert.equal(response.error.status, 400);

@@ -42,10 +42,20 @@ export function TreesPanel({ client, onActivated }) {
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    if (!name.trim()) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    const fold = (value) => value.trim().toLowerCase();
+    const duplicate = (trees ?? []).some((tree) => fold(tree.name) === fold(trimmedName));
+    if (duplicate) {
+      setStatus(null);
+      setError(
+        `Un arbre nommé « ${trimmedName} » existe déjà. Choisissez un nom différent pour éviter toute confusion.`,
+      );
+      return;
+    }
     const created = await run(
-      () => client.trees.create({ name: name.trim(), description: description.trim() || null }),
-      `Arbre « ${name.trim()} » créé.`,
+      () => client.trees.create({ name: trimmedName, description: description.trim() || null }),
+      `Arbre « ${trimmedName} » créé.`,
     );
     if (created) {
       setName('');

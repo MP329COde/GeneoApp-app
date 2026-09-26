@@ -1,4 +1,15 @@
-import { runTesseract } from './tesseract-runner.js';
+import { readFile } from 'node:fs/promises';
+import { ocrImage, pdfContent } from '../indexing/content-extract.js';
+
+// OCR embarqué (WebAssembly, données de langue fournies) : fonctionne sans
+// aucun logiciel installé. Les PDF gardent leur texte intégré s'il existe.
+export async function runEmbeddedOcr(absolutePath) {
+  const buffer = await readFile(absolutePath);
+  if (buffer.subarray(0, 5).toString('latin1') === '%PDF-') {
+    return (await pdfContent(buffer)).text;
+  }
+  return ocrImage(buffer);
+}
 
 const OCR_ELIGIBLE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -16,7 +27,7 @@ const OCR_ELIGIBLE_MIME_TYPES = new Set([
  * service distant de substitution.
  */
 export class OcrService {
-  constructor({ runner = runTesseract } = {}) {
+  constructor({ runner = runEmbeddedOcr } = {}) {
     this.runner = runner;
   }
 

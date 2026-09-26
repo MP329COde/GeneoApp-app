@@ -39,6 +39,16 @@ test('findByName retrouve un profil existant et renvoie null sinon', () => {
   assert.equal(repository.findByName('Inconnu'), null);
 });
 
+test('le nom de profil est unique indépendamment de la casse (contournement du PIN)', () => {
+  const database = createTestDatabase();
+  const repository = new AccountRepository(database);
+
+  repository.create({ name: 'Bob', pinHash: 'salt:hash' });
+  assert.throws(() => repository.create({ name: 'bob' }), /UNIQUE|SQLITE_CONSTRAINT/);
+  assert.throws(() => repository.create({ name: 'BOB' }), /UNIQUE|SQLITE_CONSTRAINT/);
+  assert.equal(repository.findByName('bob').name, 'Bob');
+});
+
 test('touchLogin met à jour last_login_at', () => {
   const database = createTestDatabase();
   const repository = new AccountRepository(database);

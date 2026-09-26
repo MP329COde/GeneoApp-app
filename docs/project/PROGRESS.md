@@ -68,3 +68,46 @@ d'arbre, personnes décédées restant « vivantes ».
 Limites restantes : les écrans métier ne sont traduits qu'en partie (la coque l'est), l'identification sur
 photo est uniquement manuelle (volontairement, pas de biométrie), la recherche multi-sites ouvre le navigateur
 sans indexer les pages distantes, la carte reste un fond SVG hors ligne sans tuiles.
+
+## Audit 2026-09-26 (branche `fix/audit-2026-09`)
+
+Audit complet en 6 phases (buildabilité, tests, performance, fonctionnel/généalogie, sécurité,
+maintenabilité). Chaque phase validée par `npm run lint && npm run format:check && npm test && npm run build`
+(et `npm run test:e2e` à partir de la phase 1) avant son commit.
+
+| Phase | Résumé | Commit |
+|---|---|---|
+| 0 - Buildabilité | Dépôt rendu buildable ; fuite du worker OCR (tesseract.js) corrigée entre fichiers de test (`stopOcr()` + gestionnaires SIGINT/SIGTERM/before-quit) ; vérification d'imports cassés ajoutée au lint | `43aab2e` |
+| 1 - Tests | Course `addPerson` corrigée en e2e ; test carte adapté à la séparation hors ligne/en ligne | `ea864e7` |
+| 2 - Performance | `potentialDuplicates` : regroupement phonétique + pré-normalisation (O(n²) → O(n)) ; `detectCycles` : DFS itératif 3 couleurs (récursion non bornée → itératif) ; pagination + virtualisation (`react-window`) de la liste des personnes | `07971d5` |
+| 3 - Fonctionnel/généalogie | `is_living` dérivé automatiquement (décès/inhumation, ou naissance de plus de 110 ans) à la création et à l'import GEDCOM, avec migration `0019` pour les bases existantes ; prénom OU nom de famille suffit désormais (API/IPC/GEDCOM cohérents) ; carte hors ligne avec fond Europe/France embarqué (SVG, aucun appel réseau) | `7825ee5` |
+| 4 - Sécurité | Contournement du PIN corrigé (unicité des noms de profil insensible à la casse) ; protection anti DNS-rebinding (Host/Origin) avec exception `dev:lan` ; serveur HTTP Electron protégé par jeton partagé process principal/renderer ; bug `fileURLToPath` corrigé dans `main.js` ; CSP `img-src` strict par défaut, tuiles OSM autorisées uniquement en mode carte « en ligne » | `3cbd356` |
+| 5 - Maintenabilité | Menu de navigation regroupé en 5 sections repliables ; barre d'onglets mobile 390px (cibles tactiles 44×44px) ; messages d'erreur techniques génériques accompagnés d'une consigne actionnable traduite (`ErrorNotice`) ; `dev:lan` migré vers `cross-env` ; bug de packaging Electron corrigé (aucune dépendance runtime n'était embarquée dans le `.app` faute de champ `dependencies` racine) ; références `qa/reports/test-results/` cassées corrigées | `5d40c4c` |
+| Correctif e2e | Libellé aria de la carte hors ligne resynchronisé avec la phase 3 dans le test e2e correspondant | `53e6712` |
+
+### Performance mesurée (avant → après, phase 2)
+
+- `potentialDuplicates` (5000 personnes) : 20 596,8 ms → ~50-58 ms
+- `detectCycles` (5000 personnes / 1666 familles) : 49 797,2 ms → ~2-3 ms
+
+### Ce qui n'a pas été fait (liste honnête)
+
+- **Édition inline prénom/nom/sexe avec Ctrl+Z + audit log** (phase 3) : jamais commencée. L'agent en charge de
+  cette tâche a été interrompu par une limite de session avant de l'aborder ; seuls `is_living`, la règle
+  prénom/nom et la carte hors ligne ont été traités dans cette phase.
+- **Décomposition de `App.jsx`/`App.css`** (phase 5, ~4600/3300 lignes) : reportée délibérément plutôt que
+  faite à moitié, faute de budget de vérification suffisant pour garantir zéro régression sur les tests
+  client/e2e existants (contexts fortement couplés : `LifespanContext`, `VerificationContext`, client API
+  singleton).
+- **Mode carte « en ligne » (tuiles OpenStreetMap)** : conservé en option explicite, désactivé par défaut.
+  Décision ouverte pour l'utilisateur : le garder (nécessite un accès réseau, en contradiction partielle avec
+  l'esprit « local-only » de l'app) ou le retirer entièrement au profit du seul fond SVG hors ligne.
+
+### Dette d'environnement connue (non liée à l'audit)
+
+- `pdftotext` n'est pas installé sur la machine de développement/CI utilisée pour cet audit : le test
+  « PDF texte : contenu extrait directement » échoue et bascule sur le chemin OCR, ce qui est le comportement
+  de repli attendu du code, pas un bug.
+- `npm run test:client` échoue entièrement (`TypeError: webidl.util.markAsUncloneable is not a function`) sur
+  Node 20.20.2, alors que `package.json` demande `>=22.0.0` : incompatibilité `undici`/`jsdom`, sans rapport
+  avec les changements de cet audit (vérifié identique avant/après chaque phase).

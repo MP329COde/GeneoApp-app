@@ -13,6 +13,9 @@ export const DEFAULT_SETTINGS = {
   treeDepth: 4,
   showSosa: true,
   showShortcuts: true,
+  // « offline » (par défaut) : aucune requête réseau, carte de position locale.
+  // « online » : tuiles OpenStreetMap téléchargées, choix explicite de l'utilisateur.
+  mapMode: 'offline',
   // Personnalisation de l'interface.
   accent: 'blue',
   homeView: 'tree',
@@ -49,6 +52,7 @@ const OPTIONS = {
   reduceMotion: ['system', 'reduce', 'allow'],
   treeMode: ['family', 'ancestors', 'descendants', 'fan', 'graph'],
   accent: ACCENTS_OPTIONS,
+  mapMode: ['offline', 'online'],
 };
 
 // Valide chaque valeur lue : une préférence corrompue retombe sur la valeur
@@ -131,6 +135,10 @@ export function SettingsProvider({ children }) {
     } catch {
       // stockage indisponible : les préférences restent valables pour la session
     }
+    // Sous Electron : informe le process principal du mode de carte choisi
+    // pour qu'il ajuste la CSP (tuiles OpenStreetMap autorisées uniquement
+    // en mode « en ligne » explicite). Absent en dev navigateur : no-op.
+    window.geneoapp?.settings?.setMapMode?.(settings.mapMode);
   }, [settings]);
 
   const update = useCallback((patch) => {
