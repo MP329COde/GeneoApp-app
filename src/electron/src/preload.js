@@ -1,6 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from './ipc/channels.js';
 
+// Jeton du serveur HTTP local embarqué (voir main.js/local-http-guard.js),
+// transmis uniquement via additionalArguments (jamais par le réseau).
+function readHttpToken() {
+  const arg = process.argv.find((value) => value.startsWith('--geneoapp-http-token='));
+  return arg ? arg.slice('--geneoapp-http-token='.length) : null;
+}
+const httpToken = readHttpToken();
+
 /**
  * Invoque un canal de l'allowlist et déballe l'enveloppe { ok, data|error }
  * en une promesse résolue/rejetée classique côté renderer, pour que l'API
@@ -230,6 +238,17 @@ const api = {
     setMirror: (mirrorDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_MIRROR, { mirrorDir, token }),
     setDataDir: (dataDir, token) => invoke(IPC_CHANNELS.STORAGE_SET_DATA_DIR, { dataDir, token }),
   },
+
+  settings: {
+    // Informe le process principal du mode de carte choisi, pour ajuster la
+    // Content-Security-Policy (tuiles OpenStreetMap autorisées uniquement en
+    // mode « en ligne » explicite).
+    setMapMode: (mode) => ipcRenderer.invoke('geneoapp:settings:setMapMode', mode),
+  },
+
+  // Jeton du serveur HTTP local embarqué : requis pour l'appeler directement
+  // (hors IPC) sans être bloqué par local-http-guard.js.
+  httpToken,
 
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),

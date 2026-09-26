@@ -1,8 +1,12 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
 import { isSafeExternalUrl } from './external-links.js';
+import { createLocalHttpGuard } from './security/local-http-guard.js';
+import { buildContentSecurityPolicy } from './security/content-security-policy.js';
 import { createServer } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import express from 'express';
 import { createApp } from '../../server/src/app.js';
 import { TreeWorkspace, createLiveServices } from '../../server/src/trees/tree-workspace.js';
 import { startIndexScheduler } from '../../server/src/indexing/index.service.js';
@@ -17,12 +21,35 @@ import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
 const host = '127.0.0.1';
 const port = 0;
 const preloadPath = fileURLToPath(new URL('./preload.js', import.meta.url));
+// Jeton local partagé process principal / renderer (voir local-http-guard.js) :
+// protège le serveur HTTP embarqué contre tout autre processus local et
+// contre le DNS-rebinding (en complément de dnsRebindingProtection côté app).
+const httpToken = randomBytes(32).toString('hex');
+let mapMode = 'offline';
 
 let server;
 let workspace;
 let unregisterIpcHandlers;
 
 async function createWindow() {
+  ipcMain.handle('geneoapp:settings:setMapMode', (_event, mode) => {
+    mapMode = mode === 'online' ? 'online' : 'offline';
+    return { ok: true };
+  });
+
+  // Applique la CSP dynamique à toutes les réponses chargées dans la fenêtre
+  // (fichiers locaux inclus) : seule source d'application fiable en
+  // Electron, contrairement à une balise <meta> statique qui ne peut pas
+  // être mise à jour de façon fiable après le chargement de la page.
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [buildContentSecurityPolicy(mapMode)],
+      },
+    });
+  });
+
   const userData = app.getPath('userData');
   // Dossier de travail choisi (clé USB…) s'il est branché, sinon le dossier de l'app.
   const portableDir = configuredDataDir(userData);
@@ -46,7 +73,14 @@ async function createWindow() {
     console.error('Sauvegarde de lancement impossible :', error.message);
   });
 
-  server = createServer(createApp({ workspace, storage })).listen(port, host);
+  // Le serveur HTTP embarqué n'est lié qu'à 127.0.0.1, mais reste accessible
+  // à tout autre processus local (et à un site distant via DNS-rebinding
+  // sans dnsRebindingProtection, déjà appliquée par createApp). On exige en
+  // plus un jeton connu uniquement du process principal et du renderer.
+  const guarded = express();
+  guarded.use(createLocalHttpGuard(httpToken));
+  guarded.use(createApp({ workspace, storage }));
+  server = createServer(guarded).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
 
   const window = new BrowserWindow({
@@ -55,6 +89,9 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Seul canal de transmission du jeton local au renderer : jamais par
+      // le réseau ni par une variable globale accessible à une page distante.
+      additionalArguments: [`--geneoapp-http-token=${httpToken}`],
     },
   });
 
@@ -72,7 +109,10 @@ async function createWindow() {
     }
   });
 
-  await window.loadFile(new URL('../../client/dist/index.html', import.meta.url).pathname);
+  // fileURLToPath (et non l'accès brut à .pathname d'une URL file://) : seul
+  // moyen correct de retrouver un chemin de fichier système, notamment sous
+  // Windows (lettre de lecteur) et avec des caractères non-ASCII encodés.
+  await window.loadFile(fileURLToPath(new URL('../../client/dist/index.html', import.meta.url)));
 }
 
 app.whenReady().then(createWindow);

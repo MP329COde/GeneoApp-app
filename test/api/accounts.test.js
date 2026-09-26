@@ -37,6 +37,25 @@ test('POST /api/accounts refuse un nom déjà pris', async () => {
   }
 });
 
+test('POST /api/accounts refuse un nom déjà pris même avec une casse différente (contournement du PIN)', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/accounts', {
+      method: 'POST',
+      body: { name: 'Bob', pin: '1234' },
+    });
+
+    const { status } = await requestJson(server.baseUrl, '/api/accounts', {
+      method: 'POST',
+      body: { name: 'bob' },
+    });
+
+    assert.equal(status, 409);
+  } finally {
+    await server.close();
+  }
+});
+
 test('login échoue avec un code incorrect', async () => {
   const server = await startTestServer();
   try {
