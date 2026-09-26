@@ -1,0 +1,719 @@
+{
+  "config": {
+    "argv": [
+      "/Users/matthew/.hermes/node/bin/node",
+      "/Users/matthew/dev/GeneoApp-app/node_modules/.bin/playwright",
+      "test",
+      "tests/bug-fixes.spec.cjs",
+      "--project=chromium-1440x900"
+    ],
+    "configFile": "/Users/matthew/dev/GeneoApp-app/qa/playwright.config.cjs",
+    "rootDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-1366x768",
+        "name": "chromium-1366x768",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-1920x1080",
+        "name": "chromium-1920x1080",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-2560x1440",
+        "name": "chromium-2560x1440",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-mobile-375x667",
+        "name": "chromium-mobile-375x667",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-mobile-390x844",
+        "name": "chromium-mobile-390x844",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-mobile-844x390-landscape",
+        "name": "chromium-mobile-844x390-landscape",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-tablet-768x1024",
+        "name": "chromium-tablet-768x1024",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-tablet-1024x768",
+        "name": "chromium-tablet-1024x768",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-1440x900",
+        "name": "chromium-1440x900",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox-1366x768",
+        "name": "firefox-1366x768",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit-1366x768",
+        "name": "webkit-1366x768",
+        "testDir": "/Users/matthew/dev/GeneoApp-app/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "reports/html",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "reports/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 7,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "bug-fixes.spec.cjs",
+      "file": "bug-fixes.spec.cjs",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "BUG-001 — modale \"Nouvelle personne\" bloque réellement la navigation",
+          "file": "bug-fixes.spec.cjs",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "un clic sur le menu latéral ne traverse pas l’overlay tant que la modale est ouverte",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2414,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:45.116Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-001-—-modale-8a060-t-que-la-modale-est-ouverte-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-001-—-modale-8a060-t-que-la-modale-est-ouverte-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-001-—-modale-8a060-t-que-la-modale-est-ouverte-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-a0c003060470b54e153c",
+              "file": "bug-fixes.spec.cjs",
+              "line": 5,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "BUG-005 — menu latéral compact reste identifiable",
+          "file": "bug-fixes.spec.cjs",
+          "line": 35,
+          "column": 6,
+          "specs": [
+            {
+              "title": "chaque icône du menu conserve un libellé accessible (title/aria-label) sous 1024px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 327,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:47.654Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-005-—-menu-l-f1fb5-itle-aria-label-sous-1024px-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-005-—-menu-l-f1fb5-itle-aria-label-sous-1024px-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-005-—-menu-l-f1fb5-itle-aria-label-sous-1024px-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-94e2a66ec0eba038e7c0",
+              "file": "bug-fixes.spec.cjs",
+              "line": 36,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "BUG-003 — avertissement sur nom d’arbre dupliqué",
+          "file": "bug-fixes.spec.cjs",
+          "line": 56,
+          "column": 6,
+          "specs": [
+            {
+              "title": "la création d’un arbre avec un nom déjà utilisé est refusée avec un message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 408,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:48.002Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-003-—-averti-23a01-est-refusée-avec-un-message-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-003-—-averti-23a01-est-refusée-avec-un-message-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-003-—-averti-23a01-est-refusée-avec-un-message-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-3e7021063401ae1d7c09",
+              "file": "bug-fixes.spec.cjs",
+              "line": 57,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "BUG-002 — suppression d’une personne depuis la fiche",
+          "file": "bug-fixes.spec.cjs",
+          "line": 76,
+          "column": 6,
+          "specs": [
+            {
+              "title": "un bouton \"Supprimer\" retire la personne de l’arbre après confirmation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 875,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:48.443Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-002-—-suppre-c1679--l’arbre-après-confirmation-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-002-—-suppre-c1679--l’arbre-après-confirmation-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-002-—-suppre-c1679--l’arbre-après-confirmation-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-f83c1f70564bed908ace",
+              "file": "bug-fixes.spec.cjs",
+              "line": 77,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "BUG-004 — contraste du badge de notifications",
+          "file": "bug-fixes.spec.cjs",
+          "line": 112,
+          "column": 6,
+          "specs": [
+            {
+              "title": "le badge respecte un contraste suffisant (fond rouge, texte blanc)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 292,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:49.364Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-004-—-contra-62f1d-ant-fond-rouge-texte-blanc--chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-004-—-contra-62f1d-ant-fond-rouge-texte-blanc--chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-004-—-contra-62f1d-ant-fond-rouge-texte-blanc--chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-0ca604718c7320b7d5a1",
+              "file": "bug-fixes.spec.cjs",
+              "line": 113,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "BUG-006 — cycle suppression/restauration d’arbre (protocole propre, sans homonyme)",
+          "file": "bug-fixes.spec.cjs",
+          "line": 127,
+          "column": 6,
+          "specs": [
+            {
+              "title": "un arbre unique avec personnes et relations est intact après suppression puis restauration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1064,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:49.679Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-006-—-cycle--89f0f-ppression-puis-restauration-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-006-—-cycle--89f0f-ppression-puis-restauration-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-BUG-006-—-cycle--89f0f-ppression-puis-restauration-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-46ee33e7699756fc88d6",
+              "file": "bug-fixes.spec.cjs",
+              "line": 128,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "QA-015 : libellés français dans le panneau Statistiques",
+          "file": "bug-fixes.spec.cjs",
+          "line": 242,
+          "column": 6,
+          "specs": [
+            {
+              "title": "les clés techniques (persons, places, events...) sont traduites en français",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 880,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:50.818Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-015-libellés--0e78f--sont-traduites-en-français-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-015-libellés--0e78f--sont-traduites-en-français-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-015-libellés--0e78f--sont-traduites-en-français-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-c5e95b85f7499e622ab5",
+              "file": "bug-fixes.spec.cjs",
+              "line": 243,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "QA-016 : message de suppression de personne compréhensible",
+          "file": "bug-fixes.spec.cjs",
+          "line": 265,
+          "column": 6,
+          "specs": [
+            {
+              "title": "en cas d'échec, le message affiché est en français clair, sans détail technique brut",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-1440x900",
+                  "projectName": "chromium-1440x900",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2832,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-24T08:14:51.735Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-016-message-d-e7424--sans-détail-technique-brut-chromium-1440x900/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-016-message-d-e7424--sans-détail-technique-brut-chromium-1440x900/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/matthew/dev/GeneoApp-app/qa/reports/test-results/bug-fixes-QA-016-message-d-e7424--sans-détail-technique-brut-chromium-1440x900/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "464ad29cc54578d1b255-6f482723917c0efe5d58",
+              "file": "bug-fixes.spec.cjs",
+              "line": 266,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-24T08:14:44.932Z",
+    "duration": 9746.471,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

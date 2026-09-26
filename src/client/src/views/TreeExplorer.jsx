@@ -16,6 +16,7 @@ import {
 } from '../export/tree-export.js';
 import { useI18n } from '../design-system/index.js';
 import { RadialGraph } from './RadialGraph.jsx';
+import { PortraitAvatar } from './DocumentTools.jsx';
 
 const MODES = [
   { id: 'family', label: 'Familial' },
@@ -24,11 +25,12 @@ const MODES = [
   { id: 'fan', label: 'Éventail' },
   { id: 'graph', label: 'Graphe' },
 ];
+const EMPTY_ISSUES = new Map();
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
 
 function clampZoom(value) {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 1000) / 1000));
 }
 
 // Réglages d'affichage partagés par tous les nœuds (années, repli, période).
@@ -37,6 +39,8 @@ const TreeViewContext = createContext({
   collapsed: new Set(),
   toggle: () => {},
   period: null,
+  issues: new Map(),
+  client: null,
 });
 
 function outsidePeriod(lifespan, period) {
@@ -48,8 +52,9 @@ function outsidePeriod(lifespan, period) {
 }
 
 function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
-  const { lifespans, period } = useContext(TreeViewContext);
+  const { lifespans, period, issues, client } = useContext(TreeViewContext);
   const lifespan = lifespans.get(person.id);
+  const issueCount = issues.get(person.id)?.length ?? 0;
   const dimmed = outsidePeriod(lifespan, period);
   return (
     <button
@@ -57,11 +62,19 @@ function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
       className={`tree-node${focus ? ' tree-node--focus' : ''}${branch ? ` tree-node--${branch}` : ''}${dimmed ? ' tree-node--dimmed' : ''}`}
       onClick={() => onSelect(person.id)}
     >
+      {person.portrait_media_id ? (
+        <PortraitAvatar client={client} person={person} size={40} />
+      ) : null}
       <span className="person-card__name">
         {person.given_names} {person.family_name}
       </span>
       {lifespan ? <span className="person-card__years">{lifespan.label}</span> : null}
       {dimmed ? <span className="gds-visually-hidden"> (hors de la période filtrée)</span> : null}
+      {issueCount ? (
+        <span className="issue-dot" title={`${issueCount} point(s) à vérifier`}>
+          <span className="gds-visually-hidden">{issueCount} point(s) à vérifier</span>
+        </span>
+      ) : null}
       <span className="tree-node__meta">
         {branch ? (
           <span
@@ -346,9 +359,26 @@ export function TreeExplorer({
   defaultDepth = 4,
   showSosa = true,
   lifespans = new Map(),
+  refreshKey = 0,
+  issues = EMPTY_ISSUES,
 }) {
   const { t } = useI18n();
-  const [mode, setMode] = useState(defaultMode);
+  // Le mode choisi survit au passage par une autre vue pendant la session.
+  const [mode, setModeState] = useState(() => {
+    try {
+      return window.sessionStorage.getItem('geneoapp:treeMode') ?? defaultMode;
+    } catch {
+      return defaultMode;
+    }
+  });
+  const setMode = (next) => {
+    setModeState(next);
+    try {
+      window.sessionStorage.setItem('geneoapp:treeMode', next);
+    } catch {
+      // confort uniquement
+    }
+  };
   const [depth, setDepth] = useState(defaultDepth);
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [branchFilter, setBranchFilter] = useState('all');
@@ -370,7 +400,11 @@ export function TreeExplorer({
           to: periodTo ? Number(periodTo) : null,
         }
       : null;
-  const [items, setItems] = useState(null);
+  // Données chargées avec leur mode et leur racine : pendant le chargement
+  // suivant, l'ancien arbre reste affiché (atténué) au lieu de disparaître.
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [panning, setPanning] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -384,7 +418,8 @@ export function TreeExplorer({
   useEffect(() => {
     if (mode === 'family' || !selected) return undefined;
     let cancelled = false;
-    setItems(null);
+    // On garde l'arbre précédent affiché pendant le chargement (pas de saut).
+    setLoading(true);
     setLoadError(null);
     const request =
       mode === 'graph'
@@ -393,12 +428,17 @@ export function TreeExplorer({
           ? client.graph.ancestors(selected.id, mode === 'fan' ? Math.min(depth, 6) : depth)
           : client.graph.descendants(selected.id, depth);
     request
-      .then((list) => !cancelled && setItems(list))
-      .catch((error) => !cancelled && setLoadError(error.message));
+      .then((list) => {
+        if (cancelled) return;
+        setData({ mode, root: selected, items: list });
+      })
+      .catch((error) => !cancelled && setLoadError(error.message))
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [client, mode, depth, selected]);
+    // selected?.id : ne recharger que si la personne change réellement.
+  }, [client, mode, depth, selected?.id, refreshKey]);
 
   const baseName = selected
     ? `arbre-${mode}-${selected.given_names}-${selected.family_name}`
@@ -450,34 +490,74 @@ export function TreeExplorer({
 
   // Pavé tactile : pincement (ctrlKey) = zoom, deux doigts = déplacement.
   // Souris : molette + Ctrl = zoom, molette seule = défilement vertical.
-  const handleWheel = (event) => {
-    event.preventDefault();
-    if (event.ctrlKey || event.metaKey) {
-      setZoom((current) => clampZoom(current * (event.deltaY > 0 ? 0.9 : 1.1)));
-    } else {
-      setOffset((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
-    }
-  };
-
+  // Pendant un geste continu, la transition CSS est coupée (sinon saccades).
   const viewportRef = useRef(null);
+  const wheelIdle = useRef(null);
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return undefined;
+    const handleWheel = (event) => {
+      event.preventDefault();
+      setPanning(true);
+      clearTimeout(wheelIdle.current);
+      wheelIdle.current = setTimeout(() => setPanning(false), 160);
+      if (event.ctrlKey || event.metaKey) {
+        setZoom((current) => clampZoom(current * Math.exp(-event.deltaY * 0.0025)));
+      } else {
+        setOffset((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
+      }
+    };
     node.addEventListener('wheel', handleWheel, { passive: false });
-    return () => node.removeEventListener('wheel', handleWheel);
-  });
+    return () => {
+      node.removeEventListener('wheel', handleWheel);
+      clearTimeout(wheelIdle.current);
+    };
+  }, []);
 
+  // Glisser : le déplacement n'est appliqué qu'une fois par image, directement
+  // sur le style, et validé dans l'état au relâchement. Un clic (sans
+  // mouvement) reste un clic, y compris sur les secteurs SVG de l'éventail.
+  const frame = useRef(null);
+  const applyStageTransform = (next) => {
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      if (stageRef.current) {
+        stageRef.current.style.transform = `translate(${next.x}px, ${next.y}px) scale(${zoom})`;
+      }
+    });
+  };
   const handlePointerDown = (event) => {
-    if (event.button !== 0 || event.target.closest('button')) return;
-    drag.current = { x: event.clientX - offset.x, y: event.clientY - offset.y };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (event.button !== 0 || event.target.closest('button, [role="button"], a, input, select')) {
+      return;
+    }
+    drag.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX - offset.x,
+      y: event.clientY - offset.y,
+      moved: false,
+      pointerId: event.pointerId,
+    };
   };
   const handlePointerMove = (event) => {
-    if (!drag.current) return;
-    setOffset({ x: event.clientX - drag.current.x, y: event.clientY - drag.current.y });
+    const current = drag.current;
+    if (!current) return;
+    if (!current.moved) {
+      if (Math.hypot(event.clientX - current.startX, event.clientY - current.startY) < 4) return;
+      current.moved = true;
+      event.currentTarget.setPointerCapture?.(current.pointerId);
+      setPanning(true);
+    }
+    current.last = { x: event.clientX - current.x, y: event.clientY - current.y };
+    applyStageTransform(current.last);
   };
   const handlePointerUp = () => {
+    const current = drag.current;
     drag.current = null;
+    if (!current?.moved) return;
+    cancelAnimationFrame(frame.current);
+    if (current.last) setOffset(current.last);
+    setPanning(false);
   };
 
   const handleKeyDown = (event) => {
@@ -503,9 +583,12 @@ export function TreeExplorer({
   };
 
   // Isolation d'une branche : Sosa 2 (père) et ses ascendants, ou Sosa 3 (mère).
-  let visibleItems = Array.isArray(items) ? items : [];
-  if (selected && branchFilter !== 'all' && (mode === 'ancestors' || mode === 'fan')) {
-    const sosa = computeSosa(selected.id, visibleItems);
+  const itemsReady = data !== null && data.mode === mode;
+  const items = itemsReady ? data.items : null;
+  const root = itemsReady ? data.root : selected;
+  let visibleItems = itemsReady && Array.isArray(items) ? items : [];
+  if (root && branchFilter !== 'all' && (mode === 'ancestors' || mode === 'fan')) {
+    const sosa = computeSosa(root.id, visibleItems);
     const wanted = branchFilter === 'paternal' ? 2 : 3;
     visibleItems = visibleItems.filter((item) => {
       const number = sosa.get(item.id);
@@ -529,7 +612,7 @@ export function TreeExplorer({
         {loadError}
       </p>
     );
-  } else if (items === null) {
+  } else if (!itemsReady) {
     content = (
       <p role="status" className="loading-line">
         Chargement de l’arbre…
@@ -540,7 +623,7 @@ export function TreeExplorer({
       <RadialGraph network={items} lifespans={lifespans} onSelect={onSelect} />
     ) : null;
   } else if (mode === 'fan') {
-    content = <FanChart root={selected} items={visibleItems} onSelect={onSelect} />;
+    content = <FanChart root={root} items={visibleItems} onSelect={onSelect} />;
   } else {
     content = (
       <>
@@ -550,7 +633,7 @@ export function TreeExplorer({
           </p>
         ) : null}
         <Branch
-          person={selected}
+          person={root}
           linksOf={linksOf}
           sosa={mode === 'ancestors' && showSosa ? 1 : null}
           focus
@@ -563,7 +646,22 @@ export function TreeExplorer({
     );
   }
 
-  // Mesure de l'arbre pour la minicarte (coordonnées non zoomées).
+  // Mesure de l'arbre pour la minicarte (coordonnées non zoomées) : seulement
+  // quand le contenu change, jamais pendant un déplacement.
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setViewportSize((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const contentKey = `${mode}|${root?.id}|${itemsReady}|${items?.length ?? items?.nodes?.length}|${[...collapsed].join(',')}|${branchFilter}|${refreshKey}`;
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const viewport = viewportRef.current;
@@ -594,7 +692,7 @@ export function TreeExplorer({
       viewHeight: viewport.clientHeight,
     };
     setLayout((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
-  });
+  }, [contentKey, viewportSize]);
 
   const MINIMAP = { width: 180, height: 120 };
   const miniScale = layout
@@ -634,7 +732,9 @@ export function TreeExplorer({
               min="1"
               max="30"
               value={depth}
-              onChange={(event) => setDepth(Math.max(1, Number(event.target.value) || 1))}
+              onChange={(event) =>
+                setDepth(Math.min(30, Math.max(1, Number(event.target.value) || 1)))
+              }
             />
           </label>
         ) : null}
@@ -817,7 +917,8 @@ export function TreeExplorer({
       {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
       <div
         ref={viewportRef}
-        className="tree-viewport"
+        className={`tree-viewport${panning ? ' is-panning' : ''}${loading ? ' is-loading' : ''}`}
+        aria-busy={loading}
         tabIndex={0}
         role="application"
         aria-roledescription="arbre navigable"
@@ -834,9 +935,15 @@ export function TreeExplorer({
           style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
         >
           <TreeViewContext.Provider
-            value={{ lifespans, collapsed, toggle: toggleCollapsed, period }}
+            value={{ lifespans, collapsed, toggle: toggleCollapsed, period, issues, client }}
           >
-            {content}
+            {/* La clé rejoue l'animation d'entrée à chaque nouvelle vue. */}
+            <div
+              key={`${mode}-${itemsReady ? root?.id : selected?.id}`}
+              className="tree-stage__content"
+            >
+              {content}
+            </div>
           </TreeViewContext.Provider>
         </div>
       </div>

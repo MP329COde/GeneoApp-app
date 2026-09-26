@@ -364,7 +364,7 @@ export class GenealogyGraphService {
     const ids = [...distance.keys()];
     const persons = this.database
       .prepare(
-        `SELECT id, given_names, family_name, sex FROM persons
+        `SELECT id, given_names, family_name, sex, portrait_media_id FROM persons
          WHERE deleted_at IS NULL AND id IN (${ids.map(() => '?').join(',')})`,
       )
       .all(...ids);

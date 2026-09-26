@@ -1,0 +1,420 @@
+[
+  {
+    "step": "bug-union",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "nameA": "Godefroy de La Tour-d'Auvergne",
+      "nameB": "Isabeau Müller",
+      "err": "Error: personne A introuvable: Godefroy de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.098Z"
+  },
+  {
+    "step": "bug-union",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "nameA": "Armand de La Tour-d'Auvergne",
+      "nameB": "Constance Dupont",
+      "err": "Error: personne A introuvable: Armand de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.101Z"
+  },
+  {
+    "step": "bug-union",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "nameA": "Armand de La Tour-d'Auvergne",
+      "nameB": "Victoire N'Diaye",
+      "err": "Error: personne A introuvable: Armand de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.104Z"
+  },
+  {
+    "step": "bug-union",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "nameA": "Louis-Auguste de La Tour-d'Auvergne",
+      "nameB": "Eléonore Dupond",
+      "err": "Error: personne A introuvable: Louis-Auguste de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.107Z"
+  },
+  {
+    "step": "bug-union",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "nameA": "Charles de La Tour-d'Auvergne",
+      "nameB": "Amélie Rousseau",
+      "err": "Error: personne A introuvable: Charles de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.109Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Armand de La Tour-d'Auvergne",
+      "parent": "Godefroy de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Armand de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.111Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Armand de La Tour-d'Auvergne",
+      "parent": "Isabeau Müller",
+      "err": "Error: enfant introuvable: Armand de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.113Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Marguerite de La Tour-d'Auvergne",
+      "parent": "Godefroy de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Marguerite de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.115Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Marguerite de La Tour-d'Auvergne",
+      "parent": "Isabeau Müller",
+      "err": "Error: enfant introuvable: Marguerite de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.116Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Louis-Auguste de La Tour-d'Auvergne",
+      "parent": "Armand de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Louis-Auguste de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.118Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Louis-Auguste de La Tour-d'Auvergne",
+      "parent": "Constance Dupont",
+      "err": "Error: enfant introuvable: Louis-Auguste de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.119Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Jean-Baptiste de La Tour-d'Auvergne",
+      "parent": "Armand de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Jean-Baptiste de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.120Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Jean-Baptiste de La Tour-d'Auvergne",
+      "parent": "Victoire N'Diaye",
+      "err": "Error: enfant introuvable: Jean-Baptiste de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.122Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Charles de La Tour-d'Auvergne",
+      "parent": "Louis-Auguste de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Charles de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.123Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Charles de La Tour-d'Auvergne",
+      "parent": "Eléonore Dupond",
+      "err": "Error: enfant introuvable: Charles de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.124Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Suzanne de La Tour-d'Auvergne",
+      "parent": "Louis-Auguste de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Suzanne de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.126Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Suzanne de La Tour-d'Auvergne",
+      "parent": "Eléonore Dupond",
+      "err": "Error: enfant introuvable: Suzanne de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.128Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Adrien de La Tour-d'Auvergne",
+      "parent": "Jean-Baptiste de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Adrien de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.129Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Hippolyte de La Tour-d'Auvergne",
+      "parent": "Charles de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Hippolyte de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.130Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Hippolyte de La Tour-d'Auvergne",
+      "parent": "Amélie Rousseau",
+      "err": "Error: enfant introuvable: Hippolyte de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.131Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Hyacinthe de La Tour-d'Auvergne",
+      "parent": "Charles de La Tour-d'Auvergne",
+      "err": "Error: enfant introuvable: Hyacinthe de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.132Z"
+  },
+  {
+    "step": "bug-parentage",
+    "info": {
+      "arbre": "QA - Famille La Tour-d'Auvergne",
+      "enfant": "Hyacinthe de La Tour-d'Auvergne",
+      "parent": "Amélie Rousseau",
+      "err": "Error: enfant introuvable: Hyacinthe de La Tour-d'Auvergne"
+    },
+    "t": "2026-09-23T18:10:32.134Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Paul Müller-N'Diaye",
+      "parent": "Frédéric Müller"
+    },
+    "t": "2026-09-23T18:10:34.989Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Paul Müller-N'Diaye",
+      "parent": "Aïssatou N'Diaye"
+    },
+    "t": "2026-09-23T18:10:36.187Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Lucien Müller-N'Diaye",
+      "parent": "Paul Müller-N'Diaye"
+    },
+    "t": "2026-09-23T18:10:37.422Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Lucien Müller-N'Diaye",
+      "parent": "Joséphine Dupont"
+    },
+    "t": "2026-09-23T18:10:38.621Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Berthe Müller-N'Diaye",
+      "parent": "Paul Müller-N'Diaye"
+    },
+    "t": "2026-09-23T18:10:39.856Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Berthe Müller-N'Diaye",
+      "parent": "Rosalie Dupond"
+    },
+    "t": "2026-09-23T18:10:41.056Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Gabriel Müller-N'Diaye",
+      "parent": "Paul Müller-N'Diaye"
+    },
+    "t": "2026-09-23T18:10:42.271Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Muller-Ndiaye",
+      "enfant": "Gabriel Müller-N'Diaye",
+      "parent": "Rosalie Dupond"
+    },
+    "t": "2026-09-23T18:10:43.487Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Marie Dupond",
+      "parent": "Pierre Dupont"
+    },
+    "t": "2026-09-23T18:10:45.970Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Marie Dupond",
+      "parent": "Jeanne Bernard"
+    },
+    "t": "2026-09-23T18:10:47.172Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Étienne Dupont",
+      "parent": "Pierre Dupont"
+    },
+    "t": "2026-09-23T18:10:48.408Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Étienne Dupont",
+      "parent": "Jeanne Bernard"
+    },
+    "t": "2026-09-23T18:10:49.605Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Antoine Dupont",
+      "parent": "Nicolas Dupont"
+    },
+    "t": "2026-09-23T18:10:50.875Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Antoine Dupont",
+      "parent": "Louise Petit"
+    },
+    "t": "2026-09-23T18:10:52.068Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Julie Dupont",
+      "parent": "Nicolas Dupont"
+    },
+    "t": "2026-09-23T18:10:53.290Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Julie Dupont",
+      "parent": "Louise Petit"
+    },
+    "t": "2026-09-23T18:10:54.486Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Émile Dupont",
+      "parent": "Antoine Dupont"
+    },
+    "t": "2026-09-23T18:10:55.703Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Émile Dupont",
+      "parent": "Catherine Dupont"
+    },
+    "t": "2026-09-23T18:10:56.905Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Augustine Dupont",
+      "parent": "Antoine Dupont"
+    },
+    "t": "2026-09-23T18:10:58.123Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Augustine Dupont",
+      "parent": "Catherine Dupont"
+    },
+    "t": "2026-09-23T18:10:59.320Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Gustave Dupont",
+      "parent": "Antoine Dupont"
+    },
+    "t": "2026-09-23T18:11:00.555Z"
+  },
+  {
+    "step": "parent-ajoute",
+    "info": {
+      "arbre": "QA - Famille Dupont-Bernard",
+      "enfant": "Gustave Dupont",
+      "parent": "Catherine Dupont"
+    },
+    "t": "2026-09-23T18:11:01.758Z"
+  }
+]

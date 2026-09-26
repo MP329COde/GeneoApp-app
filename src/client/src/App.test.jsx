@@ -120,6 +120,12 @@ const events = vi.hoisted(() => ({
 const audit = vi.hoisted(() => ({
   listForEntity: vi.fn(),
 }));
+const notifications = vi.hoisted(() => ({
+  list: vi.fn().mockResolvedValue({ items: [], unread: 0 }),
+  markRead: vi.fn(),
+  markAllRead: vi.fn(),
+  publish: vi.fn().mockResolvedValue({ created: 0 }),
+}));
 
 const history = vi.hoisted(() => ({
   status: vi.fn().mockResolvedValue({ canUndo: false, canRedo: false }),
@@ -165,6 +171,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     places,
     events,
     audit,
+    notifications,
     trees,
     history,
     storage,
@@ -184,6 +191,18 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
+  });
+
+  it('affiche un assistant guidé pour démarrer un arbre vide', async () => {
+    persons.list.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/assistant de départ/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('button', { name: /ajouter la première personne/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /importer un fichier gedcom/i })).toBeInTheDocument();
   });
 
   it("n'a aucune violation d'accessibilité détectée par axe (état vide)", async () => {
@@ -522,7 +541,7 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText(/Aucune sauvegarde/)).toBeInTheDocument());
   });
 
-  it('détecte les doublons potentiels via le client API et permet de rejoindre une fiche', async () => {
+  it('signale les doublons dans le panneau de la personne et les publie en notification', async () => {
     persons.list.mockResolvedValue([
       { id: 1, given_names: 'Jean', family_name: 'Dupont' },
       { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
@@ -548,13 +567,22 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
+    // Aucune section « Vérifier » séparée : l'analyse tourne toute seule.
+    expect(screen.queryByRole('button', { name: 'Doublons' })).not.toBeInTheDocument();
+    await waitFor(() => expect(search.duplicates).toHaveBeenCalled(), { timeout: 3000 });
+    const section = await screen.findByText(/Doublon possible \(92 %\)/, {}, { timeout: 3000 });
+    expect(section).toBeInTheDocument();
+    await waitFor(() =>
+      expect(notifications.publish).toHaveBeenCalledWith([
+        expect.objectContaining({
+          title: 'Doublon possible',
+          personId: 1,
+          dedupeKey: 'duplicate:1:2',
+        }),
+      ]),
+    );
 
-    await waitFor(() => expect(search.duplicates).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Voir la fiche B' })[0]);
+    fireEvent.click(within(section.closest('li')).getByRole('button', { name: 'Jehan Dupont' }));
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
   });
 
@@ -599,11 +627,9 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
-    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: 'Fusionner (garder A)' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Fusionner ici' }, { timeout: 3000 }),
+    );
 
     await waitFor(() => expect(search.previewMerge).toHaveBeenCalledWith(1, 2));
     await waitFor(() => expect(screen.getByText(/lien\(s\) enfant → parent/)).toBeInTheDocument());
@@ -612,9 +638,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmer la fusion' }));
 
     await waitFor(() => expect(search.merge).toHaveBeenCalledWith(1, 2));
-    await waitFor(() =>
-      expect(screen.getByText('Aucun doublon potentiel détecté.')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
   });
 
   it('gère les familles (unions) d’une personne via le client API', async () => {
@@ -1110,6 +1134,10 @@ describe('App', () => {
     );
     // Par défaut, la carte est locale (hors ligne, sans tuiles externes).
     expect(screen.getByText(/Carte locale \(hors ligne/)).toBeInTheDocument();
+    // La personne active reste sélectionnée d'une vue à l'autre.
+    expect(screen.getByRole('button', { name: 'Jean Dupont' })).toHaveClass(
+      'person-card--selected',
+    );
     expect(screen.getAllByText('Nantes').length).toBeGreaterThan(0);
     expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
   });
@@ -1153,14 +1181,25 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cohérence' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }));
-
-    await waitFor(() => expect(graph.cycles).toHaveBeenCalled());
+    await waitFor(() => expect(graph.cycles).toHaveBeenCalled(), { timeout: 3000 });
+    expect(
+      await screen.findByText(/Naissance enregistrée après le décès/, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Cycle de filiation')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByText(/Naissance enregistrée après le décès/)).toBeInTheDocument(),
+      expect(notifications.publish).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: 'Cycle de filiation',
+            message: 'Jean Dupont → Marie Curie → Jean Dupont',
+          }),
+          expect.objectContaining({
+            type: 'danger',
+            title: 'Naissance enregistrée après le décès',
+          }),
+        ]),
+      ),
     );
-    expect(screen.getByText(/Jean Dupont → Marie Curie → Jean Dupont/)).toBeInTheDocument();
   });
 
   it('calcule les ancêtres communs réels entre la fiche sélectionnée et une autre personne', async () => {
@@ -1894,8 +1933,7 @@ describe('App', () => {
     expect(await screen.findByText('1 / 3')).toBeInTheDocument();
     expect(screen.getByText(/2 fait\(s\) sans source : identité, décès/)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Qualité : 1 sur 4' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'examiner' }));
-    expect(screen.getByRole('button', { name: 'Cohérence' })).toHaveClass('is-active');
+    expect(screen.getByRole('button', { name: 'examiner' })).toBeInTheDocument();
   });
   it('ouvre les recherches de la personne sur les sites choisis, sans les contacter', async () => {
     persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Lefèvre' }]);

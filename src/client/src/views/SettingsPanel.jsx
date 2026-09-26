@@ -14,10 +14,10 @@ const ACCENT_CHOICES = [
   ['ink', 'Encre', '#2c3a42'],
 ];
 const SECTION_LABELS = {
-  actions: 'Boutons d’action',
-  relations: 'Relations',
-  quality: 'Qualité des données',
-  identity: 'Modifier l’identité',
+  actions: 'Actions',
+  relations: 'Liens',
+  quality: 'Qualité',
+  identity: 'Identité',
 };
 const TAB_LABELS = {
   identity: 'Identité',
@@ -177,6 +177,9 @@ export function SettingsPanel({ navGroups = [] }) {
   return (
     <div className="search-panel settings-panel">
       <h3>{t('settings.title')}</h3>
+      <p className="settings-hint">
+        Configurez rapidement l’apparence et le comportement de votre espace de travail.
+      </p>
 
       <section aria-labelledby="settings-appearance">
         <h4 id="settings-appearance">{t('settings.appearance')}</h4>

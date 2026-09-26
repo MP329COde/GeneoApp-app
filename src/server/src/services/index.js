@@ -16,6 +16,7 @@ import {
   PhotoRepository,
   SearchRepository,
   AuditRepository,
+  NotificationRepository,
   AccountRepository,
   TrashRepository,
   NoteRepository,
@@ -43,6 +44,8 @@ import { ResearchService } from './research.service.js';
 import { StatisticsService } from './statistics.service.js';
 import { LocalAiService } from './local-ai.service.js';
 import { MergeService } from './merge.service.js';
+import { NotificationService } from './notification.service.js';
+import { DocumentService } from './document.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
 export const DEFAULT_BACKUP_DIR =
@@ -70,11 +73,14 @@ export function createServices(
   const accounts = new AccountService(new AccountRepository(database), new SessionStore());
   const backups = new BackupService(database, { backupDir, mirrorDir });
 
+  const localAi = new LocalAiService();
+
   return {
     ...entityServices,
     sources,
     search: new SearchService(new SearchRepository(database), database),
     audit: new AuditService(new AuditRepository(database)),
+    notifications: new NotificationService(new NotificationRepository(database)),
     gedcom: new GedcomService(database, { media: entityServices.media, backups }),
     accounts,
     trash: new TrashService(new TrashRepository(database), entityServices),
@@ -83,7 +89,7 @@ export function createServices(
     notes: new NoteService(new NoteRepository(database)),
     research: new ResearchService(new ResearchRepository(database)),
     statistics: new StatisticsService(database),
-    localAi: new LocalAiService(),
+    localAi,
     merge: new MergeService(database),
     history: new UndoHistory(database),
     advancedSearch: new AdvancedSearchService(database),
@@ -92,5 +98,7 @@ export function createServices(
     // Contenu des fichiers indexé localement (OCR embarqué, PDF, bureautique).
     indexing: new IndexService(database, { media: entityServices.media }),
     photos: new PhotoService(new PhotoRepository(database), database),
+    // Documents anciens, propriétaires d'un fichier, portraits.
+    documents: new DocumentService(database, { media: entityServices.media, localAi }),
   };
 }

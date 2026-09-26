@@ -38,6 +38,11 @@ export const IPC_CHANNELS = Object.freeze({
 
   AUDIT_LIST_FOR_ENTITY: 'geneoapp:audit:listForEntity',
 
+  NOTIFICATIONS_LIST: 'geneoapp:notifications:list',
+  NOTIFICATIONS_READ: 'geneoapp:notifications:read',
+  NOTIFICATIONS_READ_ALL: 'geneoapp:notifications:readAll',
+  NOTIFICATIONS_PUBLISH: 'geneoapp:notifications:publish',
+
   GRAPH_ANCESTORS: 'geneoapp:graph:ancestors',
   GRAPH_DESCENDANTS: 'geneoapp:graph:descendants',
   GRAPH_RELATIONS: 'geneoapp:graph:relations',
@@ -110,6 +115,13 @@ export const IPC_CHANNELS = Object.freeze({
   MEDIA_REGION_ADD: 'geneoapp:media:addRegion',
   MEDIA_REGION_REMOVE: 'geneoapp:media:removeRegion',
   MEDIA_PHOTOS_FOR_PERSON: 'geneoapp:media:photosForPerson',
+  MEDIA_DECODE: 'geneoapp:media:decode',
+  MEDIA_TRANSCRIPTION_SAVE: 'geneoapp:media:saveTranscription',
+  MEDIA_OWNERS: 'geneoapp:media:owners',
+  MEDIA_LINK: 'geneoapp:media:link',
+  MEDIA_IDENTIFY: 'geneoapp:media:identify',
+  PERSONS_SET_PORTRAIT: 'geneoapp:persons:setPortrait',
+  PERSONS_UPLOAD_PORTRAIT: 'geneoapp:persons:uploadPortrait',
 
   SEARCH_ADVANCED: 'geneoapp:search:advanced',
   PERSON_QUALITY: 'geneoapp:quality:forPerson',

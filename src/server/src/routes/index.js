@@ -8,6 +8,7 @@ import { sourceRoutes } from './source.routes.js';
 import { mediaRoutes } from './media.routes.js';
 import { searchRoutes } from './search.routes.js';
 import { auditRoutes } from './audit.routes.js';
+import { notificationRoutes } from './notification.routes.js';
 import { gedcomRoutes } from './gedcom.routes.js';
 import { accountRoutes } from './account.routes.js';
 import { trashRoutes } from './trash.routes.js';
@@ -21,11 +22,13 @@ import { localAiRoutes } from './local-ai.routes.js';
 import { historyRoutes } from './history.routes.js';
 import { indexingRoutes } from './indexing.routes.js';
 import { undoGroup } from '../middleware/undo-group.js';
+import { notificationMiddleware } from '../middleware/notifications.js';
 
 export function apiRoutes(services) {
   const router = Router();
 
   router.use(undoGroup(services));
+  router.use(notificationMiddleware(services));
   router.use('/history', historyRoutes(services));
   router.use('/indexing', indexingRoutes(services));
   router.use('/persons', personRoutes(services));
@@ -37,6 +40,7 @@ export function apiRoutes(services) {
   router.use('/media', mediaRoutes(services));
   router.use('/search', searchRoutes(services));
   router.use('/audit', auditRoutes(services));
+  router.use('/notifications', notificationRoutes(services));
   router.use('/gedcom', gedcomRoutes(services));
   router.use('/accounts', accountRoutes(services));
   router.use('/trash', trashRoutes(services));

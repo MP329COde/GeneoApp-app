@@ -49,6 +49,8 @@ function wrap(handler) {
 // techniques : comptes, sauvegardes, arbres, IA, historique lui-même.
 const WRITE_ACTIONS =
   /^(create|update|remove|restore|merge|import|addParticipant|addCitation|upload|purge)$/;
+const NOTIFICATION_ACTIONS =
+  /(?:create|update|remove|restore|merge|import|add|upload|purge|set|activate|run)/;
 const NON_UNDOABLE_DOMAINS = new Set(['accounts', 'backups', 'trees', 'ai', 'history']);
 const DOMAIN_LABELS = {
   persons: 'personne',
@@ -99,12 +101,28 @@ function withUndoGroup(services, channel, handler) {
   };
 }
 
+function withNotification(services, channel, handler) {
+  const [, domain, action] = channel.split(':');
+  if (domain === 'notifications' || !NOTIFICATION_ACTIONS.test(action ?? '')) return handler;
+  return async (payload) => {
+    const result = await handler(payload);
+    if (result?.ok !== false) {
+      services.notifications?.recordMutation({
+        method: 'POST',
+        path: `/${domain}/${action}`,
+        status: 200,
+      });
+    }
+    return result;
+  };
+}
+
 export function buildIpcHandlers(services, workspace = null, storage = null) {
   const handlers = buildRawHandlers(services, workspace, storage);
   return Object.fromEntries(
     Object.entries(handlers).map(([channel, handler]) => [
       channel,
-      withUndoGroup(services, channel, handler),
+      withNotification(services, channel, withUndoGroup(services, channel, handler)),
     ]),
   );
 }
@@ -118,6 +136,7 @@ function buildRawHandlers(services, workspace, storage) {
     parentages,
     sources,
     audit,
+    notifications,
     graph,
     search,
     gedcom,
@@ -209,6 +228,10 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY]: wrap(({ tableName, rowId }) =>
       audit.listForEntity(tableName, rowId),
     ),
+    [IPC_CHANNELS.NOTIFICATIONS_LIST]: wrap((options) => notifications.list(options)),
+    [IPC_CHANNELS.NOTIFICATIONS_READ]: wrap(({ id }) => notifications.markRead(id)),
+    [IPC_CHANNELS.NOTIFICATIONS_READ_ALL]: wrap(() => notifications.markAllRead()),
+    [IPC_CHANNELS.NOTIFICATIONS_PUBLISH]: wrap(({ items }) => notifications.publish(items)),
 
     [IPC_CHANNELS.GRAPH_ANCESTORS]: wrap(({ personId, depth }) =>
       graph.getAncestors(personId, { maxDepth: depth }),
@@ -414,6 +437,21 @@ function buildRawHandlers(services, workspace, storage) {
     }),
     [IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON]: wrap(({ personId }) =>
       services.photos.listForPerson(personId),
+    ),
+    [IPC_CHANNELS.MEDIA_DECODE]: wrap(({ id, data }) => services.documents.decode(id, data ?? {})),
+    [IPC_CHANNELS.MEDIA_TRANSCRIPTION_SAVE]: wrap(({ id, data }) =>
+      services.documents.saveTranscription(id, data ?? {}),
+    ),
+    [IPC_CHANNELS.MEDIA_OWNERS]: wrap(({ id }) => services.documents.owners(id)),
+    [IPC_CHANNELS.MEDIA_LINK]: wrap(({ id, data, performedBy }) =>
+      services.documents.link(id, data ?? {}, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.MEDIA_IDENTIFY]: wrap(({ data }) => services.documents.identify(data ?? {})),
+    [IPC_CHANNELS.PERSONS_SET_PORTRAIT]: wrap(({ id, data, performedBy }) =>
+      services.documents.setPortrait(id, data ?? {}, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.PERSONS_UPLOAD_PORTRAIT]: wrap(({ id, data, performedBy }) =>
+      services.documents.uploadPortrait(id, data ?? {}, { performedBy: actorOf(performedBy) }),
     ),
     [IPC_CHANNELS.MEDIA_REMOVE]: wrap(({ id, performedBy }) => {
       media.remove(id, { performedBy: actorOf(performedBy) });

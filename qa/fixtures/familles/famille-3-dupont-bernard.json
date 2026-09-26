@@ -1,0 +1,52 @@
+{
+  "nomFamille": "Dupont / Bernard",
+  "description": "Famille rurale fictive, 4 générations, Bourgogne. Teste noms très communs, homonymies, orthographe Dupont/Dupond, fratries nombreuses.",
+  "generations": [
+    { "gen": 1, "personnes": [
+      { "id": "F3-G1-1", "prenom": "Pierre", "nom": "Dupont", "sexe": "M",
+        "naissance": { "date": "1730-05-05", "lieu": "Dijon, Bourgogne" },
+        "deces": { "date": "1795-03-03", "lieu": "Dijon, Bourgogne" },
+        "profession": "Vigneron",
+        "unions": [ { "conjointId": "F3-G1-2", "date": "1752-10-10", "lieu": "Dijon, Bourgogne", "type": "mariage" } ] },
+      { "id": "F3-G1-2", "prenom": "Jeanne", "nom": "Bernard", "sexe": "F",
+        "naissance": { "date": "1734-08-08", "lieu": "Beaune, Bourgogne" },
+        "deces": { "date": "1801-12-12", "lieu": "Dijon, Bourgogne" } }
+    ]},
+    { "gen": 2, "personnes": [
+      { "id": "F3-G2-1", "prenom": "Nicolas", "nom": "Dupont", "sexe": "M", "parents": ["F3-G1-1", "F3-G1-2"],
+        "naissance": { "date": "1754-01-01", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1820-01-01", "lieu": "Dijon, Bourgogne" },
+        "profession": "Vigneron",
+        "unions": [ { "conjointId": "F3-G2-4", "date": "1778-06-06", "lieu": "Dijon, Bourgogne", "type": "mariage" } ] },
+      { "id": "F3-G2-2", "prenom": "Marie", "nom": "Dupond", "sexe": "F", "parents": ["F3-G1-1", "F3-G1-2"],
+        "naissance": { "date": "1756-02-02", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1830-02-02", "lieu": "Dijon, Bourgogne" },
+        "note": "Fratrie de Nicolas — orthographe divergente 'Dupond' relevée dans son acte de baptême." },
+      { "id": "F3-G2-3", "prenom": "Étienne", "nom": "Dupont", "sexe": "M", "parents": ["F3-G1-1", "F3-G1-2"],
+        "naissance": { "date": "1758-03-03", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1759-01-01", "lieu": "Dijon, Bourgogne" },
+        "note": "Décédé en bas âge." },
+      { "id": "F3-G2-4", "prenom": "Louise", "nom": "Petit", "sexe": "F",
+        "naissance": { "date": "1758-09-09", "lieu": "Beaune, Bourgogne" }, "deces": { "date": "1825-09-09", "lieu": "Dijon, Bourgogne" } }
+    ]},
+    { "gen": 3, "personnes": [
+      { "id": "F3-G3-1", "prenom": "Antoine", "nom": "Dupont", "sexe": "M", "parents": ["F3-G2-1", "F3-G2-4"],
+        "naissance": { "date": "1780-04-04", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1850-04-04", "lieu": "Dijon, Bourgogne" },
+        "profession": "Tonnelier",
+        "unions": [ { "conjointId": "F3-G3-2", "date": "1803-05-05", "lieu": "Dijon, Bourgogne", "type": "mariage" } ] },
+      { "id": "F3-G3-2", "prenom": "Catherine", "nom": "Dupont", "sexe": "F",
+        "naissance": { "date": "1784-06-06", "lieu": "Auxerre, Bourgogne" }, "deces": { "date": "1860-06-06", "lieu": "Dijon, Bourgogne" },
+        "note": "Homonyme (même patronyme que son mari, sans lien de parenté connu) — cas de test pour la désambiguïsation." },
+      { "id": "F3-G3-3", "prenom": "Julie", "nom": "Dupont", "sexe": "F", "parents": ["F3-G2-1", "F3-G2-4"],
+        "naissance": { "date": "1782-07-07", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1840-07-07", "lieu": "Lyon, Lyonnais" } }
+    ]},
+    { "gen": 4, "personnes": [
+      { "id": "F3-G4-1", "prenom": "Émile", "nom": "Dupont", "sexe": "M", "parents": ["F3-G3-1", "F3-G3-2"],
+        "naissance": { "date": "1804-08-08", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1875-08-08", "lieu": "Dijon, Bourgogne" },
+        "profession": "Instituteur" },
+      { "id": "F3-G4-2", "prenom": "Augustine", "nom": "Dupont", "sexe": "F", "parents": ["F3-G3-1", "F3-G3-2"],
+        "naissance": { "date": "1806-10-10", "lieu": "Dijon, Bourgogne" }, "deces": { "date": "1890-10-10", "lieu": "Dijon, Bourgogne" } },
+      { "id": "F3-G4-3", "prenom": "Gustave", "nom": "Dupont", "sexe": "M", "parents": ["F3-G3-1", "F3-G3-2"],
+        "naissance": { "date": "1809-01-30", "lieu": "Dijon, Bourgogne" },
+        "deces": { "date": "1809-02-02", "lieu": "Dijon, Bourgogne" },
+        "note": "Nourrisson décédé (test cas limite : durée de vie de quelques jours)." }
+    ]}
+  ]
+}

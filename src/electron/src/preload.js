@@ -74,6 +74,13 @@ const api = {
       invoke(IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY, { tableName, rowId }),
   },
 
+  notifications: {
+    list: (options) => invoke(IPC_CHANNELS.NOTIFICATIONS_LIST, options),
+    markRead: (id) => invoke(IPC_CHANNELS.NOTIFICATIONS_READ, { id }),
+    markAllRead: () => invoke(IPC_CHANNELS.NOTIFICATIONS_READ_ALL),
+    publish: (items) => invoke(IPC_CHANNELS.NOTIFICATIONS_PUBLISH, { items }),
+  },
+
   graph: {
     ancestors: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_ANCESTORS, { personId, depth }),
     descendants: (personId, depth) => invoke(IPC_CHANNELS.GRAPH_DESCENDANTS, { personId, depth }),
@@ -183,6 +190,15 @@ const api = {
     addRegion: (id, data) => invoke(IPC_CHANNELS.MEDIA_REGION_ADD, { id, data }),
     removeRegion: (regionId) => invoke(IPC_CHANNELS.MEDIA_REGION_REMOVE, { regionId }),
     photosForPerson: (personId) => invoke(IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON, { personId }),
+    decode: (id, data) => invoke(IPC_CHANNELS.MEDIA_DECODE, { id, data }),
+    saveTranscription: (id, data) => invoke(IPC_CHANNELS.MEDIA_TRANSCRIPTION_SAVE, { id, data }),
+    owners: (id) => invoke(IPC_CHANNELS.MEDIA_OWNERS, { id }),
+    link: (id, data) => invoke(IPC_CHANNELS.MEDIA_LINK, { id, data }),
+    identify: (data) => invoke(IPC_CHANNELS.MEDIA_IDENTIFY, { data }),
+    setPortrait: (personId, data) =>
+      invoke(IPC_CHANNELS.PERSONS_SET_PORTRAIT, { id: personId, data }),
+    uploadPortrait: (personId, data) =>
+      invoke(IPC_CHANNELS.PERSONS_UPLOAD_PORTRAIT, { id: personId, data }),
   },
 
   indexing: {

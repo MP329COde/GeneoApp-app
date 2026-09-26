@@ -1,0 +1,60 @@
+[
+  {
+    "step": "debug-inputs-count",
+    "info": 6,
+    "t": "2026-09-23T17:57:36.491Z"
+  },
+  {
+    "step": "debug-visible-inputs",
+    "info": 2,
+    "t": "2026-09-23T17:57:36.498Z"
+  },
+  {
+    "step": "creation-arbre-1",
+    "info": {
+      "ok": true
+    },
+    "t": "2026-09-23T17:57:37.543Z"
+  },
+  {
+    "step": "console-error",
+    "info": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "t": "2026-09-23T17:57:37.667Z"
+  },
+  {
+    "step": "console-error",
+    "info": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "t": "2026-09-23T17:57:37.667Z"
+  },
+  {
+    "step": "console-error",
+    "info": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "t": "2026-09-23T17:57:37.667Z"
+  },
+  {
+    "step": "ouverture-arbre-1",
+    "info": "ok",
+    "t": "2026-09-23T17:57:38.426Z"
+  },
+  {
+    "step": "bug-creation-arbre",
+    "info": {
+      "nom": "QA - Famille Muller-Ndiaye",
+      "err": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /créer l.arbre/i }).first()\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"su"
+    },
+    "t": "2026-09-23T17:57:43.531Z"
+  },
+  {
+    "step": "bug-creation-arbre",
+    "info": {
+      "nom": "QA - Famille Dupont-Bernard",
+      "err": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /créer l.arbre/i }).first()\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"su"
+    },
+    "t": "2026-09-23T17:57:48.547Z"
+  },
+  {
+    "step": "bug-bouton-nouvelle-personne",
+    "info": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /\\+ Nouvelle personne/i })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" clas",
+    "t": "2026-09-23T17:57:53.632Z"
+  }
+]
