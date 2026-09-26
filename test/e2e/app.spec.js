@@ -520,10 +520,17 @@ test('indexe réellement un dossier local et retrouve un document par son conten
   );
 
   await page.goto('/');
+  // Rend le test autonome (exécutable seul, sans dépendre de personnes
+  // créées par des tests précédents) : sur un arbre vide, l'assistant de
+  // départ ouvre automatiquement une modale « Nouvelle personne » qui
+  // intercepterait les clics suivants tant qu'elle reste ouverte.
+  await addPerson(page, 'Jean-Baptiste', 'Lefèvre');
   await page.getByRole('button', { name: 'Documents indexés', exact: true }).click();
   await page.getByLabel('Dossier (chemin complet)').fill(folder);
   await page.getByRole('button', { name: 'Ajouter le dossier' }).click();
-  await page.getByRole('button', { name: 'Indexer maintenant' }).click();
+  // Bouton global d'indexation : distinct du bouton par source, dont le
+  // libellé accessible est « Indexer maintenant {dossier} » (même préfixe).
+  await page.getByRole('button', { name: 'Indexer maintenant', exact: true }).click();
   await expect(page.getByText(/Indexation terminée : 1 nouveau/)).toBeVisible();
 
   await page.getByLabel('Rechercher dans les documents').fill('saint maclou');
