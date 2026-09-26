@@ -351,11 +351,15 @@ que fonctionnalité manquante.
 - Résultats responsive : `qa/reports/responsive-resultats.md` (captures :
   `qa/reports/screenshots-responsive/`, 36 fichiers)
 - Résultats OCR : `qa/reports/ocr-resultats.md`
-- Vidéo du parcours complet (bloc 3D) :
-  `qa/reports/test-results/parcours-complet-parcours--74d95-e---fiche-personne---retour-chromium-1440x900/video.webm`
+- Vidéo du parcours complet (bloc 3D) : copiée par Playwright dans
+  `qa/reports/html/data/` (nommage par hash de contenu) ; consultable via le rapport HTML
+  ci-dessous. Le répertoire brut `qa/reports/test-results/` (chemin lisible d'origine) a
+  été supprimé après cette copie.
 - Rapport HTML Playwright (tous blocs confondus, dernière exécution) :
   `qa/reports/html/index.html`
-- Traces Playwright : `qa/reports/test-results/*/trace.zip`
+- Traces Playwright : non conservées (`qa/reports/test-results/*/trace.zip` a été
+  supprimé) ; utiliser le rapport HTML ci-dessus, qui embarque les traces des tests en
+  échec.
 - Captures bloc 2 (arbres/suppression/recherche/import/OCR) : `qa/reports/screenshots-bloc2/`
 - Captures bloc 3 (cas limites/a11y) : `qa/reports/screenshots-bloc3/`
 - Scripts Playwright jetables utilisés (aucune insertion en base, pilotage UI réel) :

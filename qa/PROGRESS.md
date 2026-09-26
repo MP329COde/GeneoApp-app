@@ -101,9 +101,9 @@
       → **1 test passé (17,3 s)**, aucun contournement du bug
       de modale bloquante n'a été nécessaire cette fois (les arbres QA ciblés contiennent
       déjà des personnes, donc la modale d'onboarding automatique ne s'est pas déclenchée
-      sur arbre vide). Vidéo générée et vérifiée présente :
-      `qa/reports/test-results/parcours-complet-parcours--74d95-e---fiche-personne---retour-chromium-1440x900/video.webm`
-      (copie également dans `qa/reports/html/data/`, rapport HTML Playwright disponible
+      sur arbre vide). Vidéo générée et vérifiée présente (le répertoire brut
+      `qa/reports/test-results/` a depuis été supprimé ; la vidéo reste consultable dans
+      la copie faite par Playwright sous `qa/reports/html/data/`, rapport HTML disponible
       dans `qa/reports/html/index.html`).
 - [x] Étape 12 — Rapport final consolidé (`qa/RAPPORT.md` réécrit intégralement, fusionne
       les bugs des blocs 1, 2 et 3 en une numérotation unique BUG-001 à BUG-014, triée par

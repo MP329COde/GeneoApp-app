@@ -14,10 +14,18 @@
     "src/db",
     "src/electron"
   ],
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "express": "^5.1.0",
+    "pdfjs-dist": "^6.3.289",
+    "tesseract.js": "^7.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/fra": "^1.0.0"
+  },
   "scripts": {
     "build": "npm run build --workspace @geneoapp/client",
     "dev": "concurrently --kill-others-on-fail \"npm run dev --workspace @geneoapp/server\" \"npm run dev --workspace @geneoapp/client\"",
-    "dev:lan": "GENEOAPP_HOST=0.0.0.0 concurrently --kill-others-on-fail \"npm run dev --workspace @geneoapp/server\" \"npm run dev --workspace @geneoapp/client\"",
+    "dev:lan": "cross-env GENEOAPP_HOST=0.0.0.0 concurrently --kill-others-on-fail \"npm run dev --workspace @geneoapp/server\" \"npm run dev --workspace @geneoapp/client\"",
     "electron": "npm run build && npm run start --workspace @geneoapp/electron",
     "package:mac": "npm run build && electron-builder --mac",
     "package:win": "npm run build && electron-builder --win",
@@ -47,6 +55,7 @@
     "@playwright/test": "^1.63.0",
     "playwright-core": "^1.63.0",
     "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
     "electron": "^38.1.0",
     "electron-builder": "^26.15.3",
     "eslint": "^9.35.0",

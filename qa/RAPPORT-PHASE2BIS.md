@@ -165,5 +165,6 @@ Réserves à traiter séparément (non bloquantes pour ce GO, mais à planifier)
   « + Nouvelle personne »)
 - Rapport HTML Playwright de la dernière exécution complète (workers=1) :
   `qa/reports/html/index.html`
-- Résultats bruts : `qa/reports/results.json`, traces dans
-  `qa/reports/test-results/*/trace.zip`
+- Résultats bruts : `qa/reports/results.json` ; traces consultables via le rapport HTML
+  ci-dessus (`qa/reports/test-results/*/trace.zip` n'a pas été conservé, seul le rapport
+  HTML embarque les traces sous `qa/reports/html/data/`)

@@ -87,6 +87,8 @@ const ICON_PATHS = {
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
   offline: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
   bell: 'M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
+  'chevron-right': 'M9 5l7 7-7 7',
+  'chevron-down': 'M5 9l7 7 7-7',
 };
 
 function Icon({ name }) {
@@ -109,28 +111,69 @@ function Icon({ name }) {
   );
 }
 
-// Architecture de navigation : vues regroupées en 3 familles (Explorer,
-// Documenter, Données locales). La vérification est intégrée aux fiches et à
-// l'arbre au fil de l'édition, et complétée par un écran « Cohérence » dédié
-// pour lancer un contrôle global sur tout l'arbre en un clic.
+// Détecte les messages d'erreur techniques (réseau, parsing…) qui ne disent
+// pas à l'utilisateur quoi faire, pour leur adjoindre une consigne concrète
+// traduite. Les messages métier (ex. "GEDCOM invalide : ...") restent
+// affichés tels quels : ils sont déjà clairs et actionnables.
+function errorHintKey(message) {
+  const value = String(message ?? '');
+  if (/failed to fetch|networkerror|ECONNREFUSED|ERR_NETWORK/i.test(value)) {
+    return 'error.hint.network';
+  }
+  if (/timed? ?out|ETIMEDOUT/i.test(value)) {
+    return 'error.hint.timeout';
+  }
+  if (/unexpected token|JSON\.parse|SyntaxError/i.test(value)) {
+    return 'error.hint.corruptResponse';
+  }
+  return null;
+}
+
+function ErrorNotice({ message, className = '' }) {
+  const { t } = useI18n();
+  const hintKey = errorHintKey(message);
+  return (
+    <p role="alert" className={`notice notice--error${className ? ` ${className}` : ''}`}>
+      <span>{message}</span>
+      {hintKey ? (
+        <span className="notice__hint">
+          {' '}
+          {t(hintKey, {}, 'Réessayez ; si le problème persiste, vérifiez votre connexion.')}
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
+// Architecture de navigation : vues regroupées en 5 familles repliables, du
+// point de vue généalogie (Personnes & familles, Recherche & vérification,
+// Documents & sources, Outils & import, Paramètres). La vérification au fil
+// de l'eau reste intégrée aux fiches et à l'arbre ; l'écran « Cohérence »
+// permet en plus un contrôle global sur tout l'arbre en un clic.
 const NAV_GROUPS = [
   {
-    key: 'explore',
-    label: 'Explorer',
+    key: 'people',
+    label: 'Personnes & familles',
     items: [
       { id: 'tree', label: 'Arbre', icon: 'tree', shortcut: '⌘1' },
       { id: 'person', label: 'Personne', icon: 'person', shortcut: '⌘2' },
       { id: 'families', label: 'Familles', icon: 'family', shortcut: '⌘3' },
-      { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
       { id: 'relations', label: 'Parenté', icon: 'family' },
+    ],
+  },
+  {
+    key: 'search',
+    label: 'Recherche & vérification',
+    items: [
+      { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
       { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
       { id: 'consistency', label: 'Cohérence', icon: 'family' },
       { id: 'statistics', label: 'Statistiques', icon: 'stats' },
     ],
   },
   {
-    key: 'document',
-    label: 'Documents',
+    key: 'documents',
+    label: 'Documents & sources',
     items: [
       { id: 'sources', label: 'Sources', icon: 'source' },
       { id: 'media', label: 'Médias', icon: 'media' },
@@ -144,15 +187,21 @@ const NAV_GROUPS = [
     ],
   },
   {
-    key: 'local',
-    label: 'Local',
+    key: 'tools',
+    label: 'Outils & import',
     items: [
       { id: 'trees', label: 'Arbres', icon: 'tree' },
       { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
       { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
       { id: 'trash', label: 'Corbeille', icon: 'trash' },
-      { id: 'profile', label: 'Profil', icon: 'person' },
       { id: 'ai', label: 'IA', icon: 'chip' },
+    ],
+  },
+  {
+    key: 'settings',
+    label: 'Paramètres',
+    items: [
+      { id: 'profile', label: 'Profil', icon: 'person' },
       { id: 'settings', label: 'Paramètres', icon: 'settings' },
     ],
   },
@@ -435,11 +484,7 @@ function SearchPanel({ onNavigate, selected, lifespan }) {
           Rechercher
         </Button>
       </form>
-      {searchError ? (
-        <p role="alert" className="notice notice--error">
-          {searchError}
-        </p>
-      ) : null}
+      {searchError ? <ErrorNotice message={searchError} /> : null}
       {results === null ? null : results.length === 0 ? (
         <p className="notice">Aucun résultat pour « {term} ».</p>
       ) : (
@@ -523,11 +568,7 @@ function DuplicatesPanel({ onSelect, onMerged }) {
           Analyser les doublons potentiels
         </Button>
       </div>
-      {duplicatesError ? (
-        <p role="alert" className="notice notice--error">
-          {duplicatesError}
-        </p>
-      ) : null}
+      {duplicatesError ? <ErrorNotice message={duplicatesError} /> : null}
       {pendingMerge ? (
         <div className="notice" role="alertdialog" aria-label="Confirmer la fusion">
           <p>
@@ -738,11 +779,7 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
   return (
     <section>
       <h3>Parenté de {personLabel(selected)}</h3>
-      {parentageError ? (
-        <p role="alert" className="notice notice--error">
-          {parentageError}
-        </p>
-      ) : null}
+      {parentageError ? <ErrorNotice message={parentageError} /> : null}
 
       <form className="create-person-form" onSubmit={handleAddParent}>
         <label>
@@ -928,11 +965,7 @@ function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   return (
     <div className="search-panel">
       <h3>Familles de {personLabel(selected)}</h3>
-      {familiesError ? (
-        <p role="alert" className="notice notice--error">
-          {familiesError}
-        </p>
-      ) : null}
+      {familiesError ? <ErrorNotice message={familiesError} /> : null}
 
       <form className="create-person-form" onSubmit={handleCreate}>
         <label>
@@ -1124,11 +1157,7 @@ function EventsPanel({ selected }) {
   return (
     <div className="search-panel">
       <h3>Événements de {personLabel(selected)}</h3>
-      {eventsError ? (
-        <p role="alert" className="notice notice--error">
-          {eventsError}
-        </p>
-      ) : null}
+      {eventsError ? <ErrorNotice message={eventsError} /> : null}
 
       <form className="create-person-form" onSubmit={handleSubmit}>
         <label>
@@ -1259,11 +1288,7 @@ function TimelinePanel({ onNavigate }) {
   }, []);
 
   if (timelineError) {
-    return (
-      <p role="alert" className="notice notice--error">
-        {timelineError}
-      </p>
-    );
+    return <ErrorNotice message={timelineError} />;
   }
 
   if (events === null) {
@@ -1334,11 +1359,7 @@ function MapPanel() {
   }, []);
 
   if (mapError) {
-    return (
-      <p role="alert" className="notice notice--error">
-        {mapError}
-      </p>
-    );
+    return <ErrorNotice message={mapError} />;
   }
 
   if (places === null) {
@@ -1813,11 +1834,7 @@ function VerificationSection({ selected, issues, onNavigate, onCompare, onMerged
           ))}
         </ul>
       )}
-      {mergeError ? (
-        <p role="alert" className="notice notice--error">
-          {mergeError}
-        </p>
-      ) : null}
+      {mergeError ? <ErrorNotice message={mergeError} /> : null}
       {pendingMerge ? (
         <div className="verification__confirm" role="alertdialog" aria-label="Confirmer la fusion">
           <p>
@@ -1887,11 +1904,7 @@ function ConsistencyPanel({ onNavigate, personLabelById }) {
           Vérifier la cohérence de l’arbre
         </Button>
       </div>
-      {consistencyError ? (
-        <p role="alert" className="notice notice--error">
-          {consistencyError}
-        </p>
-      ) : null}
+      {consistencyError ? <ErrorNotice message={consistencyError} /> : null}
       {cycles !== null || timelineIssues !== null ? (
         <>
           <h3>Cycles de filiation</h3>
@@ -1992,11 +2005,7 @@ function SourceMediaTool({ sourceId }) {
 
   return (
     <div className="source-media-tool">
-      {mediaError ? (
-        <p role="alert" className="notice notice--error">
-          {mediaError}
-        </p>
-      ) : null}
+      {mediaError ? <ErrorNotice message={mediaError} /> : null}
       <label className="gedcom-panel__file">
         <span>Ajouter un document à cette source</span>
         <input type="file" onChange={handleUpload} disabled={busy} />
@@ -2069,11 +2078,7 @@ function IdentityTool({ selected, onUpdated }) {
   return (
     <form className="detail-section create-person-form" onSubmit={handleSubmit}>
       <h3>Identité</h3>
-      {identityError ? (
-        <p role="alert" className="notice notice--error">
-          {identityError}
-        </p>
-      ) : null}
+      {identityError ? <ErrorNotice message={identityError} /> : null}
       <label>
         <span>Surnom / alias</span>
         <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
@@ -2170,11 +2175,7 @@ function SourcesPanel({ selected }) {
   return (
     <div className="search-panel">
       <h3>Sources citées pour {personLabel(selected)}</h3>
-      {sourcesError ? (
-        <p role="alert" className="notice notice--error">
-          {sourcesError}
-        </p>
-      ) : null}
+      {sourcesError ? <ErrorNotice message={sourcesError} /> : null}
 
       <form className="create-person-form" onSubmit={handleSubmit}>
         <label>
@@ -2251,11 +2252,7 @@ function AuditPanel({ selected }) {
   return (
     <div className="search-panel">
       <h3>Journal d’audit de {personLabel(selected)}</h3>
-      {auditError ? (
-        <p role="alert" className="notice notice--error">
-          {auditError}
-        </p>
-      ) : null}
+      {auditError ? <ErrorNotice message={auditError} /> : null}
 
       {entries === null ? (
         <p role="status">Chargement…</p>
@@ -2320,9 +2317,7 @@ function StatisticsPanel() {
     <div className="search-panel">
       <h3>Statistiques locales</h3>
       {statsError ? (
-        <p role="alert" className="notice notice--error">
-          {statsError}
-        </p>
+        <ErrorNotice message={statsError} />
       ) : totals === null ? (
         <p role="status">Chargement…</p>
       ) : (
@@ -2377,11 +2372,7 @@ function AiPanel() {
           Analyser
         </Button>
       </form>
-      {aiError ? (
-        <p role="alert" className="notice notice--error">
-          {aiError}
-        </p>
-      ) : null}
+      {aiError ? <ErrorNotice message={aiError} /> : null}
       {result ? (
         <p className="notice" role="status">
           {result.response}
@@ -2557,11 +2548,7 @@ function MediaPanel({ selected, persons = [], onPersonChanged }) {
     <div className="search-panel">
       <h3>Médias de {personLabel(selected)}</h3>
       <PortraitPicker client={client} person={selected} onChange={() => onPersonChanged?.()} />
-      {mediaError ? (
-        <p role="alert" className="notice notice--error">
-          {mediaError}
-        </p>
-      ) : null}
+      {mediaError ? <ErrorNotice message={mediaError} /> : null}
 
       <label className="gedcom-panel__file">
         <span>Ajouter un fichier</span>
@@ -2850,11 +2837,7 @@ function GedcomPanel({ onImported, selected }) {
           Importer
         </Button>
       </div>
-      {gedcomError ? (
-        <p role="alert" className="notice notice--error">
-          {gedcomError}
-        </p>
-      ) : null}
+      {gedcomError ? <ErrorNotice message={gedcomError} /> : null}
       {preview ? (
         <p className="notice" role="status">
           {preview.valid
@@ -2939,11 +2922,7 @@ function LoginForm({ onLogin, loginError }) {
         <span>Code PIN (optionnel)</span>
         <input type="password" value={pin} onChange={(event) => setPin(event.target.value)} />
       </label>
-      {loginError ? (
-        <p role="alert" className="notice notice--error">
-          {loginError}
-        </p>
-      ) : null}
+      {loginError ? <ErrorNotice message={loginError} /> : null}
       <Button type="submit" size="sm">
         Se connecter
       </Button>
@@ -2992,11 +2971,7 @@ function StorageSection({ token }) {
   return (
     <section className="storage-section" aria-labelledby="storage-title">
       <h3 id="storage-title">Clé USB et emplacement des données</h3>
-      {storageError ? (
-        <p role="alert" className="notice notice--error">
-          {storageError}
-        </p>
-      ) : null}
+      {storageError ? <ErrorNotice message={storageError} /> : null}
       {message ? (
         <p role="status" className="notice">
           {message}
@@ -3214,11 +3189,7 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
 
   return (
     <div className="backups-panel">
-      {actionError ? (
-        <p role="alert" className="notice notice--error">
-          {actionError}
-        </p>
-      ) : null}
+      {actionError ? <ErrorNotice message={actionError} /> : null}
 
       <section className="session-banner">
         <h3>Profil connecté : {session.account.name}</h3>
@@ -3558,11 +3529,7 @@ function PersonSheet({
             aria-label="Confirmer la suppression"
           >
             <p>Supprimer {personLabel(selected)} ? La personne sera déplacée vers la corbeille.</p>
-            {deleteError ? (
-              <p role="alert" className="form-error">
-                {deleteError}
-              </p>
-            ) : null}
+            {deleteError ? <ErrorNotice message={deleteError} className="form-error" /> : null}
             <Button
               type="button"
               size="sm"
@@ -3741,6 +3708,30 @@ function AppContent() {
   const [personFilter, setPersonFilter] = useState('');
   const [creatingOpen, setCreatingOpen] = useState(false);
   const [emptyPrompted, setEmptyPrompted] = useState(false);
+  // Sections du menu repliées par l'utilisateur (persisté pour rester stable
+  // d'une session à l'autre) ; une section contenant la vue ouverte reste
+  // toujours dépliée pour ne pas masquer l'entrée active.
+  const [collapsedNavGroups, setCollapsedNavGroups] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem('geneoapp:collapsedNavGroups');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleNavGroup = (key) => {
+    setCollapsedNavGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        window.localStorage.setItem('geneoapp:collapsedNavGroups', JSON.stringify([...next]));
+      } catch {
+        // Le repli du menu reste une préférence facultative si le stockage échoue.
+      }
+      return next;
+    });
+  };
   const quickSearchRef = useRef(null);
 
   useEffect(() => {
@@ -4134,32 +4125,51 @@ function AppContent() {
             </div>
             <div className="sidenav__scroll">
               <div className="view-switcher" role="group" aria-label={t('nav.views', 'Vues')}>
-                {navGroups.map((group) => (
-                  <div className="sidenav__group" key={group.label}>
-                    <p className="sidenav__label" aria-hidden="true">
-                      {t(`nav.group.${group.key}`, group.label)}
-                    </p>
-                    {group.items.map((item) => (
+                {navGroups.map((group) => {
+                  const isCollapsed =
+                    collapsedNavGroups.has(group.key) &&
+                    !group.items.some((item) => item.id === view);
+                  return (
+                    <div className="sidenav__group" key={group.label}>
                       <button
-                        key={item.id}
-                        className={`sidenav__item${view === item.id ? ' is-active' : ''}`}
-                        aria-current={view === item.id ? 'page' : undefined}
-                        onClick={() => setView(item.id)}
                         type="button"
-                        title={t(`nav.${item.id}`, item.label)}
-                        aria-label={t(`nav.${item.id}`, item.label)}
+                        className="sidenav__label sidenav__label--toggle"
+                        aria-expanded={!isCollapsed}
+                        aria-label={t(
+                          isCollapsed ? 'nav.group.toggleExpand' : 'nav.group.toggleCollapse',
+                          { section: t(`nav.group.${group.key}`, group.label) },
+                        )}
+                        onClick={() => toggleNavGroup(group.key)}
                       >
-                        <Icon name={item.icon} />
-                        <span className="sidenav__text">{t(`nav.${item.id}`, item.label)}</span>
-                        {item.shortcut && settings.showShortcuts ? (
-                          <kbd className="sidenav__kbd" aria-hidden="true">
-                            {item.shortcut}
-                          </kbd>
-                        ) : null}
+                        <span aria-hidden="true">{t(`nav.group.${group.key}`, group.label)}</span>
+                        <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} />
                       </button>
-                    ))}
-                  </div>
-                ))}
+                      {isCollapsed
+                        ? null
+                        : group.items.map((item) => (
+                            <button
+                              key={item.id}
+                              className={`sidenav__item${view === item.id ? ' is-active' : ''}`}
+                              aria-current={view === item.id ? 'page' : undefined}
+                              onClick={() => setView(item.id)}
+                              type="button"
+                              title={t(`nav.${item.id}`, item.label)}
+                              aria-label={t(`nav.${item.id}`, item.label)}
+                            >
+                              <Icon name={item.icon} />
+                              <span className="sidenav__text">
+                                {t(`nav.${item.id}`, item.label)}
+                              </span>
+                              {item.shortcut && settings.showShortcuts ? (
+                                <kbd className="sidenav__kbd" aria-hidden="true">
+                                  {item.shortcut}
+                                </kbd>
+                              ) : null}
+                            </button>
+                          ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="sidenav__footer">
@@ -4256,11 +4266,7 @@ function AppContent() {
             </div>
           </header>
 
-          {error ? (
-            <p role="alert" className="notice notice--error app-error">
-              {error}
-            </p>
-          ) : null}
+          {error ? <ErrorNotice message={error} className="app-error" /> : null}
 
           <section
             className={`workspace${settings.showInspector ? '' : ' workspace--no-inspector'}`}

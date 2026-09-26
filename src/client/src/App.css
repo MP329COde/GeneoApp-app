@@ -151,6 +151,27 @@ kbd {
   text-transform: uppercase;
   font-weight: 700;
 }
+.sidenav__label--toggle {
+  width: 100%;
+  min-height: var(--control-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.sidenav__label--toggle:hover {
+  background: var(--surface-hover);
+}
+.sidenav__label--toggle .icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
 .sidenav__item {
   width: 100%;
   min-height: 36px;
@@ -658,6 +679,12 @@ dd {
   border-color: var(--danger);
   background: var(--danger-subtle);
 }
+.notice__hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-weight: 400;
+  color: var(--text-secondary);
+}
 
 /* ---------- Formulaires ---------- */
 .create-person-form {
@@ -875,6 +902,9 @@ input[type='radio'] {
   }
   .sidenav__scroll {
     overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
   .view-switcher {
     display: flex;
@@ -882,10 +912,26 @@ input[type='radio'] {
   }
   .sidenav__group {
     display: flex;
+    align-items: center;
     margin: 0;
   }
+  /* Sur mobile, la barre d'onglets est un ruban horizontal : le repli par
+     section n'a pas de sens (tout doit rester atteignable au doigt), donc les
+     en-têtes de section sont masqués et seuls les items sont affichés. */
+  .sidenav__label--toggle {
+    display: none;
+  }
   .sidenav__item {
+    flex: 0 0 auto;
     width: auto;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: var(--space-2);
+    scroll-snap-align: start;
+  }
+  .view-switcher {
+    scroll-snap-type: x proximity;
   }
   .search-panel,
   .gedcom-panel,
