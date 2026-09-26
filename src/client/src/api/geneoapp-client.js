@@ -62,6 +62,9 @@ function createHttpClient() {
       list: () => fetchJson('/api/places'),
       get: (id) => fetchJson(`/api/places/${id}`),
       remove: (id) => fetchJson(`/api/places/${id}`, { method: 'DELETE' }),
+      previewAutoLocate: () => fetchJson('/api/places/auto-locate/preview'),
+      applyAutoLocate: (assignments) =>
+        fetchJson('/api/places/auto-locate/apply', { method: 'POST', body: { assignments } }),
     },
     events: {
       create: (data) => fetchJson('/api/events', { method: 'POST', body: data }),
@@ -337,6 +340,8 @@ function createIpcClient(bridge) {
       list: () => bridge.places.list(),
       get: (id) => bridge.places.get(id),
       remove: (id) => bridge.places.remove(id),
+      previewAutoLocate: () => bridge.places.previewAutoLocate(),
+      applyAutoLocate: (assignments) => bridge.places.applyAutoLocate(assignments),
     },
     events: {
       create: (data) => bridge.events.create(data),

@@ -21,5 +21,14 @@ export function createPlaceController(services) {
       places.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();
     },
+
+    previewAutoLocate(_request, response) {
+      response.json(places.previewAutoLocate());
+    },
+
+    applyAutoLocate(request, response) {
+      const updated = places.applyAutoLocate(request.body?.assignments);
+      response.json({ updated });
+    },
   };
 }

@@ -177,6 +177,10 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.PLACES_REMOVE]: wrap(({ id, performedBy }) =>
       places.remove(id, { performedBy: actorOf(performedBy) }),
     ),
+    [IPC_CHANNELS.PLACES_AUTO_LOCATE_PREVIEW]: wrap(() => places.previewAutoLocate()),
+    [IPC_CHANNELS.PLACES_AUTO_LOCATE_APPLY]: wrap(({ assignments }) => ({
+      updated: places.applyAutoLocate(assignments),
+    })),
 
     [IPC_CHANNELS.EVENTS_CREATE]: wrap(({ data, performedBy }) =>
       events.create(data, { performedBy: actorOf(performedBy) }),

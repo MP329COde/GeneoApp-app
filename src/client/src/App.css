@@ -899,6 +899,17 @@ input[type='radio'] {
   border-radius: var(--radius-md);
   overflow: hidden;
 }
+.auto-locate__preview {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.auto-locate__preview .search-results li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
 .map-panel__places {
   display: flex;
   flex-wrap: wrap;

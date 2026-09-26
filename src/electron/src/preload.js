@@ -41,6 +41,9 @@ const api = {
     get: (id) => invoke(IPC_CHANNELS.PLACES_GET, { id }),
     list: (includeDeleted = false) => invoke(IPC_CHANNELS.PLACES_LIST, { includeDeleted }),
     remove: (id, performedBy) => invoke(IPC_CHANNELS.PLACES_REMOVE, { id, performedBy }),
+    previewAutoLocate: () => invoke(IPC_CHANNELS.PLACES_AUTO_LOCATE_PREVIEW),
+    applyAutoLocate: (assignments) =>
+      invoke(IPC_CHANNELS.PLACES_AUTO_LOCATE_APPLY, { assignments }),
   },
 
   events: {

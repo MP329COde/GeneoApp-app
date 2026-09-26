@@ -1391,20 +1391,17 @@ function MapPanel() {
   const [mapError, setMapError] = useState(null);
   const mapElementRef = useRef(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    client.places
-      .list()
-      .then((list) => {
-        if (!cancelled) setPlaces(list);
-      })
-      .catch((loadError) => {
-        if (!cancelled) setMapError(loadError.message);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const refreshPlaces = useCallback(async () => {
+    try {
+      setPlaces(await client.places.list());
+    } catch (loadError) {
+      setMapError(loadError.message);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshPlaces();
+  }, [refreshPlaces]);
 
   if (mapError) {
     return <ErrorNotice message={mapError} />;
@@ -1457,8 +1454,134 @@ function MapPanel() {
               <li key={place.id}>{place.name}</li>
             ))}
           </ul>
+          <AutoLocatePanel unlocatedCount={unlocated.length} onApplied={refreshPlaces} />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// Placement automatique des lieux sans coordonnées, contre le référentiel
+// local des communes françaises (embarqué, aucun appel réseau — voir
+// src/server/src/geo). Toujours une prévisualisation d'abord : l'utilisateur
+// voit chaque correspondance (et choisit le département en cas d'homonymes)
+// avant toute écriture, confirmée explicitement.
+function AutoLocatePanel({ unlocatedCount, onApplied }) {
+  const [preview, setPreview] = useState(null);
+  const [choices, setChoices] = useState({});
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const openPreview = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await client.places.previewAutoLocate();
+      setPreview(result);
+      setChoices(
+        Object.fromEntries(
+          result
+            .filter((entry) => entry.status === 'unique')
+            .map((entry) => [entry.placeId, entry.matches[0].code]),
+        ),
+      );
+    } catch (previewError) {
+      setError(previewError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = async () => {
+    const assignments = Object.entries(choices)
+      .filter(([, code]) => code)
+      .map(([placeId, code]) => ({ placeId: Number(placeId), code }));
+    if (assignments.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await client.places.applyAutoLocate(assignments);
+      setPreview(null);
+      setChoices({});
+      await onApplied?.();
+    } catch (applyError) {
+      setError(applyError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const chosenCount = Object.values(choices).filter(Boolean).length;
+
+  return (
+    <div className="auto-locate">
+      {error ? <ErrorNotice message={error} /> : null}
+      {preview === null ? (
+        <Button type="button" size="sm" onClick={openPreview} disabled={busy}>
+          Placer automatiquement {unlocatedCount} lieu{unlocatedCount > 1 ? 'x' : ''}
+        </Button>
+      ) : (
+        <div
+          className="auto-locate__preview"
+          role="group"
+          aria-label="Aperçu du placement automatique"
+        >
+          <p className="settings-hint">
+            Aperçu avant confirmation : aucune coordonnée n’est encore enregistrée.
+          </p>
+          <ul className="search-results">
+            {preview.map((entry) => (
+              <li key={entry.placeId}>
+                <strong>{entry.name}</strong>{' '}
+                {entry.status === 'none' ? (
+                  <Badge tone="neutral">Aucune correspondance</Badge>
+                ) : entry.status === 'unique' ? (
+                  <Badge tone="success">
+                    {entry.matches[0].nom} ({entry.matches[0].codeDepartement})
+                  </Badge>
+                ) : (
+                  <label>
+                    <span className="gds-visually-hidden">
+                      Choisir le département pour {entry.name}
+                    </span>
+                    <select
+                      value={choices[entry.placeId] ?? ''}
+                      onChange={(event) =>
+                        setChoices((current) => ({
+                          ...current,
+                          [entry.placeId]: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Plusieurs communes « {entry.name} » — choisir…</option>
+                      {entry.matches.map((match) => (
+                        <option key={match.code} value={match.code}>
+                          {match.nom} ({match.codeDepartement})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Button type="button" size="sm" onClick={confirm} disabled={busy || chosenCount === 0}>
+            Confirmer le placement de {chosenCount} lieu{chosenCount > 1 ? 'x' : ''}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setPreview(null);
+              setChoices({});
+            }}
+            disabled={busy}
+          >
+            Annuler
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

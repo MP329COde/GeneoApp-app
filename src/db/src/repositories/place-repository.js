@@ -55,6 +55,33 @@ export class PlaceRepository {
     return this.database.prepare(`SELECT * FROM places ${clause} ORDER BY name`).all();
   }
 
+  updateCoordinates(id, { latitude, longitude }, { performedBy = null } = {}) {
+    return withTransaction(this.database, () => {
+      const existing = this.findById(id);
+      if (!existing) {
+        throw new Error(`Lieu introuvable : ${id}`);
+      }
+
+      this.database
+        .prepare(
+          `UPDATE places SET latitude = ?, longitude = ?,
+                             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = ? AND deleted_at IS NULL`,
+        )
+        .run(latitude, longitude, id);
+
+      recordAudit(this.database, {
+        tableName: 'places',
+        rowId: id,
+        operation: 'UPDATE',
+        changes: { latitude, longitude },
+        performedBy,
+      });
+
+      return this.findById(id);
+    });
+  }
+
   softDelete(id, { performedBy = null } = {}) {
     return withTransaction(this.database, () => {
       const existing = this.findById(id);

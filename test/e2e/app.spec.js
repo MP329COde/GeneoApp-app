@@ -268,6 +268,44 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByRole('radio', { name: 'Locale (hors ligne, sans tuiles)' }).check();
 });
 
+test('place automatiquement un lieu contre le référentiel des communes françaises', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Événements', exact: true }).click();
+
+  // Nouveau lieu sans coordonnées : doit apparaître dans « Lieux sans
+  // coordonnées » avec le bouton de placement automatique.
+  await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Bordeaux');
+  await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
+  await expect(page.locator('.search-results li', { hasText: 'Bordeaux' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(page.getByText('Bordeaux', { exact: true })).toBeVisible();
+
+  const button = page.getByRole('button', { name: /Placer automatiquement \d+ lieux?/ });
+  await expect(button).toBeVisible();
+  await button.click();
+
+  // Aperçu avant toute écriture : la correspondance unique est proposée,
+  // mais rien n'est encore enregistré.
+  const preview = page.locator('.auto-locate__preview');
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText('Bordeaux (33)')).toBeVisible();
+
+  await preview.getByRole('button', { name: /Confirmer le placement/ }).click();
+  await expect(preview).toBeHidden();
+
+  // Coordonnées bien enregistrées : le lieu passe désormais dans la liste
+  // des lieux géolocalisés, plus dans « sans coordonnées » (d'autres lieux
+  // non localisés peuvent subsister, importés sans coordonnées par un test
+  // précédent — seul le sort de Bordeaux nous intéresse ici).
+  await expect(page.locator('.map-panel__places li', { hasText: 'Bordeaux' })).toBeVisible();
+  const unlocatedSection = page.locator('h3', { hasText: 'Lieux sans coordonnées' }).locator('..');
+  await expect(unlocatedSection.getByText('Bordeaux', { exact: true })).toHaveCount(0);
+});
+
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
   await page.goto('/');
   const list = page.getByRole('navigation', { name: 'Personnes' });

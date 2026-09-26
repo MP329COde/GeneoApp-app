@@ -12,6 +12,8 @@ export const IPC_CHANNELS = Object.freeze({
   PLACES_GET: 'geneoapp:places:get',
   PLACES_LIST: 'geneoapp:places:list',
   PLACES_REMOVE: 'geneoapp:places:remove',
+  PLACES_AUTO_LOCATE_PREVIEW: 'geneoapp:places:autoLocatePreview',
+  PLACES_AUTO_LOCATE_APPLY: 'geneoapp:places:autoLocateApply',
 
   EVENTS_CREATE: 'geneoapp:events:create',
   EVENTS_GET: 'geneoapp:events:get',
