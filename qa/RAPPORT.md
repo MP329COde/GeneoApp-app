@@ -5,6 +5,14 @@ Application testée : http://127.0.0.1:5173 (build dev Vite), branche `dev`.
 Portée : blocs 1 (découverte/cartographie), 2 (arbres/suppression/recherche/import/OCR
 via UI réelle) et 3 (cas limites, accessibilité, responsive, vidéo E2E).
 
+> Note (mise à jour Phase 5, maintenabilité) : les artefacts bruts produits pendant cet
+> audit (`qa/reports/`, `qa/scripts/`, `qa/CARTOGRAPHIE.md`, `qa/PROGRESS.md`,
+> `qa/playwright.config.cjs`) ont été nettoyés depuis et ne font plus partie du dépôt ;
+> les chemins encore cités plus bas sont conservés à titre de trace historique de ce qui a
+> été observé/produit au moment de l'audit, mais ne sont plus consultables. Seuls
+> `qa/RAPPORT.md`, `qa/RAPPORT-ROUND3-UX.md` et les tests sous `qa/tests/*.spec.cjs`
+> existent encore réellement dans le dépôt.
+
 ## 1. Résumé exécutif
 
 L'application est fonctionnellement solide sur son cœur de métier (arbre, recherche,
@@ -331,23 +339,17 @@ des tests menés :
 
 ## 7. Liens vers les livrables
 
-- Cartographie complète : `qa/CARTOGRAPHIE.md`
-- Suivi d'avancement détaillé : `qa/PROGRESS.md`
-- Résultats accessibilité (axe-core) : `qa/reports/a11y-resultats.md` (brut :
-  `qa/reports/a11y-raw.json`, détail sélecteur : `qa/scripts/a11y-detail-check.cjs`)
-- Résultats responsive : `qa/reports/responsive-resultats.md` (captures :
-  `qa/reports/screenshots-responsive/`, 36 fichiers)
-- Résultats OCR : `qa/reports/ocr-resultats.md`
-- Vidéo du parcours complet (bloc 3D) :
-  `qa/reports/test-results/parcours-complet-parcours--74d95-e---fiche-personne---retour-chromium-1440x900/video.webm`
-- Rapport HTML Playwright (tous blocs confondus, dernière exécution) :
-  `qa/reports/html/index.html`
-- Traces Playwright : `qa/reports/test-results/*/trace.zip`
-- Captures bloc 2 (arbres/suppression/recherche/import/OCR) : `qa/reports/screenshots-bloc2/`
-- Captures bloc 3 (cas limites/a11y) : `qa/reports/screenshots-bloc3/`
-- Scripts Playwright jetables utilisés (aucune insertion en base, pilotage UI réel) :
-  `qa/scripts/bloc2-*.cjs`, `qa/scripts/bloc3a-3b.cjs`, `qa/scripts/bloc3c-responsive.cjs`
-- Fixtures (familles, GEDCOM, images OCR) : `qa/fixtures/`
+> Les artefacts bruts de cet audit (cartographie, suivi d'avancement, résultats a11y/
+> responsive/OCR, captures, vidéos, traces, scripts jetables, fixtures) ont été nettoyés
+> après consolidation des constats dans ce rapport et **n'existent plus dans le dépôt**.
+> Livrables encore présents :
+
+- Rapport d'audit (ce document) : `qa/RAPPORT.md`
+- Rapport du cycle QA suivant (angle UX) : `qa/RAPPORT-ROUND3-UX.md`
+- Tests de non-régression issus de l'audit : `qa/tests/bug-fixes.spec.cjs`,
+  `qa/tests/qa-017-union-parent-labels.spec.cjs`,
+  `qa/tests/qa-018-confirm-union-parentage-removal.spec.cjs`,
+  `qa/tests/qa-019-union-error-message.spec.cjs`, `qa/tests/indexing-panel.spec.cjs`
 
 ## Recommandation finale
 

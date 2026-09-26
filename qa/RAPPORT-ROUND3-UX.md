@@ -2,15 +2,18 @@
 
 Branche : `qa-round3-ux` (issue de `qa-fixes`).
 Portée : audit ciblé sur la question « une personne non technicienne peut-elle utiliser
-l'application facilement, sans complications, sans bug ? », en continuité des cycles 1 et 2
-(`qa/RAPPORT.md`, `qa/RAPPORT-PHASE2BIS.md`, `qa/RAPPORT-INDEXATION.md`).
+l'application facilement, sans complications, sans bug ? », en continuité du cycle 1
+(`qa/RAPPORT.md`) et de cycles intermédiaires dont les rapports (`qa/RAPPORT-PHASE2BIS.md`,
+`qa/RAPPORT-INDEXATION.md`) ont depuis été nettoyés du dépôt une fois leurs constats
+consolidés ici et dans `qa/RAPPORT.md`.
 
 ## Méthode et limites de ce passage
 
-Ce cycle a réutilisé la cartographie déjà établie (`qa/CARTOGRAPHIE.md`, toujours à jour :
-aucun nouvel écran utilisateur significatif depuis sa rédaction — le travail en cours
-visible dans `git status` (notifications, paléographie, DocumentTools, accès LAN) est du
-WIP non lié à cette mission et n'a pas été testé ni modifié). L'audit s'est concentré sur :
+Ce cycle a réutilisé la cartographie établie lors du cycle 1 (fichier `qa/CARTOGRAPHIE.md`,
+depuis supprimé du dépôt — aucun nouvel écran utilisateur significatif n'était apparu
+depuis sa rédaction ; le travail en cours visible dans `git status` au moment de l'audit
+(notifications, paléographie, DocumentTools, accès LAN) était du WIP non lié à cette
+mission et n'a pas été testé ni modifié). L'audit s'est concentré sur :
 
 - une relecture ciblée du panneau **Statistiques**, déjà signalé comme point d'incohérence
   mineur dans le cycle 1 (labels techniques en anglais) ;
