@@ -36,8 +36,8 @@ export class PersonRepository {
 
   create(
     {
-      givenNames,
-      familyName,
+      givenNames = '',
+      familyName = '',
       birthFamilyName = null,
       sex = 'U',
       notes = null,
@@ -50,8 +50,10 @@ export class PersonRepository {
     },
     { performedBy = null } = {},
   ) {
-    if (!givenNames || !familyName) {
-      throw new Error('givenNames et familyName sont obligatoires');
+    // Un prénom OU un nom suffit (voir validation/schemas.js côté API) :
+    // seule l'absence totale des deux est refusée.
+    if (!givenNames?.trim() && !familyName?.trim()) {
+      throw new Error('givenNames ou familyName doit être renseigné');
     }
 
     return withTransaction(this.database, () => {

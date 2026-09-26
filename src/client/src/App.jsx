@@ -9,6 +9,7 @@ import {
 } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import europeOutline from './assets/europe-outline.json';
 import { List } from 'react-window';
 import { Badge, Button, Modal, useI18n } from './design-system/index.js';
 import { createGeneoAppClient } from './api/geneoapp-client.js';
@@ -1393,31 +1394,47 @@ function MapPanel() {
   );
 }
 
-// Carte de position 100 % locale : aucune tuile, aucune requête réseau.
+// Fond de carte minimal, embarqué dans l'application (aucune tuile
+// téléchargée) : contours très simplifiés de l'Europe et de la France
+// métropolitaine, voir src/client/src/assets/europe-outline.json.
+const EUROPE_BOUNDS = { minLon: -10, maxLon: 40, minLat: 34, maxLat: 70 };
+
+// Carte de position 100 % locale : aucune tuile, aucune requête réseau (voir
+// docs/adr — le mode hors ligne ne doit déclencher aucun appel réseau).
 // Projection équirectangulaire simple (longitude → x, latitude → y) sur un
-// SVG, suffisante pour situer des lieux les uns par rapport aux autres sans
-// dépendre d'un fournisseur de cartographie externe.
+// SVG, avec un fond de carte fixe (Europe/France) pour situer les lieux dans
+// leur contexte géographique sans dépendre d'un fournisseur externe.
 function LocalMap({ places }) {
   const [zoom, setZoom] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
 
   const lats = places.map((place) => place.latitude);
   const lons = places.map((place) => place.longitude);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
+  // La zone projetée couvre toujours le fond de carte (Europe/France), et
+  // s'étend si besoin pour inclure des lieux situés hors de cette zone.
+  const minLat = Math.min(EUROPE_BOUNDS.minLat, ...lats);
+  const maxLat = Math.max(EUROPE_BOUNDS.maxLat, ...lats);
+  const minLon = Math.min(EUROPE_BOUNDS.minLon, ...lons);
+  const maxLon = Math.max(EUROPE_BOUNDS.maxLon, ...lons);
   const spanLat = Math.max(maxLat - minLat, 0.01);
   const spanLon = Math.max(maxLon - minLon, 0.01);
   const size = 480;
   const padding = 40;
 
-  const project = (place) => {
-    const x = padding + ((place.longitude - minLon) / spanLon) * (size - 2 * padding);
+  const project = ({ longitude, latitude }) => {
+    const x = padding + ((longitude - minLon) / spanLon) * (size - 2 * padding);
     // L'axe Y d'un SVG croît vers le bas : on inverse la latitude pour garder le nord en haut.
-    const y = padding + ((maxLat - place.latitude) / spanLat) * (size - 2 * padding);
+    const y = padding + ((maxLat - latitude) / spanLat) * (size - 2 * padding);
     return { x, y };
   };
+
+  const projectRing = (ring) =>
+    ring
+      .map(([longitude, latitude]) => {
+        const { x, y } = project({ longitude, latitude });
+        return `${x},${y}`;
+      })
+      .join(' ');
 
   return (
     <div className="local-map">
@@ -1444,11 +1461,23 @@ function LocalMap({ places }) {
       </div>
       <svg
         role="img"
-        aria-label="Carte locale des lieux enregistrés (position relative, sans fond de carte)"
+        aria-label="Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)"
         viewBox={`0 0 ${size} ${size}`}
         className="local-map__canvas"
       >
         <g transform={`scale(${zoom})`} style={{ transformOrigin: 'center' }}>
+          <g className="local-map__basemap" aria-hidden="true">
+            {europeOutline.features.map((feature) => (
+              <polygon
+                key={feature.properties.name}
+                points={projectRing(feature.geometry.coordinates[0])}
+                fill="var(--surface-muted, #e7ece9)"
+                stroke="var(--color-border, #b8c2bd)"
+                strokeWidth={feature.properties.name === 'France' ? 1.5 : 1}
+                opacity={feature.properties.name === 'France' ? 0.9 : 0.55}
+              />
+            ))}
+          </g>
           {places.map((place) => {
             const { x, y } = project(place);
             const selected = selectedId === place.id;

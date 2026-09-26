@@ -21,7 +21,7 @@ test('POST /api/persons crée une personne valide', async () => {
   }
 });
 
-test('POST /api/persons rejette un payload invalide avec 400 et le détail des champs', async () => {
+test('POST /api/persons accepte un prénom seul (nom de famille vide, comme en import GEDCOM)', async () => {
   const server = await startTestServer();
   try {
     const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
@@ -29,7 +29,24 @@ test('POST /api/persons rejette un payload invalide avec 400 et le détail des c
       body: { givenNames: 'Ada' },
     });
 
+    assert.equal(status, 201);
+    assert.equal(body.given_names, 'Ada');
+    assert.equal(body.family_name, '');
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/persons rejette un payload invalide (prénom et nom vides) avec 400 et le détail des champs', async () => {
+  const server = await startTestServer();
+  try {
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {},
+    });
+
     assert.equal(status, 400);
+    assert.ok(body.error.fields.givenNames);
     assert.ok(body.error.fields.familyName);
   } finally {
     await server.close();

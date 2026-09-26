@@ -1,4 +1,5 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
+import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
 import { PayloadTooLargeError, ValidationError } from '../errors.js';
 import { createZip, readZip } from './zip.js';
@@ -465,6 +466,18 @@ function applyMapping(database, records, performedBy) {
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
     const name = parseName(value(person, 'NAME'));
+    const ownEvents = [
+      ...children(person, 'DEAT').map(() => ({ type: 'DEATH' })),
+      ...children(person, 'BURI').map(() => ({ type: 'BURIAL' })),
+      ...children(person, 'BIRT').map((record) => ({
+        type: 'BIRTH',
+        dateText: value(record, 'DATE'),
+      })),
+      ...children(person, 'BAPM').map((record) => ({
+        type: 'BAPTISM',
+        dateText: value(record, 'DATE'),
+      })),
+    ];
     const result = insertPerson.run(
       name.givenNames,
       name.familyName,
@@ -473,8 +486,9 @@ function applyMapping(database, records, performedBy) {
       notes(person),
       value(person, 'NICK') ?? null,
       person.xref ?? null,
-      // Décès ou inhumation connus : la personne n'est pas vivante.
-      children(person, 'DEAT').length > 0 || children(person, 'BURI').length > 0 ? 0 : 1,
+      // Décès/inhumation connus, ou naissance/baptême de plus de 110 ans :
+      // la personne est présumée non-vivante.
+      shouldBeDeceased(ownEvents) ? 0 : 1,
     );
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);
