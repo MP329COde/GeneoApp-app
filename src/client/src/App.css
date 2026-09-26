@@ -442,8 +442,38 @@ h3 {
   border-color: var(--action);
   background: var(--surface-selected);
 }
+.person-card__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 .person-card__name {
   font: var(--type-person-name);
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+/* Le prénom rétrécit en premier (ellipsis) ; le nom de famille, prioritaire,
+ * garde toujours sa largeur pleine et n'est jamais tronqué. */
+.person-card__given {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.person-card__family {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-weight: var(--weight-strong, 600);
+}
+.person-card__meta {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
 }
 .person-card__years,
 .person-card__place,
@@ -455,29 +485,21 @@ h3 {
 /* Liste virtualisée (react-window) : la hauteur de chaque ligne est fixée en
  * JS (PERSON_ROW_HEIGHT) et doit correspondre EXACTEMENT à cette hauteur
  * réelle, sinon le texte de deux lignes consécutives se chevauche
- * visuellement. Une seule ligne, tronquée avec des points de suspension. */
+ * visuellement. 2 niveaux : nom complet (nom de famille jamais tronqué),
+ * puis années/lieu sur une deuxième ligne, tronquée si besoin. */
 .person-card--compact {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  height: 44px;
-  min-height: 44px;
+  height: 56px;
+  min-height: 56px;
   grid-template-columns: unset;
   overflow: hidden;
-  white-space: nowrap;
 }
-.person-card--compact .person-card__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.person-card--compact .person-card__meta {
   white-space: nowrap;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.person-card--compact .person-card__years {
-  flex: 0 0 auto;
 }
 .person-card--compact .person-card__place {
-  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

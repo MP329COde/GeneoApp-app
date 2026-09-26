@@ -23,6 +23,7 @@ function largePersonGedcom(count) {
       `2 DATE ${1 + (index % 28)} JAN ${1700 + index}`,
     );
   }
+  lines.push('0 @IANNE@ INDI', '1 NAME Anne /Bernard/', '1 SEX F', '1 BIRT', '2 DATE 3 MAR 1888');
   lines.push('0 TRLR');
   return lines.join('\n');
 }
@@ -642,4 +643,17 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
     )
     .toBe(true);
   await expect(rows.last()).toBeVisible();
+
+  // Colonne latérale étroite (230px) : le nom de famille doit rester lisible
+  // en entier, quitte à tronquer le prénom. On cherche « Anne Bernard » en
+  // filtrant la liste (le filtre reste visible même en mode virtualisé).
+  await page.getByPlaceholder('Filtrer les personnes…').fill('Bernard');
+  const anneRow = page.locator('.person-list .person-card', { hasText: 'Bernard' }).first();
+  await expect(anneRow).toBeVisible();
+  const familySpan = anneRow.locator('.person-card__family');
+  await expect(familySpan).toHaveText('Bernard');
+  const overflow = await familySpan.evaluate(
+    (element) => element.scrollWidth > element.clientWidth,
+  );
+  expect(overflow).toBe(false);
 });

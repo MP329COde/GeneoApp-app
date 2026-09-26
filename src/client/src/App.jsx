@@ -217,6 +217,7 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
   // personnes homonymes dans une liste : « Jean Martin — 1850 – 1920 (Rouen) ».
   const birthPlace = lifespan?.birthPlace;
   const issues = useContext(VerificationContext).get(person.id)?.length ?? 0;
+  const fullName = personLabel(person);
   return (
     <button
       className={`person-card${compact ? ' person-card--compact' : ''}${selected ? ' person-card--selected' : ''}${issues ? ' has-issues' : ''}`}
@@ -227,9 +228,21 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
       {person.portrait_media_id ? (
         <PortraitAvatar client={client} person={person} size={36} />
       ) : null}
-      <span className="person-card__name">{personLabel(person)}</span>
-      {years ? <span className="person-card__years">{years}</span> : null}
-      {birthPlace ? <span className="person-card__place">({birthPlace})</span> : null}
+      <span className="person-card__lines">
+        {/* Le nom de famille est prioritaire : il ne rétrécit jamais, seul le
+         * prénom cède la place en cas de manque d'espace (ex. colonne latérale
+         * étroite). `title` porte le nom complet pour l'accessibilité. */}
+        <span className="person-card__name" title={fullName}>
+          <span className="person-card__given">{person.given_names}</span>{' '}
+          <span className="person-card__family">{person.family_name}</span>
+        </span>
+        {years || birthPlace ? (
+          <span className="person-card__meta">
+            {years ? <span className="person-card__years">{years}</span> : null}
+            {birthPlace ? <span className="person-card__place">({birthPlace})</span> : null}
+          </span>
+        ) : null}
+      </span>
       {issues ? (
         <span className="issue-dot" title={`${issues} point(s) à vérifier`}>
           <span className="gds-visually-hidden">{issues} point(s) à vérifier</span>
@@ -243,7 +256,9 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
 // (react-window) : seules les lignes visibles (+ marge) sont montées dans le
 // DOM, ce qui garde la liste fluide même avec des milliers de fiches.
 const VIRTUALIZATION_THRESHOLD = 150;
-const PERSON_ROW_HEIGHT = 44;
+// 2 niveaux (nom complet + années/lieu) : 56px suffisent à afficher les deux
+// lignes sans les faire chevaucher (cf. PERSON_ROW_HEIGHT côté CSS).
+const PERSON_ROW_HEIGHT = 56;
 
 function PersonListRow({ index, style, persons, selectedId, onSelect }) {
   const person = persons[index];
