@@ -103,11 +103,19 @@ maintenabilité). Chaque phase validée par `npm run lint && npm run format:chec
   Décision ouverte pour l'utilisateur : le garder (nécessite un accès réseau, en contradiction partielle avec
   l'esprit « local-only » de l'app) ou le retirer entièrement au profit du seul fond SVG hors ligne.
 
-### Dette d'environnement connue (non liée à l'audit)
+### Dette d'environnement connue (corrigée le 2026-09-26, contre-audit)
 
-- `pdftotext` n'est pas installé sur la machine de développement/CI utilisée pour cet audit : le test
-  « PDF texte : contenu extrait directement » échoue et bascule sur le chemin OCR, ce qui est le comportement
-  de repli attendu du code, pas un bug.
-- `npm run test:client` échoue entièrement (`TypeError: webidl.util.markAsUncloneable is not a function`) sur
-  Node 20.20.2, alors que `package.json` demande `>=22.0.0` : incompatibilité `undici`/`jsdom`, sans rapport
-  avec les changements de cet audit (vérifié identique avant/après chaque phase).
+- **Correction d'une affirmation erronée de l'audit précédent** : la note initiale attribuait l'échec du test
+  « PDF texte : contenu extrait directement » à l'absence du binaire `pdftotext`. C'était faux et n'avait
+  jamais été vérifié : le code n'invoque `pdftotext` nulle part (`grep -rn pdftotext src/` ne retourne rien) ;
+  l'extraction PDF passe uniquement par `pdfjs-dist` (`src/server/src/indexing/content-extract.js`). La cause
+  réelle, reproduite avec la trace d'erreur exacte, est `TypeError: Promise.withResolvers is not a function`,
+  une API absente de Node < 22 qu'utilise `pdfjs-dist`. Sous Node 24, le même test passe sans aucune
+  modification de code. Un garde-fou (`scripts/check-node-version.js`, câblé en `pretest`/`pretest:client`/
+  `pretest:server`) échoue désormais avec un message explicite plutôt que de laisser des tests rouges
+  incompréhensibles sous une version de Node non supportée. La CI (`.github/workflows/ci.yml`) utilisait déjà
+  Node 22, donc n'était jamais affectée ; seule la machine de développement locale (Node 20.20.2) l'était.
+- `npm run test:client` échouait entièrement (`TypeError: webidl.util.markAsUncloneable is not a function`)
+  sur Node 20.20.2, alors que `package.json` demande `>=22.0.0` : incompatibilité `undici`/`jsdom`. Sous
+  Node 24 (vérifié réellement, pas supposé), les 18 fichiers de test et 102 tests passent — voir la correction
+  du test obsolète « personnalise le menu... » ci-dessus, seul échec réel une fois l'environnement correct.
