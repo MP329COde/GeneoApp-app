@@ -155,7 +155,13 @@ export class SearchService {
         }
       }
     }
-    return results.sort((a, b) => b.score - a.score).slice(0, limit);
+    // `total` est le nombre réel de paires détectées, avant troncature à
+    // `limit` : sans lui, un appelant ne peut pas distinguer « il existe
+    // exactement `limit` doublons » de « il y en a bien plus, seuls les
+    // `limit` premiers sont renvoyés » (ex. alerte affichant « 100 doublon(s) »
+    // alors que 1400 paires ont été détectées).
+    const sorted = results.sort((a, b) => b.score - a.score);
+    return { items: sorted.slice(0, limit), total: sorted.length };
   }
 }
 

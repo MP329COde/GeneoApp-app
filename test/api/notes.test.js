@@ -64,9 +64,40 @@ test('la détection de doublons propose un score sans fusion automatique', async
     });
     const result = await requestJson(server.baseUrl, '/api/search/duplicates');
     assert.equal(result.status, 200);
-    assert.equal(result.body.length, 1);
-    assert.equal(result.body[0].requiresValidation, true);
-    assert.ok(result.body[0].score >= 60);
+    assert.equal(result.body.total, 1);
+    assert.equal(result.body.items.length, 1);
+    assert.equal(result.body.items[0].requiresValidation, true);
+    assert.ok(result.body.items[0].score >= 60);
+  } finally {
+    await server.close();
+  }
+});
+
+// Avant correctif : l'API tronquait à `limit` (défaut 100) sans renvoyer le
+// total réel, donc « 100 doublon(s) » s'affichait même quand des milliers de
+// paires avaient été détectées.
+test('le nombre total de doublons détectés est distinct du nombre affiché (troncature à `limit`)', async () => {
+  const server = await startTestServer();
+  try {
+    // 4 variantes du même nom : C(4,2) = 6 paires, toutes détectées comme
+    // doublons possibles.
+    for (const givenNames of ['Jean-Pierre', 'Jean Pierre', 'Jean-Pierre', 'Jean-Pierres']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Dupont' },
+      });
+    }
+
+    const truncated = await requestJson(server.baseUrl, '/api/search/duplicates?limit=2');
+    assert.equal(truncated.status, 200);
+    assert.equal(truncated.body.items.length, 2);
+    assert.ok(
+      truncated.body.total > truncated.body.items.length,
+      `total (${truncated.body.total}) doit dépasser le nombre affiché (${truncated.body.items.length})`,
+    );
+
+    const untruncated = await requestJson(server.baseUrl, '/api/search/duplicates?limit=100');
+    assert.equal(untruncated.body.total, untruncated.body.items.length);
   } finally {
     await server.close();
   }

@@ -82,7 +82,9 @@ test('performance : potentialDuplicates traite 5000 personnes en moins de 1s', (
   const elapsedMs = performance.now() - start;
 
   console.log(`[perf] potentialDuplicates (${PERSON_COUNT} personnes) : ${elapsedMs.toFixed(1)}ms`);
-  assert.ok(Array.isArray(duplicates));
+  assert.ok(Array.isArray(duplicates.items));
+  assert.equal(typeof duplicates.total, 'number');
+  assert.ok(duplicates.total >= duplicates.items.length);
   assert.ok(
     elapsedMs < 1000,
     `potentialDuplicates a pris ${elapsedMs.toFixed(1)}ms (cible < 1000ms)`,
@@ -125,7 +127,7 @@ test('doublons : deux « Jean Martin » nés à 250 ans d’écart ne sont jamai
   });
 
   const duplicates = services.search.potentialDuplicates();
-  const flagged = duplicates.some(
+  const flagged = duplicates.items.some(
     (duplicate) =>
       duplicate.persons.some((person) => person.id === oldJean.id) &&
       duplicate.persons.some((person) => person.id === youngJean.id),

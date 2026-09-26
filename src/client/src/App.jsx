@@ -573,9 +573,13 @@ function DuplicatesPanel({ onSelect, onMerged }) {
     setDuplicatesError(null);
     try {
       await client.search.merge(survivorId, duplicateId);
-      setPairs((current) =>
-        (current ?? []).filter((pair) => !pair.persons.some((person) => person.id === duplicateId)),
-      );
+      setPairs((current) => {
+        if (!current) return current;
+        const items = current.items.filter(
+          (pair) => !pair.persons.some((person) => person.id === duplicateId),
+        );
+        return { items, total: Math.max(current.total - (current.items.length - items.length), 0) };
+      });
       setPendingMerge(null);
       await onMerged?.();
     } catch (mergeError) {
@@ -628,11 +632,20 @@ function DuplicatesPanel({ onSelect, onMerged }) {
           </Button>
         </div>
       ) : null}
-      {pairs === null ? null : pairs.length === 0 ? (
+      {pairs === null ? null : pairs.items.length === 0 ? (
         <p className="notice">Aucun doublon potentiel détecté.</p>
       ) : (
         <ul className="search-results">
-          {pairs.map((pair) => {
+          {pairs.total > pairs.items.length ? (
+            <li className="notice">
+              {countedFr(pairs.total, {
+                one: 'doublon possible détecté au total',
+                other: 'doublons possibles détectés au total',
+              })}{' '}
+              — les {pairs.items.length} scores les plus élevés sont affichés ci-dessous.
+            </li>
+          ) : null}
+          {pairs.items.map((pair) => {
             const [left, right] = pair.persons;
             return (
               <li key={`${left.id}:${right.id}`}>
@@ -1791,14 +1804,17 @@ function useVerification({ persons, runToken, personLabelById }) {
     setRunning(true);
     const timer = setTimeout(async () => {
       const safe = (promise) => Promise.resolve(promise).catch(() => []);
-      const [duplicates, cycles, timeline] = await Promise.all([
+      const [duplicatesResult, cycles, timeline] = await Promise.all([
         safe(client.search.duplicates()),
         safe(client.graph.cycles()),
         safe(client.graph.timeline()),
       ]);
       if (cancelled) return;
+      const duplicates = Array.isArray(duplicatesResult)
+        ? duplicatesResult
+        : (duplicatesResult?.items ?? []);
       const byPerson = buildVerificationIssues({
-        duplicates: duplicates ?? [],
+        duplicates,
         cycles: cycles ?? [],
         timeline: timeline ?? [],
       });
