@@ -120,12 +120,13 @@ const api = {
   },
 
   accounts: {
-    create: (data, performedBy) => invoke(IPC_CHANNELS.ACCOUNTS_CREATE, { data, performedBy }),
+    create: (data, token, performedBy) =>
+      invoke(IPC_CHANNELS.ACCOUNTS_CREATE, { data, token, performedBy }),
     list: () => invoke(IPC_CHANNELS.ACCOUNTS_LIST),
     login: (name, pin) => invoke(IPC_CHANNELS.ACCOUNTS_LOGIN, { name, pin }),
     logout: (token) => invoke(IPC_CHANNELS.ACCOUNTS_LOGOUT, { token }),
-    remove: (id, token, performedBy) =>
-      invoke(IPC_CHANNELS.ACCOUNTS_REMOVE, { id, token, performedBy }),
+    remove: (id, token, pin, performedBy) =>
+      invoke(IPC_CHANNELS.ACCOUNTS_REMOVE, { id, token, pin, performedBy }),
   },
 
   backups: {

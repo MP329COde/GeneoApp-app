@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { createBackupController } from '../controllers/backup.controller.js';
-import { requireSession } from '../middleware/require-session.js';
+import { requireProtectedSession } from '../middleware/require-session.js';
 
 export function backupRoutes(services) {
   const controller = createBackupController(services);
   const router = Router();
 
-  router.use(requireSession(services));
+  router.use(requireProtectedSession(services));
 
   router.post('/', controller.create);
   router.get('/', controller.list);

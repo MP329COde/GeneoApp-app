@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError, UnauthorizedError } from '../errors.js';
+import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from '../errors.js';
 import { assertId, validateAccountCreate, validateAccountLogin } from '../validation/schemas.js';
 import { hashPin, verifyPin } from './password.js';
 
@@ -18,8 +18,15 @@ export class AccountService {
     this.sessionStore = sessionStore;
   }
 
-  create(payload, options) {
+  create(payload, options = {}) {
     const { name, pin } = validateAccountCreate(payload);
+    // Règle (a) : dès qu'au moins un profil existe, créer un nouveau profil
+    // exige une session valide (sinon un intrus non authentifié pourrait se
+    // créer librement un profil non protégé et s'en servir pour contourner
+    // le PIN des profils existants).
+    if (this.repository.list().length > 0) {
+      this.requireSession(options.sessionToken);
+    }
     if (this.repository.findByName(name)) {
       throw new ConflictError(`Un profil nommé "${name}" existe déjà`);
     }
@@ -31,10 +38,26 @@ export class AccountService {
     return this.repository.list().map(toPublicAccount);
   }
 
-  remove(id, options) {
+  remove(id, options = {}) {
     assertId(id);
     const existing = this.repository.findById(id);
     if (!existing) throw new NotFoundError(`Profil introuvable : ${id}`);
+
+    // Règle (b) : suppression/modification de profils = opération sensible.
+    const session = this.requireProtectedSession(options.sessionToken);
+
+    // Règle (c) : un profil ne peut supprimer que lui-même.
+    if (session.account.id !== existing.id) {
+      throw new ForbiddenError('Un profil ne peut supprimer ou modifier que lui-même');
+    }
+
+    // Règle (c) : supprimer un profil protégé exige son propre PIN.
+    if (existing.pin_hash !== null) {
+      if (!options.pin || !verifyPin(options.pin, existing.pin_hash)) {
+        throw new UnauthorizedError('Code PIN requis pour supprimer ce profil');
+      }
+    }
+
     return this.repository.remove(id, options);
   }
 
@@ -65,6 +88,26 @@ export class AccountService {
     const session = this.sessionStore.resolve(token);
     if (!session) {
       throw new UnauthorizedError('Session expirée ou invalide');
+    }
+    const account = this.repository.findById(session.accountId);
+    if (!account) {
+      this.sessionStore.revoke(token);
+      throw new UnauthorizedError('Session expirée ou invalide');
+    }
+    return { ...session, account };
+  }
+
+  // Règle (b) : une session ouverte par un profil sans PIN n'a accès à
+  // aucune opération sensible (sauvegardes, restauration, export chiffré,
+  // purge de la corbeille, suppression/modification de profils, dossier de
+  // travail et miroir) tant qu'il existe au moins un profil protégé par PIN.
+  requireProtectedSession(token) {
+    const session = this.requireSession(token);
+    const hasProtectedAccount = this.repository.list().some((account) => account.pin_hash !== null);
+    if (session.account.pin_hash === null && hasProtectedAccount) {
+      throw new ForbiddenError(
+        "Ce profil sans code n'a pas accès aux opérations sensibles tant qu'un profil protégé par code existe",
+      );
     }
     return session;
   }

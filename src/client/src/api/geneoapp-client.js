@@ -141,12 +141,17 @@ function createHttpClient() {
         fetchJson('/api/gedcom/import-archive', { method: 'POST', body: { contentBase64 } }),
     },
     accounts: {
-      create: (data) => fetchJson('/api/accounts', { method: 'POST', body: data }),
+      create: (data, token) => fetchJson('/api/accounts', { method: 'POST', body: data, token }),
       list: () => fetchJson('/api/accounts'),
       login: (name, pin) =>
         fetchJson('/api/accounts/login', { method: 'POST', body: { name, pin } }),
       logout: (token) => fetchJson('/api/accounts/logout', { method: 'POST', token }),
-      remove: (id, token) => fetchJson(`/api/accounts/${id}`, { method: 'DELETE', token }),
+      remove: (id, token, pin) =>
+        fetchJson(`/api/accounts/${id}`, {
+          method: 'DELETE',
+          token,
+          body: pin ? { pin } : undefined,
+        }),
     },
     backups: {
       create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
@@ -394,11 +399,11 @@ function createIpcClient(bridge) {
       importArchive: (contentBase64) => bridge.gedcom.importArchive(contentBase64),
     },
     accounts: {
-      create: (data) => bridge.accounts.create(data),
+      create: (data, token) => bridge.accounts.create(data, token),
       list: () => bridge.accounts.list(),
       login: (name, pin) => bridge.accounts.login(name, pin),
       logout: (token) => bridge.accounts.logout(token),
-      remove: (id, token) => bridge.accounts.remove(id, token),
+      remove: (id, token, pin) => bridge.accounts.remove(id, token, pin),
     },
     backups: {
       create: (data, token) => bridge.backups.create(data, token),

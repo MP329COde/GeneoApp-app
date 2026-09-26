@@ -10,7 +10,9 @@ export function accountRoutes(services) {
   router.get('/', controller.list);
   router.post('/login', controller.login);
   router.post('/logout', requireSession(services), controller.logout);
-  router.delete('/:id', requireSession(services), controller.remove);
+  // L'authentification/autorisation fines (session protégée, self-only, PIN)
+  // sont gérées dans AccountService.remove — voir règles (b) et (c).
+  router.delete('/:id', controller.remove);
 
   return router;
 }

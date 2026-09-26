@@ -23,12 +23,20 @@ test('POST /api/accounts crée un profil sans code (profil ouvert)', async () =>
 });
 
 test('POST /api/accounts refuse un nom déjà pris', async () => {
+  // Depuis la correction du contournement du PIN, créer un profil alors
+  // qu'un profil existe déjà exige une session valide (règle a) : on se
+  // connecte avec le premier profil avant de tenter le doublon.
   const server = await startTestServer();
   try {
     await requestJson(server.baseUrl, '/api/accounts', { method: 'POST', body: { name: 'Alice' } });
+    const { body: login } = await requestJson(server.baseUrl, '/api/accounts/login', {
+      method: 'POST',
+      body: { name: 'Alice' },
+    });
     const { status } = await requestJson(server.baseUrl, '/api/accounts', {
       method: 'POST',
       body: { name: 'Alice' },
+      headers: { 'x-geneoapp-session': login.token },
     });
 
     assert.equal(status, 409);
@@ -44,13 +52,33 @@ test('POST /api/accounts refuse un nom déjà pris même avec une casse différe
       method: 'POST',
       body: { name: 'Bob', pin: '1234' },
     });
+    const { body: login } = await requestJson(server.baseUrl, '/api/accounts/login', {
+      method: 'POST',
+      body: { name: 'Bob', pin: '1234' },
+    });
 
     const { status } = await requestJson(server.baseUrl, '/api/accounts', {
       method: 'POST',
       body: { name: 'bob' },
+      headers: { 'x-geneoapp-session': login.token },
     });
 
     assert.equal(status, 409);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/accounts refuse la création sans session dès qu’un profil existe', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/accounts', { method: 'POST', body: { name: 'Alice' } });
+    const { status } = await requestJson(server.baseUrl, '/api/accounts', {
+      method: 'POST',
+      body: { name: 'Intrus' },
+    });
+
+    assert.equal(status, 401);
   } finally {
     await server.close();
   }

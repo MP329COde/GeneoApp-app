@@ -23,6 +23,14 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class ForbiddenError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ForbiddenError';
+    this.status = 403;
+  }
+}
+
 export class ConflictError extends Error {
   constructor(message) {
     super(message);

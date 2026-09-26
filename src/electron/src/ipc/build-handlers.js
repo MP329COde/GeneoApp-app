@@ -288,8 +288,8 @@ function buildRawHandlers(services, workspace, storage) {
       gedcom.importArchive(contentBase64, { performedBy: actorOf(performedBy) }),
     ),
 
-    [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, performedBy }) =>
-      accounts.create(data, { performedBy: actorOf(performedBy) }),
+    [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, token, performedBy }) =>
+      accounts.create(data, { performedBy: actorOf(performedBy), sessionToken: token }),
     ),
     [IPC_CHANNELS.ACCOUNTS_LIST]: wrap(() => accounts.list()),
     [IPC_CHANNELS.ACCOUNTS_LOGIN]: wrap(({ name, pin }) => accounts.login({ name, pin })),
@@ -297,50 +297,50 @@ function buildRawHandlers(services, workspace, storage) {
       accounts.logout(token);
       return { loggedOut: true };
     }),
-    [IPC_CHANNELS.ACCOUNTS_REMOVE]: wrap(({ id, token, performedBy }) => {
-      accounts.requireSession(token);
-      accounts.remove(id, { performedBy: actorOf(performedBy) });
+    [IPC_CHANNELS.ACCOUNTS_REMOVE]: wrap(({ id, token, pin, performedBy }) => {
+      accounts.remove(id, { performedBy: actorOf(performedBy), sessionToken: token, pin });
       return { removed: true };
     }),
 
-    // Les opérations sensibles (sauvegarde/restauration, purge de corbeille)
-    // exigent un jeton de session valide dans le payload, comme côté HTTP
-    // (en-tête x-geneoapp-session) : requireSession lève si absent/expiré.
+    // Les opérations sensibles (sauvegarde/restauration, purge de corbeille,
+    // dossier de travail/miroir) exigent une session protégée : un profil
+    // sans PIN y est refusé tant qu'un profil protégé par PIN existe (voir
+    // AccountService.requireProtectedSession, même règle que côté HTTP).
     [IPC_CHANNELS.BACKUPS_CREATE]: wrap(({ data, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.create(data, { performedBy: actorOf(performedBy) });
     }),
     [IPC_CHANNELS.BACKUPS_LIST]: wrap(({ token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.list();
     }),
     [IPC_CHANNELS.BACKUPS_VERIFY]: wrap(({ filename, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.verify(filename);
     }),
     [IPC_CHANNELS.BACKUPS_RESTORE]: wrap(({ filename, kind, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return kind === 'sqlite'
         ? backups.restoreFile(filename)
         : backups.restoreLogical(filename, { performedBy: actorOf(performedBy) });
     }),
 
     [IPC_CHANNELS.BACKUPS_EXPORT_ENCRYPTED]: wrap(({ filename, passphrase, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.exportEncrypted(filename, passphrase);
     }),
     [IPC_CHANNELS.BACKUPS_IMPORT_ENCRYPTED]: wrap(({ contentBase64, passphrase, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.importEncrypted(contentBase64, passphrase);
     }),
 
     [IPC_CHANNELS.TRASH_LIST]: wrap(() => trash.list()),
     [IPC_CHANNELS.TRASH_RESTORE]: wrap(({ table, id, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return trash.restore(table, id, { performedBy: actorOf(performedBy) });
     }),
     [IPC_CHANNELS.TRASH_PURGE]: wrap(({ table, id, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       trash.purge(table, id, { performedBy: actorOf(performedBy) });
       return { purged: true };
     }),
@@ -500,11 +500,11 @@ function buildRawHandlers(services, workspace, storage) {
       ? {
           [IPC_CHANNELS.STORAGE_STATUS]: wrap(() => storage.status()),
           [IPC_CHANNELS.STORAGE_SET_MIRROR]: wrap(({ mirrorDir, token }) => {
-            services.accounts.requireSession(token);
+            services.accounts.requireProtectedSession(token);
             return storage.setMirrorDir(mirrorDir ?? null);
           }),
           [IPC_CHANNELS.STORAGE_SET_DATA_DIR]: wrap(({ dataDir, token }) => {
-            services.accounts.requireSession(token);
+            services.accounts.requireProtectedSession(token);
             return storage.setDataDir(dataDir ?? null);
           }),
         }

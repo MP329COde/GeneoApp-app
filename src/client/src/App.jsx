@@ -3039,6 +3039,7 @@ function StorageSection({ token }) {
 function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backups' }) {
   const [backups, setBackups] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [removePin, setRemovePin] = useState('');
   const [passphrase, setPassphrase] = useState('');
   const [backupStatus, setBackupStatus] = useState(null);
   const [trashItems, setTrashItems] = useState(null);
@@ -3178,7 +3179,11 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
     setBusy(true);
     setActionError(null);
     try {
-      await client.accounts.remove(session.account.id, session.token);
+      if (removePin) {
+        await client.accounts.remove(session.account.id, session.token, removePin);
+      } else {
+        await client.accounts.remove(session.account.id, session.token);
+      }
       onLogout();
     } catch (removeError) {
       setActionError(removeError.message);
@@ -3231,12 +3236,21 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
             </p>
             {confirming === 'account' ? (
               <div className="gedcom-panel__actions">
+                {session.account.hasPin ? (
+                  <input
+                    type="password"
+                    aria-label="Code PIN du profil"
+                    placeholder="Code PIN"
+                    value={removePin}
+                    onChange={(event) => setRemovePin(event.target.value)}
+                  />
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
                   variant="danger"
                   onClick={handleRemoveAccount}
-                  disabled={busy}
+                  disabled={busy || (session.account.hasPin && !removePin)}
                 >
                   Confirmer la suppression du profil
                 </Button>
@@ -3244,7 +3258,10 @@ function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backu
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => setConfirming(null)}
+                  onClick={() => {
+                    setConfirming(null);
+                    setRemovePin('');
+                  }}
                 >
                   Annuler
                 </Button>
