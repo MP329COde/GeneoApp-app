@@ -119,3 +119,55 @@ maintenabilité). Chaque phase validée par `npm run lint && npm run format:chec
   sur Node 20.20.2, alors que `package.json` demande `>=22.0.0` : incompatibilité `undici`/`jsdom`. Sous
   Node 24 (vérifié réellement, pas supposé), les 18 fichiers de test et 102 tests passent — voir la correction
   du test obsolète « personnalise le menu... » ci-dessus, seul échec réel une fois l'environnement correct.
+
+## Contre-audit 2026-09-26 (même branche `fix/audit-2026-09`)
+
+Un contre-audit a trouvé 10 problèmes restants après l'audit initial ci-dessus. Traités par ordre de priorité,
+un commit par point, test qui reproduit le bug avant chaque correctif :
+
+| # | Problème | Correctif | Commit |
+|---|---|---|---|
+| 1 | Contournement complet du PIN : un intrus pouvait créer un profil libre, se connecter, lire les sauvegardes et supprimer un profil protégé (201/201/200/200/204) | Création d'un profil exige une session dès qu'un profil existe ; opérations sensibles bloquées pour tout profil sans PIN tant qu'un profil protégé existe (`requireProtectedSession`, HTTP + IPC) ; suppression réservée à soi-même et exigeant son propre PIN | `017f68e` |
+| 2a | `test:client` réellement rouge (test « Documenter » obsolète) | Mis à jour pour le vrai libellé « Documents & sources » | `3153d3b` |
+| 2b | E2E « Indexer maintenant » ambigu et non autonome seul | `exact: true` + création d'une personne en préalable | `020ad91` |
+| 2c | Fausse conclusion « pdftotext absent » jamais vérifiée | Cause réelle identifiée (`Promise.withResolvers`, Node < 22) et documentée ; garde-fou `scripts/check-node-version.js` | `d4f276e` |
+| 3 | Liste virtualisée : lignes qui se chevauchent (44px alloués, ~78px de contenu réel) | Mode compact une seule ligne, tronqué, hauteur réelle = `PERSON_ROW_HEIGHT` ; test E2E 220 personnes | `be82360` |
+| 4 | 3439 notifications après un import massif | Regroupement par type (`verification-group:<type>`), plafond serveur de 20 créations/appel | `fc7c6e1` |
+| 5 | Formulaire d'identité n'éditait pas prénom/nom/nom de naissance/sexe | 4 champs ajoutés, Ctrl+Z et historique déjà génériques (aucune plomberie dédiée nécessaire) | `126b634` |
+| 9 | `qa/reports/` : 49 Mo de captures/vidéos/archives suivies par git | Retiré du suivi (fichiers gardés sur disque), seuls les `.md` restent suivis | `065d6f3` |
+
+### Ce qui n'a pas été fait dans le contre-audit (liste honnête)
+
+- **Point 6 (mobile 390×844, barre d'onglets en bas)** : non traité. Nécessite une refonte du layout mobile
+  (barre de navigation fixe à 4 onglets + bouton « Plus », minicarte repliée par défaut) qui touche à la fois
+  `App.jsx` et une bonne partie d'`App.css` ; reporté faute de budget suffisant pour le vérifier proprement
+  (viewport E2E dédié, non-régression desktop/tablette).
+- **Point 7 (référentiel de communes françaises pour la carte)** : non traité. Nécessite d'embarquer et de
+  documenter la licence d'un jeu de données ouvert (INSEE COG ou GeoNames FR), un écran de rapprochement avec
+  gestion des homonymes (choix du département) et un aperçu/confirmation avant écriture — travail de fond,
+  distinct des corrections ponctuelles ci-dessus.
+- **Point 8 (vérification réelle de la CSP Electron pour le mode carte)** : non traité. Nécessite de lancer
+  l'application Electron packagée (pas seulement les tests unitaires de `content-security-policy.js`) et
+  d'observer le comportement réel réseau/console en basculant le mode carte, ce qui n'a pas pu être fait dans
+  cette session.
+- **Point 10 (découpage d'`App.jsx` 4645 lignes / `App.css` 3344 lignes)** : non traité, comme annoncé dans le
+  brief lui-même (« après les points 1 à 9 ») — et les points 6, 7, 8 ci-dessus n'étant pas faits, ce
+  découpage aurait fait bouger une base de code pas encore stabilisée. `SettingsPanel.jsx` est déjà extrait
+  dans `src/client/src/views/` (fait avant cette session), montrant que le découpage est amorcé mais loin
+  d'être terminé.
+
+### Vérification finale (contre-audit, sous Node 24 — requis par `engines.node`)
+
+- `npm run lint` : succès (0 erreur)
+- `npm run format:check` : succès (Prettier conforme)
+- `npm test` : succès, toutes les suites (smoke, db, server — y compris le test PDF corrigé —, api, electron,
+  packaging, cli, client)
+- `npm run test:client` : succès, 18 fichiers / 105 tests
+- `npm run build` : succès
+- `npm run test:e2e` : succès, 26/26 (24 existants + 2 nouveaux : liste virtualisée, édition identité + Ctrl+Z)
+- `node --test test/server/performance.test.js` : succès, 3/3
+- Reproduction curl du point 1 (serveur réel, base SQLite temporaire) : créer `owner` avec PIN → 201 ;
+  créer `intrus` sans session → **401** (était 201) ; login `intrus` (profil jamais créé) → **401** (était
+  200) ; `GET /api/backups` sans session → **401** (était 200 avec le jeton de l'intrus, 204 pour la
+  suppression du profil protégé). La chaîne est bloquée dès la première étape, ce qui confirme qu'aucune des
+  étapes suivantes de la reproduction originale n'est plus atteignable.
