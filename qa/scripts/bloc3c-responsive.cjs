@@ -56,7 +56,9 @@ const screens = [
           .waitForSelector('text=Chargement...', { state: 'detached', timeout: 12000 })
           .catch(() => {});
       }
-      await page.screenshot({ path: path.join(SHOTS, `${scr.label}_${vp.name}.png`), fullPage: false }).catch(() => {});
+      await page
+        .screenshot({ path: path.join(SHOTS, `${scr.label}_${vp.name}.png`), fullPage: false })
+        .catch(() => {});
     }
     await context.close();
   }

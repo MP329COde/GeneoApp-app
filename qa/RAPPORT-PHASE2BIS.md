@@ -8,6 +8,7 @@ cette passe — seuls des fichiers sous `qa/` ont été créés (captures dans
 ## 1. Contexte repris
 
 Phase 2 a livré 4 commits sur `qa-fixes` :
+
 - `e565e78` fix(QA-001,QA-004) : modale bloquante robuste + contraste badge notifications
 - `a0eda4f` fix(QA-005) : libellés accessibles sur le menu latéral compact
 - `547e4b3` fix(QA-003) : bloque la création d'un arbre avec un nom déjà utilisé
@@ -34,7 +35,7 @@ séquentielle) :
 - **16 tests passés / 18** (2,9 min).
 - **2 échecs**, tous deux sur le même test `BUG-001` (modale bloquante), uniquement en
   `chromium-mobile-375x667` et `chromium-tablet-768x1024` : le bouton `.new-person-button
-  button` (« + Nouvelle personne ») n'est jamais visible à ces largeurs.
+button` (« + Nouvelle personne ») n'est jamais visible à ces largeurs.
 
 Investigation complémentaire (script dédié) : le bouton **existe bien dans le DOM** sur
 tablette/mobile mais reste **caché** (`isVisible() === false`) — le panneau gauche
@@ -84,6 +85,7 @@ lu et vérifié manuellement), sur desktop 1440×900 sauf mention contraire.
 18 captures dans `qa/reports/screenshots-phase2bis/` (`<viewport>-<écran>.png`).
 
 Constats à la relecture des captures :
+
 - Aucune erreur console, aucune requête réseau en échec, aucun échec de clic de
   navigation sur les 18 combinaisons (capturé automatiquement, tableau vide pour les 3
   viewports).
@@ -103,6 +105,7 @@ Constats à la relecture des captures :
 ## 5. Erreurs console/réseau
 
 Aucune nouvelle erreur console ni requête réseau échouée détectée pendant :
+
 - les 4 scénarios de vérification manuelle des correctifs,
 - le tour de navigation à 3 viewports (6 écrans × 3 viewports = 18 combinaisons).
 
@@ -137,6 +140,7 @@ et non par un changement de comportement introduit par les 4 commits de Phase 2.
 ## 8. Statut final
 
 **GO** pour la stabilité de la branche `qa-fixes` sur le périmètre vérifié :
+
 - Les 4 correctifs (BUG-001, BUG-003, BUG-004, BUG-005) sont confirmés fonctionnels en
   conditions réelles (pas seulement via leurs tests dédiés).
 - La suite Playwright ne régresse pas (16/18 verts en exécution séquentielle, 2 échecs
@@ -145,6 +149,7 @@ et non par un changement de comportement introduit par les 4 commits de Phase 2.
   viewports couverts.
 
 Réserves à traiter séparément (non bloquantes pour ce GO, mais à planifier) :
+
 - Adapter ou compléter le test `BUG-001` pour tablette/mobile (identifier comment créer
   une personne quand le panneau gauche est masqué), ou documenter explicitement que la
   création de personne n'est prévue qu'en desktop.

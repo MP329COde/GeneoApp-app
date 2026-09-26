@@ -7,7 +7,9 @@ test.use({
   launchOptions: { slowMo: 350 },
 });
 
-test('parcours complet : accueil -> arbre QA -> recherche -> fiche personne -> retour', async ({ page }) => {
+test('parcours complet : accueil -> arbre QA -> recherche -> fiche personne -> retour', async ({
+  page,
+}) => {
   // 1. Ouverture de l'app
   await page.goto('/');
   await page.waitForTimeout(1200);
@@ -50,7 +52,6 @@ test('parcours complet : accueil -> arbre QA -> recherche -> fiche personne -> r
   }
 
   // 5. Ouverture d'une fiche personne (via panneau gauche)
-  const firstPerson = page.locator('aside, [class*="sidebar" i]').first().locator('text=/./').first();
   const personneCard = page.locator('text=Dupont').first();
   if (await personneCard.count()) {
     await personneCard.click().catch(() => {});

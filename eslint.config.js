@@ -5,7 +5,14 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['**/dist/**', '**/storybook-static/**', '**/node_modules/**'],
+    ignores: [
+      '**/dist/**',
+      '**/storybook-static/**',
+      '**/node_modules/**',
+      // Rapport HTML Playwright généré (assets vendor minifiés, non maintenus
+      // manuellement) : régénéré par `npm run test:e2e`, jamais par une main humaine.
+      'qa/reports/**',
+    ],
   },
   js.configs.recommended,
   {

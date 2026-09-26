@@ -19,7 +19,7 @@ const BASE = 'http://127.0.0.1:5173';
   if (await closeBtn.count()) await closeBtn.click().catch(() => {});
 
   const results = await new AxeBuilder({ page }).analyze();
-  const cc = results.violations.find(v => v.id === 'color-contrast');
+  const cc = results.violations.find((v) => v.id === 'color-contrast');
   if (cc) {
     console.log('Impact:', cc.impact);
     console.log('Help:', cc.help);

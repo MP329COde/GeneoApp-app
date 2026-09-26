@@ -2,63 +2,150 @@
   "nomFamille": "Müller / N'Diaye",
   "description": "Famille fictive rhénane/sénégalaise mêlée, 4 générations. Teste tréma, apostrophe, remariages multiples, professions variées.",
   "generations": [
-    { "gen": 1, "personnes": [
-      { "id": "F2-G1-1", "prenom": "Johann", "nom": "Müller", "sexe": "M",
-        "naissance": { "date": "1750-02-02", "lieu": "Strasbourg, Alsace" },
-        "deces": { "date": "1810-01-01", "lieu": "Strasbourg, Alsace" },
-        "profession": "Meunier",
-        "unions": [ { "conjointId": "F2-G1-2", "date": "1772-06-15", "lieu": "Strasbourg, Alsace", "type": "mariage" } ] },
-      { "id": "F2-G1-2", "prenom": "Anne-Catherine", "nom": "Weber", "sexe": "F",
-        "naissance": { "date": "1753-03-03", "lieu": "Colmar, Alsace" },
-        "deces": { "date": "1795-11-11", "lieu": "Strasbourg, Alsace" } }
-    ]},
-    { "gen": 2, "personnes": [
-      { "id": "F2-G2-1", "prenom": "Frédéric", "nom": "Müller", "sexe": "M",
-        "parents": ["F2-G1-1", "F2-G1-2"],
-        "naissance": { "date": "1774-09-09", "lieu": "Strasbourg, Alsace" },
-        "deces": { "date": "1840-07-07", "lieu": "Nantes, Bretagne" },
-        "profession": "Négociant",
-        "unions": [ { "conjointId": "F2-G2-2", "date": "1798-01-20", "lieu": "Nantes, Bretagne", "type": "mariage" } ] },
-      { "id": "F2-G2-2", "prenom": "Aïssatou", "nom": "N'Diaye", "sexe": "F",
-        "naissance": { "date": "1778-04-04", "lieu": "Saint-Louis, Sénégal" },
-        "deces": { "date": "1850-02-02", "lieu": "Nantes, Bretagne" },
-        "note": "Nom avec apostrophe et signe diacritique (tréma sur ï) — cas de recherche exigeant." }
-    ]},
-    { "gen": 3, "personnes": [
-      { "id": "F2-G3-1", "prenom": "Paul", "nom": "Müller-N'Diaye", "sexe": "M",
-        "parents": ["F2-G2-1", "F2-G2-2"],
-        "naissance": { "date": "1799-12-25", "lieu": "Nantes, Bretagne" },
-        "deces": { "date": "1865-05-05", "lieu": "Nantes, Bretagne" },
-        "profession": "Armateur",
-        "unions": [
-          { "conjointId": "F2-G3-2", "date": "1822-03-03", "lieu": "Nantes, Bretagne", "type": "mariage" },
-          { "conjointId": "F2-G3-3", "date": "1835-08-08", "lieu": "Nantes, Bretagne", "type": "remariage", "note": "Veuf en 1834" }
-        ] },
-      { "id": "F2-G3-2", "prenom": "Joséphine", "nom": "Dupont", "sexe": "F",
-        "naissance": { "date": "1802-06-06", "lieu": "Nantes, Bretagne" },
-        "deces": { "date": "1834-04-01", "lieu": "Nantes, Bretagne" },
-        "note": "Décès en couches (test cas limite date décès proche naissance enfant)." },
-      { "id": "F2-G3-3", "prenom": "Rosalie", "nom": "Dupond", "sexe": "F",
-        "naissance": { "date": "1810-10-10", "lieu": "Rennes, Bretagne" },
-        "deces": { "date": "1878-09-09", "lieu": "Nantes, Bretagne" },
-        "note": "Variante orthographique Dupond, sans lien de parenté connu avec Joséphine Dupont." }
-    ]},
-    { "gen": 4, "personnes": [
-      { "id": "F2-G4-1", "prenom": "Lucien", "nom": "Müller-N'Diaye", "sexe": "M",
-        "parents": ["F2-G3-1", "F2-G3-2"],
-        "naissance": { "date": "1823-01-01", "lieu": "Nantes, Bretagne" },
-        "deces": { "date": "1890-01-01", "lieu": "Nantes, Bretagne" },
-        "profession": "Médecin de marine" },
-      { "id": "F2-G4-2", "prenom": "Berthe", "nom": "Müller-N'Diaye", "sexe": "F",
-        "parents": ["F2-G3-1", "F2-G3-3"],
-        "naissance": { "date": "1837-02-14", "lieu": "Nantes, Bretagne" },
-        "deces": { "date": "1901-03-03", "lieu": "Paris" },
-        "note": "Demi-sœur de Lucien (issue de la seconde union de Paul)." },
-      { "id": "F2-G4-3", "prenom": "Gabriel", "nom": "Müller-N'Diaye", "sexe": "M",
-        "parents": ["F2-G3-1", "F2-G3-3"],
-        "naissance": { "date": "1840-11-30", "lieu": "Nantes, Bretagne" },
-        "deces": { "date": null, "lieu": null },
-        "note": "Aucune date de décès connue (test cas limite : personne potentiellement en vie / donnée manquante)." }
-    ]}
+    {
+      "gen": 1,
+      "personnes": [
+        {
+          "id": "F2-G1-1",
+          "prenom": "Johann",
+          "nom": "Müller",
+          "sexe": "M",
+          "naissance": { "date": "1750-02-02", "lieu": "Strasbourg, Alsace" },
+          "deces": { "date": "1810-01-01", "lieu": "Strasbourg, Alsace" },
+          "profession": "Meunier",
+          "unions": [
+            {
+              "conjointId": "F2-G1-2",
+              "date": "1772-06-15",
+              "lieu": "Strasbourg, Alsace",
+              "type": "mariage"
+            }
+          ]
+        },
+        {
+          "id": "F2-G1-2",
+          "prenom": "Anne-Catherine",
+          "nom": "Weber",
+          "sexe": "F",
+          "naissance": { "date": "1753-03-03", "lieu": "Colmar, Alsace" },
+          "deces": { "date": "1795-11-11", "lieu": "Strasbourg, Alsace" }
+        }
+      ]
+    },
+    {
+      "gen": 2,
+      "personnes": [
+        {
+          "id": "F2-G2-1",
+          "prenom": "Frédéric",
+          "nom": "Müller",
+          "sexe": "M",
+          "parents": ["F2-G1-1", "F2-G1-2"],
+          "naissance": { "date": "1774-09-09", "lieu": "Strasbourg, Alsace" },
+          "deces": { "date": "1840-07-07", "lieu": "Nantes, Bretagne" },
+          "profession": "Négociant",
+          "unions": [
+            {
+              "conjointId": "F2-G2-2",
+              "date": "1798-01-20",
+              "lieu": "Nantes, Bretagne",
+              "type": "mariage"
+            }
+          ]
+        },
+        {
+          "id": "F2-G2-2",
+          "prenom": "Aïssatou",
+          "nom": "N'Diaye",
+          "sexe": "F",
+          "naissance": { "date": "1778-04-04", "lieu": "Saint-Louis, Sénégal" },
+          "deces": { "date": "1850-02-02", "lieu": "Nantes, Bretagne" },
+          "note": "Nom avec apostrophe et signe diacritique (tréma sur ï) — cas de recherche exigeant."
+        }
+      ]
+    },
+    {
+      "gen": 3,
+      "personnes": [
+        {
+          "id": "F2-G3-1",
+          "prenom": "Paul",
+          "nom": "Müller-N'Diaye",
+          "sexe": "M",
+          "parents": ["F2-G2-1", "F2-G2-2"],
+          "naissance": { "date": "1799-12-25", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": "1865-05-05", "lieu": "Nantes, Bretagne" },
+          "profession": "Armateur",
+          "unions": [
+            {
+              "conjointId": "F2-G3-2",
+              "date": "1822-03-03",
+              "lieu": "Nantes, Bretagne",
+              "type": "mariage"
+            },
+            {
+              "conjointId": "F2-G3-3",
+              "date": "1835-08-08",
+              "lieu": "Nantes, Bretagne",
+              "type": "remariage",
+              "note": "Veuf en 1834"
+            }
+          ]
+        },
+        {
+          "id": "F2-G3-2",
+          "prenom": "Joséphine",
+          "nom": "Dupont",
+          "sexe": "F",
+          "naissance": { "date": "1802-06-06", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": "1834-04-01", "lieu": "Nantes, Bretagne" },
+          "note": "Décès en couches (test cas limite date décès proche naissance enfant)."
+        },
+        {
+          "id": "F2-G3-3",
+          "prenom": "Rosalie",
+          "nom": "Dupond",
+          "sexe": "F",
+          "naissance": { "date": "1810-10-10", "lieu": "Rennes, Bretagne" },
+          "deces": { "date": "1878-09-09", "lieu": "Nantes, Bretagne" },
+          "note": "Variante orthographique Dupond, sans lien de parenté connu avec Joséphine Dupont."
+        }
+      ]
+    },
+    {
+      "gen": 4,
+      "personnes": [
+        {
+          "id": "F2-G4-1",
+          "prenom": "Lucien",
+          "nom": "Müller-N'Diaye",
+          "sexe": "M",
+          "parents": ["F2-G3-1", "F2-G3-2"],
+          "naissance": { "date": "1823-01-01", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": "1890-01-01", "lieu": "Nantes, Bretagne" },
+          "profession": "Médecin de marine"
+        },
+        {
+          "id": "F2-G4-2",
+          "prenom": "Berthe",
+          "nom": "Müller-N'Diaye",
+          "sexe": "F",
+          "parents": ["F2-G3-1", "F2-G3-3"],
+          "naissance": { "date": "1837-02-14", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": "1901-03-03", "lieu": "Paris" },
+          "note": "Demi-sœur de Lucien (issue de la seconde union de Paul)."
+        },
+        {
+          "id": "F2-G4-3",
+          "prenom": "Gabriel",
+          "nom": "Müller-N'Diaye",
+          "sexe": "M",
+          "parents": ["F2-G3-1", "F2-G3-3"],
+          "naissance": { "date": "1840-11-30", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": null, "lieu": null },
+          "note": "Aucune date de décès connue (test cas limite : personne potentiellement en vie / donnée manquante)."
+        }
+      ]
+    }
   ]
 }

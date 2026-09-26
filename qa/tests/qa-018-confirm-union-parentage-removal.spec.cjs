@@ -18,12 +18,17 @@ async function openFamiliesFor(page) {
 }
 
 async function selectPerson(page, name) {
-  await page.getByRole('button', { name: new RegExp(name) }).first().click();
+  await page
+    .getByRole('button', { name: new RegExp(name) })
+    .first()
+    .click();
   await page.waitForTimeout(400);
 }
 
 test.describe('QA-018 : confirmation avant de dissoudre une union ou retirer un lien de parenté', () => {
-  test('un clic sur "Dissoudre / supprimer" une union demande confirmation avant toute suppression', async ({ page }) => {
+  test('un clic sur "Dissoudre / supprimer" une union demande confirmation avant toute suppression', async ({
+    page,
+  }) => {
     const suffix = Date.now();
     const aliceId = await createPerson(page, `QA018-Alice-${suffix}`);
     const bobId = await createPerson(page, `QA018-Bob-${suffix}`);
@@ -53,10 +58,14 @@ test.describe('QA-018 : confirmation avant de dissoudre une union ou retirer un 
     // 2) Confirmer : l'union disparaît bien.
     page.once('dialog', (dialog) => dialog.accept());
     await dissolveButton.click();
-    await expect(page.getByRole('button', { name: 'Dissoudre / supprimer' })).toHaveCount(0, { timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Dissoudre / supprimer' })).toHaveCount(0, {
+      timeout: 10000,
+    });
   });
 
-  test('un clic sur "Retirer" un lien de parenté demande confirmation avant toute suppression', async ({ page }) => {
+  test('un clic sur "Retirer" un lien de parenté demande confirmation avant toute suppression', async ({
+    page,
+  }) => {
     const suffix = Date.now();
     const parentId = await createPerson(page, `QA018-Parent-${suffix}`);
     const childId = await createPerson(page, `QA018-Enfant-${suffix}`);

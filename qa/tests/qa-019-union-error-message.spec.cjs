@@ -18,12 +18,17 @@ async function openFamiliesFor(page) {
 }
 
 async function selectPerson(page, name) {
-  await page.getByRole('button', { name: new RegExp(name) }).first().click();
+  await page
+    .getByRole('button', { name: new RegExp(name) })
+    .first()
+    .click();
   await page.waitForTimeout(400);
 }
 
 test.describe('QA-019 : message d’erreur compréhensible si la dissolution d’une union échoue', () => {
-  test('en cas d’échec réseau, le message affiché ne contient aucun détail technique brut', async ({ page }) => {
+  test('en cas d’échec réseau, le message affiché ne contient aucun détail technique brut', async ({
+    page,
+  }) => {
     const suffix = Date.now();
     const aliceId = await createPerson(page, `QA019-Alice-${suffix}`);
     const bobId = await createPerson(page, `QA019-Bob-${suffix}`);

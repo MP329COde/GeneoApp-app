@@ -20,12 +20,17 @@ async function openFamiliesFor(page) {
 // Sélectionne une personne par son nom, qu'elle soit listée dans le panneau latéral
 // (bureau/tablette) ou dans la liste de personnes affichée en pleine largeur (mobile).
 async function selectPerson(page, name) {
-  await page.getByRole('button', { name: new RegExp(name) }).first().click();
+  await page
+    .getByRole('button', { name: new RegExp(name) })
+    .first()
+    .click();
   await page.waitForTimeout(400);
 }
 
 test.describe('QA-017 : libellés français pour le type d’union et le rôle du parent', () => {
-  test('les valeurs techniques (MARRIAGE, FATHER...) ne sont jamais affichées telles quelles', async ({ page }) => {
+  test('les valeurs techniques (MARRIAGE, FATHER...) ne sont jamais affichées telles quelles', async ({
+    page,
+  }) => {
     const suffix = Date.now();
     await createPerson(page, `QA017-Alice-${suffix}`);
     await createPerson(page, `QA017-Bob-${suffix}`);

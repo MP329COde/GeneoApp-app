@@ -679,7 +679,11 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (id) => {
-    if (!window.confirm('Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.')) {
+    if (
+      !window.confirm(
+        'Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.',
+      )
+    ) {
       return;
     }
     setBusy(true);
@@ -740,7 +744,9 @@ function ParentageSection({ persons, selected, onNavigate, onChange }) {
         <ul className="search-results">
           {parents.map((parentage) => (
             <li key={parentage.id}>
-              <Badge tone="neutral">{PARENT_ROLE_LABELS[parentage.parent_role] ?? parentage.parent_role}</Badge>{' '}
+              <Badge tone="neutral">
+                {PARENT_ROLE_LABELS[parentage.parent_role] ?? parentage.parent_role}
+              </Badge>{' '}
               <button
                 type="button"
                 className="person-card"
@@ -1180,7 +1186,8 @@ function EventsPanel({ selected }) {
           {events.map((item) => (
             <li key={item.id}>
               <Badge tone="neutral">{item.type}</Badge>{' '}
-              {item.value ? <strong>{item.value}</strong> : null} {item.date_text ?? '(date inconnue)'}
+              {item.value ? <strong>{item.value}</strong> : null}{' '}
+              {item.date_text ?? '(date inconnue)'}
               {item.place_id ? ` — ${placeLabelById(item.place_id)}` : ''}
               <Button
                 type="button"
@@ -1239,7 +1246,8 @@ function TimelinePanel({ onNavigate }) {
       {events.map((event) => (
         <li key={event.id}>
           <Badge tone="neutral">{event.type}</Badge>{' '}
-          {event.value ? <strong>{event.value}</strong> : null} {event.date_text ?? '(date inconnue)'}
+          {event.value ? <strong>{event.value}</strong> : null}{' '}
+          {event.date_text ?? '(date inconnue)'}
           {event.place_name ? ` — ${event.place_name}` : ''}
           {event.participants.length > 0 ? (
             <span>
@@ -1382,10 +1390,20 @@ function LocalMap({ places }) {
   return (
     <div className="local-map">
       <div className="local-map__controls">
-        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom((z) => Math.min(z * 1.4, 6))}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => setZoom((z) => Math.min(z * 1.4, 6))}
+        >
           Zoom +
         </Button>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom((z) => Math.max(z / 1.4, 1))}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => setZoom((z) => Math.max(z / 1.4, 1))}
+        >
           Zoom −
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={() => setZoom(1)}>
@@ -2217,7 +2235,7 @@ function StatisticsPanel() {
       .then(setTotals)
       .catch(() =>
         setStatsError(
-          "Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.",
+          'Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.',
         ),
       );
   }, []);
@@ -3415,7 +3433,7 @@ function PersonSheet({
       onDeleted?.(selected.id);
     } catch {
       setDeleteError(
-        "La suppression a échoué. Vérifiez votre connexion locale et réessayez, ou contactez le support si le problème persiste.",
+        'La suppression a échoué. Vérifiez votre connexion locale et réessayez, ou contactez le support si le problème persiste.',
       );
     } finally {
       setDeleting(false);
@@ -3458,7 +3476,11 @@ function PersonSheet({
           <Icon name="print" />
         </button>
         {confirmingDelete ? (
-          <div className="person-sheet__delete-confirm" role="alertdialog" aria-label="Confirmer la suppression">
+          <div
+            className="person-sheet__delete-confirm"
+            role="alertdialog"
+            aria-label="Confirmer la suppression"
+          >
             <p>Supprimer {personLabel(selected)} ? La personne sera déplacée vers la corbeille.</p>
             {deleteError ? (
               <p role="alert" className="form-error">

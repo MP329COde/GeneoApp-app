@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const path = require('path');
-function note(s, i) { console.log('[' + s + ']', JSON.stringify(i).slice(0, 300)); }
+function note(s, i) {
+  console.log('[' + s + ']', JSON.stringify(i).slice(0, 300));
+}
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -16,9 +18,14 @@ function note(s, i) { console.log('[' + s + ']', JSON.stringify(i).slice(0, 300)
     const restoreButtons = await page.getByRole('button', { name: /^Restaurer/i }).all();
     if (restoreButtons.length === 0) break;
     note('restore-click', await restoreButtons[0].textContent());
-    await restoreButtons[0].click({ timeout: 5000 }).catch((e) => note('bug-restore', String(e).slice(0, 200)));
+    await restoreButtons[0]
+      .click({ timeout: 5000 })
+      .catch((e) => note('bug-restore', String(e).slice(0, 200)));
     await page.waitForTimeout(600);
   }
-  await page.screenshot({ path: path.join(__dirname, '..', 'reports', 'screenshots-bloc2', 'apres-restauration.png'), fullPage: true });
+  await page.screenshot({
+    path: path.join(__dirname, '..', 'reports', 'screenshots-bloc2', 'apres-restauration.png'),
+    fullPage: true,
+  });
   await browser.close();
 })();

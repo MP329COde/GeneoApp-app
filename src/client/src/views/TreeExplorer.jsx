@@ -87,7 +87,10 @@ function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
         {sosa ? (
           <span className="data-id">Sosa {sosa}</span>
         ) : sosaAmbiguous ? (
-          <span className="data-id" title="Filiation père/mère non déterminée pour ce parent (rôle inconnu ou ambigu) : aucun numéro Sosa fiable ne peut être attribué.">
+          <span
+            className="data-id"
+            title="Filiation père/mère non déterminée pour ce parent (rôle inconnu ou ambigu) : aucun numéro Sosa fiable ne peut être attribué."
+          >
             Sosa indéterminé
           </span>
         ) : null}
@@ -144,7 +147,8 @@ function Branch({
         <div className="tree-branch__children">
           {ordered.map((relative) => {
             const slot = parentSlots.get(relative.id);
-            const childSosa = withSosa && showSosa && sosa && slot !== undefined ? sosa * 2 + slot : null;
+            const childSosa =
+              withSosa && showSosa && sosa && slot !== undefined ? sosa * 2 + slot : null;
             const childAmbiguous = withSosa && showSosa && Boolean(sosa) && slot === undefined;
             const childBranch =
               branch ??
@@ -191,7 +195,10 @@ function assignParentSlots(parents) {
 
   // Repli sur le sexe pour les rôles génériques uniquement, tant qu'un rang
   // reste ouvert et qu'un seul candidat de ce sexe le réclame.
-  for (const [slot, wantedSex] of [[0, 'M'], [1, 'F']]) {
+  for (const [slot, wantedSex] of [
+    [0, 'M'],
+    [1, 'F'],
+  ]) {
     if ([...slots.values()].includes(slot)) continue;
     const candidates = generic.filter((p) => !slots.has(p.id) && p.sex === wantedSex);
     if (candidates.length === 1) slots.set(candidates[0].id, slot);

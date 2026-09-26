@@ -15,13 +15,13 @@ que des lacunes fonctionnelles importantes par rapport aux standards du marché
 
 **14 bugs consolidés**, répartis ainsi :
 
-| Sévérité | Nombre |
-|---|---|
-| Bloquant | 0 |
-| Majeur | 7 |
-| Mineur | 5 |
-| Cosmétique | 1 |
-| Sécurité-à-vérifier | 1 |
+| Sévérité            | Nombre |
+| ------------------- | ------ |
+| Bloquant            | 0      |
+| Majeur              | 7      |
+| Mineur              | 5      |
+| Cosmétique          | 1      |
+| Sécurité-à-vérifier | 1      |
 
 Aucun bug bloquant à proprement parler (l'application reste utilisable de bout en bout),
 mais deux bugs majeurs méritent une attention prioritaire avant toute mise en avant
@@ -33,6 +33,7 @@ l'absence totale de fonctionnalité de suppression de personne.
 ### Majeur
 
 #### BUG-001 — Modale "Nouvelle personne" bloquée au premier plan, empêche la navigation
+
 - **Page/écran** : observé sur "Arbres" et "Événements" (probable sur tout écran atteint
   pendant que la modale reste ouverte).
 - **Navigateur/viewport** : Chromium, desktop 1440×900.
@@ -60,6 +61,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   effectivement le clic) et que la navigation redevient fonctionnelle après fermeture.
 
 #### BUG-002 — Aucune fonctionnalité de suppression d'une personne dans l'UI
+
 - **Page/écran** : "Personne" (fiche complète).
 - **Repro** : ouvrir la fiche d'une personne feuille, puis d'une personne centrale ;
   chercher un moyen de la supprimer.
@@ -87,6 +89,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   de fiche, suppression confirmée, disparition sans crash.
 
 #### BUG-003 — Création d'arbre avec nom dupliqué acceptée sans avertissement
+
 - **Page/écran** : "Arbres".
 - **Repro** : créer deux arbres avec exactement le même nom.
 - **Attendu** : avertissement ou blocage de la création si le nom existe déjà.
@@ -103,6 +106,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   ajouté (`qa/tests/bug-fixes.spec.cjs`, suite BUG-003).
 
 #### BUG-004 — Violation d'accessibilité "color-contrast" systématique (10/10 écrans)
+
 - **Page/écran** : Arbre, Personne, Familles, Recherche, Statistiques, Sources, Documents
   indexés, Événements, Arbres, Corbeille — **tous les écrans testés**.
 - **Outil** : axe-core (`@axe-core/playwright`), impact **Serious**.
@@ -121,6 +125,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   ajouté (`qa/tests/bug-fixes.spec.cjs`, suite BUG-004) vérifiant les couleurs calculées.
 
 #### BUG-005 — Menu latéral perd tous ses libellés texte sous ~1024 px de large
+
 - **Page/écran** : tous, menu latéral gauche.
 - **Viewport** : tablette portrait 768×1024, tablette paysage 1024×768, mobile 375×667 et
   390×844.
@@ -143,6 +148,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   768×1024.
 
 #### BUG-006 — Arbre restauré vide (0 personne) après un cycle suppression/restauration
+
 - **Statut** : non reproductible (protocole propre rejoué en Phase 2, voir statut
   ci-dessous) — confirmé comme artefact d'outillage du test initial, pas un bug
   applicatif.
@@ -160,7 +166,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   confusion, avant de considérer ce point clos.
 - **Statut (Phase 2)** : **non reproductible — cause confirmée : erreur d'outillage du
   test précédent (hypothèse a)**. Investigation du code (`src/server/src/trees/
-  tree-workspace.js`) : chaque arbre est un fichier SQLite entièrement séparé
+tree-workspace.js`) : chaque arbre est un fichier SQLite entièrement séparé
   (`tree-<uuid>.sqlite`) référencé dans un catalogue JSON (`trees.json`) ;
   `remove(id)`/`restore(id)` ne font que poser/retirer un champ `deletedAt` sur
   l'entrée du catalogue — **le fichier de base de données de l'arbre n'est
@@ -184,6 +190,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   Aucun correctif de code nécessaire ; ce point est clos.
 
 #### BUG-007 — Firefox ne démarre pas dans l'environnement de test
+
 - **Sévérité** : Majeur pour la couverture de test (bloque tout test Firefox), mais
   probablement pas un bug applicatif.
 - **Repro** : `npx playwright test --config=qa/playwright.config.cjs` avec le projet
@@ -195,7 +202,7 @@ l'absence totale de fonctionnalité de suppression de personne.
   quelconque problème côté application.
 - **Statut (Phase 2)** : non corrigé — confirmé comme limite d'environnement, pas un bug
   applicatif. Reproduit à nouveau : `browserType.launch` échoue avec `Could not find
-  profile folder` même après `npx playwright install firefox` et en forçant un `TMPDIR`
+profile folder` même après `npx playwright install firefox` et en forçant un `TMPDIR`
   local inscriptible dédié. Le comportement est identique quel que soit le répertoire de
   profil temporaire fourni, ce qui pointe vers une restriction du bac à sable de cet
   environnement d'exécution (accès processus/exécution Firefox) plutôt qu'un problème de
@@ -205,34 +212,41 @@ l'absence totale de fonctionnalité de suppression de personne.
 ### Mineur
 
 #### BUG-008 — Compteur "n personne(s)" sur la carte d'un arbre non rafraîchi immédiatement
+
 Après création de 12 personnes dans un arbre, sa carte sur l'écran "Arbres" affichait
 encore "0 personne(s)" alors que le panneau de gauche indiquait bien 12. Un rafraîchissement
 (navigation) corrige l'affichage. Capture :
 `qa/reports/screenshots-bloc2/personnes-QA-Famille-Dupont-Bernard.png`.
 
 #### BUG-009 — Bandeau d'erreur "Personne introuvable : 2" persistant
+
 Bandeau rouge apparu et resté affiché à plusieurs reprises sur l'écran "Arbres",
 probablement une référence de contexte pointant vers un id de personne obsolète après
 changement de contexte. N'empêche pas l'usage mais nuit à la confiance. Capture :
 `qa/reports/screenshots-bloc2/03-arbre-1-ouvert.png`, `debug-famille1.png`.
 
 #### BUG-010 — OCR n'extrait jamais de date
+
 Sur les 4 images testées (baptême, mariage, décès, registre double), **aucune date n'a
 été extraite**, malgré la présence explicite d'une date en toutes lettres dans chaque
 acte. Le module semble cibler uniquement les noms propres. Détail complet :
 `qa/reports/ocr-resultats.md`.
+
 - **Statut (Phase 2)** : non corrigé — reporté faute de temps disponible dans cette
   itération après priorisation des bugs majeurs.
 
 #### BUG-011 — Écrans "Statistiques"/"Documents indexés" sans indicateur de progression
+
 Avec un arbre volumineux (2618 personnes, 8193 événements), ces deux écrans affichent un
 texte brut "Chargement..." sans spinner ni barre de progression, pendant plusieurs
 secondes (jusqu'à plus de 10 s observés dans certaines conditions). Peut donner
 l'impression d'un blocage. Capture : `qa/reports/screenshots-responsive/Statistiques_1920x1080.png`.
+
 - **Statut (Phase 2)** : non corrigé — reporté faute de temps disponible dans cette
   itération après priorisation des bugs majeurs.
 
 #### BUG-012 — Suggestions "personnes probablement citées" (OCR) bruitées sur grand arbre
+
 Avec l'arbre volumineux (2618 personnes), la liste de suggestions de l'OCR devient
 polluée par des homonymes sans rapport réel avec le document analysé (faux positifs).
 Comportement de correspondance floue documenté, mais dégrade l'utilité à grande échelle.
@@ -241,6 +255,7 @@ Voir `qa/reports/ocr-resultats.md`.
 ### Cosmétique
 
 #### BUG-013 — Léger débordement de texte sur tablette portrait
+
 La carte "Étienne de La Tour-d'Auvergne" déborde légèrement de la largeur visible de sa
 case sur tablette portrait (768×1024) — texte touchant presque le bord de la carte
 voisine. Capture : `qa/reports/screenshots-responsive/Arbre_tablet-768x1024.png`.
@@ -248,10 +263,12 @@ voisine. Capture : `qa/reports/screenshots-responsive/Arbre_tablet-768x1024.png`
 ### Sécurité-à-vérifier
 
 #### BUG-014 — Erreur réseau 400 (Bad Request) en console pendant un import GEDCOM valide
+
 Une requête a échoué avec un statut 400 dans la console pendant l'import d'un GEDCOM
 valide, sans empêcher l'import de réussir. Cause non identifiée (appel secondaire non
 bloquant ? télémétrie locale ? favicon ?). À signaler pour investigation côté équipe
 technique — pas d'effet fonctionnel observé mais à ne pas ignorer.
+
 - **Statut (Phase 2)** : non corrigé — reporté faute de temps disponible dans cette
   itération après priorisation des bugs majeurs.
 
@@ -303,6 +320,7 @@ Classées par priorité, sur la base de la cartographie complète (`qa/CARTOGRAP
 des tests menés :
 
 **Priorité haute**
+
 1. **Suppression de personne individuelle** (BUG-002) — fonctionnalité de base absente,
    pourtant standard chez tous les concurrents.
 2. **Extraction de dates en OCR** (BUG-010) — les 3 acteurs cités extraient au minimum les
@@ -314,20 +332,15 @@ des tests menés :
    peut être un choix de positionnement assumé (auto-hébergé, confidentialité) plutôt
    qu'un manque, à confirmer avec l'équipe produit.
 
-**Priorité moyenne**
-4. **Correspondance ADN / DNA matching** — aucune trace dans les menus (Geneanet, MyHeritage
-   et Ancestry en font un argument central).
-5. **Avertissement de nom d'arbre dupliqué** (BUG-003) — fonctionnalité de garde-fou de
-   base absente.
-6. **Indicateur de progression** sur les écrans lourds (BUG-011) — attendu dès qu'une base
-   dépasse quelques centaines de personnes.
+**Priorité moyenne** 4. **Correspondance ADN / DNA matching** — aucune trace dans les menus (Geneanet, MyHeritage
+et Ancestry en font un argument central). 5. **Avertissement de nom d'arbre dupliqué** (BUG-003) — fonctionnalité de garde-fou de
+base absente. 6. **Indicateur de progression** sur les écrans lourds (BUG-011) — attendu dès qu'une base
+dépasse quelques centaines de personnes.
 
-**Priorité basse**
-7. Recherche multi-sites externes (Geneanet/FamilySearch/Gallica) déjà présente en
-   interface (`qa/reports/screenshots-responsive/Recherche_1920x1080.png`) mais non testée
-   fonctionnellement — un point positif de conception à valider en profondeur.
-8. Tooltips/labels accessibles sur les icônes en mode compact (BUG-005) — confort plutôt
-   que fonctionnalité manquante.
+**Priorité basse** 7. Recherche multi-sites externes (Geneanet/FamilySearch/Gallica) déjà présente en
+interface (`qa/reports/screenshots-responsive/Recherche_1920x1080.png`) mais non testée
+fonctionnellement — un point positif de conception à valider en profondeur. 8. Tooltips/labels accessibles sur les icônes en mode compact (BUG-005) — confort plutôt
+que fonctionnalité manquante.
 
 ## 7. Liens vers les livrables
 

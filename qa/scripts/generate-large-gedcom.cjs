@@ -7,16 +7,79 @@
 const fs = require('fs');
 const path = require('path');
 
-const PRENOMS_M = ['Jean', 'Pierre', 'Louis', 'Antoine', 'Charles', 'Nicolas', 'Henri', 'François', 'Étienne', 'Gabriel', 'Adrien', 'Lucien', 'Émile', 'Gustave', 'Paul'];
-const PRENOMS_F = ['Marie', 'Jeanne', 'Catherine', 'Louise', 'Isabeau', 'Joséphine', 'Rosalie', 'Augustine', 'Berthe', 'Suzanne', 'Amélie', 'Victoire', 'Constance', 'Eléonore', 'Aïssatou'];
-const NOMS = ['Dupont', 'Dupond', 'Bernard', 'Petit', 'Müller', "N'Diaye", "de La Tour-d'Auvergne", 'Rousseau', 'Weber', 'Martin'];
-const LIEUX = ['Dijon, Bourgogne', 'Lyon, Lyonnais', 'Paris', 'Nantes, Bretagne', 'Strasbourg, Alsace', 'Clermont-Ferrand, Auvergne', 'Rennes, Bretagne', 'Beaune, Bourgogne'];
-const PROFESSIONS = ['Vigneron', 'Tonnelier', 'Instituteur', 'Notaire', 'Médecin', 'Négociant', 'Meunier', 'Avocat', 'Armateur', ''];
+const PRENOMS_M = [
+  'Jean',
+  'Pierre',
+  'Louis',
+  'Antoine',
+  'Charles',
+  'Nicolas',
+  'Henri',
+  'François',
+  'Étienne',
+  'Gabriel',
+  'Adrien',
+  'Lucien',
+  'Émile',
+  'Gustave',
+  'Paul',
+];
+const PRENOMS_F = [
+  'Marie',
+  'Jeanne',
+  'Catherine',
+  'Louise',
+  'Isabeau',
+  'Joséphine',
+  'Rosalie',
+  'Augustine',
+  'Berthe',
+  'Suzanne',
+  'Amélie',
+  'Victoire',
+  'Constance',
+  'Eléonore',
+  'Aïssatou',
+];
+const NOMS = [
+  'Dupont',
+  'Dupond',
+  'Bernard',
+  'Petit',
+  'Müller',
+  "N'Diaye",
+  "de La Tour-d'Auvergne",
+  'Rousseau',
+  'Weber',
+  'Martin',
+];
+const LIEUX = [
+  'Dijon, Bourgogne',
+  'Lyon, Lyonnais',
+  'Paris',
+  'Nantes, Bretagne',
+  'Strasbourg, Alsace',
+  'Clermont-Ferrand, Auvergne',
+  'Rennes, Bretagne',
+  'Beaune, Bourgogne',
+];
+const PROFESSIONS = [
+  'Vigneron',
+  'Tonnelier',
+  'Instituteur',
+  'Notaire',
+  'Médecin',
+  'Négociant',
+  'Meunier',
+  'Avocat',
+  'Armateur',
+  '',
+];
 
-function pick(arr, seed) { return arr[seed % arr.length]; }
-function pad(n) { return String(n).padStart(2, '0'); }
-
-const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function pick(arr, seed) {
+  return arr[seed % arr.length];
+}
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 function randomDate(seed, startYear, endYear) {
   const year = startYear + (seed % (endYear - startYear));
   const month = MONTHS[seed % 12];
@@ -83,7 +146,6 @@ for (let l = 0; l < stockLignees && indiCounter < TARGET; l++) {
   for (let gen = 0; gen < 8 && indiCounter < TARGET; gen++) {
     const marrYear = birthYear + 22;
     const nbEnfants = 2 + (gen % 3);
-    const famId = famCounter; // will be assigned
     const childIds = [];
     const tmpFamRef = `F${famCounter}`;
     for (let e = 0; e < nbEnfants && indiCounter < TARGET; e++) {
@@ -95,7 +157,7 @@ for (let l = 0; l < stockLignees && indiCounter < TARGET; l++) {
     if (childIds.length === 0) break;
     // la lignée continue avec le premier enfant marié à un nouveau conjoint
     const heir = childIds[0];
-    const heirSexe = individuals.find(i => i.id === heir).sexe;
+    const heirSexe = individuals.find((i) => i.id === heir).sexe;
     birthYear = birthYear + 24;
     const spouseSexe = heirSexe === 'M' ? 'F' : 'M';
     const spouse = newIndi(spouseSexe, birthYear + 1, null);

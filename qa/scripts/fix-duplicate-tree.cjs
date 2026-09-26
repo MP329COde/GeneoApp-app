@@ -18,6 +18,8 @@ const path = require('path');
     const text = await container.textContent();
     console.log('---', text.slice(0, 120));
   }
-  await page.screenshot({ path: path.join(__dirname, '..', 'reports', 'screenshots-bloc2', 'avant-renommage.png') });
+  await page.screenshot({
+    path: path.join(__dirname, '..', 'reports', 'screenshots-bloc2', 'avant-renommage.png'),
+  });
   await browser.close();
 })();

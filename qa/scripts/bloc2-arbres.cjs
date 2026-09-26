@@ -27,7 +27,9 @@ async function clickMenu(page, label) {
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  page.on('console', (msg) => { if (msg.type() === 'error') note('console-error', msg.text().slice(0, 200)); });
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') note('console-error', msg.text().slice(0, 200));
+  });
   page.on('pageerror', (err) => note('page-error', String(err).slice(0, 300)));
 
   await page.goto('http://127.0.0.1:5173', { waitUntil: 'networkidle' });
@@ -48,7 +50,7 @@ async function clickMenu(page, label) {
     }
     note('debug-visible-inputs', visibleInputs.length);
     const nomArbreInput = visibleInputs[visibleInputs.length - 2] || visibleInputs[0];
-    await nomArbreInput.fill('QA - Famille La Tour-d\'Auvergne', { timeout: 8000 });
+    await nomArbreInput.fill("QA - Famille La Tour-d'Auvergne", { timeout: 8000 });
     const btnCreer = page.getByRole('button', { name: /créer l.arbre/i }).first();
     await btnCreer.click({ timeout: 5000 });
     await page.waitForTimeout(1000);
@@ -61,21 +63,29 @@ async function clickMenu(page, label) {
 
   // Ouvrir le nouvel arbre
   try {
-    await page.getByRole('button', { name: /^Ouvrir QA - Famille La Tour/i }).first().click({ timeout: 5000 });
+    await page
+      .getByRole('button', { name: /^Ouvrir QA - Famille La Tour/i })
+      .first()
+      .click({ timeout: 5000 });
     await page.waitForTimeout(800);
     note('ouverture-arbre-1', 'ok');
-  } catch (e) { note('bug-ouverture-arbre-1', String(e).slice(0, 200)); }
+  } catch (e) {
+    note('bug-ouverture-arbre-1', String(e).slice(0, 200));
+  }
   await shot(page, '03-arbre-1-ouvert.png');
 
   // Créer les 2 autres arbres
   for (const nom of ['QA - Famille Muller-Ndiaye', 'QA - Famille Dupont-Bernard']) {
     try {
-      const inputs = (await page.locator('input[type="text"], input:not([type])').all());
+      const inputs = await page.locator('input[type="text"], input:not([type])').all();
       const visible = [];
       for (const inp of inputs) if (await inp.isVisible()) visible.push(inp);
       const nomInput = visible[visible.length - 2] || visible[0];
       await nomInput.fill(nom, { timeout: 8000 });
-      await page.getByRole('button', { name: /créer l.arbre/i }).first().click({ timeout: 5000 });
+      await page
+        .getByRole('button', { name: /créer l.arbre/i })
+        .first()
+        .click({ timeout: 5000 });
       await page.waitForTimeout(800);
       note('creation-arbre', { nom, ok: true });
     } catch (e) {
@@ -89,7 +99,9 @@ async function clickMenu(page, label) {
     await page.getByRole('button', { name: /\+ Nouvelle personne/i }).click({ timeout: 5000 });
     await page.waitForTimeout(600);
     await shot(page, '05-form-nouvelle-personne.png');
-  } catch (e) { note('bug-bouton-nouvelle-personne', String(e).slice(0, 200)); }
+  } catch (e) {
+    note('bug-bouton-nouvelle-personne', String(e).slice(0, 200));
+  }
 
   await browser.close();
   fs.writeFileSync(LOG_PATH, JSON.stringify(log, null, 2));

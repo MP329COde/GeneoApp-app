@@ -165,7 +165,10 @@ kbd {
   color: var(--text);
   text-align: left;
   font-weight: 500;
-  transition: background var(--duration-instant) var(--ease-standard), border-color var(--duration-instant) var(--ease-standard), transform var(--duration-instant) var(--ease-standard);
+  transition:
+    background var(--duration-instant) var(--ease-standard),
+    border-color var(--duration-instant) var(--ease-standard),
+    transform var(--duration-instant) var(--ease-standard);
 }
 .sidenav__item .icon {
   flex: 0 0 auto;
@@ -1391,7 +1394,10 @@ input[type='radio'] {
   background: var(--surface-raised);
   font: var(--type-body) !important;
   cursor: pointer;
-  transition: border-color var(--duration-instant) var(--ease-standard), background var(--duration-instant) var(--ease-standard), transform var(--duration-instant) var(--ease-standard);
+  transition:
+    border-color var(--duration-instant) var(--ease-standard),
+    background var(--duration-instant) var(--ease-standard),
+    transform var(--duration-instant) var(--ease-standard);
 }
 .settings-option:hover {
   border-color: var(--border-strong);
@@ -2765,7 +2771,9 @@ input[type='radio'] {
   border-radius: var(--radius-md);
   background: var(--surface-raised);
   font: var(--type-body);
-  transition: border-color var(--duration-instant) var(--ease-standard), box-shadow var(--duration-instant) var(--ease-standard);
+  transition:
+    border-color var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-instant) var(--ease-standard);
 }
 .gds-modal .create-person-form input:focus,
 .gds-modal .create-person-form select:focus {

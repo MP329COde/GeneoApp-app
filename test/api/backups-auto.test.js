@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { openDatabase } from '../../src/db/src/database.js';
 import { runMigrations } from '../../src/db/src/migrate.js';
 import { listBackups, verifyBackup } from '../../src/db/src/index.js';

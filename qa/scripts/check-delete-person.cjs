@@ -13,7 +13,8 @@ const path = require('path');
     const all = Array.from(document.querySelectorAll('*'));
     const out = [];
     for (const el of all) {
-      const label = (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || '';
+      const label =
+        (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || '';
       const txt = el.tagName === 'BUTTON' ? el.textContent.trim().slice(0, 40) : '';
       if (/supprim|delete|corbeille|trash/i.test(label) || /supprim/i.test(txt)) {
         out.push({ tag: el.tagName, label, txt });
@@ -21,7 +22,10 @@ const path = require('path');
     }
     return out;
   });
-  require('fs').writeFileSync(path.join(__dirname, '..', 'reports', 'check-delete-person.json'), JSON.stringify(matches, null, 2));
+  require('fs').writeFileSync(
+    path.join(__dirname, '..', 'reports', 'check-delete-person.json'),
+    JSON.stringify(matches, null, 2),
+  );
   console.log(JSON.stringify(matches));
   await browser.close();
 })();

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 import { parseGedcom, validateGedcom } from '../../src/server/src/gedcom/index.js';
 
@@ -170,10 +173,7 @@ test('GEDCOM importe et réexporte les événements étendus (profession, migrat
     );
     // La valeur métier portée par la ligne du tag lui-même (« 1 OCCU Mathématicienne »)
     // doit être conservée, pas seulement le type d'événement.
-    assert.equal(
-      eventRows.find((row) => row.type === 'OCCUPATION').value,
-      'Mathématicienne',
-    );
+    assert.equal(eventRows.find((row) => row.type === 'OCCUPATION').value, 'Mathématicienne');
 
     const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
       method: 'POST',

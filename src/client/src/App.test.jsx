@@ -198,10 +198,10 @@ describe('App', () => {
 
     renderWithProviders(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/assistant de départ/i)).toBeInTheDocument(),
-    );
-    expect(screen.getByRole('button', { name: /ajouter la première personne/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/assistant de départ/i)).toBeInTheDocument());
+    expect(
+      screen.getByRole('button', { name: /ajouter la première personne/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /importer un fichier gedcom/i })).toBeInTheDocument();
   });
 
@@ -460,7 +460,9 @@ describe('App', () => {
     expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument();
     expect(backups.list).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() => expect(accounts.login).toHaveBeenCalledWith('Alice', undefined));
@@ -488,7 +490,9 @@ describe('App', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
 
@@ -498,7 +502,9 @@ describe('App', () => {
       expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument(),
     );
 
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
 
@@ -531,7 +537,9 @@ describe('App', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Bob' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Bob' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() =>
@@ -1142,7 +1150,7 @@ describe('App', () => {
     expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
   });
 
-  it("passe la carte en mode en ligne uniquement sur choix explicite dans les réglages", async () => {
+  it('passe la carte en mode en ligne uniquement sur choix explicite dans les réglages', async () => {
     localStorage.setItem('geneoapp.settings', JSON.stringify({ mapMode: 'online' }));
     persons.list.mockResolvedValue([]);
     places.list.mockResolvedValueOnce([
@@ -1774,7 +1782,9 @@ describe('App', () => {
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     expect(await screen.findByText(/Automatique · lancement/)).toBeInTheDocument();
@@ -1825,7 +1835,9 @@ describe('App', () => {
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     fireEvent.change(await screen.findByLabelText(/Copie miroir des sauvegardes/), {

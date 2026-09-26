@@ -9,7 +9,10 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(300);
   await page.getByText('Arbres', { exact: true }).first().click();
   await page.waitForTimeout(500);
-  await page.getByRole('button', { name: /^Ouvrir QA - Famille La Tour/i }).first().click();
+  await page
+    .getByRole('button', { name: /^Ouvrir QA - Famille La Tour/i })
+    .first()
+    .click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: __dirname + '/../reports/screenshots-bloc2/debug-famille1.png' });
   const html = await page.content();

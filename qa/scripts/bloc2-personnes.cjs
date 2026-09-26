@@ -14,10 +14,14 @@ function note(step, info) {
   console.log('[' + step + ']', JSON.stringify(info).slice(0, 300));
   log.push({ step, info, t: new Date().toISOString() });
 }
-async function shot(page, name) { await page.screenshot({ path: path.join(OUT, name), fullPage: false }); }
+async function shot(page, name) {
+  await page.screenshot({ path: path.join(OUT, name), fullPage: false });
+}
 
 function loadFamily(file) {
-  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'familles', file), 'utf8'));
+  const d = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'familles', file), 'utf8'),
+  );
   const personnes = [];
   const unions = [];
   const parentages = [];
@@ -25,7 +29,9 @@ function loadFamily(file) {
     for (const p of g.personnes) {
       personnes.push(p);
       if (p.parents) for (const par of p.parents) parentages.push({ enfant: p.id, parent: par });
-      if (p.unions) for (const u of p.unions) unions.push({ a: p.id, b: u.conjointId, date: u.date, lieu: u.lieu });
+      if (p.unions)
+        for (const u of p.unions)
+          unions.push({ a: p.id, b: u.conjointId, date: u.date, lieu: u.lieu });
     }
   }
   return { nom: d.nomFamille, personnes, unions, parentages };
@@ -33,7 +39,7 @@ function loadFamily(file) {
 
 async function closeAnyModal(page) {
   const closeBtn = page.locator('button:has-text("×")').first();
-  if (await closeBtn.count() > 0 && await closeBtn.isVisible().catch(() => false)) {
+  if ((await closeBtn.count()) > 0 && (await closeBtn.isVisible().catch(() => false))) {
     await closeBtn.click({ timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(300);
   }
@@ -44,32 +50,41 @@ async function openTree(page, name) {
   const menu = page.getByText('Arbres', { exact: true }).first();
   await menu.click({ timeout: 8000 });
   await page.waitForTimeout(500);
-  const btn = page.getByRole('button', { name: new RegExp('^Ouvrir ' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first();
+  const btn = page
+    .getByRole('button', {
+      name: new RegExp('^Ouvrir ' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    })
+    .first();
   await btn.click({ timeout: 8000 });
   await page.waitForTimeout(600);
 }
 
 async function createPerson(page, prenom, nom, sexe) {
-  const modalAlreadyOpen = await page.getByPlaceholder('Ex. Jean').isVisible().catch(() => false);
+  const modalAlreadyOpen = await page
+    .getByPlaceholder('Ex. Jean')
+    .isVisible()
+    .catch(() => false);
   if (!modalAlreadyOpen) {
-    await page.getByRole('button', { name: /\+ Nouvelle personne/i }).first().click({ timeout: 8000 });
+    await page
+      .getByRole('button', { name: /\+ Nouvelle personne/i })
+      .first()
+      .click({ timeout: 8000 });
     await page.waitForTimeout(300);
   }
   await page.getByPlaceholder('Ex. Jean').fill(prenom);
   await page.getByPlaceholder('Ex. Dupont').fill(nom);
-  const sexeSelect = page.locator('select').filter({ hasText: /Inconnu|Homme|Femme/ }).first();
+  const sexeSelect = page
+    .locator('select')
+    .filter({ hasText: /Inconnu|Homme|Femme/ })
+    .first();
   const val = sexe === 'M' ? 'M' : sexe === 'F' ? 'F' : 'U';
-  try { await sexeSelect.selectOption(val); } catch (e) { /* valeurs possiblement différentes */ }
+  try {
+    await sexeSelect.selectOption(val);
+  } catch {
+    /* valeurs possiblement différentes */
+  }
   await page.getByRole('button', { name: /Ajouter une personne/i }).click({ timeout: 5000 });
   await page.waitForTimeout(400);
-}
-
-async function selectPersonInSidebar(page, displayName) {
-  const item = page.locator('nav, aside').first().getByText(displayName, { exact: false }).first();
-  if (await item.count() === 0) return false;
-  await item.click({ timeout: 5000 });
-  await page.waitForTimeout(300);
-  return true;
 }
 
 (async () => {
@@ -80,17 +95,25 @@ async function selectPersonInSidebar(page, displayName) {
   await page.waitForTimeout(1500);
 
   const familles = [
-    { file: 'famille-1-de-la-tour-dauvergne.json', arbre: 'QA - Famille La Tour-d\'Auvergne' },
+    { file: 'famille-1-de-la-tour-dauvergne.json', arbre: "QA - Famille La Tour-d'Auvergne" },
     { file: 'famille-2-mueller-ndiaye.json', arbre: 'QA - Famille Muller-Ndiaye' },
     { file: 'famille-3-dupont-bernard.json', arbre: 'QA - Famille Dupont-Bernard' },
   ];
 
   for (const f of familles) {
     const data = loadFamily(f.file);
-    note('debut-famille', { arbre: f.arbre, personnes: data.personnes.length, unions: data.unions.length, parentages: data.parentages.length });
+    note('debut-famille', {
+      arbre: f.arbre,
+      personnes: data.personnes.length,
+      unions: data.unions.length,
+      parentages: data.parentages.length,
+    });
     try {
       await openTree(page, f.arbre);
-    } catch (e) { note('bug-ouverture-arbre', { arbre: f.arbre, err: String(e).slice(0, 200) }); continue; }
+    } catch (e) {
+      note('bug-ouverture-arbre', { arbre: f.arbre, err: String(e).slice(0, 200) });
+      continue;
+    }
 
     const idToDisplay = {};
     for (const p of data.personnes) {

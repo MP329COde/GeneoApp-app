@@ -176,6 +176,7 @@ fiable de l'écran courant.
 ## Écran : Documents indexés
 
 Écran le plus riche fonctionnellement observé :
+
 - "Rechercher dans les documents" : champ avec exemples de syntaxe avancée
   (`acte, nom, lieu... « "jean baptiste" -paris »` — suggère une syntaxe de recherche
   avec guillemets pour phrase exacte et `-` pour exclusion), select "Source" (Toutes),
@@ -186,7 +187,7 @@ fiable de l'écran courant.
 - Bouton "Données ouvertes prêtes à l'emploi" : "INSEE — personnes décédées en France
   depuis 1970" — jeu de données ouvertes préconfiguré (cohérent avec
   `docs/adr/0012-donnees-ouvertes-et-robot-approfondi.md` et `src/server/src/indexing/
-  datasets.js` vus dans le statut git).
+datasets.js` vus dans le statut git).
 - "Réglages" : case "Autoriser l'accès internet pour indexer les sites listés" (décochée
   par défaut, avec note "robots.txt respecté ; aucune donnée de votre arbre n'est
   envoyée"), case "Indexer automatiquement chaque nuit" + select heure ("02 h"), avec note

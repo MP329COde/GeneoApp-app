@@ -25,7 +25,7 @@
     "package": "npm run build && electron-builder --mac --win --linux",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-imports.js",
     "migrate": "npm run migrate --workspace @geneoapp/db",
     "smoke": "node --test test/smoke/*.test.js",
     "test:db": "node --test test/db/*.test.js",
@@ -45,6 +45,7 @@
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@playwright/test": "^1.63.0",
+    "playwright-core": "^1.63.0",
     "concurrently": "^9.2.1",
     "electron": "^38.1.0",
     "electron-builder": "^26.15.3",

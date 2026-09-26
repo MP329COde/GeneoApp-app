@@ -8,20 +8,12 @@
       locales" existe — Arbres/GEDCOM/Sauvegardes/Corbeille/Profil local/IA locale/
       Paramètres — repérée mais pas encore cartographiée en détail, cf. CARTOGRAPHIE.md
       section finale).
-- [x] Étape 2 — Jeu de données fictives (BLOC 1B complété) :
-      - [x] 3 familles fictives JSON, 4-5 générations, cas particuliers (particules,
-        apostrophes, tréma, jumeaux, adoption, remariages, décès en bas âge, variantes
-        Dupont/Dupond) → `qa/fixtures/familles/*.json`
-      - [x] GEDCOM valide (1 famille, 8 individus) → `qa/fixtures/gedcom/valide.ged`
-      - [x] GEDCOM malformé (tags invalides, boucle de parenté, dates impossibles,
-        contenu après TRLR, id dupliqué) → `qa/fixtures/gedcom/malforme.ged`
-      - [x] GEDCOM volumineux (2600 individus, 630 familles, généré par script) →
-        `qa/fixtures/gedcom/volumineux.ged` + `qa/scripts/generate-large-gedcom.cjs`
-      - [x] CSV de documentation fictive → `qa/fixtures/documents/exemple.csv`
-      - [x] PDF minimal texte (généré à la main, 1 page) → `qa/fixtures/documents/exemple.pdf`
-      - [x] 4 images OCR (baptême, mariage, décès, registre double) + .txt de référence
-        + script Python/Pillow → `qa/fixtures/ocr/` et `qa/scripts/generate-ocr-fixtures.py`
-        (voir `qa/fixtures/ocr/LIMITES.md` pour les limites de rendu)
+- [x] Étape 2 — Jeu de données fictives (BLOC 1B complété) : - [x] 3 familles fictives JSON, 4-5 générations, cas particuliers (particules,
+      apostrophes, tréma, jumeaux, adoption, remariages, décès en bas âge, variantes
+      Dupont/Dupond) → `qa/fixtures/familles/*.json` - [x] GEDCOM valide (1 famille, 8 individus) → `qa/fixtures/gedcom/valide.ged` - [x] GEDCOM malformé (tags invalides, boucle de parenté, dates impossibles,
+      contenu après TRLR, id dupliqué) → `qa/fixtures/gedcom/malforme.ged` - [x] GEDCOM volumineux (2600 individus, 630 familles, généré par script) →
+      `qa/fixtures/gedcom/volumineux.ged` + `qa/scripts/generate-large-gedcom.cjs` - [x] CSV de documentation fictive → `qa/fixtures/documents/exemple.csv` - [x] PDF minimal texte (généré à la main, 1 page) → `qa/fixtures/documents/exemple.pdf` - [x] 4 images OCR (baptême, mariage, décès, registre double) + .txt de référence + script Python/Pillow → `qa/fixtures/ocr/` et `qa/scripts/generate-ocr-fixtures.py`
+      (voir `qa/fixtures/ocr/LIMITES.md` pour les limites de rendu)
 - [x] Étape 3 — Arbres généalogiques créés via UI (BLOC 2A complété avec incident) :
       3 arbres créés et peuplés réellement via Playwright (clics/saisies UI, aucune
       insertion en base) : `QA - Famille La Tour-d'Auvergne (reprise)` (15 personnes,
@@ -105,8 +97,8 @@
       libellés texte (icônes seules) en dessous d'environ 1024 px de large, sur tablette
       et mobile. Résultats détaillés dans `qa/reports/responsive-resultats.md`.
 - [x] Étape 11 — Vidéo parcours complet (BLOC 3D complété) : `qa/tests/parcours-complet.spec.cjs`
-      exécuté avec `npx playwright test --config=qa/playwright.config.cjs parcours-complet
-      --project=chromium-1440x900` → **1 test passé (17,3 s)**, aucun contournement du bug
+      exécuté avec `npx playwright test --config=qa/playwright.config.cjs parcours-complet --project=chromium-1440x900`
+      → **1 test passé (17,3 s)**, aucun contournement du bug
       de modale bloquante n'a été nécessaire cette fois (les arbres QA ciblés contiennent
       déjà des personnes, donc la modale d'onboarding automatique ne s'est pas déclenchée
       sur arbre vide). Vidéo générée et vérifiée présente :
@@ -129,6 +121,7 @@ OCR effectif, suppression/corbeille, recherche approfondie, cas limites, a11y bo
 bouton, vidéo E2E — voir qa/RAPPORT.md.
 
 Limites rencontrées dans ce bloc :
+
 - Police manuscrite dédiée non disponible ; Snell Roundhand (calligraphique, présente sur
   macOS) a été utilisée à la place — rendu correct mais plus régulier qu'une véritable
   écriture d'époque (voir `qa/fixtures/ocr/LIMITES.md`).

@@ -13,9 +13,9 @@ test.describe('BUG-001 — modale "Nouvelle personne" bloque réellement la navi
 
     // Un vrai clic utilisateur ne doit pas atteindre le lien "Événements" masqué
     // en dessous : l'overlay intercepte le clic (timeout attendu), la vue ne change pas.
-    await expect(
-      page.locator('.sidenav').getByText('Événements', { exact: true }),
-    ).not.toBeVisible({ timeout: 1 }).catch(() => {});
+    await expect(page.locator('.sidenav').getByText('Événements', { exact: true }))
+      .not.toBeVisible({ timeout: 1 })
+      .catch(() => {});
     await page
       .locator('.sidenav')
       .getByText('Événements', { exact: true })
@@ -68,7 +68,9 @@ test.describe('BUG-003 — avertissement sur nom d’arbre dupliqué', () => {
 
     await expect(page.getByRole('alert')).toContainText('existe déjà');
     // Aucun arbre supplémentaire n'a été créé.
-    const cardCountAfter = await page.locator('.tree-card__name', { hasText: firstTreeName }).count();
+    const cardCountAfter = await page
+      .locator('.tree-card__name', { hasText: firstTreeName })
+      .count();
     expect(cardCountAfter).toBe(1);
   });
 });
@@ -143,9 +145,13 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
     await page.getByRole('button', { name: 'Créer l’arbre' }).click();
     await expect(page.locator('.tree-card__name', { hasText: uniqueName })).toHaveCount(1);
 
-    const testCard = page.locator('.tree-card', { has: page.locator('.tree-card__name', { hasText: uniqueName }) });
+    const testCard = page.locator('.tree-card', {
+      has: page.locator('.tree-card__name', { hasText: uniqueName }),
+    });
     await testCard.getByRole('button', { name: `Ouvrir ${uniqueName}` }).click();
-    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName })).toBeVisible();
+    await expect(
+      page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName }),
+    ).toBeVisible();
 
     // 2) Ajouter 3 personnes + 2 relations dans cet arbre fraîchement activé (vide).
     // Note méthodologique : la création via la modale "Nouvelle personne" s'est
@@ -166,7 +172,10 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
       created[fullName] = (await response.json()).id;
     }
     const unionResponse = await page.request.post('/api/unions', {
-      data: { type: 'MARRIAGE', partnerIds: [created['QA-BUG006-Alpha'], created['QA-BUG006-Beta']] },
+      data: {
+        type: 'MARRIAGE',
+        partnerIds: [created['QA-BUG006-Alpha'], created['QA-BUG006-Beta']],
+      },
     });
     expect(unionResponse.ok()).toBeTruthy();
     const parentageResponse = await page.request.post('/api/parentages', {
@@ -186,7 +195,9 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
     for (const fullName of names) {
       await expect(page.locator('.sidenav__persons').getByText(`${fullName} Test`)).toBeVisible();
     }
-    const relationsCheck = await page.request.get(`/api/persons/${created['QA-BUG006-Alpha']}/relations`);
+    const relationsCheck = await page.request.get(
+      `/api/persons/${created['QA-BUG006-Alpha']}/relations`,
+    );
     const relationsBefore = await relationsCheck.json();
     expect(relationsBefore.spouses).toHaveLength(1);
     expect(relationsBefore.children).toHaveLength(1);
@@ -199,7 +210,9 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
       .first();
     const otherName = await otherCard.locator('.tree-card__name').innerText();
     await otherCard.getByRole('button', { name: `Ouvrir ${otherName}` }).click();
-    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: otherName })).toBeVisible();
+    await expect(
+      page.locator('.tree-card--active .tree-card__name', { hasText: otherName }),
+    ).toBeVisible();
 
     // 6) Supprimer l'arbre de test, identifié précisément par son nom unique.
     const inactiveTestCard = page.locator('.tree-card', {
@@ -219,7 +232,9 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
       has: page.locator('.tree-card__name', { hasText: uniqueName }),
     });
     await restoredCard.getByRole('button', { name: `Ouvrir ${uniqueName}` }).click();
-    await expect(page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName })).toBeVisible();
+    await expect(
+      page.locator('.tree-card--active .tree-card__name', { hasText: uniqueName }),
+    ).toBeVisible();
 
     await expect(page.locator('.sidenav__persons h2')).toContainText('3 personne');
     for (const fullName of names) {
@@ -240,7 +255,9 @@ test.describe('BUG-006 — cycle suppression/restauration d’arbre (protocole p
 // --- Cycle QA round 3 (angle UX / utilisateur non technique) ---
 
 test.describe('QA-015 : libellés français dans le panneau Statistiques', () => {
-  test('les clés techniques (persons, places, events...) sont traduites en français', async ({ page }) => {
+  test('les clés techniques (persons, places, events...) sont traduites en français', async ({
+    page,
+  }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
 
     // Ouvre le panneau Statistiques via la barre latérale.
@@ -263,7 +280,9 @@ test.describe('QA-015 : libellés français dans le panneau Statistiques', () =>
 });
 
 test.describe('QA-016 : message de suppression de personne compréhensible', () => {
-  test('en cas d\'échec, le message affiché est en français clair, sans détail technique brut', async ({ page }) => {
+  test("en cas d'échec, le message affiché est en français clair, sans détail technique brut", async ({
+    page,
+  }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
 

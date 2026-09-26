@@ -8,7 +8,10 @@ const BASE = 'http://127.0.0.1:5173';
 const SHOTS = path.join(__dirname, '..', 'reports', 'screenshots-bloc3');
 fs.mkdirSync(SHOTS, { recursive: true });
 const log = [];
-function add(entry) { log.push(entry); console.log(JSON.stringify(entry)); }
+function add(entry) {
+  log.push(entry);
+  console.log(JSON.stringify(entry));
+}
 
 async function shot(page, name) {
   await page.screenshot({ path: path.join(SHOTS, name), fullPage: true });
@@ -16,14 +19,20 @@ async function shot(page, name) {
 
 // Cherche un arbre QA existant dans la liste et l'ouvre (jamais un arbre par défaut)
 async function openQaTree(page, nameContains) {
-  await page.getByRole('button', { name: /Arbres/i }).first().click().catch(() => {});
+  await page
+    .getByRole('button', { name: /Arbres/i })
+    .first()
+    .click()
+    .catch(() => {});
   // navigation via menu latéral "Données locales > Arbres"
   const menuArbres = page.locator('text=Arbres').first();
   await menuArbres.click({ timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(500);
   const card = page.locator(`text=${nameContains}`).first();
   if (await card.count()) {
-    const openBtn = page.getByRole('button', { name: new RegExp(`Ouvrir.*${nameContains.split(' ')[0]}`, 'i') }).first();
+    const openBtn = page
+      .getByRole('button', { name: new RegExp(`Ouvrir.*${nameContains.split(' ')[0]}`, 'i') })
+      .first();
     if (await openBtn.count()) {
       await openBtn.click();
       await page.waitForTimeout(800);
@@ -38,7 +47,9 @@ async function openQaTree(page, nameContains) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   const consoleErrors = [];
-  page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text());
+  });
 
   await page.goto(BASE);
   await page.waitForTimeout(1000);
@@ -62,7 +73,10 @@ async function openQaTree(page, nameContains) {
       await submit.click().catch(() => {});
       await page.waitForTimeout(400);
       await shot(page, '03-apres-soumission-vide.png');
-      add({ test: 'formulaire-vide-nouvelle-personne', note: 'Voir capture 03-apres-soumission-vide.png pour comportement (bloqué ? message ?)' });
+      add({
+        test: 'formulaire-vide-nouvelle-personne',
+        note: 'Voir capture 03-apres-soumission-vide.png pour comportement (bloqué ? message ?)',
+      });
     }
     // fermer si modale
     const closeBtn = page.getByRole('button', { name: /Fermer|Annuler|×/i }).first();
@@ -76,9 +90,11 @@ async function openQaTree(page, nameContains) {
   await shot(page, '04-ecran-personne.png');
 
   // 2. Texte très long + emoji + injection dans le champ "Surnom"
-  const surnomInput = page.locator('input').filter({ hasText: '' }).first();
   const inputs = await page.locator('input[type="text"], input:not([type])').all();
-  const longText = 'A'.repeat(520) + ' 🎉🧬👴🏻 é è ñ ü ' + '<script>window.__qaXss=1;</script> <img src=x onerror="window.__qaXss2=1">';
+  const longText =
+    'A'.repeat(520) +
+    ' 🎉🧬👴🏻 é è ñ ü ' +
+    '<script>window.__qaXss=1;</script> <img src=x onerror="window.__qaXss2=1">';
   let testedField = false;
   for (const inp of inputs) {
     const placeholder = (await inp.getAttribute('placeholder')) || '';
@@ -99,13 +115,19 @@ async function openQaTree(page, nameContains) {
     await page.waitForTimeout(600);
   }
   await shot(page, '06-apres-enregistrement-injection.png');
-  const xssExecuted = await page.evaluate(() => window.__qaXss === 1 || window.__qaXss2 === 1).catch(() => false);
-  const bodyHtmlHasRawScript = await page.evaluate(() => document.body.innerHTML.includes('<script>window.__qaXss')).catch(() => false);
+  const xssExecuted = await page
+    .evaluate(() => window.__qaXss === 1 || window.__qaXss2 === 1)
+    .catch(() => false);
+  const bodyHtmlHasRawScript = await page
+    .evaluate(() => document.body.innerHTML.includes('<script>window.__qaXss'))
+    .catch(() => false);
   add({
     test: 'injection-html-script-champ-surnom',
     xssExecuted,
     bodyHtmlHasRawScript,
-    severite: xssExecuted ? 'SECURITE - CRITIQUE (script exécuté)' : 'OK - probablement échappé (voir capture)',
+    severite: xssExecuted
+      ? 'SECURITE - CRITIQUE (script exécuté)'
+      : 'OK - probablement échappé (voir capture)',
   });
 
   // 3. Dates impossibles / partielles sur l'écran Événements
@@ -114,7 +136,9 @@ async function openQaTree(page, nameContains) {
   await page.waitForTimeout(500);
   await shot(page, '07-ecran-evenements.png');
 
-  const dateInput = page.locator('input[placeholder*="avril" i], input[placeholder*="1998" i]').first();
+  const dateInput = page
+    .locator('input[placeholder*="avril" i], input[placeholder*="1998" i]')
+    .first();
   const casDates = ['vers 1750', 'avant 1800', '31 février 2099', '2099-99-99', '  '];
   for (const [i, val] of casDates.entries()) {
     if (await dateInput.count()) {
@@ -129,7 +153,11 @@ async function openQaTree(page, nameContains) {
       }
     }
   }
-  add({ test: 'dates-partielles-et-impossibles', cas: casDates, note: 'Voir captures 08/09-date-cas-*.png pour acceptation/rejet par cas' });
+  add({
+    test: 'dates-partielles-et-impossibles',
+    cas: casDates,
+    note: 'Voir captures 08/09-date-cas-*.png pour acceptation/rejet par cas',
+  });
 
   // 4. Double-clic rapide sur un bouton de soumission
   await evenementsMenu.click().catch(() => {});
@@ -140,7 +168,10 @@ async function openQaTree(page, nameContains) {
     await Promise.all([addEvBtn2.click(), addEvBtn2.click({ force: true }).catch(() => {})]);
     await page.waitForTimeout(600);
     await shot(page, '10-apres-double-clic.png');
-    add({ test: 'double-clic-rapide-soumission', note: 'Vérifier capture 10 + liste événements pour doublon éventuel' });
+    add({
+      test: 'double-clic-rapide-soumission',
+      note: 'Vérifier capture 10 + liste événements pour doublon éventuel',
+    });
   }
 
   // 5. Navigation avant/arrière navigateur pendant saisie
@@ -154,14 +185,20 @@ async function openQaTree(page, nameContains) {
   await page.goForward().catch(() => {});
   await page.waitForTimeout(500);
   await shot(page, '12-apres-forward.png');
-  add({ test: 'navigation-back-forward-pendant-saisie', note: 'SPA sans routes: back/forward navigateur — voir 11/12.png pour effet (app inchangée attendu, ou perte de saisie)' });
+  add({
+    test: 'navigation-back-forward-pendant-saisie',
+    note: 'SPA sans routes: back/forward navigateur — voir 11/12.png pour effet (app inchangée attendu, ou perte de saisie)',
+  });
 
   // 6. Reload pendant une action (import GEDCOM volumineux) — reload juste après lancement
   const gedcomMenuHandle = page.locator('text=GEDCOM').first();
   await gedcomMenuHandle.click().catch(() => {});
   await page.waitForTimeout(500);
   await shot(page, '13-ecran-gedcom.png');
-  add({ test: 'reload-pendant-import', note: 'Non rejoué agressivement pour ne pas risquer de corrompre les arbres QA restants (leçon du bloc 2). Ecran GEDCOM capturé pour référence.' });
+  add({
+    test: 'reload-pendant-import',
+    note: 'Non rejoué agressivement pour ne pas risquer de corrompre les arbres QA restants (leçon du bloc 2). Ecran GEDCOM capturé pour référence.',
+  });
 
   // 7. Deux onglets simultanés
   const page2 = await context.newPage();
@@ -173,10 +210,16 @@ async function openQaTree(page, nameContains) {
   await page2.bringToFront();
   await page2.waitForTimeout(300);
   await shot(page2, '15-onglet-2-apres-focus.png');
-  add({ test: 'deux-onglets-simultanes', note: 'Deux onglets ouverts sur la même URL simultanément — voir captures 14/15 et 01 pour cohérence de state (chaque onglet a son propre état React, pas de sync live observée attendue car pas de websocket visible)' });
+  add({
+    test: 'deux-onglets-simultanes',
+    note: 'Deux onglets ouverts sur la même URL simultanément — voir captures 14/15 et 01 pour cohérence de state (chaque onglet a son propre état React, pas de sync live observée attendue car pas de websocket visible)',
+  });
   await page2.close();
 
-  add({ consoleErrorsCount: consoleErrors.length, consoleErrorsSample: consoleErrors.slice(0, 10) });
+  add({
+    consoleErrorsCount: consoleErrors.length,
+    consoleErrorsSample: consoleErrors.slice(0, 10),
+  });
 
   // ---------- BLOC 3B : boutons + a11y + clavier ----------
   const screensToScan = [
@@ -200,16 +243,31 @@ async function openQaTree(page, nameContains) {
     }
     try {
       const results = await new AxeBuilder({ page }).analyze();
-      a11yResults.push({ screen: scr.label, violations: results.violations.map(v => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length })) });
+      a11yResults.push({
+        screen: scr.label,
+        violations: results.violations.map((v) => ({
+          id: v.id,
+          impact: v.impact,
+          help: v.help,
+          nodes: v.nodes.length,
+        })),
+      });
     } catch (e) {
       a11yResults.push({ screen: scr.label, error: String(e) });
     }
   }
-  fs.writeFileSync(path.join(__dirname, '..', 'reports', 'a11y-raw.json'), JSON.stringify(a11yResults, null, 2));
+  fs.writeFileSync(
+    path.join(__dirname, '..', 'reports', 'a11y-raw.json'),
+    JSON.stringify(a11yResults, null, 2),
+  );
   add({ a11yScreensScanned: a11yResults.length });
 
   // Boutons: cliquer sur un maximum sur écran "Familles" et "Arbre" (comptage + capture)
-  await page.locator('text=Familles').first().click().catch(() => {});
+  await page
+    .locator('text=Familles')
+    .first()
+    .click()
+    .catch(() => {});
   await page.waitForTimeout(500);
   const familleButtons = await page.getByRole('button').all();
   const familleButtonLabels = [];
@@ -219,23 +277,37 @@ async function openQaTree(page, nameContains) {
   }
   add({ screen: 'Familles', boutonsListes: familleButtonLabels });
 
-  await page.locator('text=Arbre').first().click().catch(() => {});
+  await page
+    .locator('text=Arbre')
+    .first()
+    .click()
+    .catch(() => {});
   await page.waitForTimeout(500);
   await shot(page, '16-arbre-onglets-avant.png');
   for (const onglet of ['Ascendant', 'Descendant', 'Éventail', 'Graphe', 'Familial']) {
-    const tab = page.getByRole('tab', { name: onglet }).or(page.locator(`text=${onglet}`)).first();
+    const tab = page
+      .getByRole('tab', { name: onglet })
+      .or(page.locator(`text=${onglet}`))
+      .first();
     if (await tab.count()) {
       await tab.click().catch(() => {});
       await page.waitForTimeout(400);
       await shot(page, `17-arbre-onglet-${onglet}.png`);
     }
   }
-  add({ test: 'onglets-vue-arbre', note: 'Voir captures 17-arbre-onglet-*.png pour vérifier que chaque onglet change bien la vue' });
+  add({
+    test: 'onglets-vue-arbre',
+    note: 'Voir captures 17-arbre-onglet-*.png pour vérifier que chaque onglet change bien la vue',
+  });
 
   // Navigation clavier sur 3 écrans avec formulaire/modale
   const keyboardScreens = ['Personne', 'Événements', 'Sources'];
   for (const scr of keyboardScreens) {
-    await page.locator(`text=${scr}`).first().click().catch(() => {});
+    await page
+      .locator(`text=${scr}`)
+      .first()
+      .click()
+      .catch(() => {});
     await page.waitForTimeout(400);
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
@@ -244,7 +316,12 @@ async function openQaTree(page, nameContains) {
       const el = document.activeElement;
       if (!el) return null;
       const style = getComputedStyle(el);
-      return { tag: el.tagName, outline: style.outline, boxShadow: style.boxShadow, className: el.className };
+      return {
+        tag: el.tagName,
+        outline: style.outline,
+        boxShadow: style.boxShadow,
+        className: el.className,
+      };
     });
     await shot(page, `18-clavier-${scr.replace(/[^a-z]/gi, '_')}.png`);
     add({ test: 'navigation-clavier', screen: scr, focusedElement: focused });
@@ -254,6 +331,9 @@ async function openQaTree(page, nameContains) {
   await context.close();
   await browser.close();
 
-  fs.writeFileSync(path.join(__dirname, '..', 'reports', 'bloc3a-3b-log.json'), JSON.stringify(log, null, 2));
+  fs.writeFileSync(
+    path.join(__dirname, '..', 'reports', 'bloc3a-3b-log.json'),
+    JSON.stringify(log, null, 2),
+  );
   console.log('DONE');
 })();

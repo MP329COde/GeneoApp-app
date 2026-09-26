@@ -2,9 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 
-const findings = [];
-
-test('découverte de la page d\'accueil et capture', async ({ page }, testInfo) => {
+test("découverte de la page d'accueil et capture", async ({ page }, testInfo) => {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
@@ -26,10 +24,15 @@ test('découverte de la page d\'accueil et capture', async ({ page }, testInfo) 
   await page.screenshot({ path: path.join(shotDir, `home-${vp}.png`), fullPage: true });
 
   // Lister les liens/boutons/menus visibles
-  const links = await page.locator('a, button, [role="button"], [role="menuitem"]').allTextContents();
+  const links = await page
+    .locator('a, button, [role="button"], [role="menuitem"]')
+    .allTextContents();
   const cleanLinks = links.map((t) => t.trim()).filter(Boolean);
 
-  const bodyText = await page.locator('body').innerText().catch(() => '');
+  const bodyText = await page
+    .locator('body')
+    .innerText()
+    .catch(() => '');
 
   const record = {
     viewport: vp,

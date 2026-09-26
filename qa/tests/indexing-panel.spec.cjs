@@ -9,7 +9,9 @@ const path = require('path');
 
 test.describe.configure({ mode: 'serial' });
 
-test('panneau d\'indexation : dossier local -> indexation -> recherche -> purge après suppression', async ({ page }) => {
+test("panneau d'indexation : dossier local -> indexation -> recherche -> purge après suppression", async ({
+  page,
+}) => {
   const stamp = Date.now();
   const folderName = `geneoapp-qa-indexing-${stamp}`;
   const tmpDir = path.join(os.tmpdir(), folderName);
@@ -40,9 +42,7 @@ test('panneau d\'indexation : dossier local -> indexation -> recherche -> purge 
     await expect(sourceItem).toBeVisible({ timeout: 10000 });
 
     // 3. Lancement de l'indexation de cette seule source.
-    await page
-      .getByRole('button', { name: `Indexer maintenant ${folderName}` })
-      .click();
+    await page.getByRole('button', { name: `Indexer maintenant ${folderName}` }).click();
     await expect(sourceItem.locator('.data-id', { hasText: '1 document(s)' })).toBeVisible({
       timeout: 15000,
     });
@@ -58,9 +58,7 @@ test('panneau d\'indexation : dossier local -> indexation -> recherche -> purge 
 
     // 5. Suppression du fichier source, puis ré-indexation de la source.
     fs.rmSync(path.join(tmpDir, fileName));
-    await page
-      .getByRole('button', { name: `Indexer maintenant ${folderName}` })
-      .click();
+    await page.getByRole('button', { name: `Indexer maintenant ${folderName}` }).click();
     await expect(sourceItem.locator('.data-id', { hasText: '0 document(s)' })).toBeVisible({
       timeout: 15000,
     });

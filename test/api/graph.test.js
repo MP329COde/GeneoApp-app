@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 
 async function createPerson(baseUrl, givenNames, sex) {
@@ -278,20 +281,14 @@ test('GET /api/persons/:id/network renvoie le réseau typé jusqu’à la profon
     // Une filiation adoptive n'est jamais présentée comme biologique par
     // défaut dans le libellé de la relation directe.
     const relationship = (
-      await requestJson(
-        server.baseUrl,
-        `/api/graph/relationship?personA=${adopte}&personB=${moi}`,
-      )
+      await requestJson(server.baseUrl, `/api/graph/relationship?personA=${adopte}&personB=${moi}`)
     ).body;
     assert.equal(relationship.relationship, 'ANCESTOR_1');
     assert.equal(relationship.linkType, 'ADOPTIVE');
     assert.equal(relationship.label, 'parent adoptif');
 
     const reverseRelationship = (
-      await requestJson(
-        server.baseUrl,
-        `/api/graph/relationship?personA=${moi}&personB=${adopte}`,
-      )
+      await requestJson(server.baseUrl, `/api/graph/relationship?personA=${moi}&personB=${adopte}`)
     ).body;
     assert.equal(reverseRelationship.relationship, 'DESCENDANT_1');
     assert.equal(reverseRelationship.linkType, 'ADOPTIVE');

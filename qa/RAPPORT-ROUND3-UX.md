@@ -75,6 +75,7 @@ tel quel dans l'UI).
 Les points suivants, déjà identifiés en cycle 1/2 comme nécessitant potentiellement une
 refonte plus large plutôt qu'un correctif ponctuel, restent valables et ne sont pas repris
 ici par cette mission (voir `qa/RAPPORT.md` section recommandations) :
+
 - absence de mode multi-utilisateur/collaboratif (choix de positionnement probable, à
   confirmer côté produit) ;
 - absence de correspondance ADN ;
@@ -98,6 +99,7 @@ Aucun débordement horizontal, aucune erreur console et aucun texte de type
 `undefined`/`NaN`/`[object Object]` n'a été observé sur les écrans passés en revue, aux trois
 largeurs testées. Deux hypothèses de bug ont été investiguées puis écartées après vérification
 directe du DOM/CSS (pas de rapport à tort) :
+
 - la liste de personnes du panneau latéral (`.sidenav__persons`) est bien masquée sous
   1024px (comportement voulu, cohérent avec BUG-005 déjà validé), mais un second champ de
   recherche visible et fonctionnel (« Rechercher une personne… ») reste disponible dans la

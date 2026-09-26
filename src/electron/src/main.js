@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createApp } from '../../server/src/app.js';
 import { TreeWorkspace, createLiveServices } from '../../server/src/trees/tree-workspace.js';
 import { startIndexScheduler } from '../../server/src/indexing/index.service.js';
+import { stopOcr } from '../../server/src/indexing/content-extract.js';
 import {
   StorageService,
   configuredDataDir,
@@ -81,4 +82,13 @@ app.on('window-all-closed', () => {
   server?.close();
   workspace?.close();
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Libère le worker OCR (tesseract.js) avant de quitter, pour ne jamais
+// laisser le process bloqué en arrière-plan.
+app.on('before-quit', (event) => {
+  event.preventDefault();
+  stopOcr()
+    .catch((error) => console.error('Arrêt du worker OCR impossible :', error.message))
+    .finally(() => app.exit(0));
 });

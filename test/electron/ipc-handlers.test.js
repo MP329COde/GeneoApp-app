@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { openDatabase } from '../../src/db/src/database.js';
 import { runMigrations } from '../../src/db/src/migrate.js';
 import { createServices } from '../../src/server/src/services/index.js';
