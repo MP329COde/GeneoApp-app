@@ -2051,6 +2051,10 @@ function SourceMediaTool({ sourceId }) {
 // suffixe et statut « vivant » existent côté modèle (Phase B du cahier des
 // charges) mais n'avaient jusque-là aucun formulaire pour les saisir.
 function IdentityTool({ selected, onUpdated }) {
+  const [givenNames, setGivenNames] = useState(selected.given_names ?? '');
+  const [familyName, setFamilyName] = useState(selected.family_name ?? '');
+  const [birthFamilyName, setBirthFamilyName] = useState(selected.birth_family_name ?? '');
+  const [sex, setSex] = useState(selected.sex ?? 'U');
   const [nickname, setNickname] = useState(selected.nickname ?? '');
   const [marriedName, setMarriedName] = useState(selected.married_name ?? '');
   const [title, setTitle] = useState(selected.title ?? '');
@@ -2060,6 +2064,10 @@ function IdentityTool({ selected, onUpdated }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    setGivenNames(selected.given_names ?? '');
+    setFamilyName(selected.family_name ?? '');
+    setBirthFamilyName(selected.birth_family_name ?? '');
+    setSex(selected.sex ?? 'U');
     setNickname(selected.nickname ?? '');
     setMarriedName(selected.married_name ?? '');
     setTitle(selected.title ?? '');
@@ -2069,10 +2077,22 @@ function IdentityTool({ selected, onUpdated }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!givenNames.trim() && !familyName.trim()) {
+      setIdentityError('Un prénom ou un nom est requis.');
+      return;
+    }
     setBusy(true);
     setIdentityError(null);
     try {
+      // Une seule écriture persons.update : l'historique (Ctrl+Z / Ctrl+Maj+Z
+      // et l'onglet Historique) est déjà générique pour toute écriture sur
+      // /api/persons/:id, ces champs en bénéficient donc sans plomberie
+      // supplémentaire.
       await client.persons.update(selected.id, {
+        givenNames: givenNames.trim() || null,
+        familyName: familyName.trim() || null,
+        birthFamilyName: birthFamilyName.trim() || null,
+        sex,
         nickname: nickname.trim() || null,
         marriedName: marriedName.trim() || null,
         title: title.trim() || null,
@@ -2091,6 +2111,29 @@ function IdentityTool({ selected, onUpdated }) {
     <form className="detail-section create-person-form" onSubmit={handleSubmit}>
       <h3>Identité</h3>
       {identityError ? <ErrorNotice message={identityError} /> : null}
+      <label>
+        <span>Prénom(s)</span>
+        <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
+      </label>
+      <label>
+        <span>Nom</span>
+        <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
+      </label>
+      <label>
+        <span>Nom de naissance</span>
+        <input
+          value={birthFamilyName}
+          onChange={(event) => setBirthFamilyName(event.target.value)}
+        />
+      </label>
+      <label>
+        <span>Sexe</span>
+        <select value={sex} onChange={(event) => setSex(event.target.value)}>
+          <option value="U">Inconnu</option>
+          <option value="M">Masculin</option>
+          <option value="F">Féminin</option>
+        </select>
+      </label>
       <label>
         <span>Surnom / alias</span>
         <input value={nickname} onChange={(event) => setNickname(event.target.value)} />

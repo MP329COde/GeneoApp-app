@@ -379,6 +379,10 @@ describe('App', () => {
 
     await waitFor(() =>
       expect(persons.update).toHaveBeenCalledWith(1, {
+        givenNames: 'Jean',
+        familyName: 'Dupont',
+        birthFamilyName: null,
+        sex: 'U',
         nickname: 'Jeannot',
         marriedName: null,
         title: null,
@@ -386,6 +390,66 @@ describe('App', () => {
         isLiving: false,
       }),
     );
+  });
+
+  it('modifie réellement le prénom, le nom, le nom de naissance et le sexe', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', sex: 'M', is_living: 1 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    persons.update.mockResolvedValue({});
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
+      target: { value: 'Dupont-Durand' },
+    });
+    fireEvent.change(screen.getByLabelText('Nom de naissance'), { target: { value: 'Durand' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() =>
+      expect(persons.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          givenNames: 'Jean',
+          familyName: 'Dupont-Durand',
+          birthFamilyName: 'Durand',
+          sex: 'M',
+        }),
+      ),
+    );
+  });
+
+  it('refuse de sauvegarder une identité sans prénom ni nom', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', is_living: 1 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Prénom(s)'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(persons.update).not.toHaveBeenCalled();
+    expect(screen.getByText('Un prénom ou un nom est requis.')).toBeInTheDocument();
   });
 
   it('recherche via le client API et affiche les résultats réels (aucune donnée fictive)', async () => {

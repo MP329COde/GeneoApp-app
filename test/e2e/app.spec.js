@@ -306,6 +306,46 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
 });
 
+test('corrige une faute dans le prénom/nom depuis l’identité, annule (Ctrl+Z) et rétablit (Ctrl+Maj+Z)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  if ((await page.getByRole('button', { name: 'Byron Lovelace' }).count()) === 0) {
+    await addPerson(page, 'Byron', 'Lovelace');
+  }
+  await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
+
+  await page.getByLabel('Nom', { exact: true }).fill('Lovelacee');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('heading', { name: 'Byron Lovelacee' })).toBeVisible();
+
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.getByRole('heading', { name: 'Byron Lovelace' })).toBeVisible();
+
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(page.getByRole('heading', { name: 'Byron Lovelacee' })).toBeVisible();
+
+  // Historique des écritures (panneau Sauvegardes/Historique global) : la
+  // correction du nom y apparaît, comme toute écriture persons.update — sans
+  // plomberie dédiée pour ces nouveaux champs.
+  await page.getByRole('button', { name: 'Notifications' }).click();
+  await expect(page.getByText(/Personne modifiée/).first()).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Remet le nom d'origine pour ne pas affecter les tests suivants du fichier
+  // (mode serial, personnes partagées entre tests).
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
+  await page.getByLabel('Nom', { exact: true }).fill('Lovelace');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('heading', { name: 'Byron Lovelace' })).toBeVisible();
+});
+
 test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune erreur certaine)', async ({
   page,
 }) => {
