@@ -46,8 +46,8 @@
   "nav.views": "Vues",
   "shell.persons": "Personnes",
   "shell.personCount": {
-    "one": "{count} personne(s)",
-    "other": "{count} personne(s)"
+    "one": "{count} personne",
+    "other": "{count} personnes"
   },
   "shell.context": "Contexte :",
   "shell.offline": "Hors ligne",

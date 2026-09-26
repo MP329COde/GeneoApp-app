@@ -244,8 +244,13 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
         ) : null}
       </span>
       {issues ? (
-        <span className="issue-dot" title={`${issues} point(s) à vérifier`}>
-          <span className="gds-visually-hidden">{issues} point(s) à vérifier</span>
+        <span
+          className="issue-dot"
+          title={countedFr(issues, { one: 'point à vérifier', other: 'points à vérifier' })}
+        >
+          <span className="gds-visually-hidden">
+            {countedFr(issues, { one: 'point à vérifier', other: 'points à vérifier' })}
+          </span>
         </span>
       ) : null}
     </button>
@@ -519,13 +524,16 @@ function SearchPanel({ onNavigate, selected, lifespan }) {
 }
 
 const MERGE_REASSIGNMENT_LABELS = {
-  parentagesAsParent: 'lien(s) parent → enfant',
-  parentagesAsChild: 'lien(s) enfant → parent',
-  unionPartnerships: 'union(s)',
-  eventParticipations: 'participation(s) à un événement',
-  citations: 'citation(s) de source',
-  notes: 'note(s)',
-  media: 'média(s)',
+  parentagesAsParent: { one: 'lien parent → enfant', other: 'liens parent → enfant' },
+  parentagesAsChild: { one: 'lien enfant → parent', other: 'liens enfant → parent' },
+  unionPartnerships: { one: 'union', other: 'unions' },
+  eventParticipations: {
+    one: 'participation à un événement',
+    other: 'participations à un événement',
+  },
+  citations: { one: 'citation de source', other: 'citations de source' },
+  notes: { one: 'note', other: 'notes' },
+  media: { one: 'média', other: 'médias' },
 };
 
 function DuplicatesPanel({ onSelect, onMerged }) {
@@ -596,7 +604,7 @@ function DuplicatesPanel({ onSelect, onMerged }) {
               .filter(([, count]) => count > 0)
               .map(([key, count]) => (
                 <li key={key}>
-                  {count} {MERGE_REASSIGNMENT_LABELS[key] ?? key}
+                  {countedFr(count, MERGE_REASSIGNMENT_LABELS[key] ?? { one: key, other: key })}
                 </li>
               ))}
             {Object.values(pendingMerge.preview.reassignments).every((count) => count === 0) ? (
@@ -1605,6 +1613,77 @@ const TIMELINE_ISSUE_LABELS = {
 };
 const SEVERITY_LABELS = { CERTAIN: 'Erreur certaine', POSSIBLE: 'Inhabituel, à vérifier' };
 
+// Formes plurielles (accord singulier/pluriel réel, pas de suffixe "(s)")
+// pour les messages qui préfixent ce libellé par un nombre, ex.
+// « 1 375 enfants nés avant leur parent ». Intl.PluralRules('fr') classe
+// 0 et 1 dans « one » (accord français correct : « 0 naissance », pas
+// « 0 naissances »).
+const TIMELINE_ISSUE_LABELS_PLURAL = {
+  BIRTH_AFTER_DEATH: {
+    one: 'naissance enregistrée après le décès',
+    other: 'naissances enregistrées après le décès',
+  },
+  MARRIAGE_AFTER_DEATH: {
+    one: 'mariage enregistré après le décès',
+    other: 'mariages enregistrés après le décès',
+  },
+  MARRIAGE_BEFORE_BIRTH: {
+    one: 'mariage enregistré avant la naissance',
+    other: 'mariages enregistrés avant la naissance',
+  },
+  MARRIAGE_VERY_YOUNG: {
+    one: 'mariage à un âge très jeune',
+    other: 'mariages à un âge très jeune',
+  },
+  BAPTISM_BEFORE_BIRTH: {
+    one: 'baptême enregistré avant la naissance',
+    other: 'baptêmes enregistrés avant la naissance',
+  },
+  BURIAL_BEFORE_DEATH: {
+    one: 'inhumation enregistrée avant le décès',
+    other: 'inhumations enregistrées avant le décès',
+  },
+  IMPOSSIBLE_AGE: { one: 'âge au décès exceptionnel', other: 'âges au décès exceptionnels' },
+  MULTIPLE_BIRTHS: {
+    one: 'naissance multiple enregistrée',
+    other: 'naissances multiples enregistrées',
+  },
+  CHILD_BORN_BEFORE_PARENT: {
+    one: 'enfant né avant son parent',
+    other: 'enfants nés avant leur parent',
+  },
+  PARENT_TOO_YOUNG: {
+    one: 'parent très jeune à la naissance',
+    other: 'parents très jeunes à la naissance',
+  },
+  PARENT_TOO_OLD: { one: 'parent âgé à la naissance', other: 'parents âgés à la naissance' },
+  CHILD_AFTER_PARENT_DEATH: {
+    one: "naissance de l'enfant enregistrée après le décès du parent",
+    other: "naissances d'enfants enregistrées après le décès du parent",
+  },
+  LIVING_WITH_DEATH: {
+    one: 'personne marquée vivante malgré un décès enregistré',
+    other: 'personnes marquées vivantes malgré un décès enregistré',
+  },
+  LIVING_TOO_OLD: {
+    one: 'personne marquée vivante mais très âgée',
+    other: 'personnes marquées vivantes mais très âgées',
+  },
+};
+const GENERIC_TIMELINE_ISSUE_PLURAL = {
+  one: 'incohérence de chronologie',
+  other: 'incohérences de chronologie',
+};
+
+export function pluralFr(count, forms) {
+  const category = new Intl.PluralRules('fr').select(count);
+  return forms[category] ?? forms.other;
+}
+
+export function countedFr(count, forms) {
+  return `${new Intl.NumberFormat('fr').format(count)} ${pluralFr(count, forms)}`;
+}
+
 // ---------- Vérification intégrée ----------
 // Les contrôles (doublons, cycles, chronologie) tournent en arrière-plan après
 // chaque modification. Les résultats sont portés par la personne concernée
@@ -1663,19 +1742,19 @@ export function verificationNotifications(byPerson) {
         addToGroup('duplicate', (count) => ({
           type: 'warning',
           title: 'Doublons possibles',
-          message: `${count} doublon(s) possible(s) détecté(s) — ouvrir la vérification.`,
+          message: `${countedFr(count, { one: 'doublon possible détecté', other: 'doublons possibles détectés' })} — ouvrir la vérification.`,
         }));
       } else if (issue.kind === 'cycle') {
         addToGroup('cycle', (count) => ({
           type: 'danger',
           title: 'Cycles de filiation',
-          message: `${count} cycle(s) de filiation détecté(s) — ouvrir la cohérence.`,
+          message: `${countedFr(count, { one: 'cycle de filiation détecté', other: 'cycles de filiation détectés' })} — ouvrir la cohérence.`,
         }));
       } else {
         addToGroup(`timeline:${issue.code}`, (count) => ({
           type: issue.severity === 'CERTAIN' ? 'danger' : 'warning',
           title: TIMELINE_ISSUE_LABELS[issue.code] ?? 'Incohérence de chronologie',
-          message: `${count} ${(TIMELINE_ISSUE_LABELS[issue.code] ?? 'incohérence(s) de chronologie').toLowerCase()} — ouvrir la cohérence.`,
+          message: `${countedFr(count, TIMELINE_ISSUE_LABELS_PLURAL[issue.code] ?? GENERIC_TIMELINE_ISSUE_PLURAL)} — ouvrir la cohérence.`,
         }));
       }
     }
@@ -1873,7 +1952,7 @@ function VerificationSection({ selected, issues, onNavigate, onCompare, onMerged
               .filter(([, count]) => count > 0)
               .map(([key, count]) => (
                 <li key={key}>
-                  {count} {MERGE_REASSIGNMENT_LABELS[key] ?? key}
+                  {countedFr(count, MERGE_REASSIGNMENT_LABELS[key] ?? { one: key, other: key })}
                 </li>
               ))}
           </ul>
@@ -2872,12 +2951,12 @@ function GedcomPanel({ onImported, selected }) {
       {archiveReport ? (
         <p className="notice" role="status">
           {archiveReport.imported
-            ? `Archive importée : ${archiveReport.mapping.persons} personne(s), ${archiveReport.media.attached} média(s) rattaché(s)` +
+            ? `Archive importée : ${countedFr(archiveReport.mapping.persons, { one: 'personne', other: 'personnes' })}, ${countedFr(archiveReport.media.attached, { one: 'média rattaché', other: 'médias rattachés' })}` +
               (archiveReport.media.missing.length
-                ? `, ${archiveReport.media.missing.length} fichier(s) absent(s) de l’archive`
+                ? `, ${countedFr(archiveReport.media.missing.length, { one: 'fichier absent', other: 'fichiers absents' })} de l’archive`
                 : '') +
               (archiveReport.media.rejected.length
-                ? `, ${archiveReport.media.rejected.length} fichier(s) refusé(s) : ${archiveReport.media.rejected.map((item) => `${item.file} (${item.reason})`).join(', ')}`
+                ? `, ${countedFr(archiveReport.media.rejected.length, { one: 'fichier refusé', other: 'fichiers refusés' })} : ${archiveReport.media.rejected.map((item) => `${item.file} (${item.reason})`).join(', ')}`
                 : '') +
               '.'
             : 'Import refusé : aucune donnée écrite (rollback).'}
@@ -2911,7 +2990,7 @@ function GedcomPanel({ onImported, selected }) {
       {preview ? (
         <p className="notice" role="status">
           {preview.valid
-            ? `Aperçu valide : ${preview.mapping.persons} personne(s), ${preview.mapping.unions} union(s), ${preview.mapping.events} événement(s).`
+            ? `Aperçu valide : ${countedFr(preview.mapping.persons, { one: 'personne', other: 'personnes' })}, ${countedFr(preview.mapping.unions, { one: 'union', other: 'unions' })}, ${countedFr(preview.mapping.events, { one: 'événement', other: 'événements' })}.`
             : `GEDCOM invalide : ${preview.errors?.map((issue) => issue.message).join(', ') || 'voir le rapport'}`}
         </p>
       ) : null}
@@ -2960,7 +3039,8 @@ function GedcomPanel({ onImported, selected }) {
         ) : null}
         {exportSummary ? (
           <p role="status" className="data-id">
-            Exporté : {exportSummary.persons} personne(s), {exportSummary.families} famille(s)
+            Exporté : {countedFr(exportSummary.persons, { one: 'personne', other: 'personnes' })},{' '}
+            {countedFr(exportSummary.families, { one: 'famille', other: 'familles' })}
           </p>
         ) : null}
       </div>

@@ -212,7 +212,7 @@ describe('regroupement des notifications de vérification (contre-audit, point 4
     // Deux groupes distincts (un par code), jamais un par occurrence.
     expect(items.length).toBe(2);
     expect(items.length).toBeLessThanOrEqual(20);
-    const childBeforeParent = items.find((item) => /1234/.test(item.message));
+    const childBeforeParent = items.find((item) => /1\s?234/.test(item.message));
     expect(childBeforeParent).toBeTruthy();
     expect(childBeforeParent.dedupeKey).toBe('verification-group:timeline:CHILD_BEFORE_PARENT');
 
@@ -222,6 +222,24 @@ describe('regroupement des notifications de vérification (contre-audit, point 4
     expect(again.map((item) => item.dedupeKey).sort()).toEqual(
       items.map((item) => item.dedupeKey).sort(),
     );
+  });
+
+  it('accorde le pluriel et formate le nombre (pas de suffixe "(s)")', () => {
+    // Avant correctif : "{count} {libellé au singulier}", donc
+    // "1375 enfant né avant son parent — ouvrir la cohérence." (faux accord,
+    // pas de séparateur de milliers).
+    const timeline = Array.from({ length: 1375 }, (_, index) => ({
+      code: 'CHILD_BORN_BEFORE_PARENT',
+      severity: 'CERTAIN',
+      personId: index + 1,
+      parentId: index + 5000,
+    }));
+    const items = verificationNotifications(buildVerificationIssues({ timeline }));
+    expect(items).toHaveLength(1);
+    expect(items[0].message).toBe('1 375 enfants nés avant leur parent — ouvrir la cohérence.');
+
+    const single = verificationNotifications(buildVerificationIssues({ timeline: [timeline[0]] }));
+    expect(single[0].message).toBe('1 enfant né avant son parent — ouvrir la cohérence.');
   });
 });
 
@@ -270,7 +288,7 @@ describe('App', () => {
     });
 
     const { container } = renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
 
     expect(await axe(container)).toHaveNoViolations();
@@ -291,7 +309,7 @@ describe('App', () => {
 
     renderWithProviders(<App />);
 
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
   });
@@ -310,7 +328,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
 
     const nav = screen.getByRole('navigation', { name: 'Personnes' });
@@ -371,7 +389,7 @@ describe('App', () => {
     persons.update.mockResolvedValue({});
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('Surnom / alias'), { target: { value: 'Jeannot' } });
     fireEvent.click(screen.getByLabelText('Personne vivante'));
@@ -406,7 +424,7 @@ describe('App', () => {
     persons.update.mockResolvedValue({});
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
       target: { value: 'Dupont-Durand' },
@@ -440,7 +458,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('Prénom(s)'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
@@ -466,7 +484,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'paroissial' } });
@@ -680,7 +698,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     // Aucune section « Vérifier » séparée : l'analyse tourne toute seule.
     expect(screen.queryByRole('button', { name: 'Doublons' })).not.toBeInTheDocument();
@@ -744,20 +762,20 @@ describe('App', () => {
     persons.list.mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Fusionner ici' }, { timeout: 3000 }),
     );
 
     await waitFor(() => expect(search.previewMerge).toHaveBeenCalledWith(1, 2));
-    await waitFor(() => expect(screen.getByText(/lien\(s\) enfant → parent/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/liens? enfant → parent/)).toBeInTheDocument());
     expect(search.merge).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmer la fusion' }));
 
     await waitFor(() => expect(search.merge).toHaveBeenCalledWith(1, 2));
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
   });
 
   it('gère les familles (unions) d’une personne via le client API', async () => {
@@ -778,7 +796,7 @@ describe('App', () => {
     unions.create.mockResolvedValue({ id: 7, type: 'MARRIAGE', partnerIds: [1, 2] });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
     await waitFor(() => expect(unions.listForPerson).toHaveBeenCalledWith(1));
@@ -856,7 +874,7 @@ describe('App', () => {
     research.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Vérifier acte' } });
@@ -961,7 +979,7 @@ describe('App', () => {
     notes.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
@@ -1004,7 +1022,7 @@ describe('App', () => {
     media.upload.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
     await waitFor(() => expect(media.listForEntity).toHaveBeenCalledWith('PERSON', 1));
@@ -1045,7 +1063,7 @@ describe('App', () => {
     sources.addCitation.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
     await waitFor(() => expect(sources.listCitationsForEntity).toHaveBeenCalledWith('PERSON', 1));
@@ -1100,7 +1118,7 @@ describe('App', () => {
     HTMLAnchorElement.prototype.click = clickSpy;
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
 
@@ -1135,7 +1153,7 @@ describe('App', () => {
     parentages.create.mockResolvedValue({ id: 10 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('3 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('3 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
     await waitFor(() => expect(parentages.listParentsOf).toHaveBeenCalledWith(1));
@@ -1172,7 +1190,7 @@ describe('App', () => {
     events.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
     await waitFor(() => expect(events.listForPerson).toHaveBeenCalledWith(1));
@@ -1219,7 +1237,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Chronologie' }));
 
@@ -1244,7 +1262,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
 
@@ -1269,7 +1287,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
 
     await waitFor(() =>
@@ -1298,7 +1316,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     // L'anti-rebond de la vérification a été allongé (cf. Phase 2 audit
     // performance) pour ne plus relancer l'analyse après chaque écriture ;
@@ -1347,7 +1365,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     graph.relationship.mockResolvedValue({
       relationship: 'CONNECTED',
@@ -1381,7 +1399,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Historique' }));
@@ -1404,7 +1422,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
 
@@ -1448,7 +1466,7 @@ describe('App', () => {
     graph.commonAncestors.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Parenté' }));
     fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
@@ -1473,7 +1491,7 @@ describe('App', () => {
     events.listForPerson.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
 
@@ -1530,7 +1548,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Éventail' }));
 
     const mother = await screen.findByRole('button', { name: 'Anne Morel, Sosa 3' });
@@ -1569,14 +1587,14 @@ describe('App', () => {
     trees.activate.mockResolvedValue({ ...second, active: true, personCount: 0 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     expect(await screen.findByRole('button', { name: 'Mon arbre' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Arbres' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir Famille Morel' }));
 
     await waitFor(() => expect(trees.activate).toHaveBeenCalledWith('abc-1'));
-    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Famille Morel' })).toBeInTheDocument();
   });
   it('annule la dernière action via le bouton puis Ctrl+Z, sans intercepter la frappe', async () => {
@@ -1612,11 +1630,11 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(await screen.findByRole('button', { name: 'Annuler : Ajout · personne' }));
     await waitFor(() => expect(history.undo).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     expect(screen.getByText('Annulé : Ajout · personne')).toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByRole('combobox', { name: /Rechercher une personne/ }), {
@@ -1722,7 +1740,7 @@ describe('App', () => {
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
     fireEvent.change(screen.getByLabelText('Format d’export'), { target: { value: '5.5.1' } });
     fireEvent.change(screen.getByLabelText('Périmètre'), { target: { value: 'maternal' } });
@@ -1735,7 +1753,7 @@ describe('App', () => {
         side: 'MATERNAL',
       }),
     );
-    expect(await screen.findByText('Exporté : 3 personne(s), 1 famille(s)')).toBeInTheDocument();
+    expect(await screen.findByText('Exporté : 3 personnes, 1 famille')).toBeInTheDocument();
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
   });
@@ -1784,7 +1802,7 @@ describe('App', () => {
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:photo'), revokeObjectURL: vi.fn() });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir mariage.png' }));
 
@@ -1817,7 +1835,7 @@ describe('App', () => {
     events.listForPerson.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
 
     fireEvent.change(await screen.findByLabelText('Date (texte libre)'), {
@@ -1853,7 +1871,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
 
     expect(await screen.findByText('vers 1760 – 1822')).toBeInTheDocument();
@@ -1983,7 +2001,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Comparaison' }));
     fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
 
@@ -2014,7 +2032,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     const form = screen.getByRole('heading', { name: 'Filtres avancés' }).parentElement;
     fireEvent.change(within(form).getByLabelText('Nom'), { target: { value: 'Dupont' } });
@@ -2076,7 +2094,7 @@ describe('App', () => {
     localStorage.removeItem('geneoapp.searchSites');
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Gallica (BnF)' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Recherche web' }));
@@ -2121,7 +2139,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Graphe' }));
 
     await waitFor(() => expect(graph.network).toHaveBeenCalledWith(1, 4));
@@ -2146,7 +2164,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
     fireEvent.change(screen.getByLabelText('Langue'), { target: { value: 'en' } });
 
@@ -2159,7 +2177,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
-    expect(await screen.findByText('1 personne(s)')).toBeInTheDocument();
+    expect(await screen.findByText('1 personne')).toBeInTheDocument();
     localStorage.clear();
   });
   it('modifie une note en texte riche et liste les annotations de toutes les cibles', async () => {
@@ -2188,7 +2206,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
     expect(await screen.findByText('à Nantes', { selector: 'strong' })).toBeInTheDocument();
@@ -2231,7 +2249,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     const box = screen.getByRole('combobox', { name: /Rechercher une personne/ });
     expect(box).toHaveFocus();
@@ -2255,7 +2273,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
 
     // Menu réorganisé en 5 sections (phase 5 de l'audit) : « Carte » vit

@@ -1,17 +1,29 @@
+// `gender`/`plural` pilotent l'accord du participe passé ("créé(e)(s)") :
+// sans eux, un seul accord (féminin singulier) était appliqué à tous les
+// libellés, produisant des messages incorrects ("GEDCOM créée", "Événement
+// créée", "Données créée" au lieu de "GEDCOM créé", "Événement créé",
+// "Données créées").
 const PATH_LABELS = [
-  [/\/backups(?:\/|$)/, 'Sauvegarde'],
-  [/\/gedcom(?:\/|$)/, 'GEDCOM'],
-  [/\/persons(?:\/|$)/, 'Personne'],
-  [/\/events(?:\/|$)/, 'Événement'],
-  [/\/sources(?:\/|$)/, 'Source'],
-  [/\/media(?:\/|$)/, 'Média'],
-  [/\/notes(?:\/|$)/, 'Note'],
-  [/\/notebook(?:\/|$)/, 'Carnet de recherche'],
-  [/\/trash(?:\/|$)/, 'Corbeille'],
+  [/\/backups(?:\/|$)/, { label: 'Sauvegarde', gender: 'f', plural: false }],
+  [/\/gedcom(?:\/|$)/, { label: 'GEDCOM', gender: 'm', plural: false }],
+  [/\/persons(?:\/|$)/, { label: 'Personne', gender: 'f', plural: false }],
+  [/\/events(?:\/|$)/, { label: 'Événement', gender: 'm', plural: false }],
+  [/\/sources(?:\/|$)/, { label: 'Source', gender: 'f', plural: false }],
+  [/\/media(?:\/|$)/, { label: 'Média', gender: 'm', plural: false }],
+  [/\/notes(?:\/|$)/, { label: 'Note', gender: 'f', plural: false }],
+  [/\/notebook(?:\/|$)/, { label: 'Carnet de recherche', gender: 'm', plural: false }],
+  [/\/trash(?:\/|$)/, { label: 'Corbeille', gender: 'f', plural: false }],
 ];
+const DEFAULT_LABEL = { label: 'Données', gender: 'f', plural: true };
 
 function labelForPath(path) {
-  return PATH_LABELS.find(([pattern]) => pattern.test(path))?.[1] ?? 'Données';
+  return PATH_LABELS.find(([pattern]) => pattern.test(path))?.[1] ?? DEFAULT_LABEL;
+}
+
+// Accorde un participe passé masculin singulier ("créé", "modifié",
+// "supprimé") en genre et en nombre.
+function agree(base, { gender, plural }) {
+  return `${base}${gender === 'f' ? 'e' : ''}${plural ? 's' : ''}`;
 }
 
 export class NotificationService {
@@ -60,12 +72,13 @@ export class NotificationService {
   }
 
   recordMutation({ method, path, status }) {
-    const label = labelForPath(path);
-    const action = method === 'DELETE' ? 'supprimée' : method === 'PATCH' ? 'modifiée' : 'créée';
+    const descriptor = labelForPath(path);
+    const base = method === 'DELETE' ? 'supprimé' : method === 'PATCH' ? 'modifié' : 'créé';
+    const action = agree(base, descriptor);
     return this.repository.create({
       type: 'success',
-      title: `${label} ${action}`,
-      message: `${label} ${action} avec succès.`,
+      title: `${descriptor.label} ${action}`,
+      message: `${descriptor.label} ${action} avec succès.`,
       metadata: { method, path, status },
     });
   }

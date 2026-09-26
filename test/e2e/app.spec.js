@@ -62,7 +62,7 @@ async function addPerson(page, givenNames, familyName) {
 test('démarre sur un état vide honnête, sans donnée fictive', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText(/Aucune personne enregistrée/)).toBeVisible();
-  await expect(page.getByText('0 personne(s)')).toBeVisible();
+  await expect(page.getByText('0 personne')).toBeVisible();
 });
 
 test('crée une personne réelle via le formulaire et la voit apparaître dans la liste', async ({
@@ -71,7 +71,7 @@ test('crée une personne réelle via le formulaire et la voit apparaître dans l
   await page.goto('/');
   await addPerson(page, 'Ada', 'Lovelace');
 
-  await expect(page.getByText('1 personne(s)')).toBeVisible();
+  await expect(page.getByText('1 personne')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
 });
 
@@ -80,7 +80,7 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
 }) => {
   await page.goto('/');
   await addPerson(page, 'Byron', 'Lovelace');
-  await expect(page.getByText('2 personne(s)')).toBeVisible();
+  await expect(page.getByText('2 personnes')).toBeVisible();
 
   // Sélectionne Ada, puis ajoute Byron comme enfant via l'onglet Familles.
   await page.getByRole('button', { name: 'Ada Lovelace' }).click();
@@ -122,7 +122,7 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
   await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
-  await expect(page.getByText('5 personne(s)')).toBeVisible();
+  await expect(page.getByText('5 personnes')).toBeVisible();
 });
 
 test('exporte réellement l’arbre au format GEDCOM (téléchargement déclenché)', async ({ page }) => {
@@ -205,7 +205,7 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
-  await expect(page.getByText('4 personne(s)')).toBeVisible();
+  await expect(page.getByText('4 personnes')).toBeVisible();
 });
 
 test('la chronologie affiche les événements réels importés par GEDCOM, triés et avec lieu', async ({
@@ -407,7 +407,7 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
 }) => {
   await page.goto('/');
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  await expect(counter).toHaveText(/\d+ personnes?/);
   const before = await counter.textContent();
 
   await page.getByRole('button', { name: 'Arbres', exact: true }).click();
@@ -415,10 +415,10 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
   await page.getByRole('button', { name: 'Créer l’arbre' }).click();
   await page.getByRole('button', { name: 'Ouvrir Famille Morel' }).click();
 
-  await expect(counter).toHaveText('0 personne(s)');
+  await expect(counter).toHaveText('0 personne');
   await expect(page.getByRole('button', { name: 'Famille Morel', exact: true })).toBeVisible();
   await addPerson(page, 'Anne', 'Morel');
-  await expect(counter).toHaveText('1 personne(s)');
+  await expect(counter).toHaveText('1 personne');
 
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
   await expect(counter).toHaveText(before);
@@ -430,19 +430,20 @@ test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la ré
 }) => {
   await page.goto('/');
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  await expect(counter).toHaveText(/\d+ personnes?/);
   const before = Number((await counter.textContent()).split(' ')[0]);
+  const personCountText = (count) => `${count} personne${count === 0 || count === 1 ? '' : 's'}`;
 
   await addPerson(page, 'Temporaire', 'Annulable');
-  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before + 1));
 
   await page.locator('body').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('ControlOrMeta+z');
-  await expect(counter).toHaveText(`${before} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before));
   await expect(page.getByRole('button', { name: 'Temporaire Annulable' })).toHaveCount(0);
 
   await page.keyboard.press('ControlOrMeta+Shift+z');
-  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before + 1));
 });
 
 test('mène une recherche complète : hypothèse étayée, tâche faite, persistées au rechargement', async ({
@@ -515,7 +516,7 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   await page.getByRole('button', { name: 'Créer l’arbre' }).click();
   await page.getByRole('button', { name: 'Ouvrir Réimport GEDZIP' }).click();
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText('0 personne(s)');
+  await expect(counter).toHaveText('0 personne');
 
   // L'arbre vide ouvre automatiquement l'assistant de départ ("Nouvelle
   // personne") : on le referme avant de naviguer, comme le ferait un
@@ -531,9 +532,9 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
     .setInputFiles({ name: 'export.gdz', mimeType: 'application/zip', buffer: archive });
   await page.getByRole('button', { name: 'Importer l’archive GEDZIP' }).click();
   await expect(
-    page.getByText(/Archive importée : \d+ personne\(s\), \d+ média\(s\)/),
+    page.getByText(/Archive importée : \d+ personnes?, \d+ médias? rattaché/),
   ).toBeVisible();
-  await expect(counter).not.toHaveText('0 personne(s)');
+  await expect(counter).not.toHaveText('0 personne');
 
   await page.getByRole('button', { name: 'Arbres', exact: true }).click();
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
