@@ -225,7 +225,7 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await expect(page.getByText('Carte locale (hors ligne, aucune requête réseau)')).toBeVisible();
   await expect(
     page.getByRole('img', {
-      name: 'Carte locale des lieux enregistrés (position relative, sans fond de carte)',
+      name: 'Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)',
     }),
   ).toBeVisible();
   await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
