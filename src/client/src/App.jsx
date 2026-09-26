@@ -4554,7 +4554,7 @@ function AppContent() {
                 ) : view === 'ai' ? (
                   <AiPanel />
                 ) : view === 'trees' ? (
-                  <TreesPanel client={client} onActivated={handleTreeActivated} />
+                  <TreesPanel client={client} onActivated={handleTreeActivated} session={session} />
                 ) : view === 'settings' ? (
                   <SettingsPanel navGroups={NAV_GROUPS} />
                 ) : view === 'person' && selected ? (

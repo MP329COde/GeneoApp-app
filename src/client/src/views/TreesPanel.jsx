@@ -3,7 +3,7 @@ import { Badge, Button } from '../design-system/index.js';
 
 // Gestion des arbres : chaque arbre est une base locale isolée. On choisit
 // d'abord l'arbre de travail, puis toute l'application travaille dessus.
-export function TreesPanel({ client, onActivated }) {
+export function TreesPanel({ client, onActivated, session }) {
   const [trees, setTrees] = useState(null);
   const [deleted, setDeleted] = useState([]);
   const [name, setName] = useState('');
@@ -162,9 +162,15 @@ export function TreesPanel({ client, onActivated }) {
                       <Button
                         size="sm"
                         variant="secondary"
+                        disabled={!session}
+                        title={
+                          session
+                            ? undefined
+                            : 'Connectez-vous avec un profil local pour supprimer un arbre.'
+                        }
                         onClick={() =>
                           run(
-                            () => client.trees.remove(tree.id),
+                            () => client.trees.remove(tree.id, session.token),
                             `Arbre « ${tree.name} » supprimé.`,
                           )
                         }
@@ -212,8 +218,17 @@ export function TreesPanel({ client, onActivated }) {
                 <Button
                   size="sm"
                   variant="secondary"
+                  disabled={!session}
+                  title={
+                    session
+                      ? undefined
+                      : 'Connectez-vous avec un profil local pour restaurer un arbre.'
+                  }
                   onClick={() =>
-                    run(() => client.trees.restore(tree.id), `Arbre « ${tree.name} » restauré.`)
+                    run(
+                      () => client.trees.restore(tree.id, session.token),
+                      `Arbre « ${tree.name} » restauré.`,
+                    )
                   }
                 >
                   Restaurer {tree.name}

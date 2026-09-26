@@ -616,6 +616,57 @@ test('les canaux d’arbres basculent les services IPC « live » sur l’arbre 
   }
 });
 
+// Avant correctif : TREES_REMOVE et TREES_RESTORE n'exigeaient aucun jeton
+// de session, contrairement à STORAGE_SET_MIRROR/STORAGE_SET_DATA_DIR qui
+// suivent la même règle de protection (contre-audit, point 4).
+test('TREES_REMOVE et TREES_RESTORE exigent une session protégée côté IPC', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { TreeWorkspace, createLiveServices } =
+    await import('../../src/server/src/trees/tree-workspace.js');
+  const dataDir = await mkdtemp(path.join(tmpdir(), 'geneoapp-ipc-trees-session-'));
+  const workspace = new TreeWorkspace({
+    dataDir,
+    defaultDatabaseFile: path.join(dataDir, 'geneoapp.sqlite'),
+  });
+  try {
+    const services = createLiveServices(workspace);
+    const handlers = buildIpcHandlers(services, workspace);
+    const created = await handlers[IPC_CHANNELS.TREES_CREATE]({ data: { name: 'Cible' } });
+
+    const removedWithoutToken = await handlers[IPC_CHANNELS.TREES_REMOVE]({
+      id: created.data.id,
+    });
+    assert.equal(removedWithoutToken.ok, false);
+    assert.equal(removedWithoutToken.error.status, 401);
+
+    const restoredWithoutToken = await handlers[IPC_CHANNELS.TREES_RESTORE]({
+      id: created.data.id,
+    });
+    assert.equal(restoredWithoutToken.ok, false);
+    assert.equal(restoredWithoutToken.error.status, 401);
+
+    await services.accounts.create({ name: 'Alice' });
+    const { token } = services.accounts.login({ name: 'Alice' });
+
+    const removed = await handlers[IPC_CHANNELS.TREES_REMOVE]({
+      id: created.data.id,
+      token,
+    });
+    assert.equal(removed.ok, true);
+
+    const restored = await handlers[IPC_CHANNELS.TREES_RESTORE]({
+      id: created.data.id,
+      token,
+    });
+    assert.equal(restored.ok, true);
+  } finally {
+    workspace.close();
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 test('une écriture IPC forme une action annulable puis rétablissable', async () => {
   const handlers = createHandlers();
   const created = await handlers[IPC_CHANNELS.PERSONS_CREATE]({

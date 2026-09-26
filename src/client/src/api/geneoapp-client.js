@@ -266,9 +266,10 @@ function createHttpClient() {
         fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'PATCH', body: data }),
       activate: (id) =>
         fetchJson(`/api/trees/${encodeURIComponent(id)}/activate`, { method: 'POST' }),
-      remove: (id) => fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-      restore: (id) =>
-        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+      remove: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE', token }),
+      restore: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST', token }),
     },
     notes: {
       create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
@@ -475,8 +476,8 @@ function createIpcClient(bridge) {
       create: (data) => bridge.trees.create(data),
       update: (id, data) => bridge.trees.update(id, data),
       activate: (id) => bridge.trees.activate(id),
-      remove: (id) => bridge.trees.remove(id),
-      restore: (id) => bridge.trees.restore(id),
+      remove: (id, token) => bridge.trees.remove(id, token),
+      restore: (id, token) => bridge.trees.restore(id, token),
     },
     notes: {
       create: (data) => bridge.notes.create(data),

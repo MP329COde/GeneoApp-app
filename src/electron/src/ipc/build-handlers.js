@@ -518,8 +518,14 @@ function buildRawHandlers(services, workspace, storage) {
           [IPC_CHANNELS.TREES_CREATE]: wrap(({ data }) => workspace.create(data ?? {})),
           [IPC_CHANNELS.TREES_UPDATE]: wrap(({ id, data }) => workspace.update(id, data ?? {})),
           [IPC_CHANNELS.TREES_ACTIVATE]: wrap(({ id }) => workspace.activate(id)),
-          [IPC_CHANNELS.TREES_REMOVE]: wrap(({ id }) => workspace.remove(id)),
-          [IPC_CHANNELS.TREES_RESTORE]: wrap(({ id }) => workspace.restore(id)),
+          [IPC_CHANNELS.TREES_REMOVE]: wrap(({ id, token }) => {
+            services.accounts.requireProtectedSession(token);
+            return workspace.remove(id);
+          }),
+          [IPC_CHANNELS.TREES_RESTORE]: wrap(({ id, token }) => {
+            services.accounts.requireProtectedSession(token);
+            return workspace.restore(id);
+          }),
         }
       : {}),
   };

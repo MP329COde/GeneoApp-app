@@ -1597,6 +1597,48 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Famille Morel' })).toBeInTheDocument();
   });
+
+  // Contre-audit, point 4 : DELETE/restore d'arbre exigent désormais une
+  // session (comme sauvegardes/corbeille), y compris côté UI.
+  it('désactive Supprimer/Restaurer un arbre tant qu’aucun profil n’est connecté', async () => {
+    persons.list.mockResolvedValueOnce([]);
+    trees.list.mockResolvedValue([
+      {
+        id: 'default',
+        name: 'Mon arbre',
+        active: true,
+        createdAt: '2026-09-22T10:00:00Z',
+        personCount: 0,
+      },
+      {
+        id: 'abc-1',
+        name: 'Famille Morel',
+        active: false,
+        createdAt: '2026-09-23T10:00:00Z',
+        personCount: 0,
+      },
+    ]);
+    trees.listDeleted.mockResolvedValue([
+      { id: 'old-1', name: 'Ancien arbre', deletedAt: '2026-09-20T10:00:00Z' },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Arbres' }));
+
+    const removeButton = await screen.findByRole('button', { name: 'Supprimer Famille Morel' });
+    expect(removeButton).toBeDisabled();
+    const restoreButton = await screen.findByRole('button', {
+      name: 'Restaurer Ancien arbre',
+    });
+    expect(restoreButton).toBeDisabled();
+
+    fireEvent.click(removeButton);
+    fireEvent.click(restoreButton);
+    expect(trees.remove).not.toHaveBeenCalled();
+    expect(trees.restore).not.toHaveBeenCalled();
+  });
+
   it('annule la dernière action via le bouton puis Ctrl+Z, sans intercepter la frappe', async () => {
     persons.list
       .mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }])

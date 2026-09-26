@@ -258,8 +258,8 @@ const api = {
     create: (data) => invoke(IPC_CHANNELS.TREES_CREATE, { data }),
     update: (id, data) => invoke(IPC_CHANNELS.TREES_UPDATE, { id, data }),
     activate: (id) => invoke(IPC_CHANNELS.TREES_ACTIVATE, { id }),
-    remove: (id) => invoke(IPC_CHANNELS.TREES_REMOVE, { id }),
-    restore: (id) => invoke(IPC_CHANNELS.TREES_RESTORE, { id }),
+    remove: (id, token) => invoke(IPC_CHANNELS.TREES_REMOVE, { id, token }),
+    restore: (id, token) => invoke(IPC_CHANNELS.TREES_RESTORE, { id, token }),
   },
 };
 

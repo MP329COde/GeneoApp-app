@@ -33,7 +33,7 @@ export function createApp({ database, mediaRoot, backupDir, services, workspace,
     response.json({ status: 'ok' });
   });
 
-  if (workspace) app.use('/api/trees', treeRoutes(workspace));
+  if (workspace) app.use('/api/trees', treeRoutes(workspace, services));
   if (storage) app.use('/api/storage', storageRoutes(storage, services));
   app.use('/api', apiRoutes(services));
 
