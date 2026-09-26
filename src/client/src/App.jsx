@@ -1603,7 +1603,7 @@ function addIssue(map, personId, issue) {
   map.get(personId).push(issue);
 }
 
-function buildVerificationIssues({ duplicates = [], cycles = [], timeline = [] }) {
+export function buildVerificationIssues({ duplicates = [], cycles = [], timeline = [] }) {
   const byPerson = new Map();
   for (const pair of duplicates) {
     const [left, right] = pair.persons;
@@ -1623,42 +1623,53 @@ function buildVerificationIssues({ duplicates = [], cycles = [], timeline = [] }
   return byPerson;
 }
 
-function verificationNotifications(byPerson, personLabelById) {
-  const seen = new Set();
-  const items = [];
-  for (const [personId, issues] of byPerson) {
+// Regroupe les incohérences par type (et non une notification par occurrence
+// individuelle) : un import massif (ex. GEDCOM de 5000 personnes) peut
+// produire des milliers d'alertes de chronologie identiques, et créer une
+// notification par occurrence noierait le centre de notifications (voir
+// contre-audit, point 4). La clé de déduplication est stable par groupe (pas
+// par occurrence), donc une analyse suivante qui retrouve les mêmes
+// incohérences ne republie rien (INSERT OR IGNORE sur dedupe_key en base).
+export function verificationNotifications(byPerson) {
+  const groups = new Map();
+  const addToGroup = (groupKey, factory) => {
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, { count: 0, factory });
+    }
+    groups.get(groupKey).count += 1;
+  };
+
+  const seenIssueKeys = new Set();
+  for (const issues of byPerson.values()) {
     for (const issue of issues) {
-      if (seen.has(issue.key)) continue;
-      seen.add(issue.key);
-      const name = personLabelById(personId);
+      if (seenIssueKeys.has(issue.key)) continue;
+      seenIssueKeys.add(issue.key);
       if (issue.kind === 'duplicate') {
-        items.push({
+        addToGroup('duplicate', (count) => ({
           type: 'warning',
-          title: 'Doublon possible',
-          message: `${name} et ${personLabel(issue.other)} se ressemblent à ${issue.score} %.`,
-          personId,
-          dedupeKey: issue.key,
-        });
+          title: 'Doublons possibles',
+          message: `${count} doublon(s) possible(s) détecté(s) — ouvrir la vérification.`,
+        }));
       } else if (issue.kind === 'cycle') {
-        items.push({
+        addToGroup('cycle', (count) => ({
           type: 'danger',
-          title: 'Cycle de filiation',
-          message: issue.cycle.map((id) => personLabelById(id)).join(' → '),
-          personId,
-          dedupeKey: issue.key,
-        });
+          title: 'Cycles de filiation',
+          message: `${count} cycle(s) de filiation détecté(s) — ouvrir la cohérence.`,
+        }));
       } else {
-        items.push({
+        addToGroup(`timeline:${issue.code}`, (count) => ({
           type: issue.severity === 'CERTAIN' ? 'danger' : 'warning',
           title: TIMELINE_ISSUE_LABELS[issue.code] ?? 'Incohérence de chronologie',
-          message: `${name}${issue.parentId ? ` (parent : ${personLabelById(issue.parentId)})` : ''}${issue.message ? ` — ${issue.message}` : ''}`,
-          personId,
-          dedupeKey: issue.key,
-        });
+          message: `${count} ${(TIMELINE_ISSUE_LABELS[issue.code] ?? 'incohérence(s) de chronologie').toLowerCase()} — ouvrir la cohérence.`,
+        }));
       }
     }
   }
-  return items;
+
+  return [...groups.entries()].map(([groupKey, { count, factory }]) => ({
+    ...factory(count),
+    dedupeKey: `verification-group:${groupKey}`,
+  }));
 }
 
 // Analyse doublons/cycles/chronologie : coûteuse sur une grande base (elle
@@ -1699,7 +1710,7 @@ function useVerification({ persons, runToken, personLabelById }) {
       });
       setIssues(byPerson);
       setRunning(false);
-      const items = verificationNotifications(byPerson, labelRef.current);
+      const items = verificationNotifications(byPerson);
       if (items.length && client.notifications?.publish) {
         try {
           const result = await client.notifications.publish(items);

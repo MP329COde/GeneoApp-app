@@ -63,3 +63,28 @@ test('les alertes de vérification sont publiées une seule fois et liées à la
     await server.close();
   }
 });
+
+test('publish() plafonne à 20 notifications non lues créées par appel', async () => {
+  const server = await startTestServer();
+  try {
+    const items = Array.from({ length: 60 }, (_, index) => ({
+      type: 'warning',
+      title: `Alerte ${index}`,
+      message: `Message ${index}`,
+      dedupeKey: `bulk:${index}`,
+    }));
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/notifications', {
+      method: 'POST',
+      body: { items },
+    });
+
+    assert.equal(status, 201);
+    assert.equal(body.created, 20);
+
+    const listed = await requestJson(server.baseUrl, '/api/notifications?limit=100');
+    assert.equal(listed.body.items.length, 20);
+  } finally {
+    await server.close();
+  }
+});

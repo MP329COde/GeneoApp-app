@@ -15,6 +15,8 @@ function labelForPath(path) {
 }
 
 export class NotificationService {
+  static MAX_CREATED_PER_PUBLISH = 20;
+
   constructor(repository) {
     this.repository = repository;
   }
@@ -31,21 +33,29 @@ export class NotificationService {
     return this.repository.markAllRead();
   }
 
-  /** Publie des alertes (ex. vérifications automatiques) ; ignore les clés déjà vues. */
+  /**
+   * Publie des alertes (ex. vérifications automatiques) ; ignore les clés déjà
+   * vues. Plafonné à MAX_CREATED_PER_PUBLISH notifications non lues créées par
+   * appel : une analyse (ex. après un import GEDCOM massif) peut produire un
+   * grand nombre d'alertes distinctes, mais le centre de notifications ne
+   * doit jamais être noyé (voir contre-audit, point 4). Au-delà, les alertes
+   * restent visibles ailleurs (pastilles sur les fiches, écran Cohérence).
+   */
   publish(items = []) {
     const list = Array.isArray(items) ? items : [items];
-    const created = list
-      .filter((item) => item?.title && item?.message)
-      .map((item) =>
-        this.repository.create({
-          type: ['info', 'warning', 'danger', 'success'].includes(item.type) ? item.type : 'info',
-          title: String(item.title),
-          message: String(item.message),
-          personId: Number.isInteger(item.personId) ? item.personId : null,
-          dedupeKey: item.dedupeKey ? String(item.dedupeKey) : null,
-        }),
-      )
-      .filter(Boolean);
+    const created = [];
+    for (const item of list) {
+      if (created.length >= NotificationService.MAX_CREATED_PER_PUBLISH) break;
+      if (!item?.title || !item?.message) continue;
+      const result = this.repository.create({
+        type: ['info', 'warning', 'danger', 'success'].includes(item.type) ? item.type : 'info',
+        title: String(item.title),
+        message: String(item.message),
+        personId: Number.isInteger(item.personId) ? item.personId : null,
+        dedupeKey: item.dedupeKey ? String(item.dedupeKey) : null,
+      });
+      if (result) created.push(result);
+    }
     return { created: created.length };
   }
 

@@ -180,7 +180,50 @@ vi.mock('./api/geneoapp-client.js', () => ({
   }),
 }));
 
-const { default: App } = await import('./App.jsx');
+const {
+  default: App,
+  buildVerificationIssues,
+  verificationNotifications,
+} = await import('./App.jsx');
+
+describe('regroupement des notifications de vérification (contre-audit, point 4)', () => {
+  it('regroupe des milliers d’incohérences en quelques notifications, sous le plafond de 20', () => {
+    // Volume comparable à qa/scripts/generate-large-gedcom.cjs (~2600 individus
+    // sur 8 générations) : un import massif peut faire remonter des milliers
+    // d'incohérences de chronologie identiques (même code), qui ne doivent
+    // jamais produire une notification par occurrence.
+    const timeline = Array.from({ length: 1234 }, (_, index) => ({
+      code: 'CHILD_BEFORE_PARENT',
+      severity: 'CERTAIN',
+      personId: index + 1,
+      childId: index + 1,
+      parentId: index + 1000,
+    })).concat(
+      Array.from({ length: 42 }, (_, index) => ({
+        code: 'IMPOSSIBLE_AGE',
+        severity: 'POSSIBLE',
+        personId: index + 5000,
+      })),
+    );
+
+    const byPerson = buildVerificationIssues({ timeline });
+    const items = verificationNotifications(byPerson);
+
+    // Deux groupes distincts (un par code), jamais un par occurrence.
+    expect(items.length).toBe(2);
+    expect(items.length).toBeLessThanOrEqual(20);
+    const childBeforeParent = items.find((item) => /1234/.test(item.message));
+    expect(childBeforeParent).toBeTruthy();
+    expect(childBeforeParent.dedupeKey).toBe('verification-group:timeline:CHILD_BEFORE_PARENT');
+
+    // Une deuxième analyse identique doit produire la même clé de
+    // déduplication (donc être ignorée en base, voir test API du plafond).
+    const again = verificationNotifications(buildVerificationIssues({ timeline }));
+    expect(again.map((item) => item.dedupeKey).sort()).toEqual(
+      items.map((item) => item.dedupeKey).sort(),
+    );
+  });
+});
 
 describe('App', () => {
   it('affiche un état vide sans donnée fictive quand aucune personne n’existe', async () => {
@@ -580,12 +623,16 @@ describe('App', () => {
     await waitFor(() => expect(search.duplicates).toHaveBeenCalled(), { timeout: 3000 });
     const section = await screen.findByText(/Doublon possible \(92 %\)/, {}, { timeout: 3000 });
     expect(section).toBeInTheDocument();
+    // Depuis le regroupement des notifications par type (contre-audit, point
+    // 4 : un import massif ne doit jamais créer une notification par
+    // occurrence), l'alerte publiée résume le nombre de doublons plutôt que
+    // de nommer chaque paire individuellement.
     await waitFor(() =>
       expect(notifications.publish).toHaveBeenCalledWith([
         expect.objectContaining({
-          title: 'Doublon possible',
-          personId: 1,
-          dedupeKey: 'duplicate:1:2',
+          title: 'Doublons possibles',
+          message: expect.stringContaining('1 doublon'),
+          dedupeKey: 'verification-group:duplicate',
         }),
       ]),
     );
@@ -1201,12 +1248,14 @@ describe('App', () => {
       expect(notifications.publish).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
-            title: 'Cycle de filiation',
-            message: 'Jean Dupont → Marie Curie → Jean Dupont',
+            title: 'Cycles de filiation',
+            message: expect.stringContaining('1 cycle'),
+            dedupeKey: 'verification-group:cycle',
           }),
           expect.objectContaining({
             type: 'danger',
             title: 'Naissance enregistrée après le décès',
+            message: expect.stringContaining('1 '),
           }),
         ]),
       ),
