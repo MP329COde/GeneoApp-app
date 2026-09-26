@@ -2,6 +2,7 @@ import express from 'express';
 import { createServices } from './services/index.js';
 import { apiRoutes } from './routes/index.js';
 import { performedBy } from './middleware/performed-by.js';
+import { dnsRebindingProtection } from './middleware/dns-rebinding-protection.js';
 import { treeRoutes } from './routes/tree.routes.js';
 import { storageRoutes } from './routes/storage.routes.js';
 import { createLiveServices } from './trees/tree-workspace.js';
@@ -24,6 +25,7 @@ export function createApp({ database, mediaRoot, backupDir, services, workspace,
   });
   const app = express();
 
+  app.use(dnsRebindingProtection());
   app.use(express.json({ limit: '40mb' }));
   app.use(performedBy);
 

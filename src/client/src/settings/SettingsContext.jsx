@@ -135,6 +135,10 @@ export function SettingsProvider({ children }) {
     } catch {
       // stockage indisponible : les préférences restent valables pour la session
     }
+    // Sous Electron : informe le process principal du mode de carte choisi
+    // pour qu'il ajuste la CSP (tuiles OpenStreetMap autorisées uniquement
+    // en mode « en ligne » explicite). Absent en dev navigateur : no-op.
+    window.geneoapp?.settings?.setMapMode?.(settings.mapMode);
   }, [settings]);
 
   const update = useCallback((patch) => {

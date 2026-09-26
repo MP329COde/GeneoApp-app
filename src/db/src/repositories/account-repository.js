@@ -33,7 +33,13 @@ export class AccountRepository {
   }
 
   findByName(name) {
-    return this.database.prepare(`SELECT * FROM local_accounts WHERE name = ?`).get(name) ?? null;
+    // Comparaison insensible à la casse (voir migration 0019) : empêche de
+    // créer un doublon "bob" pour contourner le PIN d'un profil "Bob".
+    return (
+      this.database
+        .prepare(`SELECT * FROM local_accounts WHERE name = ? COLLATE NOCASE`)
+        .get(name) ?? null
+    );
   }
 
   list() {
