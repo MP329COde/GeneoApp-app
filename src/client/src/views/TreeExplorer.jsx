@@ -388,6 +388,11 @@ export function TreeExplorer({
   };
   const [depth, setDepth] = useState(defaultDepth);
   const [collapsed, setCollapsed] = useState(() => new Set());
+  // Repliée par défaut sur mobile : sur un écran de 390px, la minicarte
+  // dépliée prend une part disproportionnée de l'espace utile.
+  const [minimapCollapsed, setMinimapCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= 720,
+  );
   const [branchFilter, setBranchFilter] = useState('all');
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
@@ -959,44 +964,55 @@ export function TreeExplorer({
       {layout &&
       layout.boxes.length > 0 &&
       (layout.width * zoom > layout.viewWidth || layout.height * zoom > layout.viewHeight) ? (
-        <div className="minimap" aria-hidden="true">
-          <p className="minimap__title">Minicarte</p>
-          <div
-            className="minimap__canvas"
-            style={{
-              width: Math.ceil(layout.width * miniScale),
-              height: Math.ceil(layout.height * miniScale),
-            }}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture?.(event.pointerId);
-              moveFromMinimap(event);
-            }}
-            onPointerMove={(event) => {
-              if (event.buttons === 1) moveFromMinimap(event);
-            }}
+        <div className="minimap">
+          <button
+            type="button"
+            className="minimap__toggle"
+            aria-expanded={!minimapCollapsed}
+            onClick={() => setMinimapCollapsed((value) => !value)}
           >
-            {layout.boxes.map((box, index) => (
+            <span>Minicarte</span>
+            <span aria-hidden="true">{minimapCollapsed ? '▸' : '▾'}</span>
+          </button>
+          {minimapCollapsed ? null : (
+            <div
+              className="minimap__canvas"
+              aria-hidden="true"
+              style={{
+                width: Math.ceil(layout.width * miniScale),
+                height: Math.ceil(layout.height * miniScale),
+              }}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                moveFromMinimap(event);
+              }}
+              onPointerMove={(event) => {
+                if (event.buttons === 1) moveFromMinimap(event);
+              }}
+            >
+              {layout.boxes.map((box, index) => (
+                <span
+                  key={index}
+                  className={`minimap__node${box.focus ? ' minimap__node--focus' : ''}`}
+                  style={{
+                    left: box.x * miniScale,
+                    top: box.y * miniScale,
+                    width: Math.max(2, box.width * miniScale),
+                    height: Math.max(2, box.height * miniScale),
+                  }}
+                />
+              ))}
               <span
-                key={index}
-                className={`minimap__node${box.focus ? ' minimap__node--focus' : ''}`}
+                className="minimap__view"
                 style={{
-                  left: box.x * miniScale,
-                  top: box.y * miniScale,
-                  width: Math.max(2, box.width * miniScale),
-                  height: Math.max(2, box.height * miniScale),
+                  left: (-offset.x / zoom) * miniScale,
+                  top: (-offset.y / zoom) * miniScale,
+                  width: (layout.viewWidth / zoom) * miniScale,
+                  height: (layout.viewHeight / zoom) * miniScale,
                 }}
               />
-            ))}
-            <span
-              className="minimap__view"
-              style={{
-                left: (-offset.x / zoom) * miniScale,
-                top: (-offset.y / zoom) * miniScale,
-                width: (layout.viewWidth / zoom) * miniScale,
-                height: (layout.viewHeight / zoom) * miniScale,
-              }}
-            />
-          </div>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

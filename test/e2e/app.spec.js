@@ -658,3 +658,57 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   );
   expect(overflow).toBe(false);
 });
+
+test.describe('navigation mobile (390×844)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('barre d’onglets mobile : navigation, aucun défilement horizontal, nœud sélectionné visible', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await addPerson(page, 'Ada', 'Lovelace');
+
+    // Le ruban d'icônes de navigation entre vues est masqué (remplacé par la
+    // barre fixe en bas d'écran, 4 onglets étiquetés + « Plus ») ; la liste
+    // des personnes reste accessible (ce n'est pas de la navigation).
+    await expect(page.locator('.sidenav__scroll')).toBeHidden();
+    const tabbar = page.locator('.mobile-tabbar');
+    await expect(tabbar).toBeVisible();
+    for (const label of ['Arbre', 'Personne', 'Recherche', 'Documents', 'Plus']) {
+      await expect(tabbar.getByText(label, { exact: true })).toBeVisible();
+    }
+
+    // Aucun défilement horizontal de page, contrairement au ruban précédent.
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+
+    // « Plus » ouvre la feuille du menu complet, avec les entrées non
+    // couvertes par les 4 onglets directs (ex. Statistiques).
+    await tabbar.getByText('Plus', { exact: true }).click();
+    const sheet = page.locator('.mobile-menu-sheet');
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: 'Statistiques' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Statistiques' })).toBeVisible();
+
+    // Sélectionne explicitement la personne qu'on vient de créer (le filtre
+    // reste accessible même sur mobile), pour un test indépendant du volume
+    // de données déjà accumulé par les tests précédents (serveur partagé).
+    await page.getByPlaceholder('Filtrer les personnes…').fill('Ada Lovelace');
+    await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+
+    // Navigation directe par un onglet, et nœud sélectionné non masqué par
+    // la barre fixe (le point de vérification du contre-audit) : on le fait
+    // défiler dans la zone visible, puis on vérifie qu'il n'empiète pas sur
+    // la barre fixe en bas d'écran.
+    await tabbar.getByText('Arbre', { exact: true }).click();
+    const selectedNode = page.locator('.tree-row .person-card--selected').first();
+    await selectedNode.scrollIntoViewIfNeeded();
+    await expect(selectedNode).toBeVisible();
+    const nodeBox = await selectedNode.boundingBox();
+    const tabbarBox = await tabbar.boundingBox();
+    expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(tabbarBox.y);
+  });
+});

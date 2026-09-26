@@ -946,46 +946,52 @@ input[type='radio'] {
     flex-wrap: wrap;
   }
 }
+/* Hauteur de la barre d'onglets mobile fixe en bas d'écran : réutilisée pour
+ * réserver l'espace correspondant en bas du contenu (sinon le dernier
+ * élément, ex. la personne sélectionnée dans l'arbre, se retrouve masqué
+ * derrière la barre). */
+.mobile-tabbar {
+  display: none;
+}
+.mobile-menu-sheet {
+  display: none;
+}
 @media (max-width: 720px) {
   .genealogy-app {
     display: block;
+    padding-bottom: 64px; /* hauteur de .mobile-tabbar, cf. ci-dessous */
   }
+  /* Réserve la hauteur de la barre fixe lors d'un scrollIntoView natif
+   * (ex. sélection d'une personne) : sans cela, l'élément défile jusqu'au
+   * bord réel de la fenêtre puis se retrouve masqué par la barre fixe. */
+  html {
+    scroll-padding-bottom: 64px;
+  }
+  /* La navigation entre vues passe par .mobile-tabbar (4 onglets étiquetés +
+   * Plus) : le ruban d'icônes seules (.sidenav__scroll), qui défilait au
+   * doigt sans libellé visible, était illisible à 390px (contre-audit).
+   * La liste des personnes et le bouton de création (.sidenav__persons)
+   * restent en revanche accessibles : ce sont des fonctions, pas de la
+   * navigation entre vues. */
   .sidenav {
     border-right: 0;
     border-bottom: var(--border-hairline) solid var(--border);
   }
-  .sidenav__scroll {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-  .view-switcher {
-    display: flex;
-    gap: var(--space-1);
-  }
-  .sidenav__group {
-    display: flex;
-    align-items: center;
-    margin: 0;
-  }
-  /* Sur mobile, la barre d'onglets est un ruban horizontal : le repli par
-     section n'a pas de sens (tout doit rester atteignable au doigt), donc les
-     en-têtes de section sont masqués et seuls les items sont affichés. */
-  .sidenav__label--toggle {
+  .sidenav__scroll,
+  .sidenav__footer {
     display: none;
   }
-  .sidenav__item {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 44px;
-    min-height: 44px;
-    justify-content: center;
-    padding: var(--space-2);
-    scroll-snap-align: start;
+  /* Contrairement au rail d'icônes ≤1024px (tablette), le mobile n'a plus de
+   * ruban de navigation dans la sidenav : la liste des personnes retrouve
+   * donc sa place, pleinement dépliée (le style ≤1024px la masque). */
+  .sidenav__persons {
+    display: block;
   }
-  .view-switcher {
-    scroll-snap-type: x proximity;
+  .sidenav__persons .sidenav__label {
+    display: block;
+  }
+  .sidenav__brand h1 {
+    display: initial;
   }
   .search-panel,
   .gedcom-panel,
@@ -997,6 +1003,79 @@ input[type='radio'] {
     flex-direction: column;
     align-items: stretch;
   }
+
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    z-index: 30;
+    background: var(--surface-raised);
+    border-top: var(--border-hairline) solid var(--border);
+  }
+  .mobile-tabbar__item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font: var(--type-date);
+  }
+  .mobile-tabbar__item.is-active {
+    color: var(--action);
+  }
+  .mobile-menu-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    z-index: 31;
+    background: var(--surface-raised);
+    border-top: var(--border-hairline) solid var(--border);
+    box-shadow: var(--shadow-2, var(--shadow-1));
+  }
+  .mobile-menu-sheet__header {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    border-bottom: var(--border-hairline) solid var(--border);
+  }
+  .mobile-menu-sheet__label {
+    margin: var(--space-3) var(--space-4) var(--space-1);
+    color: var(--text-secondary);
+    font: var(--type-date);
+  }
+  .mobile-menu-sheet__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    background: transparent;
+    text-align: left;
+  }
+  .mobile-menu-sheet__item.is-active {
+    color: var(--action);
+  }
+  /* Minicarte repliée par défaut sur mobile (voir JS : mapMinimapCollapsed
+   * par défaut à true en dessous de 720px). */
 }
 
 /* Formulaires de vue : grille dense, bouton à largeur naturelle (maquettes). */
@@ -2239,9 +2318,24 @@ input[type='radio'] {
   box-shadow: var(--shadow-2);
   z-index: var(--z-panel);
 }
-.minimap__title {
+.minimap__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 32px;
   margin: 0 0 var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
   font: var(--type-label);
+  color: inherit;
+}
+@media (max-width: 720px) {
+  .minimap__toggle {
+    min-height: 44px;
+  }
 }
 .minimap__canvas {
   position: relative;

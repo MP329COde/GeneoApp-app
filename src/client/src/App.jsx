@@ -207,6 +207,17 @@ const NAV_GROUPS = [
   },
 ];
 
+// Barre d'onglets mobile (< 720px) : 4 destinations directes plus « Plus »,
+// qui ouvre une feuille listant le menu complet (NAV_GROUPS). Remplace le
+// ruban horizontal d'icônes de la version précédente, illisible sur un
+// écran de 390px (aucun libellé visible, défilement latéral au doigt).
+const MOBILE_TABS = [
+  { id: 'tree', label: 'Arbre', icon: 'tree' },
+  { id: 'person', label: 'Personne', icon: 'person' },
+  { id: 'search', label: 'Recherche', icon: 'search' },
+  { id: 'documents', label: 'Documents', icon: 'file' },
+];
+
 // Années de vie partagées par toutes les fiches (calculées depuis les événements).
 const LifespanContext = createContext(new Map());
 
@@ -3915,6 +3926,8 @@ function AppContent() {
       return next;
     });
   };
+  // Feuille « Plus » de la barre d'onglets mobile (menu complet).
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const quickSearchRef = useRef(null);
 
   useEffect(() => {
@@ -4361,6 +4374,65 @@ function AppContent() {
               </p>
             </div>
           </aside>
+
+          <nav className="mobile-tabbar" aria-label={t('nav.main', 'Navigation principale')}>
+            {MOBILE_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`mobile-tabbar__item${view === tab.id ? ' is-active' : ''}`}
+                aria-current={view === tab.id ? 'page' : undefined}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setView(tab.id);
+                }}
+              >
+                <Icon name={tab.icon} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              className="mobile-tabbar__item"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((open) => !open)}
+            >
+              <Icon name="panel" />
+              <span>Plus</span>
+            </button>
+          </nav>
+          {mobileMenuOpen ? (
+            <div className="mobile-menu-sheet" role="dialog" aria-label="Menu complet">
+              <div className="mobile-menu-sheet__header">
+                <strong>Menu</strong>
+                <Button size="sm" variant="secondary" onClick={() => setMobileMenuOpen(false)}>
+                  Fermer
+                </Button>
+              </div>
+              {navGroups.map((group) => (
+                <div className="mobile-menu-sheet__group" key={group.label}>
+                  <p className="mobile-menu-sheet__label">
+                    {t(`nav.group.${group.key}`, group.label)}
+                  </p>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`mobile-menu-sheet__item${view === item.id ? ' is-active' : ''}`}
+                      aria-current={view === item.id ? 'page' : undefined}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setView(item.id);
+                      }}
+                    >
+                      <Icon name={item.icon} />
+                      <span>{t(`nav.${item.id}`, item.label)}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <header className="topbar">
             <p className="topbar__crumbs">
