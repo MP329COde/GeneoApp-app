@@ -2145,7 +2145,10 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
 
-    const documentGroup = screen.getByRole('group', { name: 'Documenter' });
+    // Menu réorganisé en 5 sections (phase 5 de l'audit) : « Carte » vit
+    // désormais dans « Documents & sources », plus dans l'ancien groupe
+    // « Documenter » qui n'existe plus.
+    const documentGroup = screen.getByRole('group', { name: 'Documents & sources' });
     fireEvent.click(within(documentGroup).getByRole('checkbox', { name: 'Carte' }));
     expect(screen.queryByRole('button', { name: 'Carte' })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /^Arbre\s*\(toujours/ })).toBeDisabled();
