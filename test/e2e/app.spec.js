@@ -21,8 +21,16 @@ test.describe.configure({ mode: 'serial' });
 // déjà affichée, pour refléter le comportement réel de l'UI.
 async function addPerson(page, givenNames, familyName) {
   const dialog = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  const openButton = page.getByRole('button', { name: '+ Nouvelle personne' });
+  // Sur un arbre vide, l'application ouvre la modale automatiquement, mais ce
+  // n'est pas instantané : on attend que l'état de l'application se stabilise
+  // (modale déjà visible, ou bouton d'ouverture disponible) avant de décider.
+  await Promise.race([
+    dialog.waitFor({ state: 'visible' }).catch(() => {}),
+    openButton.waitFor({ state: 'visible' }).catch(() => {}),
+  ]);
   if (!(await dialog.isVisible())) {
-    await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
+    await openButton.click();
   }
   await dialog.getByLabel('Prénom(s)').fill(givenNames);
   await dialog.getByLabel('Nom', { exact: true }).fill(familyName);
@@ -206,9 +214,33 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
   await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
 
+  // Par défaut l'application est en mode carte locale (hors ligne, sans
+  // requête réseau) : voir a9af2bd « sépare réellement le mode hors ligne du
+  // mode en ligne ». On vérifie ce mode d'abord.
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(page.getByText('Carte locale (hors ligne, aucune requête réseau)')).toBeVisible();
+  await expect(
+    page.getByRole('img', {
+      name: 'Carte locale des lieux enregistrés (position relative, sans fond de carte)',
+    }),
+  ).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Bascule explicite vers le mode en ligne (tuiles OpenStreetMap) via les
+  // réglages, puis vérifie que la carte Leaflet s'affiche à la place.
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'En ligne (tuiles OpenStreetMap)' }).check();
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(
+    page.getByText('Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)'),
+  ).toBeVisible();
   await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
   await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Remet le mode local pour ne pas influencer les tests suivants (suite en
+  // mode `serial`, réglages partagés entre les tests).
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'Locale (hors ligne, sans tuiles)' }).check();
 });
 
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {

@@ -1605,7 +1605,7 @@ function useVerification({ persons, dataVersion, personLabelById }) {
       });
       setIssues(byPerson);
       const items = verificationNotifications(byPerson, labelRef.current);
-      if (items.length && client.notifications.publish) {
+      if (items.length && client.notifications?.publish) {
         try {
           const result = await client.notifications.publish(items);
           if (result?.created) window.dispatchEvent(new Event('geneoapp:notifications'));
