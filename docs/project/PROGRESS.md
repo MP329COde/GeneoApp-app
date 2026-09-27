@@ -171,3 +171,43 @@ un commit par point, test qui reproduit le bug avant chaque correctif :
   200) ; `GET /api/backups` sans session → **401** (était 200 avec le jeton de l'intrus, 204 pour la
   suppression du profil protégé). La chaîne est bloquée dès la première étape, ce qui confirme qu'aucune des
   étapes suivantes de la reproduction originale n'est plus atteignable.
+
+## Second contre-audit 2026-09-27 (même branche `fix/audit-2026-09`)
+
+Huit nouveaux points relevés après le contre-audit ci-dessus, traités dans l'ordre, un commit par point, test
+qui reproduit le bug avant chaque correctif :
+
+| # | Problème | Correctif | Commit |
+|---|---|---|---|
+| 1 | Nom de famille tronqué dans la liste latérale (230px), lignes 44px | Fiche à 2 lignes (nom complet jamais tronqué côté famille, prénom cède la place), hauteur réelle 56px, `title` avec le nom complet | `4e51c62` |
+| 2 | Pluriels et accords incorrects (« 1 enfants nés... », suffixe `(s)`) | `Intl.PluralRules('fr')` + `Intl.NumberFormat('fr')` (helpers `pluralFr`/`countedFr`), formes one/other pour chaque message concerné | `532cb6b` |
+| 3 | Nombre de doublons affiché plafonné à 100 par l'API | Réponse `{ items, total }`, l'UI affiche le vrai total et non `items.length` | `a7b48e2` |
+| 4 | `DELETE /api/trees/:id` et restauration d'arbre sans session requise | Alignées sur `requireSession` + la règle « aucun profil sans PIN », HTTP et IPC, avec tests | `4e8e70b` |
+| 5 | Aucune barre de navigation mobile (390×844), menu illisible sur petit écran | Barre d'onglets étiquetée (4 destinations + « Plus » en feuille), minicarte repliée par défaut sur mobile | `8747999` |
+| 6 | Placement de lieux entièrement manuel, aucun référentiel local | Référentiel communes françaises embarqué (API Geo gouv.fr, Licence Ouverte/Etalab 2.0, compressé), bouton « Placer automatiquement », aperçu, désambiguïsation par département, confirmation obligatoire, zéro appel réseau | `6e6998d` |
+| 7 | CSP du mode carte non fiable sur `file://` (mode hors ligne n'empêchait aucune requête de tuile) | App réellement lancée et pilotée via CDP : confirmé que `onHeadersReceived` ne s'applique pas à `file://` ; renderer servi via `protocol.handle('geneoapp://...)` avec CSP calculée à la demande ; conclusion dans `docs/adr/0013-csp-carte-protocol-handle.md` | `a87d111` |
+| 8 | `App.jsx` (5023 lignes) / `App.css` (3503 lignes) | Découpé en vues (`views/*View.jsx` par domaine : Personne, Familles, Sauvegardes/Comptes, Carte, Documents/GEDCOM) et hooks (`useVerification`, `useNotifications`) ; `App.jsx` → 1276 lignes ; aucun changement de comportement (109 tests client verts avant/après à chaque étape) | `f212309` |
+
+### Ce qui n'a pas été fait ou est resté partiel (liste honnête)
+
+- **Point 8, volet CSS** : `App.css` n'a pas été découpé par vue (reste à 3503 lignes, centralisé). Un
+  déplacement par préfixe de classe aurait été mécanique mais invérifiable visuellement dans cette passe
+  (pas de comparaison de captures avant/après outillée) ; risque de régression de style silencieuse jugé trop
+  élevé pour le temps disponible. Le JS/JSX, lui, est intégralement découpé et vérifié par les tests.
+- Un correctif de formatage Prettier oublié dans le commit du point 7 (`preload.cjs` et son test) a été
+  rattrapé séparément (`bbee5dc`), détecté par `npm run format:check` lors de la vérification finale.
+
+### Vérification finale (second contre-audit, sous Node 24)
+
+- `npm run lint` : succès (0 erreur, `check-imports` : 286 fichiers vérifiés, aucun import cassé)
+- `npm run format:check` : succès (Prettier conforme sur tout le dépôt)
+- `npm test` : succès, toutes les suites (smoke 1, db 57, server 56, api 139, electron 36, packaging 4, cli 5,
+  client 109 — 0 échec)
+- `npm run test:client` : succès, 18 fichiers / 109 tests
+- `npm run build` : succès (`vite build`, ~600ms)
+- `npm run test:e2e` : succès, 28/28
+- `node --test test/server/performance.test.js` : succès, 3/3
+- Vérification manuelle du point 7 (app Electron réellement lancée, pilotée via CDP `--remote-debugging-port`) :
+  mode hors ligne → CSP servie sans domaine OpenStreetMap ; appel `window.geneoapp.settings.setMapMode('online')`
+  → `webContents.reload()` déclenché → nouvelle réponse `index.html` avec
+  `img-src 'self' data: blob: https://*.tile.openstreetmap.org` confirmée par `Network.responseReceived`.
