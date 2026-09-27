@@ -15,7 +15,6 @@
 // docs/adr/0013-preload-cjs-sandbox.md.
 const { contextBridge, ipcRenderer } = require('electron');
 const IPC_CHANNELS = Object.freeze({
-
   PERSONS_CREATE: 'geneoapp:persons:create',
   PERSONS_GET: 'geneoapp:persons:get',
   PERSONS_LIST: 'geneoapp:persons:list',
