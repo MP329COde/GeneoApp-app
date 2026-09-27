@@ -41,6 +41,13 @@ function contentSecurityPolicy() {
 
 export default defineConfig({
   plugins: [react(), contentSecurityPolicy()],
+  // Base relative ('./', pas '/') : le renderer Electron charge index.html
+  // via file://, où une base absolue résout les assets à la racine du
+  // système de fichiers (file:///assets/...) au lieu du dossier réel
+  // (file://.../dist/assets/...) — page blanche silencieuse (aucune erreur
+  // JS, seulement des échecs réseau ERR_FILE_NOT_FOUND dans les DevTools).
+  // Constaté en lançant réellement l'app Electron packagée (contre-audit).
+  base: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,

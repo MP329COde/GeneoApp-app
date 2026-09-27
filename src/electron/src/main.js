@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, shell } from 'electron';
 import { isSafeExternalUrl } from './external-links.js';
 import { createLocalHttpGuard } from './security/local-http-guard.js';
 import { buildContentSecurityPolicy } from './security/content-security-policy.js';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import express from 'express';
@@ -20,7 +21,68 @@ import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
 
 const host = '127.0.0.1';
 const port = 0;
-const preloadPath = fileURLToPath(new URL('./preload.js', import.meta.url));
+const preloadPath = fileURLToPath(new URL('./preload.cjs', import.meta.url));
+const distDir = fileURLToPath(new URL('../../client/dist/', import.meta.url));
+
+// Renderer servi via un schéma personnalisé (geneoapp://app/…) plutôt que
+// file:// : constaté en lançant réellement l'app (voir docs/adr/0013), la
+// CSP recalculée dynamiquement (session.defaultSession.webRequest.
+// onHeadersReceived) ne s'applique PAS de façon fiable à une navigation
+// file://, alors que Network.responseReceived rapportait bien l'en-tête
+// attendu — seule la balise <meta> statique (toujours identique, quel que
+// soit le mode carte) était réellement appliquée. Le mode « hors ligne »
+// n'empêchait donc en réalité aucune requête de tuile. `protocol.handle`
+// donne un contrôle direct et fiable sur les en-têtes de chaque réponse.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'geneoapp',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false },
+  },
+]);
+
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ico': 'image/x-icon',
+};
+
+function registerAppProtocol() {
+  protocol.handle('geneoapp', async (request) => {
+    const { pathname } = new URL(request.url);
+    const relative = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    const filePath = path.join(distDir, relative);
+    // Empêche toute évasion du dossier dist (ex. `geneoapp://app/../../…`) :
+    // le fichier résolu doit toujours rester à l'intérieur de `distDir`.
+    if (!filePath.startsWith(distDir)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    try {
+      const body = await readFile(filePath);
+      const contentType = MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream';
+      const headers = { 'Content-Type': contentType };
+      if (relative === '/index.html') {
+        // Sans cet en-tête, un simple window.reload() peut être servi
+        // depuis le cache HTTP du renderer plutôt que de repasser par ce
+        // handler : la CSP resterait figée sur celle du tout premier
+        // chargement, quel que soit le mode carte choisi ensuite (constaté
+        // en conditions réelles, voir docs/adr/0013).
+        headers['Cache-Control'] = 'no-store';
+        headers['Content-Security-Policy'] = buildContentSecurityPolicy(mapMode);
+      }
+      return new Response(body, { headers });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
 // Jeton local partagé process principal / renderer (voir local-http-guard.js) :
 // protège le serveur HTTP embarqué contre tout autre processus local et
 // contre le DNS-rebinding (en complément de dnsRebindingProtection côté app).
@@ -30,24 +92,25 @@ let mapMode = 'offline';
 let server;
 let workspace;
 let unregisterIpcHandlers;
+let mainWindow;
 
 async function createWindow() {
+  // La CSP (Content-Security-Policy) d'une page est fixée à la navigation
+  // qui l'a chargée : changer `mapMode` ne modifie PAS la politique déjà
+  // appliquée à la page en cours, seulement celle d'une future navigation.
+  // Constaté en lançant réellement l'app (voir docs/adr/0013) : sans
+  // rechargement explicite, le mode carte « en ligne » choisi dans les
+  // Réglages n'autorisait jamais les tuiles OpenStreetMap dans la session
+  // en cours (uniquement après un relancement complet de l'app, qui
+  // réinitialise de toute façon `mapMode` à 'offline'). Un rechargement de
+  // la fenêtre après le changement est donc nécessaire pour que le nouveau
+  // mode prenne réellement effet.
   ipcMain.handle('geneoapp:settings:setMapMode', (_event, mode) => {
-    mapMode = mode === 'online' ? 'online' : 'offline';
+    const next = mode === 'online' ? 'online' : 'offline';
+    const changed = next !== mapMode;
+    mapMode = next;
+    if (changed) mainWindow?.webContents.reload();
     return { ok: true };
-  });
-
-  // Applique la CSP dynamique à toutes les réponses chargées dans la fenêtre
-  // (fichiers locaux inclus) : seule source d'application fiable en
-  // Electron, contrairement à une balise <meta> statique qui ne peut pas
-  // être mise à jour de façon fiable après le chargement de la page.
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [buildContentSecurityPolicy(mapMode)],
-      },
-    });
   });
 
   const userData = app.getPath('userData');
@@ -94,6 +157,7 @@ async function createWindow() {
       additionalArguments: [`--geneoapp-http-token=${httpToken}`],
     },
   });
+  mainWindow = window;
 
   // Aucune fenêtre ni navigation vers l'extérieur dans l'application : les
   // liens https (sites de recherche généalogique) s'ouvrent dans le navigateur
@@ -103,16 +167,14 @@ async function createWindow() {
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) {
+    if (!url.startsWith('geneoapp://')) {
       event.preventDefault();
       if (isSafeExternalUrl(url)) shell.openExternal(url);
     }
   });
 
-  // fileURLToPath (et non l'accès brut à .pathname d'une URL file://) : seul
-  // moyen correct de retrouver un chemin de fichier système, notamment sous
-  // Windows (lettre de lecteur) et avec des caractères non-ASCII encodés.
-  await window.loadFile(fileURLToPath(new URL('../../client/dist/index.html', import.meta.url)));
+  registerAppProtocol();
+  await window.loadURL('geneoapp://app/index.html');
 }
 
 app.whenReady().then(createWindow);
