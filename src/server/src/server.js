@@ -5,8 +5,9 @@ import { createApp } from './app.js';
 import { TreeWorkspace } from './trees/tree-workspace.js';
 import { startIndexScheduler } from './indexing/index.service.js';
 import { StorageService, configuredDataDir, readStorageConfig } from './storage/storage-config.js';
+import { stopOcr } from './indexing/content-extract.js';
 
-const host = '127.0.0.1';
+const host = process.env.GENEOAPP_HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 3000);
 
 const memory = process.env.GENEOAPP_DATABASE === ':memory:';
@@ -37,6 +38,23 @@ workspace.services.backups.createAutomatic('lancement').catch((error) => {
 // Indexation nocturne planifiée (si activée dans l'écran Indexation).
 startIndexScheduler(() => workspace.services.indexing);
 
-createApp({ workspace, storage }).listen(port, host, () => {
+const server = createApp({ workspace, storage }).listen(port, host, () => {
   console.log(`GeneoApp server listening on http://${host}:${port}`);
 });
+
+// Arrêt propre : libère le worker OCR (tesseract.js) avant de quitter, pour
+// ne jamais laisser le process bloqué en arrière-plan (Ctrl+C, kill…).
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    await stopOcr();
+  } catch (error) {
+    console.error('Arrêt du worker OCR impossible :', error.message);
+  } finally {
+    server.close(() => process.exit(0));
+  }
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

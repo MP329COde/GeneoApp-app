@@ -24,3 +24,8 @@ storage.json
 *.sqlite.meta.json
 *.gnapenc
 *.gdz
+
+# Artefacts de QA manuelle (captures, vidéos, archives, traces Playwright) :
+# volumineux et régénérables, seuls les rapports .md ont une valeur durable.
+qa/reports/*
+!qa/reports/*.md

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 
 test('POST /api/persons crée une personne valide', async () => {
@@ -18,7 +21,7 @@ test('POST /api/persons crée une personne valide', async () => {
   }
 });
 
-test('POST /api/persons rejette un payload invalide avec 400 et le détail des champs', async () => {
+test('POST /api/persons accepte un prénom seul (nom de famille vide, comme en import GEDCOM)', async () => {
   const server = await startTestServer();
   try {
     const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
@@ -26,7 +29,24 @@ test('POST /api/persons rejette un payload invalide avec 400 et le détail des c
       body: { givenNames: 'Ada' },
     });
 
+    assert.equal(status, 201);
+    assert.equal(body.given_names, 'Ada');
+    assert.equal(body.family_name, '');
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/persons rejette un payload invalide (prénom et nom vides) avec 400 et le détail des champs', async () => {
+  const server = await startTestServer();
+  try {
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {},
+    });
+
     assert.equal(status, 400);
+    assert.ok(body.error.fields.givenNames);
     assert.ok(body.error.fields.familyName);
   } finally {
     await server.close();
@@ -173,6 +193,61 @@ test('POST /api/persons rejette un isLiving non booléen', async () => {
 
     assert.equal(status, 400);
     assert.ok(body.error.fields.isLiving);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons sans paramètre renvoie un tableau simple (comportement historique)', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body));
+    assert.equal(body.length, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?limit= pagine avec total et respecte offset/q', async () => {
+  const server = await startTestServer();
+  try {
+    for (const givenNames of ['Ada', 'Byron', 'Charles', 'Diane', 'Ernest']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Lovelace' },
+      });
+    }
+
+    const firstPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '0' })}`,
+    );
+    assert.equal(firstPage.status, 200);
+    assert.equal(firstPage.body.total, 5);
+    assert.equal(firstPage.body.items.length, 2);
+
+    const secondPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '2' })}`,
+    );
+    assert.equal(secondPage.body.items.length, 2);
+    assert.notDeepEqual(
+      firstPage.body.items.map((p) => p.id),
+      secondPage.body.items.map((p) => p.id),
+    );
+
+    const filtered = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '10', q: 'byron' })}`,
+    );
+    assert.equal(filtered.body.total, 1);
+    assert.equal(filtered.body.items[0].given_names, 'Byron');
   } finally {
     await server.close();
   }

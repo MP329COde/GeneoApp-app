@@ -13,6 +13,20 @@ export function personRoutes(services) {
   router.patch('/:id', controller.update);
   router.delete('/:id', controller.remove);
   router.post('/:id/restore', controller.restore);
+  router.put('/:id/portrait', (request, response) =>
+    response.json(
+      services.documents.setPortrait(request.params.id, request.body ?? {}, {
+        performedBy: request.performedBy,
+      }),
+    ),
+  );
+  router.post('/:id/portrait', async (request, response) =>
+    response.json(
+      await services.documents.uploadPortrait(request.params.id, request.body ?? {}, {
+        performedBy: request.performedBy,
+      }),
+    ),
+  );
   router.get('/:id/ancestors', graph.ancestors);
   router.get('/:id/descendants', graph.descendants);
   router.get('/:id/relations', graph.relations);

@@ -49,6 +49,8 @@ function wrap(handler) {
 // techniques : comptes, sauvegardes, arbres, IA, historique lui-même.
 const WRITE_ACTIONS =
   /^(create|update|remove|restore|merge|import|addParticipant|addCitation|upload|purge)$/;
+const NOTIFICATION_ACTIONS =
+  /(?:create|update|remove|restore|merge|import|add|upload|purge|set|activate|run)/;
 const NON_UNDOABLE_DOMAINS = new Set(['accounts', 'backups', 'trees', 'ai', 'history']);
 const DOMAIN_LABELS = {
   persons: 'personne',
@@ -99,12 +101,28 @@ function withUndoGroup(services, channel, handler) {
   };
 }
 
+function withNotification(services, channel, handler) {
+  const [, domain, action] = channel.split(':');
+  if (domain === 'notifications' || !NOTIFICATION_ACTIONS.test(action ?? '')) return handler;
+  return async (payload) => {
+    const result = await handler(payload);
+    if (result?.ok !== false) {
+      services.notifications?.recordMutation({
+        method: 'POST',
+        path: `/${domain}/${action}`,
+        status: 200,
+      });
+    }
+    return result;
+  };
+}
+
 export function buildIpcHandlers(services, workspace = null, storage = null) {
   const handlers = buildRawHandlers(services, workspace, storage);
   return Object.fromEntries(
     Object.entries(handlers).map(([channel, handler]) => [
       channel,
-      withUndoGroup(services, channel, handler),
+      withNotification(services, channel, withUndoGroup(services, channel, handler)),
     ]),
   );
 }
@@ -118,6 +136,7 @@ function buildRawHandlers(services, workspace, storage) {
     parentages,
     sources,
     audit,
+    notifications,
     graph,
     search,
     gedcom,
@@ -158,6 +177,10 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.PLACES_REMOVE]: wrap(({ id, performedBy }) =>
       places.remove(id, { performedBy: actorOf(performedBy) }),
     ),
+    [IPC_CHANNELS.PLACES_AUTO_LOCATE_PREVIEW]: wrap(() => places.previewAutoLocate()),
+    [IPC_CHANNELS.PLACES_AUTO_LOCATE_APPLY]: wrap(({ assignments }) => ({
+      updated: places.applyAutoLocate(assignments),
+    })),
 
     [IPC_CHANNELS.EVENTS_CREATE]: wrap(({ data, performedBy }) =>
       events.create(data, { performedBy: actorOf(performedBy) }),
@@ -209,6 +232,10 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.AUDIT_LIST_FOR_ENTITY]: wrap(({ tableName, rowId }) =>
       audit.listForEntity(tableName, rowId),
     ),
+    [IPC_CHANNELS.NOTIFICATIONS_LIST]: wrap((options) => notifications.list(options)),
+    [IPC_CHANNELS.NOTIFICATIONS_READ]: wrap(({ id }) => notifications.markRead(id)),
+    [IPC_CHANNELS.NOTIFICATIONS_READ_ALL]: wrap(() => notifications.markAllRead()),
+    [IPC_CHANNELS.NOTIFICATIONS_PUBLISH]: wrap(({ items }) => notifications.publish(items)),
 
     [IPC_CHANNELS.GRAPH_ANCESTORS]: wrap(({ personId, depth }) =>
       graph.getAncestors(personId, { maxDepth: depth }),
@@ -265,8 +292,8 @@ function buildRawHandlers(services, workspace, storage) {
       gedcom.importArchive(contentBase64, { performedBy: actorOf(performedBy) }),
     ),
 
-    [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, performedBy }) =>
-      accounts.create(data, { performedBy: actorOf(performedBy) }),
+    [IPC_CHANNELS.ACCOUNTS_CREATE]: wrap(({ data, token, performedBy }) =>
+      accounts.create(data, { performedBy: actorOf(performedBy), sessionToken: token }),
     ),
     [IPC_CHANNELS.ACCOUNTS_LIST]: wrap(() => accounts.list()),
     [IPC_CHANNELS.ACCOUNTS_LOGIN]: wrap(({ name, pin }) => accounts.login({ name, pin })),
@@ -274,50 +301,50 @@ function buildRawHandlers(services, workspace, storage) {
       accounts.logout(token);
       return { loggedOut: true };
     }),
-    [IPC_CHANNELS.ACCOUNTS_REMOVE]: wrap(({ id, token, performedBy }) => {
-      accounts.requireSession(token);
-      accounts.remove(id, { performedBy: actorOf(performedBy) });
+    [IPC_CHANNELS.ACCOUNTS_REMOVE]: wrap(({ id, token, pin, performedBy }) => {
+      accounts.remove(id, { performedBy: actorOf(performedBy), sessionToken: token, pin });
       return { removed: true };
     }),
 
-    // Les opérations sensibles (sauvegarde/restauration, purge de corbeille)
-    // exigent un jeton de session valide dans le payload, comme côté HTTP
-    // (en-tête x-geneoapp-session) : requireSession lève si absent/expiré.
+    // Les opérations sensibles (sauvegarde/restauration, purge de corbeille,
+    // dossier de travail/miroir) exigent une session protégée : un profil
+    // sans PIN y est refusé tant qu'un profil protégé par PIN existe (voir
+    // AccountService.requireProtectedSession, même règle que côté HTTP).
     [IPC_CHANNELS.BACKUPS_CREATE]: wrap(({ data, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.create(data, { performedBy: actorOf(performedBy) });
     }),
     [IPC_CHANNELS.BACKUPS_LIST]: wrap(({ token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.list();
     }),
     [IPC_CHANNELS.BACKUPS_VERIFY]: wrap(({ filename, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.verify(filename);
     }),
     [IPC_CHANNELS.BACKUPS_RESTORE]: wrap(({ filename, kind, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return kind === 'sqlite'
         ? backups.restoreFile(filename)
         : backups.restoreLogical(filename, { performedBy: actorOf(performedBy) });
     }),
 
     [IPC_CHANNELS.BACKUPS_EXPORT_ENCRYPTED]: wrap(({ filename, passphrase, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.exportEncrypted(filename, passphrase);
     }),
     [IPC_CHANNELS.BACKUPS_IMPORT_ENCRYPTED]: wrap(({ contentBase64, passphrase, token }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return backups.importEncrypted(contentBase64, passphrase);
     }),
 
     [IPC_CHANNELS.TRASH_LIST]: wrap(() => trash.list()),
     [IPC_CHANNELS.TRASH_RESTORE]: wrap(({ table, id, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       return trash.restore(table, id, { performedBy: actorOf(performedBy) });
     }),
     [IPC_CHANNELS.TRASH_PURGE]: wrap(({ table, id, token, performedBy }) => {
-      accounts.requireSession(token);
+      accounts.requireProtectedSession(token);
       trash.purge(table, id, { performedBy: actorOf(performedBy) });
       return { purged: true };
     }),
@@ -415,6 +442,21 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.MEDIA_PHOTOS_FOR_PERSON]: wrap(({ personId }) =>
       services.photos.listForPerson(personId),
     ),
+    [IPC_CHANNELS.MEDIA_DECODE]: wrap(({ id, data }) => services.documents.decode(id, data ?? {})),
+    [IPC_CHANNELS.MEDIA_TRANSCRIPTION_SAVE]: wrap(({ id, data }) =>
+      services.documents.saveTranscription(id, data ?? {}),
+    ),
+    [IPC_CHANNELS.MEDIA_OWNERS]: wrap(({ id }) => services.documents.owners(id)),
+    [IPC_CHANNELS.MEDIA_LINK]: wrap(({ id, data, performedBy }) =>
+      services.documents.link(id, data ?? {}, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.MEDIA_IDENTIFY]: wrap(({ data }) => services.documents.identify(data ?? {})),
+    [IPC_CHANNELS.PERSONS_SET_PORTRAIT]: wrap(({ id, data, performedBy }) =>
+      services.documents.setPortrait(id, data ?? {}, { performedBy: actorOf(performedBy) }),
+    ),
+    [IPC_CHANNELS.PERSONS_UPLOAD_PORTRAIT]: wrap(({ id, data, performedBy }) =>
+      services.documents.uploadPortrait(id, data ?? {}, { performedBy: actorOf(performedBy) }),
+    ),
     [IPC_CHANNELS.MEDIA_REMOVE]: wrap(({ id, performedBy }) => {
       media.remove(id, { performedBy: actorOf(performedBy) });
       return { removed: true };
@@ -434,6 +476,16 @@ function buildRawHandlers(services, workspace, storage) {
       services.indexing.updateSettings(data ?? {}),
     ),
     [IPC_CHANNELS.INDEXING_RUN]: wrap(() => services.indexing.run('MANUAL')),
+    [IPC_CHANNELS.INDEXING_SEARCH_PAGE]: wrap(({ q, options }) =>
+      services.indexing.searchPage(q, options ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_DOCUMENT]: wrap(({ id }) => services.indexing.getDocument(id)),
+    [IPC_CHANNELS.INDEXING_UPDATE_SOURCE]: wrap(({ id, data }) =>
+      services.indexing.updateSource(id, data ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_RUN_SOURCE]: wrap(({ id }) => services.indexing.runSource(id)),
+    [IPC_CHANNELS.INDEXING_CLEAR_SOURCE]: wrap(({ id }) => services.indexing.clearSource(id)),
+    [IPC_CHANNELS.INDEXING_CANCEL]: wrap(() => services.indexing.cancel()),
     [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
       services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
     ),
@@ -452,11 +504,11 @@ function buildRawHandlers(services, workspace, storage) {
       ? {
           [IPC_CHANNELS.STORAGE_STATUS]: wrap(() => storage.status()),
           [IPC_CHANNELS.STORAGE_SET_MIRROR]: wrap(({ mirrorDir, token }) => {
-            services.accounts.requireSession(token);
+            services.accounts.requireProtectedSession(token);
             return storage.setMirrorDir(mirrorDir ?? null);
           }),
           [IPC_CHANNELS.STORAGE_SET_DATA_DIR]: wrap(({ dataDir, token }) => {
-            services.accounts.requireSession(token);
+            services.accounts.requireProtectedSession(token);
             return storage.setDataDir(dataDir ?? null);
           }),
         }
@@ -470,8 +522,14 @@ function buildRawHandlers(services, workspace, storage) {
           [IPC_CHANNELS.TREES_CREATE]: wrap(({ data }) => workspace.create(data ?? {})),
           [IPC_CHANNELS.TREES_UPDATE]: wrap(({ id, data }) => workspace.update(id, data ?? {})),
           [IPC_CHANNELS.TREES_ACTIVATE]: wrap(({ id }) => workspace.activate(id)),
-          [IPC_CHANNELS.TREES_REMOVE]: wrap(({ id }) => workspace.remove(id)),
-          [IPC_CHANNELS.TREES_RESTORE]: wrap(({ id }) => workspace.restore(id)),
+          [IPC_CHANNELS.TREES_REMOVE]: wrap(({ id, token }) => {
+            services.accounts.requireProtectedSession(token);
+            return workspace.remove(id);
+          }),
+          [IPC_CHANNELS.TREES_RESTORE]: wrap(({ id, token }) => {
+            services.accounts.requireProtectedSession(token);
+            return workspace.restore(id);
+          }),
         }
       : {}),
   };

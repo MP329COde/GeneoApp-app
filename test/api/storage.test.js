@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { createApp } from '../../src/server/src/app.js';
 import { TreeWorkspace } from '../../src/server/src/trees/tree-workspace.js';
 import {
@@ -91,6 +94,32 @@ test('refuse un dossier relatif, absent ou un fichier, et exige une session', as
       body: { mirrorDir: ctx.root },
     });
     assert.equal(anonymous.status, 401);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('un profil sans code ne peut pas changer le miroir tant qu’un profil protégé existe', async () => {
+  const ctx = await start();
+  try {
+    // "Alice" (sans code) existe déjà via start(). On ajoute un profil protégé
+    // puis un intrus sans code : lui seul doit être bloqué (règle b).
+    await requestJson(ctx.baseUrl, '/api/accounts', {
+      method: 'POST',
+      body: { name: 'owner', pin: '1234' },
+      headers: ctx.headers,
+    });
+    const intrusLogin = await requestJson(ctx.baseUrl, '/api/accounts/login', {
+      method: 'POST',
+      body: { name: 'Alice' },
+    });
+
+    const setMirror = await requestJson(ctx.baseUrl, '/api/storage/mirror', {
+      method: 'PUT',
+      headers: { 'x-geneoapp-session': intrusLogin.body.token },
+      body: { mirrorDir: ctx.root },
+    });
+    assert.equal(setMirror.status, 403);
   } finally {
     await ctx.close();
   }

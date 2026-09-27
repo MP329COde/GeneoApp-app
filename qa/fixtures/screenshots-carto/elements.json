@@ -1,0 +1,3836 @@
+{
+  "Arbre": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-arbre.png",
+    "nbElements": 47,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familial"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ascendant"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Descendant"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Éventail"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Graphe"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "−"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recentrer"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Personne": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-personne.png",
+    "nbElements": 45,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "texte": "Photo de T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Imprimer la fiche ou l’enregistrer en PDF"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Identité"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Notes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Historique"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Enregistrer"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Familles": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-familles.png",
+    "nbElements": 45,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "MARRIAGE\nCIVIL_PARTNERSHIP\nCOHABITATION\nOTHER"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "— Choisir une personne —\nT1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Créer l’union"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "FATHER\nMOTHER\nPARENT"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter le parent"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter l’enfant"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Recherche": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-recherche.png",
+    "nbElements": 50,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "Nom, lieu, source..."
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Rechercher"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Tous\nHomme\nFemme\nInconnu"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Tous\nNaissance\nBaptême\nDécès\nInhumation\nMariage\nDivorce\nAdoption\nÉvénement"
+      },
+      {
+        "tag": "input",
+        "type": "number",
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Filtrer"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Effacer les filtres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Retirer"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir les recherches"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sites par défaut"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "https://archives.exemple.fr/recherche?q={nom}"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      }
+    ]
+  },
+  "Parenté": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-parent.png",
+    "nbElements": 41,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "— choisir —\nT2 99\nT1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Calculer la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Comparaison": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-comparaison.png",
+    "nbElements": 40,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "— choisir —\nT2 99 (#2)\nT1 T1 (#1)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Statistiques": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-statistiques.png",
+    "nbElements": 39,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Sources": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-sources.png",
+    "nbElements": 41,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "LOW\nMEDIUM\nHIGH"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter et citer la source"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Médias": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-m-dias.png",
+    "nbElements": 41,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "texte": "Photo de T2 99"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Déchiffrer & identifier": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-d-chiffrer-identifier.png",
+    "nbElements": 40,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Événements": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-v-nements.png",
+    "nbElements": 43,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "BIRTH\nDEATH\nMARRIAGE\nDIVORCE\nBAPTISM\nBURIAL\nADOPTION\nOCCUPATION\nRESIDENCE\nEMIGRA"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "EXACT\nABOUT\nBEFORE\nAFTER\nBETWEEN\nUNKNOWN"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "— Aucun —"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter l’événement"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Chronologie": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-chronologie.png",
+    "nbElements": 39,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Carte": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-carte.png",
+    "nbElements": 39,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Annotations": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-annotations.png",
+    "nbElements": 49,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Gras"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Italique"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Liste"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Citation"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Lien"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Aperçu"
+      },
+      {
+        "tag": "textarea",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Élevée\nMoyenne\nFaible"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter la note"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Toutes\nPersonne\nFamille\nÉvénement\nSource\nCitation\nLieu\nArbre\nRecherche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Documents indexés": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-documents-index-s.png",
+    "nbElements": 51,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "acte, nom, lieu… « \"jean baptiste\" -paris »"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Toutes"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Chercher"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "/Users/moi/Généalogie/scans"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter le dossier"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Site d’archives (exploration des liens)\nFichier de données ouvertes (CSV, JSON, "
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "https://archives.exemple.fr/registres"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Page de départ seule\n1 niveau(x)\n2 niveau(x)\n3 niveau(x)\n4 niveau(x)"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter la source"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "INSEE — personnes décédées en France depuis 1970"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "00 h\n01 h\n02 h\n03 h\n04 h\n05 h\n06 h\n07 h\n08 h\n09 h\n10 h\n11 h\n12 h\n13 h\n14 h\n15 h\n"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Indexer maintenant"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Carnet": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-carnet.png",
+    "nbElements": 49,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": "Trouver son acte de mariage"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "À faire\nEn cours\nTerminé\nAbandonné"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "Haute\nMoyenne\nBasse"
+      },
+      {
+        "tag": "select",
+        "type": null,
+        "texte": "— Aucune —\nT2 99\nT1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Ajouter une piste de recherche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Toutes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "À faire"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "En cours"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Terminé"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Abandonné"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  },
+  "Arbres": {
+    "url": "http://127.0.0.1:5173/",
+    "screenshot": "page-arbres.png",
+    "nbElements": 44,
+    "elements": [
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "+ Nouvelle personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T2 99"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T1 T1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbre\n⌘1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Personne\n⌘2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Familles\n⌘3"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Recherche\n⌘4"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Comparaison"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Statistiques"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sources"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Médias"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Déchiffrer & identifier"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Événements"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Chronologie"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carte"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annotations"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Documents indexés"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Carnet"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Arbres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "GEDCOM"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Sauvegardes"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Corbeille"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Profil local"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "IA locale"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Paramètres"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "T"
+      },
+      {
+        "tag": "input",
+        "type": "search",
+        "texte": "Rechercher une personne (Ctrl+K)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Annuler : Ajout · personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Rien à rétablir"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Masquer le panneau de la personne"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Passer au thème sombre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir Mon arbre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Renommer Mon arbre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Supprimer Mon arbre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Renommer T"
+      },
+      {
+        "tag": "input",
+        "type": null,
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": "Créer l’arbre"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la fiche"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "Ouvrir la parenté"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "texte": "citer une source"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "texte": ""
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "texte": ""
+      }
+    ]
+  }
+}

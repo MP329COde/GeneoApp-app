@@ -8,6 +8,27 @@ const sampleGedcom = readFileSync(
 );
 const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.meta.url));
 
+// 220 personnes (> VIRTUALIZATION_THRESHOLD = 150), individus isolés sans
+// lien de parenté : suffisant pour déclencher la virtualisation de la liste
+// et rapide à importer/rendre, contrairement à qa/fixtures/gedcom/volumineux.ged
+// (2600 individus, prévu pour les tests de performance côté serveur).
+function largePersonGedcom(count) {
+  const lines = ['0 HEAD', '1 GEDC', '2 VERS 5.5.1'];
+  for (let index = 1; index <= count; index += 1) {
+    lines.push(
+      `0 @I${index}@ INDI`,
+      `1 NAME Personne${String(index).padStart(4, '0')} /Volumineux/`,
+      `1 SEX ${index % 2 === 0 ? 'F' : 'M'}`,
+      '1 BIRT',
+      `2 DATE ${1 + (index % 28)} JAN ${1700 + index}`,
+    );
+  }
+  lines.push('0 @IANNE@ INDI', '1 NAME Anne /Bernard/', '1 SEX F', '1 BIRT', '2 DATE 3 MAR 1888');
+  lines.push('0 TRLR');
+  return lines.join('\n');
+}
+const largeGedcom = largePersonGedcom(220);
+
 // Suite E2E navigateur : pilote l'application réelle (React + Vite + Express
 // + SQLite en mémoire), sans mock d'API — vérifie le parcours métier de
 // bout en bout tel qu'un utilisateur le vivrait, contrairement aux tests
@@ -16,9 +37,22 @@ const samplePngPath = fileURLToPath(new URL('../fixtures/sample.png', import.met
 test.describe.configure({ mode: 'serial' });
 
 // Création d'une personne par la fenêtre « Nouvelle personne ».
+// Sur un arbre vide, l'application ouvre déjà cette fenêtre automatiquement
+// (assistant de départ) : on ne re-clique le bouton que si elle n'est pas
+// déjà affichée, pour refléter le comportement réel de l'UI.
 async function addPerson(page, givenNames, familyName) {
-  await page.getByRole('button', { name: '+ Nouvelle personne' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  const openButton = page.getByRole('button', { name: '+ Nouvelle personne' });
+  // Sur un arbre vide, l'application ouvre la modale automatiquement, mais ce
+  // n'est pas instantané : on attend que l'état de l'application se stabilise
+  // (modale déjà visible, ou bouton d'ouverture disponible) avant de décider.
+  await Promise.race([
+    dialog.waitFor({ state: 'visible' }).catch(() => {}),
+    openButton.waitFor({ state: 'visible' }).catch(() => {}),
+  ]);
+  if (!(await dialog.isVisible())) {
+    await openButton.click();
+  }
   await dialog.getByLabel('Prénom(s)').fill(givenNames);
   await dialog.getByLabel('Nom', { exact: true }).fill(familyName);
   await dialog.getByRole('button', { name: 'Ajouter une personne' }).click();
@@ -28,7 +62,7 @@ async function addPerson(page, givenNames, familyName) {
 test('démarre sur un état vide honnête, sans donnée fictive', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText(/Aucune personne enregistrée/)).toBeVisible();
-  await expect(page.getByText('0 personne(s)')).toBeVisible();
+  await expect(page.getByText('0 personne')).toBeVisible();
 });
 
 test('crée une personne réelle via le formulaire et la voit apparaître dans la liste', async ({
@@ -37,7 +71,7 @@ test('crée une personne réelle via le formulaire et la voit apparaître dans l
   await page.goto('/');
   await addPerson(page, 'Ada', 'Lovelace');
 
-  await expect(page.getByText('1 personne(s)')).toBeVisible();
+  await expect(page.getByText('1 personne')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
 });
 
@@ -46,7 +80,7 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
 }) => {
   await page.goto('/');
   await addPerson(page, 'Byron', 'Lovelace');
-  await expect(page.getByText('2 personne(s)')).toBeVisible();
+  await expect(page.getByText('2 personnes')).toBeVisible();
 
   // Sélectionne Ada, puis ajoute Byron comme enfant via l'onglet Familles.
   await page.getByRole('button', { name: 'Ada Lovelace' }).click();
@@ -66,7 +100,7 @@ test('les statistiques reflètent les données réelles créées durant le parco
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Statistiques', exact: true }).click();
-  const personsRow = page.locator('dl div', { hasText: 'persons' });
+  const personsRow = page.locator('dl div', { hasText: 'Personnes' });
   await expect(personsRow.locator('dd')).toHaveText('2');
 });
 
@@ -88,7 +122,7 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
   await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
-  await expect(page.getByText('5 personne(s)')).toBeVisible();
+  await expect(page.getByText('5 personnes')).toBeVisible();
 });
 
 test('exporte réellement l’arbre au format GEDCOM (téléchargement déclenché)', async ({ page }) => {
@@ -108,7 +142,7 @@ test('bloque les sauvegardes sans session puis autorise la création après conn
   await page.getByRole('button', { name: 'Sauvegardes', exact: true }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
 
   await page.getByRole('button', { name: 'Créer une sauvegarde (JSON)' }).click();
@@ -121,14 +155,14 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Toujours connecté depuis le test précédent (état React réinitialisé par
   // page.goto, la session locale doit donc être rétablie).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page.getByText(/connectez-vous avec un profil local/)).toBeVisible();
 
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 
@@ -139,7 +173,7 @@ test('permet de se déconnecter puis de supprimer réellement le profil local', 
 
   // Le profil supprimé n'existe plus : une nouvelle connexion avec le même
   // nom recrée un profil distinct via le repli 401 (premier lancement).
-  await page.getByLabel('Profil local').fill('Généalogiste E2E');
+  await page.getByRole('textbox', { name: 'Profil local' }).fill('Généalogiste E2E');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Profil connecté : Généalogiste E2E')).toBeVisible();
 });
@@ -148,24 +182,30 @@ test('fusionne un doublon réel : les données du doublon rejoignent le survivan
   page,
 }) => {
   await page.goto('/');
-  // L'import GEDCOM précédent a recréé "Ada Lovelace" et "Byron Lovelace" en
-  // plus des fiches déjà saisies manuellement : un vrai doublon exact exploité
-  // ici plutôt que d'en fabriquer un artificiellement.
-  await page.getByRole('button', { name: 'Doublons', exact: true }).click();
-  await page.getByRole('button', { name: 'Analyser les doublons potentiels' }).click();
+  // L'import GEDCOM précédent a recréé "Ada Lovelace" en plus de la fiche déjà
+  // saisie manuellement : un vrai doublon exact exploité ici plutôt que d'en
+  // fabriquer un artificiellement. La vérification des doublons n'est plus un
+  // écran séparé : elle est intégrée à la fiche de la personne concernée
+  // (section « À vérifier », cf. App.jsx VerificationSection).
+  await page.getByRole('button', { name: 'Personne', exact: true }).click();
+  await page
+    .locator('.sidenav__persons')
+    .getByText('Ada Lovelace', { exact: false })
+    .first()
+    .click();
 
-  const pair = page.locator('.search-results li', { hasText: 'Ada Lovelace' }).first();
-  await expect(pair).toBeVisible();
-  await pair.getByRole('button', { name: 'Fusionner (garder A)' }).click();
+  const verification = page.locator('#verification-section');
+  await expect(verification.getByText(/Doublon possible/)).toBeVisible();
+  await verification.getByRole('button', { name: 'Fusionner ici' }).click();
 
   // L'aperçu de fusion bloque tant que l'utilisateur n'a pas confirmé.
   await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirmer la fusion' }).click();
 
-  await expect(pair).not.toBeVisible();
+  await expect(page.getByRole('alertdialog', { name: 'Confirmer la fusion' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Arbre', exact: true }).click();
-  await expect(page.getByText('4 personne(s)')).toBeVisible();
+  await expect(page.getByText('4 personnes')).toBeVisible();
 });
 
 test('la chronologie affiche les événements réels importés par GEDCOM, triés et avec lieu', async ({
@@ -178,7 +218,11 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   // mariage (Charles et Ada) : de vrais événements, pas des données de test
   // fabriquées pour cet écran.
   await expect(page.getByText(/BIRTH/)).toBeVisible();
-  await expect(page.getByText(/London/)).toBeVisible();
+  // La liste de personnes affiche aussi désormais le lieu de naissance (pour
+  // distinguer les homonymes), donc « London » y apparaît également : on
+  // cible ici précisément la ligne de la chronologie plutôt qu'un texte
+  // ambigu partagé avec la fiche de la barre latérale.
+  await expect(page.getByText(/BIRTH.*London/)).toBeVisible();
   await expect(page.getByText(/MARRIAGE/)).toBeVisible();
 });
 
@@ -195,9 +239,71 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
   await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
 
+  // Par défaut l'application est en mode carte locale (hors ligne, sans
+  // requête réseau) : voir a9af2bd « sépare réellement le mode hors ligne du
+  // mode en ligne ». On vérifie ce mode d'abord.
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(page.getByText('Carte locale (hors ligne, aucune requête réseau)')).toBeVisible();
+  await expect(
+    page.getByRole('img', {
+      name: 'Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)',
+    }),
+  ).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Bascule explicite vers le mode en ligne (tuiles OpenStreetMap) via les
+  // réglages, puis vérifie que la carte Leaflet s'affiche à la place.
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'En ligne (tuiles OpenStreetMap)' }).check();
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(
+    page.getByText('Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)'),
+  ).toBeVisible();
   await expect(page.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeVisible();
-  await expect(page.locator('.map-panel__label', { hasText: 'Nantes' })).toBeVisible();
+  await expect(page.locator('.map-panel__places li', { hasText: 'Nantes' })).toBeVisible();
+
+  // Remet le mode local pour ne pas influencer les tests suivants (suite en
+  // mode `serial`, réglages partagés entre les tests).
+  await page.getByRole('button', { name: 'Paramètres', exact: true }).click();
+  await page.getByRole('radio', { name: 'Locale (hors ligne, sans tuiles)' }).check();
+});
+
+test('place automatiquement un lieu contre le référentiel des communes françaises', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Événements', exact: true }).click();
+
+  // Nouveau lieu sans coordonnées : doit apparaître dans « Lieux sans
+  // coordonnées » avec le bouton de placement automatique.
+  await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Bordeaux');
+  await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
+  await expect(page.locator('.search-results li', { hasText: 'Bordeaux' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await expect(page.getByText('Bordeaux', { exact: true })).toBeVisible();
+
+  const button = page.getByRole('button', { name: /Placer automatiquement \d+ lieux?/ });
+  await expect(button).toBeVisible();
+  await button.click();
+
+  // Aperçu avant toute écriture : la correspondance unique est proposée,
+  // mais rien n'est encore enregistré.
+  const preview = page.locator('.auto-locate__preview');
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText('Bordeaux (33)')).toBeVisible();
+
+  await preview.getByRole('button', { name: /Confirmer le placement/ }).click();
+  await expect(preview).toBeHidden();
+
+  // Coordonnées bien enregistrées : le lieu passe désormais dans la liste
+  // des lieux géolocalisés, plus dans « sans coordonnées » (d'autres lieux
+  // non localisés peuvent subsister, importés sans coordonnées par un test
+  // précédent — seul le sort de Bordeaux nous intéresse ici).
+  await expect(page.locator('.map-panel__places li', { hasText: 'Bordeaux' })).toBeVisible();
+  const unlocatedSection = page.locator('h3', { hasText: 'Lieux sans coordonnées' }).locator('..');
+  await expect(unlocatedSection.getByText('Bordeaux', { exact: true })).toHaveCount(0);
 });
 
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
@@ -237,6 +343,46 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   await expect(page.getByLabel('Surnom / alias')).toHaveValue('Le petit Byron');
   await expect(page.getByLabel('Titre honorifique')).toHaveValue('Lord');
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
+});
+
+test('corrige une faute dans le prénom/nom depuis l’identité, annule (Ctrl+Z) et rétablit (Ctrl+Maj+Z)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  if ((await page.getByRole('button', { name: 'Byron Lovelace' }).count()) === 0) {
+    await addPerson(page, 'Byron', 'Lovelace');
+  }
+  await page.getByRole('button', { name: 'Byron Lovelace' }).first().click();
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
+
+  await page.getByLabel('Nom', { exact: true }).fill('Lovelacee');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('heading', { name: 'Byron Lovelacee' })).toBeVisible();
+
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.getByRole('heading', { name: 'Byron Lovelace' })).toBeVisible();
+
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(page.getByRole('heading', { name: 'Byron Lovelacee' })).toBeVisible();
+
+  // Historique des écritures (panneau Sauvegardes/Historique global) : la
+  // correction du nom y apparaît, comme toute écriture persons.update — sans
+  // plomberie dédiée pour ces nouveaux champs.
+  await page.getByRole('button', { name: 'Notifications' }).click();
+  await expect(page.getByText(/Personne modifiée/).first()).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Remet le nom d'origine pour ne pas affecter les tests suivants du fichier
+  // (mode serial, personnes partagées entre tests).
+  if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
+    await page.getByText('Modifier l’identité').click();
+  }
+  await page.getByLabel('Nom', { exact: true }).fill('Lovelace');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('heading', { name: 'Byron Lovelace' })).toBeVisible();
 });
 
 test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune erreur certaine)', async ({
@@ -299,7 +445,7 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
 }) => {
   await page.goto('/');
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  await expect(counter).toHaveText(/\d+ personnes?/);
   const before = await counter.textContent();
 
   await page.getByRole('button', { name: 'Arbres', exact: true }).click();
@@ -307,10 +453,10 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
   await page.getByRole('button', { name: 'Créer l’arbre' }).click();
   await page.getByRole('button', { name: 'Ouvrir Famille Morel' }).click();
 
-  await expect(counter).toHaveText('0 personne(s)');
+  await expect(counter).toHaveText('0 personne');
   await expect(page.getByRole('button', { name: 'Famille Morel', exact: true })).toBeVisible();
   await addPerson(page, 'Anne', 'Morel');
-  await expect(counter).toHaveText('1 personne(s)');
+  await expect(counter).toHaveText('1 personne');
 
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
   await expect(counter).toHaveText(before);
@@ -322,19 +468,20 @@ test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la ré
 }) => {
   await page.goto('/');
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText(/\d+ personne\(s\)/);
+  await expect(counter).toHaveText(/\d+ personnes?/);
   const before = Number((await counter.textContent()).split(' ')[0]);
+  const personCountText = (count) => `${count} personne${count === 0 || count === 1 ? '' : 's'}`;
 
   await addPerson(page, 'Temporaire', 'Annulable');
-  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before + 1));
 
   await page.locator('body').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('ControlOrMeta+z');
-  await expect(counter).toHaveText(`${before} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before));
   await expect(page.getByRole('button', { name: 'Temporaire Annulable' })).toHaveCount(0);
 
   await page.keyboard.press('ControlOrMeta+Shift+z');
-  await expect(counter).toHaveText(`${before + 1} personne(s)`);
+  await expect(counter).toHaveText(personCountText(before + 1));
 });
 
 test('mène une recherche complète : hypothèse étayée, tâche faite, persistées au rechargement', async ({
@@ -407,7 +554,15 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   await page.getByRole('button', { name: 'Créer l’arbre' }).click();
   await page.getByRole('button', { name: 'Ouvrir Réimport GEDZIP' }).click();
   const counter = page.locator('.sidenav__persons .sidenav__label span');
-  await expect(counter).toHaveText('0 personne(s)');
+  await expect(counter).toHaveText('0 personne');
+
+  // L'arbre vide ouvre automatiquement l'assistant de départ ("Nouvelle
+  // personne") : on le referme avant de naviguer, comme le ferait un
+  // utilisateur qui choisit plutôt d'importer un GEDCOM.
+  const startAssistant = page.getByRole('dialog', { name: 'Nouvelle personne' });
+  if (await startAssistant.isVisible()) {
+    await page.getByRole('button', { name: 'Fermer' }).click();
+  }
 
   await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
   await page
@@ -415,9 +570,9 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
     .setInputFiles({ name: 'export.gdz', mimeType: 'application/zip', buffer: archive });
   await page.getByRole('button', { name: 'Importer l’archive GEDZIP' }).click();
   await expect(
-    page.getByText(/Archive importée : \d+ personne\(s\), \d+ média\(s\)/),
+    page.getByText(/Archive importée : \d+ personnes?, \d+ médias? rattaché/),
   ).toBeVisible();
-  await expect(counter).not.toHaveText('0 personne(s)');
+  await expect(counter).not.toHaveText('0 personne');
 
   await page.getByRole('button', { name: 'Arbres', exact: true }).click();
   await page.getByRole('button', { name: 'Ouvrir Mon arbre' }).click();
@@ -465,13 +620,133 @@ test('indexe réellement un dossier local et retrouve un document par son conten
   );
 
   await page.goto('/');
+  // Rend le test autonome (exécutable seul, sans dépendre de personnes
+  // créées par des tests précédents) : sur un arbre vide, l'assistant de
+  // départ ouvre automatiquement une modale « Nouvelle personne » qui
+  // intercepterait les clics suivants tant qu'elle reste ouverte.
+  await addPerson(page, 'Jean-Baptiste', 'Lefèvre');
   await page.getByRole('button', { name: 'Documents indexés', exact: true }).click();
   await page.getByLabel('Dossier (chemin complet)').fill(folder);
   await page.getByRole('button', { name: 'Ajouter le dossier' }).click();
-  await page.getByRole('button', { name: 'Indexer maintenant' }).click();
+  // Bouton global d'indexation : distinct du bouton par source, dont le
+  // libellé accessible est « Indexer maintenant {dossier} » (même préfixe).
+  await page.getByRole('button', { name: 'Indexer maintenant', exact: true }).click();
   await expect(page.getByText(/Indexation terminée : 1 nouveau/)).toBeVisible();
 
   await page.getByLabel('Rechercher dans les documents').fill('saint maclou');
   await page.getByRole('button', { name: 'Chercher' }).click();
   await expect(page.getByText('bapteme.txt').first()).toBeVisible();
+});
+
+test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et défilement complet', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await addPerson(page, 'Jean-Baptiste', 'Lefèvre');
+  await page.getByRole('button', { name: 'GEDCOM', exact: true }).click();
+  await page.getByLabel('Contenu GEDCOM').fill(largeGedcom);
+  await page.getByRole('button', { name: 'Aperçu' }).click();
+  await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  await page.getByRole('button', { name: 'Importer' }).click();
+  await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: 'Arbre', exact: true }).click();
+  const rows = page.locator('.person-list .person-card');
+  await expect(rows.first()).toBeVisible();
+
+  // 10 lignes consécutives : aucune boîte englobante ne chevauche la suivante.
+  const boxes = [];
+  for (let index = 0; index < 10; index += 1) {
+    const box = await rows.nth(index).boundingBox();
+    expect(box).not.toBeNull();
+    boxes.push(box);
+  }
+  for (let index = 0; index < boxes.length - 1; index += 1) {
+    const current = boxes[index];
+    const next = boxes[index + 1];
+    expect(next.y).toBeGreaterThanOrEqual(current.y + current.height - 1);
+  }
+
+  // Défilement jusqu'à la dernière personne de la liste virtualisée.
+  const scrollContainer = page.locator('.person-list > div').first();
+  await scrollContainer.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect
+    .poll(() =>
+      scrollContainer.evaluate(
+        (element) => element.scrollTop + element.clientHeight >= element.scrollHeight - 1,
+      ),
+    )
+    .toBe(true);
+  await expect(rows.last()).toBeVisible();
+
+  // Colonne latérale étroite (230px) : le nom de famille doit rester lisible
+  // en entier, quitte à tronquer le prénom. On cherche « Anne Bernard » en
+  // filtrant la liste (le filtre reste visible même en mode virtualisé).
+  await page.getByPlaceholder('Filtrer les personnes…').fill('Bernard');
+  const anneRow = page.locator('.person-list .person-card', { hasText: 'Bernard' }).first();
+  await expect(anneRow).toBeVisible();
+  const familySpan = anneRow.locator('.person-card__family');
+  await expect(familySpan).toHaveText('Bernard');
+  const overflow = await familySpan.evaluate(
+    (element) => element.scrollWidth > element.clientWidth,
+  );
+  expect(overflow).toBe(false);
+});
+
+test.describe('navigation mobile (390×844)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('barre d’onglets mobile : navigation, aucun défilement horizontal, nœud sélectionné visible', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await addPerson(page, 'Ada', 'Lovelace');
+
+    // Le ruban d'icônes de navigation entre vues est masqué (remplacé par la
+    // barre fixe en bas d'écran, 4 onglets étiquetés + « Plus ») ; la liste
+    // des personnes reste accessible (ce n'est pas de la navigation).
+    await expect(page.locator('.sidenav__scroll')).toBeHidden();
+    const tabbar = page.locator('.mobile-tabbar');
+    await expect(tabbar).toBeVisible();
+    for (const label of ['Arbre', 'Personne', 'Recherche', 'Documents', 'Plus']) {
+      await expect(tabbar.getByText(label, { exact: true })).toBeVisible();
+    }
+
+    // Aucun défilement horizontal de page, contrairement au ruban précédent.
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+
+    // « Plus » ouvre la feuille du menu complet, avec les entrées non
+    // couvertes par les 4 onglets directs (ex. Statistiques).
+    await tabbar.getByText('Plus', { exact: true }).click();
+    const sheet = page.locator('.mobile-menu-sheet');
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: 'Statistiques' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Statistiques' })).toBeVisible();
+
+    // Sélectionne explicitement la personne qu'on vient de créer (le filtre
+    // reste accessible même sur mobile), pour un test indépendant du volume
+    // de données déjà accumulé par les tests précédents (serveur partagé).
+    await page.getByPlaceholder('Filtrer les personnes…').fill('Ada Lovelace');
+    await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+
+    // Navigation directe par un onglet, et nœud sélectionné non masqué par
+    // la barre fixe (le point de vérification du contre-audit) : on le fait
+    // défiler dans la zone visible, puis on vérifie qu'il n'empiète pas sur
+    // la barre fixe en bas d'écran.
+    await tabbar.getByText('Arbre', { exact: true }).click();
+    const selectedNode = page.locator('.tree-row .person-card--selected').first();
+    await selectedNode.scrollIntoViewIfNeeded();
+    await expect(selectedNode).toBeVisible();
+    const nodeBox = await selectedNode.boundingBox();
+    const tabbarBox = await tabbar.boundingBox();
+    expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(tabbarBox.y);
+  });
 });

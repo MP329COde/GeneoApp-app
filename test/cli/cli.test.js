@@ -3,7 +3,10 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 

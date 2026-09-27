@@ -3,10 +3,22 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { createApp } from '../../src/server/src/app.js';
 import { TreeWorkspace } from '../../src/server/src/trees/tree-workspace.js';
 import { requestJson } from './helpers.js';
+
+async function login(server, name = 'Alice', pin) {
+  await requestJson(server.baseUrl, '/api/accounts', { method: 'POST', body: { name, pin } });
+  const { body } = await requestJson(server.baseUrl, '/api/accounts/login', {
+    method: 'POST',
+    body: { name, pin },
+  });
+  return body.token;
+}
 
 async function startWorkspaceServer() {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'geneoapp-trees-test-'));
@@ -112,9 +124,11 @@ test('valide les noms et refuse les identifiants hors format (pas de traversée 
   }
 });
 
-test('renomme, supprime logiquement (fichier conservé) puis restaure un arbre', async () => {
+test('renomme, supprime logiquement (fichier conservé) puis restaure un arbre (avec session)', async () => {
   const server = await startWorkspaceServer();
   try {
+    const token = await login(server);
+    const headers = { 'x-geneoapp-session': token };
     const { body: tree } = await requestJson(server.baseUrl, '/api/trees', {
       method: 'POST',
       body: { name: 'Brouillon' },
@@ -127,11 +141,13 @@ test('renomme, supprime logiquement (fichier conservé) puis restaure un arbre',
 
     const activeRemoval = await requestJson(server.baseUrl, '/api/trees/default', {
       method: 'DELETE',
+      headers,
     });
     assert.equal(activeRemoval.status, 400, 'l’arbre ouvert ne peut pas être supprimé');
 
     const removed = await requestJson(server.baseUrl, `/api/trees/${tree.id}`, {
       method: 'DELETE',
+      headers,
     });
     assert.equal(removed.status, 200);
     assert.ok(existsSync(path.join(server.dataDir, `tree-${tree.id}.sqlite`)));
@@ -140,9 +156,52 @@ test('renomme, supprime logiquement (fichier conservé) puis restaure un arbre',
     const deleted = await requestJson(server.baseUrl, '/api/trees/deleted');
     assert.equal(deleted.body[0].name, 'Famille Caron');
 
-    await requestJson(server.baseUrl, `/api/trees/${tree.id}/restore`, { method: 'POST' });
+    await requestJson(server.baseUrl, `/api/trees/${tree.id}/restore`, {
+      method: 'POST',
+      headers,
+    });
     const restored = await requestJson(server.baseUrl, '/api/trees');
     assert.equal(restored.body.length, 2);
+  } finally {
+    await server.close();
+  }
+});
+
+// Avant correctif : ni DELETE /api/trees/:id ni la restauration ne
+// vérifiaient de session, contrairement aux autres opérations destructrices
+// (sauvegardes, corbeille, stockage) — n'importe qui pouvait supprimer ou
+// restaurer un arbre entier sans être connecté.
+test('DELETE /api/trees/:id et la restauration exigent une session (accès protégé)', async () => {
+  const server = await startWorkspaceServer();
+  try {
+    const { body: tree } = await requestJson(server.baseUrl, '/api/trees', {
+      method: 'POST',
+      body: { name: 'Sans session' },
+    });
+
+    const removedWithoutSession = await requestJson(server.baseUrl, `/api/trees/${tree.id}`, {
+      method: 'DELETE',
+    });
+    assert.equal(removedWithoutSession.status, 401);
+
+    const restoredWithoutSession = await requestJson(
+      server.baseUrl,
+      `/api/trees/${tree.id}/restore`,
+      { method: 'POST' },
+    );
+    assert.equal(restoredWithoutSession.status, 401);
+
+    // Toujours listé : rien n'a été supprimé ni restauré sans session.
+    const list = await requestJson(server.baseUrl, '/api/trees');
+    assert.equal(list.body.length, 2);
+
+    const token = await login(server);
+    const headers = { 'x-geneoapp-session': token };
+    const removed = await requestJson(server.baseUrl, `/api/trees/${tree.id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    assert.equal(removed.status, 200);
   } finally {
     await server.close();
   }

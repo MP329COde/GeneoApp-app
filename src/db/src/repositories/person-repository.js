@@ -36,8 +36,8 @@ export class PersonRepository {
 
   create(
     {
-      givenNames,
-      familyName,
+      givenNames = '',
+      familyName = '',
       birthFamilyName = null,
       sex = 'U',
       notes = null,
@@ -50,8 +50,10 @@ export class PersonRepository {
     },
     { performedBy = null } = {},
   ) {
-    if (!givenNames || !familyName) {
-      throw new Error('givenNames et familyName sont obligatoires');
+    // Un prénom OU un nom suffit (voir validation/schemas.js côté API) :
+    // seule l'absence totale des deux est refusée.
+    if (!givenNames?.trim() && !familyName?.trim()) {
+      throw new Error('givenNames ou familyName doit être renseigné');
     }
 
     return withTransaction(this.database, () => {
@@ -117,11 +119,40 @@ export class PersonRepository {
     return this.database.prepare(`SELECT * FROM persons WHERE id = ? ${clause}`).get(id) ?? null;
   }
 
-  list({ includeDeleted = false } = {}) {
-    const clause = includeDeleted ? '' : 'WHERE deleted_at IS NULL';
-    return this.database
-      .prepare(`SELECT * FROM persons ${clause} ORDER BY family_name, given_names`)
-      .all();
+  // Sans `limit`, renvoie la liste complète (comportement historique, utilisé
+  // partout côté client pour les calculs locaux — tri, filtrage, doublons…).
+  // Avec `limit`, active la pagination côté API : `{ items, total }`, avec un
+  // filtre texte optionnel `q` (nom/prénom, insensible à la casse et aux
+  // accents) — pour les grandes bases où charger toute la liste d'un coup
+  // n'est plus raisonnable (listes de plusieurs milliers de personnes).
+  list({ includeDeleted = false, limit, offset = 0, q } = {}) {
+    const deletedClause = includeDeleted ? '' : 'deleted_at IS NULL';
+    const conditions = [deletedClause].filter(Boolean);
+    const params = {};
+    if (q && q.trim()) {
+      conditions.push(`(given_names || ' ' || family_name) LIKE @q ESCAPE '\\'`);
+      const escaped = q.trim().replace(/[\\%_]/g, (match) => `\\${match}`);
+      params.q = `%${escaped}%`;
+    }
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    if (limit === undefined) {
+      return this.database
+        .prepare(`SELECT * FROM persons ${whereClause} ORDER BY family_name, given_names`)
+        .all(params);
+    }
+
+    const items = this.database
+      .prepare(
+        `SELECT * FROM persons ${whereClause}
+         ORDER BY family_name, given_names
+         LIMIT @limit OFFSET @offset`,
+      )
+      .all({ ...params, limit, offset });
+    const { total } = this.database
+      .prepare(`SELECT COUNT(*) AS total FROM persons ${whereClause}`)
+      .get(params);
+    return { items, total };
   }
 
   update(id, patch, { performedBy = null } = {}) {

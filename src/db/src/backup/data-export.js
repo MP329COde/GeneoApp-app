@@ -22,6 +22,7 @@ export const EXPORTABLE_TABLES = [
   'search_index',
   'local_accounts',
   'audit_log',
+  'notifications',
 ];
 
 export const BACKUP_FORMAT = 'geneoapp-backup';

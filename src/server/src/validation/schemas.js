@@ -2,7 +2,6 @@ import {
   assertValid,
   required,
   isString,
-  nonEmptyString,
   maxLength,
   oneOf,
   isInteger,
@@ -92,27 +91,37 @@ function validatePersonIdentityFields({
   });
 }
 
+// Un prénom OU un nom suffit (l'import GEDCOM accepte déjà des noms
+// incomplets) : seule l'absence totale des deux est rejetée, pour éviter
+// une fiche entièrement anonyme créée par erreur. Une fiche affichera un
+// libellé « Inconnu »/« Unknown » côté interface si les deux sont vides.
+function assertAtLeastOneName(givenNames, familyName) {
+  const hasGivenNames = typeof givenNames === 'string' && givenNames.trim() !== '';
+  const hasFamilyName = typeof familyName === 'string' && familyName.trim() !== '';
+  if (!hasGivenNames && !hasFamilyName) {
+    throw new ValidationError('Validation échouée', {
+      fields: {
+        givenNames: 'givenNames ou familyName doit être renseigné',
+        familyName: 'givenNames ou familyName doit être renseigné',
+      },
+    });
+  }
+}
+
 export function validatePersonCreate(payload) {
   assertPayload(payload);
   const { givenNames, familyName, ...rest } = payload;
 
   assertValid({
-    givenNames: [
-      required(givenNames, 'givenNames'),
-      isString(givenNames, 'givenNames'),
-      maxLength(givenNames, 200, 'givenNames'),
-    ],
-    familyName: [
-      required(familyName, 'familyName'),
-      isString(familyName, 'familyName'),
-      maxLength(familyName, 200, 'familyName'),
-    ],
+    givenNames: [isString(givenNames, 'givenNames'), maxLength(givenNames, 200, 'givenNames')],
+    familyName: [isString(familyName, 'familyName'), maxLength(familyName, 200, 'familyName')],
   });
+  assertAtLeastOneName(givenNames, familyName);
   validatePersonIdentityFields(payload);
 
   return {
-    givenNames,
-    familyName,
+    givenNames: givenNames ?? '',
+    familyName: familyName ?? '',
     birthFamilyName: rest.birthFamilyName ?? null,
     sex: rest.sex ?? 'U',
     notes: rest.notes ?? null,
@@ -130,14 +139,8 @@ export function validatePersonUpdate(payload) {
   const { givenNames, familyName } = payload;
 
   assertValid({
-    givenNames: [
-      nonEmptyString(givenNames, 'givenNames'),
-      maxLength(givenNames, 200, 'givenNames'),
-    ],
-    familyName: [
-      nonEmptyString(familyName, 'familyName'),
-      maxLength(familyName, 200, 'familyName'),
-    ],
+    givenNames: [isString(givenNames, 'givenNames'), maxLength(givenNames, 200, 'givenNames')],
+    familyName: [isString(familyName, 'familyName'), maxLength(familyName, 200, 'familyName')],
   });
   validatePersonIdentityFields(payload);
 
@@ -149,6 +152,18 @@ export function validatePersonUpdate(payload) {
   }
   if (Object.keys(patch).length === 0) {
     throw new ValidationError('Aucun champ modifiable fourni');
+  }
+  // Une mise à jour qui toucherait givenNames/familyName ne doit pas pouvoir
+  // vider les deux à la fois (même règle qu'à la création).
+  if ('givenNames' in patch || 'familyName' in patch) {
+    const nextGivenNames = 'givenNames' in patch ? patch.givenNames : undefined;
+    const nextFamilyName = 'familyName' in patch ? patch.familyName : undefined;
+    // Si un seul des deux champs est modifié, on ne connaît pas ici la valeur
+    // actuelle de l'autre : le contrôle strict (les deux vides) est fait par
+    // le repository/service qui a accès à l'état existant.
+    if (nextGivenNames !== undefined && nextFamilyName !== undefined) {
+      assertAtLeastOneName(nextGivenNames, nextFamilyName);
+    }
   }
   return patch;
 }
@@ -168,10 +183,11 @@ export function validatePlaceCreate(payload) {
 
 export function validateEventCreate(payload) {
   assertPayload(payload);
-  const { type, dateText, datePrecision, placeId, notes, participants } = payload;
+  const { type, value, dateText, datePrecision, placeId, notes, participants } = payload;
 
   assertValid({
     type: [required(type, 'type'), oneOf(type, EVENT_TYPES, 'type')],
+    value: [isString(value, 'value'), maxLength(value, 500, 'value')],
     dateText: [isString(dateText, 'dateText'), maxLength(dateText, 100, 'dateText')],
     datePrecision: [oneOf(datePrecision, DATE_PRECISIONS, 'datePrecision')],
     placeId: [isInteger(placeId, 'placeId')],
@@ -185,6 +201,7 @@ export function validateEventCreate(payload) {
 
   return {
     type,
+    value: value?.trim() || null,
     dateText: dateText ?? null,
     datePrecision: datePrecision ?? 'UNKNOWN',
     placeId: placeId ?? null,

@@ -14,7 +14,23 @@ export function createPersonController(services) {
 
     list(request, response) {
       const includeDeleted = request.query.includeDeleted === 'true';
-      response.json(persons.list({ includeDeleted }));
+      const { limit, offset, q } = request.query;
+      if (limit === undefined) {
+        response.json(persons.list({ includeDeleted }));
+        return;
+      }
+      const { items, total } = persons.list({
+        includeDeleted,
+        limit: Number(limit),
+        offset: offset !== undefined ? Number(offset) : 0,
+        q,
+      });
+      response.json({
+        items,
+        total,
+        limit: Number(limit),
+        offset: offset !== undefined ? Number(offset) : 0,
+      });
     },
 
     update(request, response) {

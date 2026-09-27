@@ -14,7 +14,7 @@ test('HTML réduit à son texte, sans scripts, avec titre, entités et liens', (
   assert.deepEqual(links, ['/page2.html', 'acte.pdf']);
 });
 
-test('extraction : texte brut, OCR facultatif, repli sur le titre', async () => {
+test('extraction : texte brut et OCR remplaçable', async () => {
   const plain = await extractText({
     buffer: Buffer.from('Acte de naissance'),
     filename: 'notes.txt',
@@ -23,16 +23,9 @@ test('extraction : texte brut, OCR facultatif, repli sur le titre', async () => 
   const withOcr = await extractText({
     buffer: Buffer.alloc(1),
     filename: 'scan.png',
-    filePath: '/tmp/scan.png',
     ocr: async () => 'Texte reconnu',
   });
   assert.deepEqual([withOcr.status, withOcr.text], ['OCR', 'Texte reconnu']);
-  const noOcr = await extractText({
-    buffer: Buffer.alloc(1),
-    filename: 'scan.pdf',
-    filePath: '/x',
-  });
-  assert.deepEqual([noOcr.status, noOcr.title], ['UNAVAILABLE', 'scan.pdf']);
 });
 
 test('robots.txt : groupe spécifique, règle la plus longue, joker et délai', () => {

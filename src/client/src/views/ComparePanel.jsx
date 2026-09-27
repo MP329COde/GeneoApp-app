@@ -75,9 +75,9 @@ async function loadSide(client, person, events) {
 
 // Comparaison de deux personnes : utile avant une fusion de doublons ou pour
 // départager deux homonymes. Ne modifie rien.
-export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
+export function ComparePanel({ client, persons, selected, onOpenDuplicates, initialRightId }) {
   const [leftId, setLeftId] = useState(selected ? String(selected.id) : '');
-  const [rightId, setRightId] = useState('');
+  const [rightId, setRightId] = useState(initialRightId ? String(initialRightId) : '');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 

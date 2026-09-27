@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { TreeWorkspace } from '../server/src/trees/tree-workspace.js';
 import { configuredDataDir } from '../server/src/storage/storage-config.js';
 import { formatGenealogyDate } from '../db/src/dates/genealogy-date.js';
+import { stopOcr } from '../server/src/indexing/content-extract.js';
 
 const HELP = `GeneoApp — ligne de commande (100 % locale)
 
@@ -39,10 +40,18 @@ Sauvegardes
   backup list                         Liste les sauvegardes
   backup verify <nom>                 Vérifie l'intégrité d'une sauvegarde
 
-Indexation de documents (ADR 0011)
-  index run                           Lance l'indexation (à planifier via cron / Planificateur de tâches)
+Indexation de documents (ADR 0011, 0012)
+  index run [--source <id>]           Lance l'indexation (à planifier via cron / Planificateur de tâches)
   index status                        Sources, réglages et dernières exécutions
-  index search <texte>                Recherche plein texte dans les documents indexés
+  index search <texte> [--source <id>]
+                                      Recherche plein texte ("expression exacte", -exclusion)
+  index show <id-document>            Texte indexé d'un document
+  index add <dossier|adresse> [--kind folder|site|direct|datagouv] [--depth n] [--filter <texte>]
+  index add --preset insee-deces [--filter deces-1985]
+                                      Ajoute une source (dossier, site, fichier ou jeu de données ouvertes)
+  index presets                       Préréglages de données ouvertes
+  index remove <id-source>            Retire une source et ses documents
+  index network on|off                Autorise ou non l'accès internet pour l'indexation
 
 Historique
   undo | redo                         Annule / rétablit la dernière action
@@ -82,6 +91,9 @@ async function run(argv, { stdout = process.stdout } = {}) {
       'descendants-of': { type: 'string' },
       zip: { type: 'boolean', default: false },
       kind: { type: 'string' },
+      source: { type: 'string' },
+      filter: { type: 'string' },
+      preset: { type: 'string' },
     },
   });
   const print = (human, data) =>
@@ -321,7 +333,9 @@ async function run(argv, { stdout = process.stdout } = {}) {
       case 'index': {
         const indexing = services().indexing;
         if (sub === 'run') {
-          const run = await indexing.run('CLI');
+          const run = await indexing.run('CLI', {
+            sourceId: values.source ? requireId(values.source, 'Source') : null,
+          });
           print(
             `Indexation ${run.status === 'DONE' ? 'terminée' : 'en échec'} : ${run.indexed} indexé(s), ${run.unchanged} inchangé(s), ${run.skipped} ignoré(s), ${run.errors} erreur(s)${run.message ? ` — ${run.message}` : ''}`,
             run,
@@ -329,7 +343,9 @@ async function run(argv, { stdout = process.stdout } = {}) {
           return run.status === 'DONE' ? 0 : 2;
         }
         if (sub === 'search') {
-          const hits = indexing.search(rest.join(' '));
+          const hits = indexing.search(rest.join(' '), {
+            sourceId: values.source ? requireId(values.source, 'Source') : null,
+          });
           print(
             hits
               .map(
@@ -341,6 +357,53 @@ async function run(argv, { stdout = process.stdout } = {}) {
           );
           return 0;
         }
+        if (sub === 'show') {
+          const document = indexing.getDocument(requireId(rest[0], 'Document'));
+          print(`${document.title}\n${document.location}\n\n${document.text ?? ''}`, document);
+          return 0;
+        }
+        if (sub === 'presets') {
+          const presets = indexing.presets();
+          print(
+            presets.map((preset) => `${preset.id}  ${preset.label}\n  ${preset.hint}`).join('\n'),
+            presets,
+          );
+          return 0;
+        }
+        if (sub === 'add') {
+          const kind = (values.kind ?? (values.preset ? 'datagouv' : '')).toLowerCase();
+          const mode = { site: 'CRAWL', direct: 'DIRECT', datagouv: 'DATAGOUV' }[kind];
+          const location = rest[0];
+          const source = await indexing.addSource({
+            ...(values.preset ? { preset: values.preset } : {}),
+            kind:
+              kind === 'folder' || (!kind && location && path.isAbsolute(location))
+                ? 'FOLDER'
+                : 'SITE',
+            ...(mode ? { mode } : {}),
+            ...(location
+              ? { location: kind === 'folder' ? path.resolve(location) : location }
+              : {}),
+            ...(values.depth !== undefined ? { maxDepth: Number(values.depth) } : {}),
+            ...(values.filter !== undefined ? { resourceFilter: values.filter } : {}),
+          });
+          print(`Source ${source.id} ajoutée : ${source.label} (${source.location})`, source);
+          return 0;
+        }
+        if (sub === 'remove') {
+          indexing.removeSource(requireId(rest[0], 'Source'));
+          print('Source retirée.', { removed: true });
+          return 0;
+        }
+        if (sub === 'network') {
+          if (!['on', 'off'].includes(rest[0])) throw new UsageError('index network on|off');
+          const settings = indexing.updateSettings({ networkAllowed: rest[0] === 'on' });
+          print(
+            `Accès internet pour l'indexation : ${settings.networkAllowed ? 'autorisé' : 'désactivé'}`,
+            settings,
+          );
+          return 0;
+        }
         if (sub === 'status' || !sub) {
           const status = indexing.status();
           print(
@@ -349,7 +412,7 @@ async function run(argv, { stdout = process.stdout } = {}) {
               `Accès internet : ${status.settings.networkAllowed ? 'autorisé' : 'désactivé'}`,
               ...status.sources.map(
                 (source) =>
-                  `  [${source.kind}] ${source.label} — ${source.document_count} document(s)`,
+                  `  #${source.id} [${source.kind === 'FOLDER' ? 'dossier' : { CRAWL: 'site', DIRECT: 'fichier', DATAGOUV: 'data.gouv.fr' }[source.mode]}] ${source.label} — ${source.document_count} document(s)${source.last_message ? ` (${source.last_message})` : ''}`,
               ),
             ].join('\n'),
             status,
@@ -373,6 +436,8 @@ async function run(argv, { stdout = process.stdout } = {}) {
     }
   } finally {
     workspace.close();
+    // Le moteur OCR tourne dans un thread : l'arrêter pour rendre la main.
+    await stopOcr();
   }
 }
 

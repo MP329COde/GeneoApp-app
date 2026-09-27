@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 import { parseGedcom, validateGedcom } from '../../src/server/src/gedcom/index.js';
 
@@ -157,21 +160,26 @@ test('GEDCOM importe et réexporte les événements étendus (profession, migrat
     });
     assert.equal(imported.status, 201);
 
-    const types = server.database
+    const eventRows = server.database
       .prepare(
-        `SELECT type FROM events e
+        `SELECT type, value FROM events e
          JOIN event_participants ep ON ep.event_id = e.id
          WHERE ep.person_id = ? ORDER BY e.id`,
       )
-      .all(imported.body.ids.persons[0])
-      .map((row) => row.type);
-    assert.deepEqual(types, ['BIRTH', 'OCCUPATION', 'NATURALIZATION']);
+      .all(imported.body.ids.persons[0]);
+    assert.deepEqual(
+      eventRows.map((row) => row.type),
+      ['BIRTH', 'OCCUPATION', 'NATURALIZATION'],
+    );
+    // La valeur métier portée par la ligne du tag lui-même (« 1 OCCU Mathématicienne »)
+    // doit être conservée, pas seulement le type d'événement.
+    assert.equal(eventRows.find((row) => row.type === 'OCCUPATION').value, 'Mathématicienne');
 
     const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
       method: 'POST',
       body: { format: '7' },
     });
-    assert.match(exported.body.gedcom, /1 OCCU/);
+    assert.match(exported.body.gedcom, /1 OCCU Mathématicienne/);
     assert.match(exported.body.gedcom, /1 NATU/);
   } finally {
     await server.close();

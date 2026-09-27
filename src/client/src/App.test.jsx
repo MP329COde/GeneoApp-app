@@ -120,6 +120,12 @@ const events = vi.hoisted(() => ({
 const audit = vi.hoisted(() => ({
   listForEntity: vi.fn(),
 }));
+const notifications = vi.hoisted(() => ({
+  list: vi.fn().mockResolvedValue({ items: [], unread: 0 }),
+  markRead: vi.fn(),
+  markAllRead: vi.fn(),
+  publish: vi.fn().mockResolvedValue({ created: 0 }),
+}));
 
 const history = vi.hoisted(() => ({
   status: vi.fn().mockResolvedValue({ canUndo: false, canRedo: false }),
@@ -165,6 +171,7 @@ vi.mock('./api/geneoapp-client.js', () => ({
     places,
     events,
     audit,
+    notifications,
     trees,
     history,
     storage,
@@ -173,7 +180,68 @@ vi.mock('./api/geneoapp-client.js', () => ({
   }),
 }));
 
-const { default: App } = await import('./App.jsx');
+const {
+  default: App,
+  buildVerificationIssues,
+  verificationNotifications,
+} = await import('./App.jsx');
+
+describe('regroupement des notifications de vérification (contre-audit, point 4)', () => {
+  it('regroupe des milliers d’incohérences en quelques notifications, sous le plafond de 20', () => {
+    // Volume comparable à qa/scripts/generate-large-gedcom.cjs (~2600 individus
+    // sur 8 générations) : un import massif peut faire remonter des milliers
+    // d'incohérences de chronologie identiques (même code), qui ne doivent
+    // jamais produire une notification par occurrence.
+    const timeline = Array.from({ length: 1234 }, (_, index) => ({
+      code: 'CHILD_BEFORE_PARENT',
+      severity: 'CERTAIN',
+      personId: index + 1,
+      childId: index + 1,
+      parentId: index + 1000,
+    })).concat(
+      Array.from({ length: 42 }, (_, index) => ({
+        code: 'IMPOSSIBLE_AGE',
+        severity: 'POSSIBLE',
+        personId: index + 5000,
+      })),
+    );
+
+    const byPerson = buildVerificationIssues({ timeline });
+    const items = verificationNotifications(byPerson);
+
+    // Deux groupes distincts (un par code), jamais un par occurrence.
+    expect(items.length).toBe(2);
+    expect(items.length).toBeLessThanOrEqual(20);
+    const childBeforeParent = items.find((item) => /1\s?234/.test(item.message));
+    expect(childBeforeParent).toBeTruthy();
+    expect(childBeforeParent.dedupeKey).toBe('verification-group:timeline:CHILD_BEFORE_PARENT');
+
+    // Une deuxième analyse identique doit produire la même clé de
+    // déduplication (donc être ignorée en base, voir test API du plafond).
+    const again = verificationNotifications(buildVerificationIssues({ timeline }));
+    expect(again.map((item) => item.dedupeKey).sort()).toEqual(
+      items.map((item) => item.dedupeKey).sort(),
+    );
+  });
+
+  it('accorde le pluriel et formate le nombre (pas de suffixe "(s)")', () => {
+    // Avant correctif : "{count} {libellé au singulier}", donc
+    // "1375 enfant né avant son parent — ouvrir la cohérence." (faux accord,
+    // pas de séparateur de milliers).
+    const timeline = Array.from({ length: 1375 }, (_, index) => ({
+      code: 'CHILD_BORN_BEFORE_PARENT',
+      severity: 'CERTAIN',
+      personId: index + 1,
+      parentId: index + 5000,
+    }));
+    const items = verificationNotifications(buildVerificationIssues({ timeline }));
+    expect(items).toHaveLength(1);
+    expect(items[0].message).toBe('1 375 enfants nés avant leur parent — ouvrir la cohérence.');
+
+    const single = verificationNotifications(buildVerificationIssues({ timeline: [timeline[0]] }));
+    expect(single[0].message).toBe('1 enfant né avant son parent — ouvrir la cohérence.');
+  });
+});
 
 describe('App', () => {
   it('affiche un état vide sans donnée fictive quand aucune personne n’existe', async () => {
@@ -184,6 +252,18 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
+  });
+
+  it('affiche un assistant guidé pour démarrer un arbre vide', async () => {
+    persons.list.mockResolvedValue([]);
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => expect(screen.getByText(/assistant de départ/i)).toBeInTheDocument());
+    expect(
+      screen.getByRole('button', { name: /ajouter la première personne/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /importer un fichier gedcom/i })).toBeInTheDocument();
   });
 
   it("n'a aucune violation d'accessibilité détectée par axe (état vide)", async () => {
@@ -208,7 +288,7 @@ describe('App', () => {
     });
 
     const { container } = renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
 
     expect(await axe(container)).toHaveNoViolations();
@@ -229,7 +309,7 @@ describe('App', () => {
 
     renderWithProviders(<App />);
 
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
   });
@@ -248,7 +328,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(1));
 
     const nav = screen.getByRole('navigation', { name: 'Personnes' });
@@ -309,7 +389,7 @@ describe('App', () => {
     persons.update.mockResolvedValue({});
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('Surnom / alias'), { target: { value: 'Jeannot' } });
     fireEvent.click(screen.getByLabelText('Personne vivante'));
@@ -317,6 +397,10 @@ describe('App', () => {
 
     await waitFor(() =>
       expect(persons.update).toHaveBeenCalledWith(1, {
+        givenNames: 'Jean',
+        familyName: 'Dupont',
+        birthFamilyName: null,
+        sex: 'U',
         nickname: 'Jeannot',
         marriedName: null,
         title: null,
@@ -324,6 +408,66 @@ describe('App', () => {
         isLiving: false,
       }),
     );
+  });
+
+  it('modifie réellement le prénom, le nom, le nom de naissance et le sexe', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', sex: 'M', is_living: 1 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    persons.update.mockResolvedValue({});
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
+      target: { value: 'Dupont-Durand' },
+    });
+    fireEvent.change(screen.getByLabelText('Nom de naissance'), { target: { value: 'Durand' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() =>
+      expect(persons.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          givenNames: 'Jean',
+          familyName: 'Dupont-Durand',
+          birthFamilyName: 'Durand',
+          sex: 'M',
+        }),
+      ),
+    );
+  });
+
+  it('refuse de sauvegarder une identité sans prénom ni nom', async () => {
+    persons.list.mockResolvedValue([
+      { id: 1, given_names: 'Jean', family_name: 'Dupont', is_living: 1 },
+    ]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Prénom(s)'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Nom', { selector: 'input' }), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(persons.update).not.toHaveBeenCalled();
+    expect(screen.getByText('Un prénom ou un nom est requis.')).toBeInTheDocument();
   });
 
   it('recherche via le client API et affiche les résultats réels (aucune donnée fictive)', async () => {
@@ -340,7 +484,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'paroissial' } });
@@ -441,7 +585,9 @@ describe('App', () => {
     expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument();
     expect(backups.list).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() => expect(accounts.login).toHaveBeenCalledWith('Alice', undefined));
@@ -469,7 +615,9 @@ describe('App', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
 
@@ -479,7 +627,9 @@ describe('App', () => {
       expect(screen.getByText(/connectez-vous avec un profil local/)).toBeInTheDocument(),
     );
 
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     await waitFor(() => expect(screen.getByText('Profil connecté : Alice')).toBeInTheDocument());
 
@@ -512,7 +662,9 @@ describe('App', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Bob' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Bob' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() =>
@@ -522,7 +674,7 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText(/Aucune sauvegarde/)).toBeInTheDocument());
   });
 
-  it('détecte les doublons potentiels via le client API et permet de rejoindre une fiche', async () => {
+  it('signale les doublons dans le panneau de la personne et les publie en notification', async () => {
     persons.list.mockResolvedValue([
       { id: 1, given_names: 'Jean', family_name: 'Dupont' },
       { id: 2, given_names: 'Jehan', family_name: 'Dupont' },
@@ -546,15 +698,28 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
+    // Aucune section « Vérifier » séparée : l'analyse tourne toute seule.
+    expect(screen.queryByRole('button', { name: 'Doublons' })).not.toBeInTheDocument();
+    await waitFor(() => expect(search.duplicates).toHaveBeenCalled(), { timeout: 3000 });
+    const section = await screen.findByText(/Doublon possible \(92 %\)/, {}, { timeout: 3000 });
+    expect(section).toBeInTheDocument();
+    // Depuis le regroupement des notifications par type (contre-audit, point
+    // 4 : un import massif ne doit jamais créer une notification par
+    // occurrence), l'alerte publiée résume le nombre de doublons plutôt que
+    // de nommer chaque paire individuellement.
+    await waitFor(() =>
+      expect(notifications.publish).toHaveBeenCalledWith([
+        expect.objectContaining({
+          title: 'Doublons possibles',
+          message: expect.stringContaining('1 doublon'),
+          dedupeKey: 'verification-group:duplicate',
+        }),
+      ]),
+    );
 
-    await waitFor(() => expect(search.duplicates).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Voir la fiche B' })[0]);
+    fireEvent.click(within(section.closest('li')).getByRole('button', { name: 'Jehan Dupont' }));
     await waitFor(() => expect(graph.relations).toHaveBeenCalledWith(2));
   });
 
@@ -597,24 +762,20 @@ describe('App', () => {
     persons.list.mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Doublons' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyser les doublons potentiels' }));
-    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: 'Fusionner (garder A)' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Fusionner ici' }, { timeout: 3000 }),
+    );
 
     await waitFor(() => expect(search.previewMerge).toHaveBeenCalledWith(1, 2));
-    await waitFor(() => expect(screen.getByText(/lien\(s\) enfant → parent/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/liens? enfant → parent/)).toBeInTheDocument());
     expect(search.merge).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmer la fusion' }));
 
     await waitFor(() => expect(search.merge).toHaveBeenCalledWith(1, 2));
-    await waitFor(() =>
-      expect(screen.getByText('Aucun doublon potentiel détecté.')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
   });
 
   it('gère les familles (unions) d’une personne via le client API', async () => {
@@ -635,7 +796,7 @@ describe('App', () => {
     unions.create.mockResolvedValue({ id: 7, type: 'MARRIAGE', partnerIds: [1, 2] });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
     await waitFor(() => expect(unions.listForPerson).toHaveBeenCalledWith(1));
@@ -713,7 +874,7 @@ describe('App', () => {
     research.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Vérifier acte' } });
@@ -818,7 +979,7 @@ describe('App', () => {
     notes.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
@@ -861,7 +1022,7 @@ describe('App', () => {
     media.upload.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
     await waitFor(() => expect(media.listForEntity).toHaveBeenCalledWith('PERSON', 1));
@@ -902,7 +1063,7 @@ describe('App', () => {
     sources.addCitation.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
     await waitFor(() => expect(sources.listCitationsForEntity).toHaveBeenCalledWith('PERSON', 1));
@@ -957,7 +1118,7 @@ describe('App', () => {
     HTMLAnchorElement.prototype.click = clickSpy;
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
 
@@ -992,7 +1153,7 @@ describe('App', () => {
     parentages.create.mockResolvedValue({ id: 10 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('3 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('3 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
     await waitFor(() => expect(parentages.listParentsOf).toHaveBeenCalledWith(1));
@@ -1029,7 +1190,7 @@ describe('App', () => {
     events.create.mockResolvedValue({ id: 1 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
     await waitFor(() => expect(events.listForPerson).toHaveBeenCalledWith(1));
@@ -1046,6 +1207,7 @@ describe('App', () => {
     await waitFor(() =>
       expect(events.create).toHaveBeenCalledWith({
         type: 'BIRTH',
+        value: null,
         dateText: '12 avril 1850',
         datePrecision: 'EXACT',
         placeId: 9,
@@ -1075,7 +1237,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Chronologie' }));
 
@@ -1100,15 +1262,40 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
 
     await waitFor(() =>
-      expect(screen.getByRole('img', { name: /Carte des lieux/ })).toBeInTheDocument(),
+      expect(screen.getByRole('img', { name: /lieux enregistrés/ })).toBeInTheDocument(),
     );
-    expect(screen.getByText('Nantes')).toBeInTheDocument();
+    // Par défaut, la carte est locale (hors ligne, sans tuiles externes).
+    expect(screen.getByText(/Carte locale \(hors ligne/)).toBeInTheDocument();
+    // La personne active reste sélectionnée d'une vue à l'autre.
+    expect(screen.getByRole('button', { name: 'Jean Dupont' })).toHaveClass(
+      'person-card--selected',
+    );
+    expect(screen.getAllByText('Nantes').length).toBeGreaterThan(0);
     expect(screen.getByText('Lieu inconnu')).toBeInTheDocument();
+  });
+
+  it('passe la carte en mode en ligne uniquement sur choix explicite dans les réglages', async () => {
+    localStorage.setItem('geneoapp.settings', JSON.stringify({ mapMode: 'online' }));
+    persons.list.mockResolvedValue([]);
+    places.list.mockResolvedValueOnce([
+      { id: 1, name: 'Nantes', latitude: 47.2184, longitude: -1.5536 },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Carte' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Carte en ligne \(tuiles OpenStreetMap/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('img', { name: 'Carte des lieux enregistrés' })).toBeInTheDocument();
+
+    localStorage.clear();
   });
 
   it('signale les incohérences réelles détectées par le moteur (cycle et chronologie)', async () => {
@@ -1129,16 +1316,32 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cohérence' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Vérifier la cohérence de l’arbre' }));
-
-    await waitFor(() => expect(graph.cycles).toHaveBeenCalled());
+    // L'anti-rebond de la vérification a été allongé (cf. Phase 2 audit
+    // performance) pour ne plus relancer l'analyse après chaque écriture ;
+    // le délai d'attente du test suit ce nouvel anti-rebond.
+    await waitFor(() => expect(graph.cycles).toHaveBeenCalled(), { timeout: 4000 });
+    expect(
+      await screen.findByText(/Naissance enregistrée après le décès/, {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Cycle de filiation')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByText(/Naissance enregistrée après le décès/)).toBeInTheDocument(),
+      expect(notifications.publish).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: 'Cycles de filiation',
+            message: expect.stringContaining('1 cycle'),
+            dedupeKey: 'verification-group:cycle',
+          }),
+          expect.objectContaining({
+            type: 'danger',
+            title: 'Naissance enregistrée après le décès',
+            message: expect.stringContaining('1 '),
+          }),
+        ]),
+      ),
     );
-    expect(screen.getByText(/Jean Dupont → Marie Curie → Jean Dupont/)).toBeInTheDocument();
   });
 
   it('calcule les ancêtres communs réels entre la fiche sélectionnée et une autre personne', async () => {
@@ -1162,7 +1365,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     graph.relationship.mockResolvedValue({
       relationship: 'CONNECTED',
@@ -1196,7 +1399,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Historique' }));
@@ -1219,7 +1422,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
 
@@ -1263,7 +1466,7 @@ describe('App', () => {
     graph.commonAncestors.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Parenté' }));
     fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
@@ -1288,7 +1491,7 @@ describe('App', () => {
     events.listForPerson.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
 
@@ -1345,7 +1548,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Éventail' }));
 
     const mother = await screen.findByRole('button', { name: 'Anne Morel, Sosa 3' });
@@ -1384,16 +1587,58 @@ describe('App', () => {
     trees.activate.mockResolvedValue({ ...second, active: true, personCount: 0 });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     expect(await screen.findByRole('button', { name: 'Mon arbre' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Arbres' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir Famille Morel' }));
 
     await waitFor(() => expect(trees.activate).toHaveBeenCalledWith('abc-1'));
-    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Famille Morel' })).toBeInTheDocument();
   });
+
+  // Contre-audit, point 4 : DELETE/restore d'arbre exigent désormais une
+  // session (comme sauvegardes/corbeille), y compris côté UI.
+  it('désactive Supprimer/Restaurer un arbre tant qu’aucun profil n’est connecté', async () => {
+    persons.list.mockResolvedValueOnce([]);
+    trees.list.mockResolvedValue([
+      {
+        id: 'default',
+        name: 'Mon arbre',
+        active: true,
+        createdAt: '2026-09-22T10:00:00Z',
+        personCount: 0,
+      },
+      {
+        id: 'abc-1',
+        name: 'Famille Morel',
+        active: false,
+        createdAt: '2026-09-23T10:00:00Z',
+        personCount: 0,
+      },
+    ]);
+    trees.listDeleted.mockResolvedValue([
+      { id: 'old-1', name: 'Ancien arbre', deletedAt: '2026-09-20T10:00:00Z' },
+    ]);
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Arbres' }));
+
+    const removeButton = await screen.findByRole('button', { name: 'Supprimer Famille Morel' });
+    expect(removeButton).toBeDisabled();
+    const restoreButton = await screen.findByRole('button', {
+      name: 'Restaurer Ancien arbre',
+    });
+    expect(restoreButton).toBeDisabled();
+
+    fireEvent.click(removeButton);
+    fireEvent.click(restoreButton);
+    expect(trees.remove).not.toHaveBeenCalled();
+    expect(trees.restore).not.toHaveBeenCalled();
+  });
+
   it('annule la dernière action via le bouton puis Ctrl+Z, sans intercepter la frappe', async () => {
     persons.list
       .mockResolvedValueOnce([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }])
@@ -1427,11 +1672,11 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
     fireEvent.click(await screen.findByRole('button', { name: 'Annuler : Ajout · personne' }));
     await waitFor(() => expect(history.undo).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText('0 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 personne')).toBeInTheDocument());
     expect(screen.getByText('Annulé : Ajout · personne')).toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByRole('combobox', { name: /Rechercher une personne/ }), {
@@ -1537,7 +1782,7 @@ describe('App', () => {
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
     fireEvent.change(screen.getByLabelText('Format d’export'), { target: { value: '5.5.1' } });
     fireEvent.change(screen.getByLabelText('Périmètre'), { target: { value: 'maternal' } });
@@ -1550,7 +1795,7 @@ describe('App', () => {
         side: 'MATERNAL',
       }),
     );
-    expect(await screen.findByText('Exporté : 3 personne(s), 1 famille(s)')).toBeInTheDocument();
+    expect(await screen.findByText('Exporté : 3 personnes, 1 famille')).toBeInTheDocument();
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
   });
@@ -1599,7 +1844,7 @@ describe('App', () => {
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:photo'), revokeObjectURL: vi.fn() });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Médias' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir mariage.png' }));
 
@@ -1632,7 +1877,7 @@ describe('App', () => {
     events.listForPerson.mockResolvedValue([]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Événements' }));
 
     fireEvent.change(await screen.findByLabelText('Date (texte libre)'), {
@@ -1668,7 +1913,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
 
     expect(await screen.findByText('vers 1760 – 1822')).toBeInTheDocument();
@@ -1713,7 +1958,9 @@ describe('App', () => {
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     expect(await screen.findByText(/Automatique · lancement/)).toBeInTheDocument();
@@ -1764,7 +2011,9 @@ describe('App', () => {
       expect(screen.getByText(/Aucune personne enregistrée/)).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Sauvegardes' }));
-    fireEvent.change(screen.getByLabelText('Profil local'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Profil local' }), {
+      target: { value: 'Alice' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     fireEvent.change(await screen.findByLabelText(/Copie miroir des sauvegardes/), {
@@ -1794,7 +2043,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Comparaison' }));
     fireEvent.change(screen.getByLabelText('Seconde personne'), { target: { value: '2' } });
 
@@ -1825,7 +2074,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     const form = screen.getByRole('heading', { name: 'Filtres avancés' }).parentElement;
     fireEvent.change(within(form).getByLabelText('Nom'), { target: { value: 'Dupont' } });
@@ -1872,8 +2121,7 @@ describe('App', () => {
     expect(await screen.findByText('1 / 3')).toBeInTheDocument();
     expect(screen.getByText(/2 fait\(s\) sans source : identité, décès/)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Qualité : 1 sur 4' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'examiner' }));
-    expect(screen.getByRole('button', { name: 'Cohérence' })).toHaveClass('is-active');
+    expect(screen.getByRole('button', { name: 'examiner' })).toBeInTheDocument();
   });
   it('ouvre les recherches de la personne sur les sites choisis, sans les contacter', async () => {
     persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Lefèvre' }]);
@@ -1888,7 +2136,7 @@ describe('App', () => {
     localStorage.removeItem('geneoapp.searchSites');
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Gallica (BnF)' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Recherche web' }));
@@ -1933,7 +2181,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(await screen.findByRole('button', { name: 'Graphe' }));
 
     await waitFor(() => expect(graph.network).toHaveBeenCalledWith(1, 4));
@@ -1958,7 +2206,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
     fireEvent.change(screen.getByLabelText('Langue'), { target: { value: 'en' } });
 
@@ -1971,7 +2219,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
-    expect(await screen.findByText('1 personne(s)')).toBeInTheDocument();
+    expect(await screen.findByText('1 personne')).toBeInTheDocument();
     localStorage.clear();
   });
   it('modifie une note en texte riche et liste les annotations de toutes les cibles', async () => {
@@ -2000,7 +2248,7 @@ describe('App', () => {
     ]);
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Personne' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
     expect(await screen.findByText('à Nantes', { selector: 'strong' })).toBeInTheDocument();
@@ -2043,7 +2291,7 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('2 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 personnes')).toBeInTheDocument());
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     const box = screen.getByRole('combobox', { name: /Rechercher une personne/ });
     expect(box).toHaveFocus();
@@ -2067,10 +2315,13 @@ describe('App', () => {
     });
 
     renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne(s)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Paramètres' }));
 
-    const documentGroup = screen.getByRole('group', { name: 'Documenter' });
+    // Menu réorganisé en 5 sections (phase 5 de l'audit) : « Carte » vit
+    // désormais dans « Documents & sources », plus dans l'ancien groupe
+    // « Documenter » qui n'existe plus.
+    const documentGroup = screen.getByRole('group', { name: 'Documents & sources' });
     fireEvent.click(within(documentGroup).getByRole('checkbox', { name: 'Carte' }));
     expect(screen.queryByRole('button', { name: 'Carte' })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /^Arbre\s*\(toujours/ })).toBeDisabled();

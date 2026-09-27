@@ -54,12 +54,17 @@ function createHttpClient() {
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
       update: (id, data) => fetchJson(`/api/persons/${id}`, { method: 'PATCH', body: data }),
+      remove: (id) => fetchJson(`/api/persons/${id}`, { method: 'DELETE' }),
+      restore: (id) => fetchJson(`/api/persons/${id}/restore`, { method: 'POST' }),
     },
     places: {
       create: (data) => fetchJson('/api/places', { method: 'POST', body: data }),
       list: () => fetchJson('/api/places'),
       get: (id) => fetchJson(`/api/places/${id}`),
       remove: (id) => fetchJson(`/api/places/${id}`, { method: 'DELETE' }),
+      previewAutoLocate: () => fetchJson('/api/places/auto-locate/preview'),
+      applyAutoLocate: (assignments) =>
+        fetchJson('/api/places/auto-locate/apply', { method: 'POST', body: { assignments } }),
     },
     events: {
       create: (data) => fetchJson('/api/events', { method: 'POST', body: data }),
@@ -72,6 +77,13 @@ function createHttpClient() {
     },
     audit: {
       listForEntity: (tableName, rowId) => fetchJson(`/api/audit/${tableName}/${rowId}`),
+    },
+    notifications: {
+      list: (options = {}) =>
+        fetchJson(`/api/notifications?${new URLSearchParams(options).toString()}`),
+      markRead: (id) => fetchJson(`/api/notifications/${id}/read`, { method: 'POST' }),
+      markAllRead: () => fetchJson('/api/notifications/read-all', { method: 'POST' }),
+      publish: (items) => fetchJson('/api/notifications', { method: 'POST', body: { items } }),
     },
     graph: {
       ancestors: (personId, depth) =>
@@ -132,12 +144,17 @@ function createHttpClient() {
         fetchJson('/api/gedcom/import-archive', { method: 'POST', body: { contentBase64 } }),
     },
     accounts: {
-      create: (data) => fetchJson('/api/accounts', { method: 'POST', body: data }),
+      create: (data, token) => fetchJson('/api/accounts', { method: 'POST', body: data, token }),
       list: () => fetchJson('/api/accounts'),
       login: (name, pin) =>
         fetchJson('/api/accounts/login', { method: 'POST', body: { name, pin } }),
       logout: (token) => fetchJson('/api/accounts/logout', { method: 'POST', token }),
-      remove: (id, token) => fetchJson(`/api/accounts/${id}`, { method: 'DELETE', token }),
+      remove: (id, token, pin) =>
+        fetchJson(`/api/accounts/${id}`, {
+          method: 'DELETE',
+          token,
+          body: pin ? { pin } : undefined,
+        }),
     },
     backups: {
       create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
@@ -212,6 +229,22 @@ function createHttpClient() {
       updateSettings: (data) =>
         fetchJson('/api/indexing/settings', { method: 'PATCH', body: data }),
       run: () => fetchJson('/api/indexing/run', { method: 'POST' }),
+      searchPage: (q, options = {}) =>
+        fetchJson(
+          `/api/indexing/search?${new URLSearchParams({
+            q,
+            page: '1',
+            ...Object.fromEntries(
+              Object.entries(options).filter(([, value]) => value !== null && value !== undefined),
+            ),
+          })}`,
+        ),
+      document: (id) => fetchJson(`/api/indexing/documents/${id}`),
+      updateSource: (id, data) =>
+        fetchJson(`/api/indexing/sources/${id}`, { method: 'PATCH', body: data }),
+      runSource: (id) => fetchJson(`/api/indexing/sources/${id}/run`, { method: 'POST' }),
+      clearSource: (id) => fetchJson(`/api/indexing/sources/${id}/clear`, { method: 'POST' }),
+      cancel: () => fetchJson('/api/indexing/run/cancel', { method: 'POST' }),
     },
     advancedSearch: (filters) =>
       fetchJson('/api/search/advanced', { method: 'POST', body: filters }),
@@ -236,9 +269,10 @@ function createHttpClient() {
         fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'PATCH', body: data }),
       activate: (id) =>
         fetchJson(`/api/trees/${encodeURIComponent(id)}/activate`, { method: 'POST' }),
-      remove: (id) => fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-      restore: (id) =>
-        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+      remove: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE', token }),
+      restore: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST', token }),
     },
     notes: {
       create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
@@ -276,6 +310,17 @@ function createHttpClient() {
         fetchJson(`/api/media/${id}/regions`, { method: 'POST', body: data }),
       removeRegion: (regionId) => fetchJson(`/api/media/regions/${regionId}`, { method: 'DELETE' }),
       photosForPerson: (personId) => fetchJson(`/api/media/photos/by-person/${personId}`),
+      decode: (id, data = {}) =>
+        fetchJson(`/api/media/${id}/decode`, { method: 'POST', body: data }),
+      saveTranscription: (id, data) =>
+        fetchJson(`/api/media/${id}/transcription`, { method: 'PUT', body: data }),
+      owners: (id) => fetchJson(`/api/media/${id}/owners`),
+      link: (id, data) => fetchJson(`/api/media/${id}/link`, { method: 'PUT', body: data }),
+      identify: (data) => fetchJson('/api/media/identify', { method: 'POST', body: data }),
+      setPortrait: (personId, data) =>
+        fetchJson(`/api/persons/${personId}/portrait`, { method: 'PUT', body: data }),
+      uploadPortrait: (personId, data) =>
+        fetchJson(`/api/persons/${personId}/portrait`, { method: 'POST', body: data }),
     },
   };
 }
@@ -287,12 +332,16 @@ function createIpcClient(bridge) {
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),
       update: (id, data) => bridge.persons.update(id, data),
+      remove: (id) => bridge.persons.remove(id),
+      restore: (id) => bridge.persons.restore(id),
     },
     places: {
       create: (data) => bridge.places.create(data),
       list: () => bridge.places.list(),
       get: (id) => bridge.places.get(id),
       remove: (id) => bridge.places.remove(id),
+      previewAutoLocate: () => bridge.places.previewAutoLocate(),
+      applyAutoLocate: (assignments) => bridge.places.applyAutoLocate(assignments),
     },
     events: {
       create: (data) => bridge.events.create(data),
@@ -304,6 +353,12 @@ function createIpcClient(bridge) {
     },
     audit: {
       listForEntity: (tableName, rowId) => bridge.audit.listForEntity(tableName, rowId),
+    },
+    notifications: {
+      list: (options = {}) => bridge.notifications.list(options),
+      markRead: (id) => bridge.notifications.markRead(id),
+      markAllRead: () => bridge.notifications.markAllRead(),
+      publish: (items) => bridge.notifications.publish(items),
     },
     graph: {
       ancestors: (personId, depth) => bridge.graph.ancestors(personId, depth),
@@ -350,11 +405,11 @@ function createIpcClient(bridge) {
       importArchive: (contentBase64) => bridge.gedcom.importArchive(contentBase64),
     },
     accounts: {
-      create: (data) => bridge.accounts.create(data),
+      create: (data, token) => bridge.accounts.create(data, token),
       list: () => bridge.accounts.list(),
       login: (name, pin) => bridge.accounts.login(name, pin),
       logout: (token) => bridge.accounts.logout(token),
-      remove: (id, token) => bridge.accounts.remove(id, token),
+      remove: (id, token, pin) => bridge.accounts.remove(id, token, pin),
     },
     backups: {
       create: (data, token) => bridge.backups.create(data, token),
@@ -401,6 +456,12 @@ function createIpcClient(bridge) {
       removeSource: (id) => bridge.indexing.removeSource(id),
       updateSettings: (data) => bridge.indexing.updateSettings(data),
       run: () => bridge.indexing.run(),
+      searchPage: (q, options) => bridge.indexing.searchPage(q, options),
+      document: (id) => bridge.indexing.document(id),
+      updateSource: (id, data) => bridge.indexing.updateSource(id, data),
+      runSource: (id) => bridge.indexing.runSource(id),
+      clearSource: (id) => bridge.indexing.clearSource(id),
+      cancel: () => bridge.indexing.cancel(),
     },
     advancedSearch: (filters) => bridge.advancedSearch(filters),
     history: {
@@ -420,8 +481,8 @@ function createIpcClient(bridge) {
       create: (data) => bridge.trees.create(data),
       update: (id, data) => bridge.trees.update(id, data),
       activate: (id) => bridge.trees.activate(id),
-      remove: (id) => bridge.trees.remove(id),
-      restore: (id) => bridge.trees.restore(id),
+      remove: (id, token) => bridge.trees.remove(id, token),
+      restore: (id, token) => bridge.trees.restore(id, token),
     },
     notes: {
       create: (data) => bridge.notes.create(data),
@@ -446,6 +507,13 @@ function createIpcClient(bridge) {
       addRegion: (id, data) => bridge.media.addRegion(id, data),
       removeRegion: (regionId) => bridge.media.removeRegion(regionId),
       photosForPerson: (personId) => bridge.media.photosForPerson(personId),
+      decode: (id, data = {}) => bridge.media.decode(id, data),
+      saveTranscription: (id, data) => bridge.media.saveTranscription(id, data),
+      owners: (id) => bridge.media.owners(id),
+      link: (id, data) => bridge.media.link(id, data),
+      identify: (data) => bridge.media.identify(data),
+      setPortrait: (personId, data) => bridge.media.setPortrait(personId, data),
+      uploadPortrait: (personId, data) => bridge.media.uploadPortrait(personId, data),
     },
   };
 }

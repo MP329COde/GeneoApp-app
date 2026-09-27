@@ -3,7 +3,7 @@ import { Badge, Button } from '../design-system/index.js';
 
 // Gestion des arbres : chaque arbre est une base locale isolée. On choisit
 // d'abord l'arbre de travail, puis toute l'application travaille dessus.
-export function TreesPanel({ client, onActivated }) {
+export function TreesPanel({ client, onActivated, session }) {
   const [trees, setTrees] = useState(null);
   const [deleted, setDeleted] = useState([]);
   const [name, setName] = useState('');
@@ -42,10 +42,20 @@ export function TreesPanel({ client, onActivated }) {
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    if (!name.trim()) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    const fold = (value) => value.trim().toLowerCase();
+    const duplicate = (trees ?? []).some((tree) => fold(tree.name) === fold(trimmedName));
+    if (duplicate) {
+      setStatus(null);
+      setError(
+        `Un arbre nommé « ${trimmedName} » existe déjà. Choisissez un nom différent pour éviter toute confusion.`,
+      );
+      return;
+    }
     const created = await run(
-      () => client.trees.create({ name: name.trim(), description: description.trim() || null }),
-      `Arbre « ${name.trim()} » créé.`,
+      () => client.trees.create({ name: trimmedName, description: description.trim() || null }),
+      `Arbre « ${trimmedName} » créé.`,
     );
     if (created) {
       setName('');
@@ -152,9 +162,15 @@ export function TreesPanel({ client, onActivated }) {
                       <Button
                         size="sm"
                         variant="secondary"
+                        disabled={!session}
+                        title={
+                          session
+                            ? undefined
+                            : 'Connectez-vous avec un profil local pour supprimer un arbre.'
+                        }
                         onClick={() =>
                           run(
-                            () => client.trees.remove(tree.id),
+                            () => client.trees.remove(tree.id, session.token),
                             `Arbre « ${tree.name} » supprimé.`,
                           )
                         }
@@ -202,8 +218,17 @@ export function TreesPanel({ client, onActivated }) {
                 <Button
                   size="sm"
                   variant="secondary"
+                  disabled={!session}
+                  title={
+                    session
+                      ? undefined
+                      : 'Connectez-vous avec un profil local pour restaurer un arbre.'
+                  }
                   onClick={() =>
-                    run(() => client.trees.restore(tree.id), `Arbre « ${tree.name} » restauré.`)
+                    run(
+                      () => client.trees.restore(tree.id, session.token),
+                      `Arbre « ${tree.name} » restauré.`,
+                    )
                   }
                 >
                   Restaurer {tree.name}

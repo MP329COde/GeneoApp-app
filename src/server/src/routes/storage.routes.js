@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireSession } from '../middleware/require-session.js';
+import { requireProtectedSession } from '../middleware/require-session.js';
 
 // Emplacements de stockage : dossier de travail portable et miroir des sauvegardes.
 export function storageRoutes(storage, services) {
@@ -17,12 +17,12 @@ export function storageRoutes(storage, services) {
   );
   router.put(
     '/mirror',
-    requireSession(services),
+    requireProtectedSession(services),
     handle((request) => storage.setMirrorDir(request.body?.mirrorDir ?? null)),
   );
   router.put(
     '/data-dir',
-    requireSession(services),
+    requireProtectedSession(services),
     handle((request) => storage.setDataDir(request.body?.dataDir ?? null)),
   );
   return router;

@@ -1,0 +1,9 @@
+type_document,nom,prenom,date_acte,lieu_acte,reference_archive,notes
+Acte de baptême,Dupont,Pierre,1730-05-06,"Dijon, Bourgogne",AD21-BMS-1730-042,"Parrain: Nicolas Bernard; Marraine: Jeanne Petit"
+Acte de mariage,Dupont,Pierre,1752-10-10,"Dijon, Bourgogne",AD21-BMS-1752-118,"Épouse: Jeanne Bernard"
+Acte de décès,Dupont,Pierre,1795-03-03,"Dijon, Bourgogne",AD21-BMS-1795-009,"Témoins: Nicolas Dupont, Antoine Dupont"
+Acte de baptême,Müller,Johann,1750-02-02,"Strasbourg, Alsace",AD67-BMS-1750-077,"Fils de Karl Müller, meunier"
+Acte de mariage,Müller,Johann,1772-06-15,"Strasbourg, Alsace",AD67-BMS-1772-033,"Épouse: Anne-Catherine Weber"
+Acte de décès,N'Diaye,Aïssatou,1850-02-02,"Nantes, Bretagne",AD44-BMS-1850-201,"Veuve de Frédéric Müller"
+Acte de baptême,de La Tour-d'Auvergne,Godefroy,1712-03-14,"Clermont-Ferrand, Auvergne",AD63-BMS-1712-005,"Fils de seigneur terrien"
+Recensement,Dupond,Marie,1830-02-02,"Dijon, Bourgogne",AD21-CENS-1830-014,"Orthographe Dupond relevée sur ce document (vs Dupont ailleurs)"

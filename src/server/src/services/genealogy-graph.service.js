@@ -174,6 +174,29 @@ export class GenealogyGraphService {
     return row?.parent_role ?? null;
   }
 
+  getLinkType(childId, parentId) {
+    const row = this.database
+      .prepare(
+        `SELECT link_type FROM parentages
+         WHERE child_id = ? AND parent_id = ? AND deleted_at IS NULL`,
+      )
+      .get(childId, parentId);
+    return row?.link_type ?? null;
+  }
+
+  // Qualifie le libellé « parent »/« enfant » d'après la nature réelle du
+  // lien de filiation (parentages.link_type) : une filiation adoptive,
+  // nourricière ou par recomposition familiale (STEP) n'est jamais présentée
+  // comme biologique par défaut, et un lien resté UNKNOWN le dit explicitement
+  // plutôt que de laisser croire à une filiation biologique certaine.
+  qualifyKinshipLabel(base, linkType) {
+    if (linkType === 'ADOPTIVE') return `${base} adoptif`;
+    if (linkType === 'FOSTER') return `${base} nourricier`;
+    if (linkType === 'STEP') return `${base} par alliance (famille recomposée)`;
+    if (linkType === 'UNKNOWN') return `${base} (lien de filiation non précisé)`;
+    return base;
+  }
+
   branchOf(role) {
     if (role === 'FATHER') return 'PATERNAL';
     if (role === 'MOTHER') return 'MATERNAL';
@@ -225,17 +248,28 @@ export class GenealogyGraphService {
     let relationship = 'CONNECTED';
     let branch = null;
     let label = null;
+    let linkType = null;
     if (edges.length === 1 && edges[0] === 'SPOUSE') {
       relationship = 'SPOUSE';
       label = 'conjoint(e)';
     } else if (edges.every((edge) => edge === 'PARENT')) {
       relationship = `ANCESTOR_${edges.length}`;
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
-      label = edges.length === 1 ? 'parent' : edges.length === 2 ? 'grand-parent' : null;
+      if (edges.length === 1) {
+        linkType = this.getLinkType(personA, path[1].personId);
+        label = this.qualifyKinshipLabel('parent', linkType);
+      } else {
+        label = edges.length === 2 ? 'grand-parent' : null;
+      }
     } else if (edges.every((edge) => edge === 'CHILD')) {
       relationship = `DESCENDANT_${edges.length}`;
       branch = this.branchOf(this.getParentRole(path[1].personId, personA));
-      label = edges.length === 1 ? 'enfant' : edges.length === 2 ? 'petit-enfant' : null;
+      if (edges.length === 1) {
+        linkType = this.getLinkType(path[1].personId, personA);
+        label = this.qualifyKinshipLabel('enfant', linkType);
+      } else {
+        label = edges.length === 2 ? 'petit-enfant' : null;
+      }
     } else if (edges.includes('PARENT') && edges.includes('CHILD')) {
       relationship = 'COLLATERAL';
       branch = this.branchOf(this.getParentRole(personA, path[1].personId));
@@ -247,9 +281,13 @@ export class GenealogyGraphService {
         label = this.collateralLabel(up, down, this.getPerson(personB).sex);
       }
     }
-    return { relationship, distance: edges.length, path, branch, label };
+    return { relationship, distance: edges.length, path, branch, label, linkType };
   }
 
+  // Parcours en profondeur ITÉRATIF à trois couleurs (blanc/gris/noir),
+  // linéaire en O(personnes + liens) et sans récursion (donc sans limite de
+  // pile ni ré-exploration redondante d'un sous-arbre déjà validé) : chaque
+  // nœud n'est visité qu'une fois grâce à la mémoire globale `color`.
   detectCycles() {
     const parentages = this.database
       .prepare('SELECT child_id, parent_id FROM parentages WHERE deleted_at IS NULL')
@@ -259,20 +297,44 @@ export class GenealogyGraphService {
       if (!parentsByChild.has(childId)) parentsByChild.set(childId, []);
       parentsByChild.get(childId).push(parentId);
     }
+
+    const WHITE = 0; // jamais visité
+    const GRAY = 1; // sur la pile d'exploration courante (chemin actif)
+    const BLACK = 2; // entièrement exploré, sans cycle possible depuis ce nœud
+    const color = new Map();
     const cycles = [];
-    const visit = (personId, path, active) => {
-      if (active.has(personId)) {
-        cycles.push([...path.slice(path.indexOf(personId)), personId]);
-        return;
+
+    for (const startId of parentsByChild.keys()) {
+      if (color.get(startId) === BLACK) continue;
+      // Pile explicite : { id, parentIndex } où parentIndex est l'index du
+      // prochain parent à explorer pour ce nœud (permet de reprendre après
+      // un appel récursif simulé, sans jamais utiliser la pile d'appel JS).
+      const stack = [{ id: startId, parentIndex: 0 }];
+      color.set(startId, GRAY);
+
+      while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        const parents = parentsByChild.get(frame.id) ?? [];
+        if (frame.parentIndex >= parents.length) {
+          color.set(frame.id, BLACK);
+          stack.pop();
+          continue;
+        }
+        const parentId = parents[frame.parentIndex];
+        frame.parentIndex += 1;
+        const parentColor = color.get(parentId) ?? WHITE;
+        if (parentColor === GRAY) {
+          // Cycle détecté : le chemin actif contient déjà `parentId`.
+          const pathIds = stack.map((f) => f.id);
+          const cycleStart = pathIds.indexOf(parentId);
+          cycles.push([...pathIds.slice(cycleStart), parentId]);
+        } else if (parentColor === WHITE) {
+          color.set(parentId, GRAY);
+          stack.push({ id: parentId, parentIndex: 0 });
+        }
+        // BLACK : sous-arbre déjà validé sans cycle, rien à refaire.
       }
-      if (path.includes(personId)) return;
-      active.add(personId);
-      for (const parentId of parentsByChild.get(personId) ?? []) {
-        visit(parentId, [...path, personId], active);
-      }
-      active.delete(personId);
-    };
-    for (const personId of parentsByChild.keys()) visit(personId, [], new Set());
+    }
     return cycles;
   }
 
@@ -330,7 +392,7 @@ export class GenealogyGraphService {
     const ids = [...distance.keys()];
     const persons = this.database
       .prepare(
-        `SELECT id, given_names, family_name, sex FROM persons
+        `SELECT id, given_names, family_name, sex, portrait_media_id FROM persons
          WHERE deleted_at IS NULL AND id IN (${ids.map(() => '?').join(',')})`,
       )
       .all(...ids);

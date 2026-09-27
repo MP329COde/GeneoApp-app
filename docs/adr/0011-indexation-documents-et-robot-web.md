@@ -15,7 +15,7 @@ une ADR (précédent : ADR 0010, IA locale).
 
 1. **Dossiers locaux** (aucun réseau) : l'utilisateur désigne des dossiers (disque, clé USB). Les fichiers
    pris en charge (texte, HTML, Markdown, CSV, JSON, images, PDF) sont lus **sur place** (aucune copie), leur
-   texte est extrait (OCR local via `tesseract` pour images et PDF lorsqu'il est installé) puis indexé en
+   texte est extrait **localement** : texte des PDF (pdfjs), OCR embarqué en WebAssembly (tesseract.js, données de langue française fournies avec l'application, aucun téléchargement) pour les images et les pages scannées, documents Word / Excel / PowerPoint / LibreOffice puis indexé en
    plein texte (SQLite FTS5). Liens symboliques ignorés, taille par fichier et nombre de fichiers bornés.
 2. **Robot web** — exception à l'ADR 0006, aux conditions suivantes :
    - **désactivé par défaut** : l'accès internet pour l'indexation doit être activé explicitement dans l'écran

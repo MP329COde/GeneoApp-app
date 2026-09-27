@@ -36,3 +36,16 @@ test('les sources et tests ne sont pas embarqués dans le paquet distribué', as
   assert.ok(config.files.includes('!src/client/src/**'));
   assert.ok(config.files.includes('!**/*.test.js'));
 });
+
+test('l’OCR embarqué et pdfjs restent hors de l’archive asar', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const config = await readFile(new URL('../../electron-builder.yml', import.meta.url), 'utf8');
+  for (const entry of [
+    'node_modules/tesseract.js/**',
+    'node_modules/tesseract.js-core/**',
+    'node_modules/@tesseract.js-data/**',
+    'node_modules/pdfjs-dist/**',
+  ]) {
+    assert.ok(config.includes(entry), entry);
+  }
+});

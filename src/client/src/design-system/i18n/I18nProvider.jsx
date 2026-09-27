@@ -34,6 +34,8 @@ function readStoredLocale() {
  * Traduit une clé : langue courante, puis français, puis texte de repli.
  * Variables `{nom}` ; pluriels via un objet `{ "one": …, "other": … }` et la
  * variable `count` (règles de pluriel de la langue, Intl.PluralRules).
+ * `count` est formaté avec Intl.NumberFormat (ex. « 1 375 » en français avec
+ * espace insécable), de même que toute autre variable numérique.
  */
 export function translate(locale, key, variables = {}, fallback) {
   let message = messagesByLocale[locale]?.[key] ?? messagesByLocale[DEFAULT_LOCALE]?.[key];
@@ -42,9 +44,11 @@ export function translate(locale, key, variables = {}, fallback) {
     const category = new Intl.PluralRules(locale).select(Number(variables.count ?? 0));
     message = message[category] ?? message.other ?? '';
   }
-  return message.replace(/\{(\w+)\}/g, (match, name) =>
-    variables[name] !== undefined ? String(variables[name]) : match,
-  );
+  return message.replace(/\{(\w+)\}/g, (match, name) => {
+    const value = variables[name];
+    if (value === undefined) return match;
+    return typeof value === 'number' ? new Intl.NumberFormat(locale).format(value) : String(value);
+  });
 }
 
 const I18nContext = createContext(null);

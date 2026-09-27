@@ -24,11 +24,25 @@ test('create insère une personne et journalise l’audit', () => {
   assert.equal(entries[0].performed_by, 'tester');
 });
 
-test('create rejette une personne sans nom', () => {
+test('create rejette une personne sans prénom ni nom', () => {
   const database = createTestDatabase();
   const repository = new PersonRepository(database);
 
-  assert.throws(() => repository.create({ givenNames: 'Ada' }));
+  assert.throws(() => repository.create({}));
+  assert.throws(() => repository.create({ givenNames: '   ', familyName: '' }));
+});
+
+test('create accepte un prénom seul ou un nom seul (import GEDCOM incomplet)', () => {
+  const database = createTestDatabase();
+  const repository = new PersonRepository(database);
+
+  const givenOnly = repository.create({ givenNames: 'Ada' });
+  assert.equal(givenOnly.given_names, 'Ada');
+  assert.equal(givenOnly.family_name, '');
+
+  const familyOnly = repository.create({ familyName: 'Lovelace' });
+  assert.equal(familyOnly.given_names, '');
+  assert.equal(familyOnly.family_name, 'Lovelace');
 });
 
 test('update modifie les champs autorisés et journalise', () => {
