@@ -29,20 +29,40 @@ export const DEFAULT_SITES = [
   },
 ];
 
-/** Vérifie qu'un modèle est une adresse https avec des variables connues. */
+/**
+ * Codes d'erreur renvoyés par `validateTemplate`. Le message est réservé à
+ * la couche d'affichage : la validation renvoie un code stable, que chaque
+ * langue traduit comme elle l'entend.
+ */
+export const TEMPLATE_ERRORS = {
+  HTTPS_REQUIRED: 'httpsRequired',
+  UNKNOWN_VARIABLE: 'unknownVariable',
+  CREDENTIALS_FORBIDDEN: 'credentialsForbidden',
+  INVALID_ADDRESS: 'invalidAddress',
+};
+
+/**
+ * Vérifie qu'un modèle est une adresse https avec des variables connues.
+ * Renvoie `null` si le modèle est valide, sinon un objet
+ * `{ code, variable? }` décrivant le problème.
+ */
 export function validateTemplate(template) {
   if (typeof template !== 'string' || !template.startsWith('https://')) {
-    return 'L’adresse doit commencer par https://';
+    return { code: TEMPLATE_ERRORS.HTTPS_REQUIRED };
   }
   const unknown = [...template.matchAll(/\{([^}]*)\}/g)]
     .map((match) => match[1])
     .filter((name) => !PLACEHOLDERS.includes(name));
-  if (unknown.length) return `Variable inconnue : {${unknown[0]}}`;
+  if (unknown.length) {
+    return { code: TEMPLATE_ERRORS.UNKNOWN_VARIABLE, variable: unknown[0] };
+  }
   try {
     const url = new URL(template.replace(/\{[a-z]+\}/g, 'x'));
-    if (url.username || url.password) return 'Identifiants interdits dans l’adresse';
+    if (url.username || url.password) {
+      return { code: TEMPLATE_ERRORS.CREDENTIALS_FORBIDDEN };
+    }
   } catch {
-    return 'Adresse invalide';
+    return { code: TEMPLATE_ERRORS.INVALID_ADDRESS };
   }
   return null;
 }

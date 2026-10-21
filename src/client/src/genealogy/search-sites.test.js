@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SITES, buildSearchUrl, validateTemplate } from './search-sites.js';
+import {
+  DEFAULT_SITES,
+  TEMPLATE_ERRORS,
+  buildSearchUrl,
+  validateTemplate,
+} from './search-sites.js';
 
 describe('sites de recherche', () => {
   it('encode les valeurs et laisse vides les inconnues', () => {
@@ -11,10 +16,16 @@ describe('sites de recherche', () => {
   });
 
   it('refuse les modèles non https, les variables inconnues et les identifiants', () => {
-    expect(validateTemplate('http://ex.org/{nom}')).toMatch(/https/);
-    expect(validateTemplate('javascript:alert(1)')).toMatch(/https/);
-    expect(validateTemplate('https://ex.org/{motdepasse}')).toMatch(/Variable inconnue/);
-    expect(validateTemplate('https://a:b@ex.org/{nom}')).toMatch(/Identifiants/);
+    expect(validateTemplate('http://ex.org/{nom}')?.code).toBe(TEMPLATE_ERRORS.HTTPS_REQUIRED);
+    expect(validateTemplate('javascript:alert(1)')?.code).toBe(TEMPLATE_ERRORS.HTTPS_REQUIRED);
+    expect(validateTemplate('https://ex.org/{motdepasse}')).toEqual({
+      code: TEMPLATE_ERRORS.UNKNOWN_VARIABLE,
+      variable: 'motdepasse',
+    });
+    expect(validateTemplate('https://a:b@ex.org/{nom}')?.code).toBe(
+      TEMPLATE_ERRORS.CREDENTIALS_FORBIDDEN,
+    );
+    expect(validateTemplate('https://')?.code).toBe(TEMPLATE_ERRORS.INVALID_ADDRESS);
     expect(buildSearchUrl('http://ex.org', {})).toBeNull();
   });
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '../design-system/index.js';
+import { Button, useTranslation } from '../design-system/index.js';
 
 function personName(person) {
   return `${person.given_names} ${person.family_name}`;
@@ -27,6 +27,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
   const [status, setStatus] = useState(null);
   const frameRef = useRef(null);
   const dragStart = useRef(null);
+  const { t } = useTranslation();
 
   const load = useCallback(async () => {
     try {
@@ -120,7 +121,12 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
 
   const saveRegion = async (region) => {
     if (!target.personId && !target.label.trim()) {
-      setError('Choisissez la personne présente dans la zone (ou saisissez un libellé).');
+      setError(
+        t(
+          'photoViewer.error.personRequired',
+          'Choisissez la personne présente dans la zone (ou saisissez un libellé).',
+        ),
+      );
       return;
     }
     const ok = await run(
@@ -131,7 +137,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
             ? { personId: Number(target.personId) }
             : { label: target.label.trim() }),
         }),
-      'Personne identifiée sur la photo.',
+      t('photoViewer.status.personIdentified', 'Personne identifiée sur la photo.'),
     );
     if (ok) {
       setDraft(null);
@@ -146,7 +152,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
       </p>
     ) : (
       <p role="status" className="loading-line">
-        Chargement de la photo…
+        {t('photoViewer.loading', 'Chargement de la photo…')}
       </p>
     );
   }
@@ -157,7 +163,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
     <section className="photo-viewer" aria-labelledby="photo-title">
       <header className="photo-viewer__header">
         <Button variant="secondary" size="sm" onClick={onClose}>
-          ← Retour aux médias
+          {t('photoViewer.backToMedia', '← Retour aux médias')}
         </Button>
         <h4 id="photo-title">{photo.original_filename}</h4>
         <p className="data-id">
@@ -195,7 +201,9 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
                   draggable="false"
                 />
               ) : (
-                <p className="loading-line">Chargement de l’image…</p>
+                <p className="loading-line">
+                  {t('photoViewer.loadingImage', 'Chargement de l’image…')}
+                </p>
               )}
               {photo.regions.map((region) => (
                 <span
@@ -224,11 +232,16 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               ) : null}
             </div>
           ) : (
-            <p className="notice">Aperçu indisponible pour ce type de fichier.</p>
+            <p className="notice">
+              {t('photoViewer.previewUnavailable', 'Aperçu indisponible pour ce type de fichier.')}
+            </p>
           )}
           {isImage ? (
             <p className="settings-hint">
-              Tracez un rectangle sur un visage (souris ou pavé tactile), puis indiquez qui c’est.
+              {t(
+                'photoViewer.hint.drawRectangle',
+                'Tracez un rectangle sur un visage (souris ou pavé tactile), puis indiquez qui c’est.',
+              )}
             </p>
           ) : null}
         </div>
@@ -236,14 +249,16 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
         <div className="photo-viewer__side">
           {isImage ? (
             <section aria-labelledby="identify-title" className="research-section">
-              <h4 id="identify-title">Identifier une personne</h4>
+              <h4 id="identify-title">
+                {t('photoViewer.identify.title', 'Identifier une personne')}
+              </h4>
               <label>
-                <span>Personne présente</span>
+                <span>{t('photoViewer.identify.person', 'Personne présente')}</span>
                 <select
                   value={target.personId}
                   onChange={(event) => setTarget({ ...target, personId: event.target.value })}
                 >
-                  <option value="">— Choisir —</option>
+                  <option value="">{t('photoViewer.identify.choose', '— Choisir —')}</option>
                   {persons.map((person) => (
                     <option key={person.id} value={person.id}>
                       {personName(person)}
@@ -253,7 +268,12 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               </label>
               {!target.personId ? (
                 <label>
-                  <span>Ou libellé (personne non encore dans l’arbre)</span>
+                  <span>
+                    {t(
+                      'photoViewer.identify.label',
+                      'Ou libellé (personne non encore dans l’arbre)',
+                    )}
+                  </span>
                   <input
                     value={target.label}
                     maxLength={120}
@@ -264,21 +284,23 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               {draft ? (
                 <div className="gedcom-panel__actions">
                   <Button size="sm" onClick={() => saveRegion(draft)}>
-                    Enregistrer la zone tracée
+                    {t('photoViewer.zone.saveDrawn', 'Enregistrer la zone tracée')}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => setDraft(null)}>
-                    Effacer la zone
+                    {t('photoViewer.zone.clear', 'Effacer la zone')}
                   </Button>
                 </div>
               ) : null}
               <details className="photo-viewer__manual">
-                <summary>Saisir la zone en pourcentages (clavier)</summary>
+                <summary>
+                  {t('photoViewer.manual.summary', 'Saisir la zone en pourcentages (clavier)')}
+                </summary>
                 <div className="photo-viewer__grid">
                   {[
-                    ['x', 'Gauche (%)'],
-                    ['y', 'Haut (%)'],
-                    ['width', 'Largeur (%)'],
-                    ['height', 'Hauteur (%)'],
+                    ['x', t('photoViewer.manual.left', 'Gauche (%)')],
+                    ['y', t('photoViewer.manual.top', 'Haut (%)')],
+                    ['width', t('photoViewer.manual.width', 'Largeur (%)')],
+                    ['height', t('photoViewer.manual.height', 'Hauteur (%)')],
                   ].map(([key, label]) => (
                     <label key={key}>
                       <span>{label}</span>
@@ -306,12 +328,20 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
                     })
                   }
                 >
-                  Enregistrer la zone saisie
+                  {t('photoViewer.manual.save', 'Enregistrer la zone saisie')}
                 </Button>
               </details>
-              <h4>Personnes identifiées ({photo.regions.length})</h4>
+              <h4>
+                {t(
+                  'photoViewer.identified.title',
+                  { count: photo.regions.length },
+                  `Personnes identifiées (${photo.regions.length})`,
+                )}
+              </h4>
               {photo.regions.length === 0 ? (
-                <p className="settings-hint">Aucune personne identifiée sur cette photo.</p>
+                <p className="settings-hint">
+                  {t('photoViewer.identified.empty', 'Aucune personne identifiée sur cette photo.')}
+                </p>
               ) : (
                 <ul className="task-list">
                   {photo.regions.map((region) => (
@@ -320,12 +350,22 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
                       <button
                         type="button"
                         className="link-button link-button--small"
-                        aria-label={`Retirer ${regionName(region)} de la photo`}
+                        aria-label={t(
+                          'photoViewer.identified.remove',
+                          { name: regionName(region) },
+                          `Retirer ${regionName(region)} de la photo`,
+                        )}
                         onClick={() =>
-                          run(() => client.media.removeRegion(region.id), 'Identification retirée.')
+                          run(
+                            () => client.media.removeRegion(region.id),
+                            t(
+                              'photoViewer.status.identificationRemoved',
+                              'Identification retirée.',
+                            ),
+                          )
                         }
                       >
-                        Retirer
+                        {t('photoViewer.remove', 'Retirer')}
                       </button>
                     </li>
                   ))}
@@ -346,26 +386,26 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
                     description: meta.description || null,
                     tags: meta.tags,
                   }),
-                'Photo enregistrée.',
+                t('photoViewer.status.saved', 'Photo enregistrée.'),
               );
             }}
           >
-            <h4>Description</h4>
+            <h4>{t('photoViewer.meta.title', 'Description')}</h4>
             <label>
-              <span>Date de la photo</span>
+              <span>{t('photoViewer.meta.date', 'Date de la photo')}</span>
               <input
                 value={meta.takenDate}
-                placeholder="vers 1908"
+                placeholder={t('photoViewer.meta.datePlaceholder', 'vers 1908')}
                 onChange={(event) => setMeta({ ...meta, takenDate: event.target.value })}
               />
             </label>
             <label>
-              <span>Lieu</span>
+              <span>{t('photoViewer.meta.place', 'Lieu')}</span>
               <select
                 value={meta.placeId}
                 onChange={(event) => setMeta({ ...meta, placeId: event.target.value })}
               >
-                <option value="">— Aucun —</option>
+                <option value="">{t('photoViewer.meta.noPlace', '— Aucun —')}</option>
                 {places.map((place) => (
                   <option key={place.id} value={place.id}>
                     {place.name}
@@ -374,21 +414,21 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               </select>
             </label>
             <label>
-              <span>Description</span>
+              <span>{t('photoViewer.meta.description', 'Description')}</span>
               <textarea
                 value={meta.description}
                 onChange={(event) => setMeta({ ...meta, description: event.target.value })}
               />
             </label>
             <label>
-              <span>Tags (séparés par des virgules)</span>
+              <span>{t('photoViewer.meta.tags', 'Tags (séparés par des virgules)')}</span>
               <input
                 value={meta.tags}
                 onChange={(event) => setMeta({ ...meta, tags: event.target.value })}
               />
             </label>
             <Button type="submit" size="sm">
-              Enregistrer la description
+              {t('photoViewer.meta.save', 'Enregistrer la description')}
             </Button>
           </form>
         </div>

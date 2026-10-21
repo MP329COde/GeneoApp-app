@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import europeOutline from '../assets/europe-outline.json';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice } from '../components/shared.jsx';
 import { useSettings } from '../settings/SettingsContext.jsx';
 
 export function MapPanel() {
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const [places, setPlaces] = useState(null);
   const [mapError, setMapError] = useState(null);
@@ -30,29 +31,40 @@ export function MapPanel() {
   }
 
   if (places === null) {
-    return <p role="status">Chargement…</p>;
+    return <p role="status">{t('mapView.loading', 'Chargement…')}</p>;
   }
 
   const located = places.filter((place) => place.latitude !== null && place.longitude !== null);
   const unlocated = places.filter((place) => place.latitude === null || place.longitude === null);
 
   if (places.length === 0) {
-    return <p className="notice">Aucun lieu enregistré.</p>;
+    return <p className="notice">{t('mapView.empty', 'Aucun lieu enregistré.')}</p>;
   }
 
   return (
     <div className="map-panel">
       <p className="map-panel__mode-badge" data-mode={settings.mapMode}>
         {settings.mapMode === 'online'
-          ? 'Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)'
-          : 'Carte locale (hors ligne, aucune requête réseau)'}
+          ? t(
+              'mapView.modeOnline',
+              'Carte en ligne (tuiles OpenStreetMap téléchargées à l’affichage)',
+            )
+          : t('mapView.modeOffline', 'Carte locale (hors ligne, aucune requête réseau)')}
       </p>
       {located.length === 0 ? (
-        <p className="notice">Aucun lieu ne porte de coordonnées géographiques pour l’instant.</p>
+        <p className="notice">
+          {t(
+            'mapView.noCoordinates',
+            'Aucun lieu ne porte de coordonnées géographiques pour l’instant.',
+          )}
+        </p>
       ) : settings.mapMode === 'online' ? (
         <>
           <LeafletMap places={located} mapElementRef={mapElementRef} />
-          <ul className="map-panel__places" aria-label="Lieux géolocalisés">
+          <ul
+            className="map-panel__places"
+            aria-label={t('mapView.locatedPlaces', 'Lieux géolocalisés')}
+          >
             {located.map((place) => (
               <li key={place.id}>{place.name}</li>
             ))}
@@ -61,7 +73,10 @@ export function MapPanel() {
       ) : (
         <>
           <LocalMap places={located} />
-          <ul className="map-panel__places" aria-label="Lieux géolocalisés">
+          <ul
+            className="map-panel__places"
+            aria-label={t('mapView.locatedPlaces', 'Lieux géolocalisés')}
+          >
             {located.map((place) => (
               <li key={place.id}>{place.name}</li>
             ))}
@@ -70,7 +85,7 @@ export function MapPanel() {
       )}
       {unlocated.length > 0 ? (
         <div>
-          <h3>Lieux sans coordonnées</h3>
+          <h3>{t('mapView.placesWithoutCoordinates', 'Lieux sans coordonnées')}</h3>
           <ul className="search-results">
             {unlocated.map((place) => (
               <li key={place.id}>{place.name}</li>
@@ -89,6 +104,7 @@ export function MapPanel() {
 // voit chaque correspondance (et choisit le département en cas d'homonymes)
 // avant toute écriture, confirmée explicitement.
 export function AutoLocatePanel({ unlocatedCount, onApplied }) {
+  const { t } = useTranslation();
   const [preview, setPreview] = useState(null);
   const [choices, setChoices] = useState({});
   const [error, setError] = useState(null);
@@ -140,23 +156,30 @@ export function AutoLocatePanel({ unlocatedCount, onApplied }) {
       {error ? <ErrorNotice message={error} /> : null}
       {preview === null ? (
         <Button type="button" size="sm" onClick={openPreview} disabled={busy}>
-          Placer automatiquement {unlocatedCount} lieu{unlocatedCount > 1 ? 'x' : ''}
+          {t(
+            'mapView.autoLocate',
+            { count: unlocatedCount },
+            `Placer automatiquement ${unlocatedCount} lieu${unlocatedCount > 1 ? 'x' : ''}`,
+          )}
         </Button>
       ) : (
         <div
           className="auto-locate__preview"
           role="group"
-          aria-label="Aperçu du placement automatique"
+          aria-label={t('mapView.autoLocatePreview', 'Aperçu du placement automatique')}
         >
           <p className="settings-hint">
-            Aperçu avant confirmation : aucune coordonnée n’est encore enregistrée.
+            {t(
+              'mapView.previewHint',
+              'Aperçu avant confirmation : aucune coordonnée n’est encore enregistrée.',
+            )}
           </p>
           <ul className="search-results">
             {preview.map((entry) => (
               <li key={entry.placeId}>
                 <strong>{entry.name}</strong>{' '}
                 {entry.status === 'none' ? (
-                  <Badge tone="neutral">Aucune correspondance</Badge>
+                  <Badge tone="neutral">{t('mapView.noMatch', 'Aucune correspondance')}</Badge>
                 ) : entry.status === 'unique' ? (
                   <Badge tone="success">
                     {entry.matches[0].nom} ({entry.matches[0].codeDepartement})
@@ -164,7 +187,11 @@ export function AutoLocatePanel({ unlocatedCount, onApplied }) {
                 ) : (
                   <label>
                     <span className="gds-visually-hidden">
-                      Choisir le département pour {entry.name}
+                      {t(
+                        'mapView.chooseDepartment',
+                        { name: entry.name },
+                        `Choisir le département pour ${entry.name}`,
+                      )}
                     </span>
                     <select
                       value={choices[entry.placeId] ?? ''}
@@ -175,7 +202,13 @@ export function AutoLocatePanel({ unlocatedCount, onApplied }) {
                         }))
                       }
                     >
-                      <option value="">Plusieurs communes « {entry.name} » — choisir…</option>
+                      <option value="">
+                        {t(
+                          'mapView.multipleMatches',
+                          { name: entry.name },
+                          `Plusieurs communes « ${entry.name} » — choisir…`,
+                        )}
+                      </option>
                       {entry.matches.map((match) => (
                         <option key={match.code} value={match.code}>
                           {match.nom} ({match.codeDepartement})
@@ -188,7 +221,11 @@ export function AutoLocatePanel({ unlocatedCount, onApplied }) {
             ))}
           </ul>
           <Button type="button" size="sm" onClick={confirm} disabled={busy || chosenCount === 0}>
-            Confirmer le placement de {chosenCount} lieu{chosenCount > 1 ? 'x' : ''}
+            {t(
+              'mapView.confirmAutoLocate',
+              { count: chosenCount },
+              `Confirmer le placement de ${chosenCount} lieu${chosenCount > 1 ? 'x' : ''}`,
+            )}
           </Button>
           <Button
             type="button"
@@ -200,7 +237,7 @@ export function AutoLocatePanel({ unlocatedCount, onApplied }) {
             }}
             disabled={busy}
           >
-            Annuler
+            {t('mapView.cancel', 'Annuler')}
           </Button>
         </div>
       )}
@@ -219,6 +256,7 @@ const EUROPE_BOUNDS = { minLon: -10, maxLon: 40, minLat: 34, maxLat: 70 };
 // SVG, avec un fond de carte fixe (Europe/France) pour situer les lieux dans
 // leur contexte géographique sans dépendre d'un fournisseur externe.
 export function LocalMap({ places }) {
+  const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -259,7 +297,7 @@ export function LocalMap({ places }) {
           variant="secondary"
           onClick={() => setZoom((z) => Math.min(z * 1.4, 6))}
         >
-          Zoom +
+          {t('mapView.zoomIn', 'Zoom +')}
         </Button>
         <Button
           type="button"
@@ -267,15 +305,18 @@ export function LocalMap({ places }) {
           variant="secondary"
           onClick={() => setZoom((z) => Math.max(z / 1.4, 1))}
         >
-          Zoom −
+          {t('mapView.zoomOut', 'Zoom −')}
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={() => setZoom(1)}>
-          Recentrer
+          {t('mapView.recenter', 'Recentrer')}
         </Button>
       </div>
       <svg
         role="img"
-        aria-label="Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)"
+        aria-label={t(
+          'mapView.localMapLabel',
+          'Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)',
+        )}
         viewBox={`0 0 ${size} ${size}`}
         className="local-map__canvas"
       >
@@ -300,7 +341,7 @@ export function LocalMap({ places }) {
                 key={place.id}
                 role="button"
                 tabIndex={0}
-                aria-label={`${place.name}${selected ? ' (sélectionné)' : ''}`}
+                aria-label={`${place.name}${selected ? t('mapView.selected', ' (sélectionné)') : ''}`}
                 onClick={() => setSelectedId(place.id)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -331,6 +372,7 @@ export function LocalMap({ places }) {
 }
 
 export function LeafletMap({ places, mapElementRef }) {
+  const { t } = useTranslation();
   useEffect(() => {
     const map = L.map(mapElementRef.current, { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -358,7 +400,7 @@ export function LeafletMap({ places, mapElementRef }) {
     <div
       ref={mapElementRef}
       role="img"
-      aria-label="Carte des lieux enregistrés"
+      aria-label={t('mapView.mapLabel', 'Carte des lieux enregistrés')}
       className="map-panel__canvas"
     />
   );
