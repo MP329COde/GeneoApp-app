@@ -1,0 +1,73 @@
+{
+  "verification.rerun": "Rerun verification",
+  "verification.rerunHint": "Looks again for duplicates, cycles, and date inconsistencies",
+  "verification.running": "Verification running…",
+  "quality.title": "Data quality",
+  "quality.sourcedFacts": "Sourced facts",
+  "quality.unsourced": {
+    "one": "1 unsourced fact:",
+    "other": "{count} unsourced facts:"
+  },
+  "quality.identity": "identity",
+  "quality.citeSource": "cite a source",
+  "quality.allSourced": "All facts are sourced.",
+  "quality.confidence.label": "Confidence:",
+  "quality.confidence.high": "high",
+  "quality.confidence.medium": "medium",
+  "quality.confidence.low": "low",
+  "quality.issues": {
+    "one": "1 inconsistency",
+    "other": "{count} inconsistencies"
+  },
+  "quality.certainIssues": {
+    "one": "(1 certain)",
+    "other": "({count} certain)"
+  },
+  "quality.examine": "examine",
+  "quality.score": "Quality score",
+  "quality.meterLabel": "{label}: {score} out of 4",
+  "duplicates.scan": "Scan for potential duplicates",
+  "duplicates.confirmLabel": "Confirm merge",
+  "duplicates.confirmIntro": "Merge {duplicate} into {survivor}? This action reassigns:",
+  "duplicates.noReassignment": "No linked data to reassign.",
+  "duplicates.softDeleteHint": "The record for {duplicate} will be soft-deleted.",
+  "duplicates.confirm": "Confirm merge",
+  "duplicates.cancel": "Cancel",
+  "duplicates.none": "No potential duplicate detected.",
+  "duplicates.total": {
+    "one": "{count} potential duplicate in total — the {shown} highest scores are shown below.",
+    "other": "{count} potential duplicates in total — the {shown} highest scores are shown below."
+  },
+  "duplicates.viewA": "View record A",
+  "duplicates.viewB": "View record B",
+  "duplicates.mergeKeepA": "Merge (keep A)",
+  "duplicates.mergeKeepB": "Merge (keep B)",
+  "merge.reassignment.parentagesAsParent": {
+    "one": "1 parent → child link",
+    "other": "{count} parent → child links"
+  },
+  "merge.reassignment.parentagesAsChild": {
+    "one": "1 child → parent link",
+    "other": "{count} child → parent links"
+  },
+  "merge.reassignment.unionPartnerships": {
+    "one": "1 union",
+    "other": "{count} unions"
+  },
+  "merge.reassignment.eventParticipations": {
+    "one": "1 event participation",
+    "other": "{count} event participations"
+  },
+  "merge.reassignment.citations": {
+    "one": "1 source citation",
+    "other": "{count} source citations"
+  },
+  "merge.reassignment.notes": {
+    "one": "1 note",
+    "other": "{count} notes"
+  },
+  "merge.reassignment.media": {
+    "one": "1 media",
+    "other": "{count} media"
+  }
+}

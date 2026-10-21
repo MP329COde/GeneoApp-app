@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-// Chaque fichier messages/<code>.json est une langue : l'ajouter suffit à la
-// rendre disponible (nom affiché : clé « language.name »). Aucune requête
-// réseau : les messages sont embarqués dans l'application.
-const modules = import.meta.glob('./messages/*.json', { eager: true });
-const messagesByLocale = Object.fromEntries(
-  Object.entries(modules).map(([file, module]) => [
-    file.match(/\/([\w-]+)\.json$/)[1],
-    module.default ?? module,
-  ]),
-);
+// Les messages sont rangés par langue puis par domaine : messages/<langue>/
+// <domaine>.json. Un nouveau domaine s'ajoute en déposant un fichier, sans
+// toucher aux autres. Aucune requête réseau : tout est embarqué dans
+// l'application.
+const localeModules = import.meta.glob('./messages/*/*.json', { eager: true });
+
+const messagesByLocale = {};
+for (const [file, module] of Object.entries(localeModules)) {
+  const [, locale] = file.match(/\.\/messages\/([\w-]+)\/([\w-]+)\.json$/);
+  const messages = module.default ?? module;
+  messagesByLocale[locale] = { ...messagesByLocale[locale], ...messages };
+}
 
 export const DEFAULT_LOCALE = 'fr';
 export const SUPPORTED_LOCALES = Object.keys(messagesByLocale).sort((a, b) =>

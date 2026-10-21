@@ -1,0 +1,73 @@
+{
+  "verification.rerun": "Relancer la vérification",
+  "verification.rerunHint": "Recherche à nouveau les doublons, cycles et incohérences de dates",
+  "verification.running": "Vérification en cours…",
+  "quality.title": "Qualité des données",
+  "quality.sourcedFacts": "Faits sourcés",
+  "quality.unsourced": {
+    "one": "1 fait sans source :",
+    "other": "{count} faits sans source :"
+  },
+  "quality.identity": "identité",
+  "quality.citeSource": "citer une source",
+  "quality.allSourced": "Tous les faits sont sourcés.",
+  "quality.confidence.label": "Confiance :",
+  "quality.confidence.high": "élevée",
+  "quality.confidence.medium": "moyenne",
+  "quality.confidence.low": "faible",
+  "quality.issues": {
+    "one": "1 incohérence",
+    "other": "{count} incohérences"
+  },
+  "quality.certainIssues": {
+    "one": "(1 certaine)",
+    "other": "({count} certaines)"
+  },
+  "quality.examine": "examiner",
+  "quality.score": "Indice de qualité",
+  "quality.meterLabel": "{label} : {score} sur 4",
+  "duplicates.scan": "Analyser les doublons potentiels",
+  "duplicates.confirmLabel": "Confirmer la fusion",
+  "duplicates.confirmIntro": "Fusionner {duplicate} dans {survivor} ? Cette action réattribue :",
+  "duplicates.noReassignment": "Aucune donnée liée à réattribuer.",
+  "duplicates.softDeleteHint": "La fiche de {duplicate} sera supprimée en douceur.",
+  "duplicates.confirm": "Confirmer la fusion",
+  "duplicates.cancel": "Annuler",
+  "duplicates.none": "Aucun doublon potentiel détecté.",
+  "duplicates.total": {
+    "one": "{count} doublon possible détecté au total — les {shown} scores les plus élevés sont affichés ci-dessous.",
+    "other": "{count} doublons possibles détectés au total — les {shown} scores les plus élevés sont affichés ci-dessous."
+  },
+  "duplicates.viewA": "Voir la fiche A",
+  "duplicates.viewB": "Voir la fiche B",
+  "duplicates.mergeKeepA": "Fusionner (garder A)",
+  "duplicates.mergeKeepB": "Fusionner (garder B)",
+  "merge.reassignment.parentagesAsParent": {
+    "one": "1 lien parent → enfant",
+    "other": "{count} liens parent → enfant"
+  },
+  "merge.reassignment.parentagesAsChild": {
+    "one": "1 lien enfant → parent",
+    "other": "{count} liens enfant → parent"
+  },
+  "merge.reassignment.unionPartnerships": {
+    "one": "1 union",
+    "other": "{count} unions"
+  },
+  "merge.reassignment.eventParticipations": {
+    "one": "1 participation à un événement",
+    "other": "{count} participations à un événement"
+  },
+  "merge.reassignment.citations": {
+    "one": "1 citation de source",
+    "other": "{count} citations de source"
+  },
+  "merge.reassignment.notes": {
+    "one": "1 note",
+    "other": "{count} notes"
+  },
+  "merge.reassignment.media": {
+    "one": "1 média",
+    "other": "{count} médias"
+  }
+}
