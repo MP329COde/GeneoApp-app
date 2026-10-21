@@ -47,13 +47,55 @@ export function runMigrations(database, { migrationsDir = MIGRATIONS_DIR, backup
       database.exec(sql);
       database.prepare('INSERT INTO schema_migrations (name) VALUES (?)').run(name);
     });
-    applyMigration();
+    // Une migration qui reconstruit une table (procédure SQLite : créer,
+    // copier, supprimer, renommer) échoue sur « DROP TABLE » si les clés
+    // étrangères sont actives : la table fille qui référence la table
+    // reconstruite bloque la suppression. SQLite impose de désactiver les
+    // clés étrangères avant la transaction — le PRAGMA est sans effet une
+    // fois dans une transaction, d'où le réglage effectué ici, avant.
+    if (rebuildsTable(sql)) {
+      applyWithForeignKeysDisabled(database, applyMigration);
+    } else {
+      applyMigration();
+    }
   }
 
   // Régénérés à chaque ouverture : couvrent aussi les colonnes ajoutées.
   installUndoTriggers(database);
 
   return pending;
+}
+
+/**
+ * Une migration reconstruit une table si elle supprime une table existante
+ * (le schéma définitif la recrée ensuite sous un autre nom).
+ */
+function rebuildsTable(sql) {
+  return /\bDROP\s+TABLE\b/i.test(sql);
+}
+
+/**
+ * Exécute une migration avec les clés étrangères désactivées, puis les
+ * réactive et vérifie l'intégrité référentielle. La désactivation n'est
+ * effective que hors transaction : elle est donc positionnée avant l'ouverture
+ * de la transaction de migration, et annulée quoi qu'il arrive.
+ */
+function applyWithForeignKeysDisabled(database, applyMigration) {
+  database.pragma('foreign_keys = OFF');
+  try {
+    applyMigration();
+  } finally {
+    database.pragma('foreign_keys = ON');
+  }
+  // Une reconstruction de table laisse parfois des références pointant vers
+  // l'ancienne table : on le détecte plutôt que de laisser une base
+  // incohérente en silence.
+  const violations = database.pragma('foreign_key_check');
+  if (violations.length > 0) {
+    throw new Error(
+      `Intégrité référentielle rompue après migration : ${violations.length} violation(s) — ${JSON.stringify(violations.slice(0, 5))}`,
+    );
+  }
 }
 
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
