@@ -1,4 +1,5 @@
 import { createContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 
 export function pluralFr(count, forms) {
@@ -10,85 +11,59 @@ export function countedFr(count, forms) {
   return `${new Intl.NumberFormat('fr').format(count)} ${pluralFr(count, forms)}`;
 }
 
-export const TIMELINE_ISSUE_LABELS = {
-  BIRTH_AFTER_DEATH: 'Naissance enregistrée après le décès',
-  MARRIAGE_AFTER_DEATH: 'Mariage enregistré après le décès',
-  MARRIAGE_BEFORE_BIRTH: 'Mariage enregistré avant la naissance',
-  MARRIAGE_VERY_YOUNG: 'Mariage à un âge très jeune',
-  BAPTISM_BEFORE_BIRTH: 'Baptême enregistré avant la naissance',
-  BURIAL_BEFORE_DEATH: 'Inhumation enregistrée avant le décès',
-  IMPOSSIBLE_AGE: 'Âge au décès exceptionnel',
-  MULTIPLE_BIRTHS: 'Plusieurs naissances enregistrées',
-  CHILD_BORN_BEFORE_PARENT: 'Enfant né avant son parent',
-  PARENT_TOO_YOUNG: 'Parent très jeune à la naissance',
-  PARENT_TOO_OLD: 'Parent âgé à la naissance',
-  CHILD_AFTER_PARENT_DEATH: "Naissance de l'enfant enregistrée après le décès du parent",
-  LIVING_WITH_DEATH: 'Marquée vivante malgré un décès enregistré',
-  LIVING_TOO_OLD: 'Marquée vivante mais très âgée',
-};
-export const SEVERITY_LABELS = { CERTAIN: 'Erreur certaine', POSSIBLE: 'Inhabituel, à vérifier' };
+/**
+ * Forme « nombre + libellé accordé », traduite.
+ *
+ * `t` applique les règles de pluriel de la locale et le format de nombre
+ * correspondant (« 1 375 » en français, « 1,375 » en anglais).
+ */
+export function countedT(t, count, key) {
+  return t(key, { count });
+}
 
-// Formes plurielles (accord singulier/pluriel réel, pas de suffixe "(s)")
-// pour les messages qui préfixent ce libellé par un nombre, ex.
-// « 1 375 enfants nés avant leur parent ». Intl.PluralRules('fr') classe
-// 0 et 1 dans « one » (accord français correct : « 0 naissance », pas
-// « 0 naissances »).
-export const TIMELINE_ISSUE_LABELS_PLURAL = {
-  BIRTH_AFTER_DEATH: {
-    one: 'naissance enregistrée après le décès',
-    other: 'naissances enregistrées après le décès',
-  },
-  MARRIAGE_AFTER_DEATH: {
-    one: 'mariage enregistré après le décès',
-    other: 'mariages enregistrés après le décès',
-  },
-  MARRIAGE_BEFORE_BIRTH: {
-    one: 'mariage enregistré avant la naissance',
-    other: 'mariages enregistrés avant la naissance',
-  },
-  MARRIAGE_VERY_YOUNG: {
-    one: 'mariage à un âge très jeune',
-    other: 'mariages à un âge très jeune',
-  },
-  BAPTISM_BEFORE_BIRTH: {
-    one: 'baptême enregistré avant la naissance',
-    other: 'baptêmes enregistrés avant la naissance',
-  },
-  BURIAL_BEFORE_DEATH: {
-    one: 'inhumation enregistrée avant le décès',
-    other: 'inhumations enregistrées avant le décès',
-  },
-  IMPOSSIBLE_AGE: { one: 'âge au décès exceptionnel', other: 'âges au décès exceptionnels' },
-  MULTIPLE_BIRTHS: {
-    one: 'naissance multiple enregistrée',
-    other: 'naissances multiples enregistrées',
-  },
-  CHILD_BORN_BEFORE_PARENT: {
-    one: 'enfant né avant son parent',
-    other: 'enfants nés avant leur parent',
-  },
-  PARENT_TOO_YOUNG: {
-    one: 'parent très jeune à la naissance',
-    other: 'parents très jeunes à la naissance',
-  },
-  PARENT_TOO_OLD: { one: 'parent âgé à la naissance', other: 'parents âgés à la naissance' },
-  CHILD_AFTER_PARENT_DEATH: {
-    one: "naissance de l'enfant enregistrée après le décès du parent",
-    other: "naissances d'enfants enregistrées après le décès du parent",
-  },
-  LIVING_WITH_DEATH: {
-    one: 'personne marquée vivante malgré un décès enregistré',
-    other: 'personnes marquées vivantes malgré un décès enregistré',
-  },
-  LIVING_TOO_OLD: {
-    one: 'personne marquée vivante mais très âgée',
-    other: 'personnes marquées vivantes mais très âgées',
-  },
+/**
+ * Clés i18n des incohérences de chronologie, par code d'issue.
+ *
+ * Le libellé affiché est traduit par l'appelant : ce module ne connaît pas
+ * la locale, il ne fournit que la clé et le code métier.
+ */
+export const TIMELINE_ISSUE_KEYS = {
+  BIRTH_AFTER_DEATH: 'timelineIssue.BIRTH_AFTER_DEATH',
+  MARRIAGE_AFTER_DEATH: 'timelineIssue.MARRIAGE_AFTER_DEATH',
+  MARRIAGE_BEFORE_BIRTH: 'timelineIssue.MARRIAGE_BEFORE_BIRTH',
+  MARRIAGE_VERY_YOUNG: 'timelineIssue.MARRIAGE_VERY_YOUNG',
+  BAPTISM_BEFORE_BIRTH: 'timelineIssue.BAPTISM_BEFORE_BIRTH',
+  BURIAL_BEFORE_DEATH: 'timelineIssue.BURIAL_BEFORE_DEATH',
+  IMPOSSIBLE_AGE: 'timelineIssue.IMPOSSIBLE_AGE',
+  MULTIPLE_BIRTHS: 'timelineIssue.MULTIPLE_BIRTHS',
+  CHILD_BORN_BEFORE_PARENT: 'timelineIssue.CHILD_BORN_BEFORE_PARENT',
+  PARENT_TOO_YOUNG: 'timelineIssue.PARENT_TOO_YOUNG',
+  PARENT_TOO_OLD: 'timelineIssue.PARENT_TOO_OLD',
+  CHILD_AFTER_PARENT_DEATH: 'timelineIssue.CHILD_AFTER_PARENT_DEATH',
+  LIVING_WITH_DEATH: 'timelineIssue.LIVING_WITH_DEATH',
+  LIVING_TOO_OLD: 'timelineIssue.LIVING_TOO_OLD',
 };
-export const GENERIC_TIMELINE_ISSUE_PLURAL = {
-  one: 'incohérence de chronologie',
-  other: 'incohérences de chronologie',
+
+/** Clés i18n de la gravité d'une incohérence. */
+export const SEVERITY_KEYS = {
+  CERTAIN: 'timelineIssue.severity.certain',
+  POSSIBLE: 'timelineIssue.severity.possible',
 };
+
+/**
+ * Libellés traduits des incohérences et de leur gravité.
+ *
+ * Une code d'issue inconnu retombe sur son code brut : l'affichage reste la
+ * donnée d'origine, jamais une chaîne vide.
+ */
+export function useVerificationLabels() {
+  const { t } = useTranslation();
+  return {
+    issueLabel: (code) => t(TIMELINE_ISSUE_KEYS[code] ?? 'timelineIssue.generic', {}, code),
+    severityLabel: (severity) =>
+      t(SEVERITY_KEYS[severity] ?? 'timelineIssue.severity.possible', {}, severity),
+  };
+}
 
 // ---------- Vérification intégrée ----------
 // Les contrôles (doublons, cycles, chronologie) tournent en arrière-plan après
@@ -130,7 +105,10 @@ export function buildVerificationIssues({ duplicates = [], cycles = [], timeline
 // contre-audit, point 4). La clé de déduplication est stable par groupe (pas
 // par occurrence), donc une analyse suivante qui retrouve les mêmes
 // incohérences ne republie rien (INSERT OR IGNORE sur dedupe_key en base).
-export function verificationNotifications(byPerson) {
+//
+// `t` est la fonction de traduction de l'appelant : la notification est
+// rédigée dans la langue de l'utilisateur, pas dans celle du serveur.
+export function verificationNotifications(byPerson, t = (key) => key) {
   const groups = new Map();
   const addToGroup = (groupKey, factory) => {
     if (!groups.has(groupKey)) {
@@ -138,6 +116,10 @@ export function verificationNotifications(byPerson) {
     }
     groups.get(groupKey).count += 1;
   };
+
+  // Forme plurielle traduite : le nombre est formaté par la locale, et le
+  // libellé s'accorde réellement (« 1 375 enfants nés avant leur parent »).
+  const counted = (count, key) => t(key, { count });
 
   const seenIssueKeys = new Set();
   for (const issues of byPerson.values()) {
@@ -147,20 +129,30 @@ export function verificationNotifications(byPerson) {
       if (issue.kind === 'duplicate') {
         addToGroup('duplicate', (count) => ({
           type: 'warning',
-          title: 'Doublons possibles',
-          message: `${countedFr(count, { one: 'doublon possible détecté', other: 'doublons possibles détectés' })} — ouvrir la vérification.`,
+          title: t('timelineIssue.duplicatesTitle'),
+          message: t('timelineIssue.duplicatesHint', {
+            counted: counted(count, 'timelineIssue.duplicatesPlural'),
+          }),
         }));
       } else if (issue.kind === 'cycle') {
         addToGroup('cycle', (count) => ({
           type: 'danger',
-          title: 'Cycles de filiation',
-          message: `${countedFr(count, { one: 'cycle de filiation détecté', other: 'cycles de filiation détectés' })} — ouvrir la cohérence.`,
+          title: t('timelineIssue.cyclesTitle'),
+          message: t('timelineIssue.cyclesHint', {
+            counted: counted(count, 'timelineIssue.cyclesPlural'),
+          }),
         }));
       } else {
+        const issueKey = TIMELINE_ISSUE_KEYS[issue.code];
         addToGroup(`timeline:${issue.code}`, (count) => ({
           type: issue.severity === 'CERTAIN' ? 'danger' : 'warning',
-          title: TIMELINE_ISSUE_LABELS[issue.code] ?? 'Incohérence de chronologie',
-          message: `${countedFr(count, TIMELINE_ISSUE_LABELS_PLURAL[issue.code] ?? GENERIC_TIMELINE_ISSUE_PLURAL)} — ouvrir la cohérence.`,
+          title: t(issueKey ?? 'timelineIssue.generic', {}, issue.code),
+          message: t('timelineIssue.cyclesHint', {
+            counted: counted(
+              count,
+              issueKey ? `${issueKey}.plural` : 'timelineIssue.genericPlural',
+            ),
+          }),
         }));
       }
     }
@@ -187,6 +179,9 @@ export function useVerification({ persons, runToken, personLabelById }) {
   const [running, setRunning] = useState(false);
   const labelRef = useRef(personLabelById);
   labelRef.current = personLabelById;
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     if (!persons?.length) {
@@ -213,7 +208,7 @@ export function useVerification({ persons, runToken, personLabelById }) {
       });
       setIssues(byPerson);
       setRunning(false);
-      const items = verificationNotifications(byPerson);
+      const items = verificationNotifications(byPerson, tRef.current);
       if (items.length && client.notifications?.publish) {
         try {
           const result = await client.notifications.publish(items);

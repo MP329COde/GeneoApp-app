@@ -140,5 +140,9 @@
   "server.validation.portraitNotImage": "The portrait must be an image",
   "server.validation.regionsNeedImage": "Person regions only apply to images",
   "server.validation.regionOutOfBounds": "The region extends beyond the photo",
-  "server.validation.passphraseTooLong": "Passphrase is too long"
+  "server.validation.passphraseTooLong": "Passphrase is too long",
+  "shell.issueCount": {
+    "one": "{count} point to verify",
+    "other": "{count} points to verify"
+  }
 }

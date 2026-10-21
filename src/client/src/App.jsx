@@ -10,7 +10,7 @@ import {
 import { List } from 'react-window';
 import { Badge, Button, Modal, useI18n } from './design-system/index.js';
 import { client, writeListeners } from './api/app-client.js';
-import { VerificationContext, countedFr, useVerification } from './hooks/useVerification.js';
+import { VerificationContext, useVerification } from './hooks/useVerification.js';
 export { buildVerificationIssues, verificationNotifications } from './hooks/useVerification.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
@@ -170,6 +170,7 @@ const MOBILE_TABS = [
 const LifespanContext = createContext(new Map());
 
 function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) {
+  const { t } = useI18n();
   const lifespan = useContext(LifespanContext).get(person.id);
   const years = lifespan?.label;
   // Le lieu de naissance est affiché en plus des années pour distinguer deux
@@ -177,6 +178,7 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
   const birthPlace = lifespan?.birthPlace;
   const issues = useContext(VerificationContext).get(person.id)?.length ?? 0;
   const fullName = personLabel(person);
+  const issueCount = t('shell.issueCount', { count: issues });
   return (
     <button
       className={`person-card${compact ? ' person-card--compact' : ''}${selected ? ' person-card--selected' : ''}${issues ? ' has-issues' : ''}`}
@@ -203,13 +205,8 @@ function PersonCard({ person, selected, onSelect, onKeyDown, compact = false }) 
         ) : null}
       </span>
       {issues ? (
-        <span
-          className="issue-dot"
-          title={countedFr(issues, { one: 'point à vérifier', other: 'points à vérifier' })}
-        >
-          <span className="gds-visually-hidden">
-            {countedFr(issues, { one: 'point à vérifier', other: 'points à vérifier' })}
-          </span>
+        <span className="issue-dot" title={issueCount}>
+          <span className="gds-visually-hidden">{issueCount}</span>
         </span>
       ) : null}
     </button>

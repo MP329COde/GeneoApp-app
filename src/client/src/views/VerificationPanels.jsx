@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { SEVERITY_LABELS, TIMELINE_ISSUE_LABELS } from '../hooks/useVerification.js';
+import { useVerificationLabels } from '../hooks/useVerification.js';
 import { MERGE_REASSIGNMENT_KEYS } from './PersonListPanels.jsx';
 
 export function VerificationSection({
@@ -14,6 +14,7 @@ export function VerificationSection({
   anchorId,
 }) {
   const { t } = useTranslation();
+  const { issueLabel, severityLabel } = useVerificationLabels();
   const [pendingMerge, setPendingMerge] = useState(null);
   const [busy, setBusy] = useState(false);
   const [mergeError, setMergeError] = useState(null);
@@ -109,16 +110,14 @@ export function VerificationSection({
                 </>
               ) : issue.kind === 'cycle' ? (
                 <p>
-                  <strong>Cycle de filiation</strong>
-                  <span className="verification__detail">
-                    Une personne figure parmi ses propres ancêtres.
-                  </span>
+                  <strong>{t('verification.cycleTitleShort')}</strong>
+                  <span className="verification__detail">{t('verification.cycleDetail')}</span>
                 </p>
               ) : (
                 <p>
-                  <strong>{TIMELINE_ISSUE_LABELS[issue.code] ?? issue.code}</strong>
+                  <strong>{issueLabel(issue.code)}</strong>
                   <span className="verification__detail">
-                    {SEVERITY_LABELS[issue.severity] ?? issue.severity}
+                    {severityLabel(issue.severity)}
                     {issue.message ? ` — ${issue.message}` : ''}
                   </span>
                 </p>
@@ -166,6 +165,8 @@ export function VerificationSection({
 // corrigées ni fusionnées automatiquement, seulement portées à la
 // connaissance de l'utilisateur pour validation humaine.
 export function ConsistencyPanel({ onNavigate, personLabelById }) {
+  const { t } = useTranslation();
+  const { issueLabel, severityLabel } = useVerificationLabels();
   const [cycles, setCycles] = useState(null);
   const [timelineIssues, setTimelineIssues] = useState(null);
   const [consistencyError, setConsistencyError] = useState(null);
@@ -192,29 +193,29 @@ export function ConsistencyPanel({ onNavigate, personLabelById }) {
     <div className="search-panel">
       <div className="gedcom-panel__actions">
         <Button type="button" size="sm" onClick={handleCheck} disabled={busy}>
-          Vérifier la cohérence de l’arbre
+          {t('verification.checkConsistency')}
         </Button>
       </div>
       {consistencyError ? <ErrorNotice message={consistencyError} /> : null}
       {cycles !== null || timelineIssues !== null ? (
         <>
-          <h3>Cycles de filiation</h3>
+          <h3>{t('verification.cyclesTitle')}</h3>
           {cycles.length === 0 ? (
-            <p className="notice">Aucun cycle détecté.</p>
+            <p className="notice">{t('verification.noCycle')}</p>
           ) : (
             <ul className="search-results">
               {cycles.map((cycle, index) => (
                 <li key={index}>
-                  <Badge tone="danger">Cycle</Badge>{' '}
+                  <Badge tone="danger">{t('verification.cycleBadge')}</Badge>{' '}
                   {cycle.map((id) => personLabelById(id)).join(' → ')}
                 </li>
               ))}
             </ul>
           )}
 
-          <h3>Incohérences de chronologie</h3>
+          <h3>{t('verification.timelineTitle')}</h3>
           {timelineIssues.length === 0 ? (
-            <p className="notice">Aucune incohérence de date détectée.</p>
+            <p className="notice">{t('verification.noTimelineIssue')}</p>
           ) : (
             <ul className="search-results">
               {timelineIssues.map((issue, index) => (
@@ -222,12 +223,12 @@ export function ConsistencyPanel({ onNavigate, personLabelById }) {
                   key={index}
                   className={`coherence-issue coherence-issue--${issue.severity.toLowerCase()}`}
                 >
-                  <span className="coherence-issue__severity">
-                    {SEVERITY_LABELS[issue.severity] ?? issue.severity}
-                  </span>{' '}
-                  <strong>{TIMELINE_ISSUE_LABELS[issue.code] ?? issue.code}</strong> —{' '}
+                  <span className="coherence-issue__severity">{severityLabel(issue.severity)}</span>{' '}
+                  <strong>{issueLabel(issue.code)}</strong> —{' '}
                   {personLabelById(issue.personId ?? issue.childId)}
-                  {issue.parentId ? ` (parent : ${personLabelById(issue.parentId)})` : ''}
+                  {issue.parentId
+                    ? ` (${t('verification.parentOf', { name: personLabelById(issue.parentId) })})`
+                    : ''}
                   {issue.message ? (
                     <span className="coherence-issue__detail">{issue.message}</span>
                   ) : null}
@@ -237,7 +238,7 @@ export function ConsistencyPanel({ onNavigate, personLabelById }) {
                     variant="secondary"
                     onClick={() => onNavigate(issue.personId ?? issue.childId)}
                   >
-                    Voir la fiche
+                    {t('verification.viewRecord')}
                   </Button>
                 </li>
               ))}

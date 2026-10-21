@@ -140,5 +140,9 @@
   "server.validation.portraitNotImage": "Le portrait doit être une image",
   "server.validation.regionsNeedImage": "Les zones de personnes ne s’appliquent qu’aux images",
   "server.validation.regionOutOfBounds": "La zone dépasse de la photo",
-  "server.validation.passphraseTooLong": "Phrase secrète trop longue"
+  "server.validation.passphraseTooLong": "Phrase secrète trop longue",
+  "shell.issueCount": {
+    "one": "{count} point à vérifier",
+    "other": "{count} points à vérifier"
+  }
 }

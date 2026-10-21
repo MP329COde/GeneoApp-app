@@ -69,5 +69,104 @@
   "merge.reassignment.media": {
     "one": "1 média",
     "other": "{count} médias"
-  }
+  },
+  "timelineIssue.BIRTH_AFTER_DEATH": "Naissance enregistrée après le décès",
+  "timelineIssue.MARRIAGE_AFTER_DEATH": "Mariage enregistré après le décès",
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Mariage enregistré avant la naissance",
+  "timelineIssue.MARRIAGE_VERY_YOUNG": "Mariage à un âge très jeune",
+  "timelineIssue.BAPTISM_BEFORE_BIRTH": "Baptême enregistré avant la naissance",
+  "timelineIssue.BURIAL_BEFORE_DEATH": "Inhumation enregistrée avant le décès",
+  "timelineIssue.IMPOSSIBLE_AGE": "Âge au décès exceptionnel",
+  "timelineIssue.MULTIPLE_BIRTHS": "Plusieurs naissances enregistrées",
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT": "Enfant né avant son parent",
+  "timelineIssue.PARENT_TOO_YOUNG": "Parent très jeune à la naissance",
+  "timelineIssue.PARENT_TOO_OLD": "Parent âgé à la naissance",
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Naissance de l'enfant enregistrée après le décès du parent",
+  "timelineIssue.LIVING_WITH_DEATH": "Marquée vivante malgré un décès enregistré",
+  "timelineIssue.LIVING_TOO_OLD": "Marquée vivante mais très âgée",
+  "timelineIssue.severity.certain": "Erreur certaine",
+  "timelineIssue.severity.possible": "Inhabituel, à vérifier",
+  "timelineIssue.generic": "Incohérence de chronologie",
+  "timelineIssue.genericPlural": {
+    "one": "{count} incohérence de chronologie",
+    "other": "{count} incohérences de chronologie"
+  },
+  "timelineIssue.duplicatesTitle": "Doublons possibles",
+  "timelineIssue.duplicatesPlural": {
+    "one": "{count} doublon possible détecté",
+    "other": "{count} doublons possibles détectés"
+  },
+  "timelineIssue.duplicatesHint": "{counted} — ouvrir la vérification.",
+  "timelineIssue.cyclesTitle": "Cycles de filiation",
+  "timelineIssue.cyclesPlural": {
+    "one": "{count} cycle de filiation détecté",
+    "other": "{count} cycles de filiation détectés"
+  },
+  "timelineIssue.cyclesHint": "{counted} — ouvrir la cohérence.",
+  "timelineIssue.BIRTH_AFTER_DEATH.plural": {
+    "one": "{count} naissance enregistrée après le décès",
+    "other": "{count} naissances enregistrées après le décès"
+  },
+  "timelineIssue.MARRIAGE_AFTER_DEATH.plural": {
+    "one": "{count} mariage enregistré après le décès",
+    "other": "{count} mariages enregistrés après le décès"
+  },
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH.plural": {
+    "one": "{count} mariage enregistré avant la naissance",
+    "other": "{count} mariages enregistrés avant la naissance"
+  },
+  "timelineIssue.MARRIAGE_VERY_YOUNG.plural": {
+    "one": "{count} mariage à un âge très jeune",
+    "other": "{count} mariages à un âge très jeune"
+  },
+  "timelineIssue.BAPTISM_BEFORE_BIRTH.plural": {
+    "one": "{count} baptême enregistré avant la naissance",
+    "other": "{count} baptêmes enregistrés avant la naissance"
+  },
+  "timelineIssue.BURIAL_BEFORE_DEATH.plural": {
+    "one": "{count} inhumation enregistrée avant le décès",
+    "other": "{count} inhumations enregistrées avant le décès"
+  },
+  "timelineIssue.IMPOSSIBLE_AGE.plural": {
+    "one": "{count} âge au décès exceptionnel",
+    "other": "{count} âges au décès exceptionnels"
+  },
+  "timelineIssue.MULTIPLE_BIRTHS.plural": {
+    "one": "{count} naissance multiple enregistrée",
+    "other": "{count} naissances multiples enregistrées"
+  },
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT.plural": {
+    "one": "{count} enfant né avant son parent",
+    "other": "{count} enfants nés avant leur parent"
+  },
+  "timelineIssue.PARENT_TOO_YOUNG.plural": {
+    "one": "{count} parent très jeune à la naissance",
+    "other": "{count} parents très jeunes à la naissance"
+  },
+  "timelineIssue.PARENT_TOO_OLD.plural": {
+    "one": "{count} parent âgé à la naissance",
+    "other": "{count} parents âgés à la naissance"
+  },
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH.plural": {
+    "one": "{count} naissance de l'enfant enregistrée après le décès du parent",
+    "other": "{count} naissances d'enfants enregistrées après le décès du parent"
+  },
+  "timelineIssue.LIVING_WITH_DEATH.plural": {
+    "one": "{count} personne marquée vivante malgré un décès enregistré",
+    "other": "{count} personnes marquées vivantes malgré un décès enregistré"
+  },
+  "timelineIssue.LIVING_TOO_OLD.plural": {
+    "one": "{count} personne marquée vivante mais très âgée",
+    "other": "{count} personnes marquées vivantes mais très âgées"
+  },
+  "verification.checkConsistency": "Vérifier la cohérence de l’arbre",
+  "verification.cyclesTitle": "Cycles de filiation",
+  "verification.noCycle": "Aucun cycle détecté.",
+  "verification.cycleBadge": "Cycle",
+  "verification.timelineTitle": "Incohérences de chronologie",
+  "verification.noTimelineIssue": "Aucune incohérence de date détectée.",
+  "verification.parentOf": "parent : {name}",
+  "verification.viewRecord": "Voir la fiche",
+  "verification.cycleDetail": "Une personne figure parmi ses propres ancêtres.",
+  "verification.cycleTitleShort": "Cycle de filiation"
 }

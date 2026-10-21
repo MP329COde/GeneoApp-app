@@ -185,6 +185,11 @@ const {
   buildVerificationIssues,
   verificationNotifications,
 } = await import('./App.jsx');
+const { translate } = await import('./design-system/i18n/I18nProvider.jsx');
+
+// Les notifications sont rédigées par le client, dans sa langue : le test
+// les vérifie en français, la langue de repli de l'application.
+const tFr = (key, variables, fallback) => translate('fr', key, variables, fallback);
 
 describe('regroupement des notifications de vérification (contre-audit, point 4)', () => {
   it('regroupe des milliers d’incohérences en quelques notifications, sous le plafond de 20', () => {
@@ -207,7 +212,7 @@ describe('regroupement des notifications de vérification (contre-audit, point 4
     );
 
     const byPerson = buildVerificationIssues({ timeline });
-    const items = verificationNotifications(byPerson);
+    const items = verificationNotifications(byPerson, tFr);
 
     // Deux groupes distincts (un par code), jamais un par occurrence.
     expect(items.length).toBe(2);
@@ -218,7 +223,7 @@ describe('regroupement des notifications de vérification (contre-audit, point 4
 
     // Une deuxième analyse identique doit produire la même clé de
     // déduplication (donc être ignorée en base, voir test API du plafond).
-    const again = verificationNotifications(buildVerificationIssues({ timeline }));
+    const again = verificationNotifications(buildVerificationIssues({ timeline }), tFr);
     expect(again.map((item) => item.dedupeKey).sort()).toEqual(
       items.map((item) => item.dedupeKey).sort(),
     );
@@ -234,11 +239,14 @@ describe('regroupement des notifications de vérification (contre-audit, point 4
       personId: index + 1,
       parentId: index + 5000,
     }));
-    const items = verificationNotifications(buildVerificationIssues({ timeline }));
+    const items = verificationNotifications(buildVerificationIssues({ timeline }), tFr);
     expect(items).toHaveLength(1);
     expect(items[0].message).toBe('1 375 enfants nés avant leur parent — ouvrir la cohérence.');
 
-    const single = verificationNotifications(buildVerificationIssues({ timeline: [timeline[0]] }));
+    const single = verificationNotifications(
+      buildVerificationIssues({ timeline: [timeline[0]] }),
+      tFr,
+    );
     expect(single[0].message).toBe('1 enfant né avant son parent — ouvrir la cohérence.');
   });
 });

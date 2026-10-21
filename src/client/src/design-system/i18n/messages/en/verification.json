@@ -69,5 +69,104 @@
   "merge.reassignment.media": {
     "one": "1 media",
     "other": "{count} media"
-  }
+  },
+  "timelineIssue.BIRTH_AFTER_DEATH": "Birth recorded after death",
+  "timelineIssue.MARRIAGE_AFTER_DEATH": "Marriage recorded after death",
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Marriage recorded before birth",
+  "timelineIssue.MARRIAGE_VERY_YOUNG": "Marriage at a very young age",
+  "timelineIssue.BAPTISM_BEFORE_BIRTH": "Baptism recorded before birth",
+  "timelineIssue.BURIAL_BEFORE_DEATH": "Burial recorded before death",
+  "timelineIssue.IMPOSSIBLE_AGE": "Exceptional age at death",
+  "timelineIssue.MULTIPLE_BIRTHS": "Several births recorded",
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT": "Child born before their parent",
+  "timelineIssue.PARENT_TOO_YOUNG": "Parent very young at the birth",
+  "timelineIssue.PARENT_TOO_OLD": "Parent old at the birth",
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Child's birth recorded after the parent's death",
+  "timelineIssue.LIVING_WITH_DEATH": "Marked living despite a recorded death",
+  "timelineIssue.LIVING_TOO_OLD": "Marked living but very old",
+  "timelineIssue.severity.certain": "Certain error",
+  "timelineIssue.severity.possible": "Unusual, to verify",
+  "timelineIssue.generic": "Chronology inconsistency",
+  "timelineIssue.genericPlural": {
+    "one": "{count} chronology inconsistency",
+    "other": "{count} chronology inconsistencies"
+  },
+  "timelineIssue.duplicatesTitle": "Possible duplicates",
+  "timelineIssue.duplicatesPlural": {
+    "one": "{count} possible duplicate detected",
+    "other": "{count} possible duplicates detected"
+  },
+  "timelineIssue.duplicatesHint": "{counted} — open verification.",
+  "timelineIssue.cyclesTitle": "Descent cycles",
+  "timelineIssue.cyclesPlural": {
+    "one": "{count} descent cycle detected",
+    "other": "{count} descent cycles detected"
+  },
+  "timelineIssue.cyclesHint": "{counted} — open consistency.",
+  "timelineIssue.BIRTH_AFTER_DEATH.plural": {
+    "one": "{count} birth recorded after death",
+    "other": "{count} births recorded after death"
+  },
+  "timelineIssue.MARRIAGE_AFTER_DEATH.plural": {
+    "one": "{count} marriage recorded after death",
+    "other": "{count} marriages recorded after death"
+  },
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH.plural": {
+    "one": "{count} marriage recorded before birth",
+    "other": "{count} marriages recorded before birth"
+  },
+  "timelineIssue.MARRIAGE_VERY_YOUNG.plural": {
+    "one": "{count} marriage at a very young age",
+    "other": "{count} marriages at a very young age"
+  },
+  "timelineIssue.BAPTISM_BEFORE_BIRTH.plural": {
+    "one": "{count} baptism recorded before birth",
+    "other": "{count} baptisms recorded before birth"
+  },
+  "timelineIssue.BURIAL_BEFORE_DEATH.plural": {
+    "one": "{count} burial recorded before death",
+    "other": "{count} burials recorded before death"
+  },
+  "timelineIssue.IMPOSSIBLE_AGE.plural": {
+    "one": "{count} exceptional age at death",
+    "other": "{count} exceptional ages at death"
+  },
+  "timelineIssue.MULTIPLE_BIRTHS.plural": {
+    "one": "{count} multiple birth recorded",
+    "other": "{count} multiple births recorded"
+  },
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT.plural": {
+    "one": "{count} child born before their parent",
+    "other": "{count} children born before their parent"
+  },
+  "timelineIssue.PARENT_TOO_YOUNG.plural": {
+    "one": "{count} parent very young at the birth",
+    "other": "{count} parents very young at the birth"
+  },
+  "timelineIssue.PARENT_TOO_OLD.plural": {
+    "one": "{count} parent old at the birth",
+    "other": "{count} parents old at the birth"
+  },
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH.plural": {
+    "one": "{count} child's birth recorded after the parent's death",
+    "other": "{count} children's births recorded after the parent's death"
+  },
+  "timelineIssue.LIVING_WITH_DEATH.plural": {
+    "one": "{count} person marked living despite a recorded death",
+    "other": "{count} people marked living despite a recorded death"
+  },
+  "timelineIssue.LIVING_TOO_OLD.plural": {
+    "one": "{count} person marked living but very old",
+    "other": "{count} people marked living but very old"
+  },
+  "verification.checkConsistency": "Check tree consistency",
+  "verification.cyclesTitle": "Descent cycles",
+  "verification.noCycle": "No cycle detected.",
+  "verification.cycleBadge": "Cycle",
+  "verification.timelineTitle": "Chronology inconsistencies",
+  "verification.noTimelineIssue": "No date inconsistency detected.",
+  "verification.parentOf": "parent: {name}",
+  "verification.viewRecord": "View record",
+  "verification.cycleDetail": "A person appears among their own ancestors.",
+  "verification.cycleTitleShort": "Descent cycle"
 }
