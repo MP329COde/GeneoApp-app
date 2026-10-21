@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice } from '../components/shared.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
-// Libellés lisibles des tables de la corbeille : le nom technique de la
-// table (« research_notebook ») n'a pas de sens pour l'utilisateur.
-const TRASH_TABLE_LABELS = {
-  persons: 'Personne',
-  places: 'Lieu',
-  events: 'Événement',
-  unions: 'Union',
-  parentages: 'Lien de parenté',
-  media: 'Média',
-  research_notebook: 'Carnet de recherche',
+// Libellés lisibles des tables de la corbeille, indexés par nom technique : le
+// nom de la table (« research_notebook ») n'a pas de sens pour l'utilisateur.
+const TRASH_TABLE_KEYS = {
+  persons: 'accountsBackups.trash.person',
+  places: 'accountsBackups.trash.place',
+  events: 'accountsBackups.trash.event',
+  unions: 'accountsBackups.trash.union',
+  parentages: 'accountsBackups.trash.parentage',
+  media: 'accountsBackups.trash.media',
+  research_notebook: 'accountsBackups.trash.researchNotebook',
 };
 
 export function LoginForm({ onLogin, loginError }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
 
@@ -29,20 +30,22 @@ export function LoginForm({ onLogin, loginError }) {
   return (
     <form className="create-person-form" onSubmit={handleSubmit}>
       <p className="notice">
-        Les sauvegardes, la restauration, la corbeille et le profil sont des opérations sensibles :
-        connectez-vous avec un profil local pour y accéder.
+        {t(
+          'accountsBackups.login.intro',
+          'Les sauvegardes, la restauration, la corbeille et le profil sont des opérations sensibles : connectez-vous avec un profil local pour y accéder.',
+        )}
       </p>
       <label>
-        <span>Profil local</span>
+        <span>{t('accountsBackups.login.profile', 'Profil local')}</span>
         <input value={name} onChange={(event) => setName(event.target.value)} />
       </label>
       <label>
-        <span>Code PIN (optionnel)</span>
+        <span>{t('accountsBackups.login.pin', 'Code PIN (optionnel)')}</span>
         <input type="password" value={pin} onChange={(event) => setPin(event.target.value)} />
       </label>
       {loginError ? <ErrorNotice message={loginError} /> : null}
       <Button type="submit" size="sm">
-        Se connecter
+        {t('accountsBackups.login.submit', 'Se connecter')}
       </Button>
     </form>
   );
@@ -50,6 +53,7 @@ export function LoginForm({ onLogin, loginError }) {
 
 // Emplacements : copie miroir des sauvegardes et dossier de travail portable (clé USB).
 export function StorageSection({ token }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [mirrorDir, setMirrorDir] = useState('');
   const [dataDir, setDataDir] = useState('');
@@ -88,14 +92,18 @@ export function StorageSection({ token }) {
 
   return (
     <section className="storage-section" aria-labelledby="storage-title">
-      <h3 id="storage-title">Clé USB et emplacement des données</h3>
+      <h3 id="storage-title">
+        {t('accountsBackups.storage.title', 'Clé USB et emplacement des données')}
+      </h3>
       {storageError ? <ErrorNotice message={storageError} /> : null}
       {message ? (
         <p role="status" className="notice">
           {message}
         </p>
       ) : null}
-      <p className="data-id">Données actuelles : {status.activeDataDir}</p>
+      <p className="data-id">
+        {t('accountsBackups.storage.current', 'Données actuelles :')} {status.activeDataDir}
+      </p>
 
       <form
         className="storage-form"
@@ -105,23 +113,31 @@ export function StorageSection({ token }) {
             () => client.storage.setMirror(mirrorDir.trim() || null, token),
             (result) =>
               result.mirrorDir
-                ? 'Chaque sauvegarde sera aussi copiée sur ce dossier dès qu’il est branché.'
-                : 'Copie miroir désactivée.',
+                ? t(
+                    'accountsBackups.storage.mirrorEnabled',
+                    'Chaque sauvegarde sera aussi copiée sur ce dossier dès qu’il est branché.',
+                  )
+                : t('accountsBackups.storage.mirrorDisabled', 'Copie miroir désactivée.'),
           );
         }}
       >
         <label>
-          <span>Copie miroir des sauvegardes (ex. /Volumes/CLE_USB/GeneoApp)</span>
+          <span>
+            {t(
+              'accountsBackups.storage.mirrorLabel',
+              'Copie miroir des sauvegardes (ex. /Volumes/CLE_USB/GeneoApp)',
+            )}
+          </span>
           <input value={mirrorDir} onChange={(event) => setMirrorDir(event.target.value)} />
         </label>
         <Button type="submit" size="sm" variant="secondary">
-          Enregistrer le miroir
+          {t('accountsBackups.storage.mirrorSubmit', 'Enregistrer le miroir')}
         </Button>
         {status.mirrorDir ? (
           <p className="data-id">
             {status.mirrorAvailable
-              ? 'Miroir branché et accessible'
-              : 'Miroir absent (clé débranchée ?)'}
+              ? t('accountsBackups.storage.mirrorAvailable', 'Miroir branché et accessible')
+              : t('accountsBackups.storage.mirrorMissing', 'Miroir absent (clé débranchée ?)')}
           </p>
         ) : null}
       </form>
@@ -134,20 +150,33 @@ export function StorageSection({ token }) {
             () => client.storage.setDataDir(dataDir.trim() || null, token),
             (result) =>
               result.dataDir
-                ? `${result.copied ? 'Arbres, médias et sauvegardes copiés. ' : 'Données GeneoApp trouvées sur ce dossier. '}Redémarrez GeneoApp pour travailler directement dessus.`
-                : 'Retour au dossier de l’application au prochain démarrage.',
+                ? `${result.copied ? t('accountsBackups.storage.dataCopied', 'Arbres, médias et sauvegardes copiés. ') : t('accountsBackups.storage.dataFound', 'Données GeneoApp trouvées sur ce dossier. ')}${t('accountsBackups.storage.dataRestart', 'Redémarrez GeneoApp pour travailler directement dessus.')}`
+                : t(
+                    'accountsBackups.storage.dataBackToApp',
+                    'Retour au dossier de l’application au prochain démarrage.',
+                  ),
           );
         }}
       >
         <label>
-          <span>Travailler directement sur un dossier (clé USB)</span>
+          <span>
+            {t(
+              'accountsBackups.storage.dataDirLabel',
+              'Travailler directement sur un dossier (clé USB)',
+            )}
+          </span>
           <input value={dataDir} onChange={(event) => setDataDir(event.target.value)} />
         </label>
         <Button type="submit" size="sm" variant="secondary">
-          Utiliser ce dossier de travail
+          {t('accountsBackups.storage.dataDirSubmit', 'Utiliser ce dossier de travail')}
         </Button>
         {status.restartRequired ? (
-          <p className="data-id">Changement en attente : effectif au prochain démarrage.</p>
+          <p className="data-id">
+            {t(
+              'accountsBackups.storage.restartRequired',
+              'Changement en attente : effectif au prochain démarrage.',
+            )}
+          </p>
         ) : null}
       </form>
     </section>
@@ -155,6 +184,7 @@ export function StorageSection({ token }) {
 }
 
 export function BackupsPanel({ session, onLogin, loginError, onLogout, section = 'backups' }) {
+  const { t, locale } = useTranslation();
   const [backups, setBackups] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const [removePin, setRemovePin] = useState('');
@@ -204,8 +234,11 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
       const result = await client.backups.restore(backup.filename, kind, session.token);
       setBackupStatus(
         result?.restartRequired
-          ? 'Restauration préparée : redémarrez GeneoApp pour retrouver cette version.'
-          : 'Sauvegarde restaurée.',
+          ? t(
+              'accountsBackups.backups.restorePrepared',
+              'Restauration préparée : redémarrez GeneoApp pour retrouver cette version.',
+            )
+          : t('accountsBackups.backups.restored', 'Sauvegarde restaurée.'),
       );
       await loadAll();
     } catch (restoreError) {
@@ -227,7 +260,10 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
       const bytes = Uint8Array.from(atob(result.contentBase64), (char) => char.charCodeAt(0));
       downloadBlob(result.filename, new Blob([bytes], { type: 'application/octet-stream' }));
       setBackupStatus(
-        'Copie chiffrée prête : conservez la phrase secrète, elle est indispensable.',
+        t(
+          'accountsBackups.backups.exportReady',
+          'Copie chiffrée prête : conservez la phrase secrète, elle est indispensable.',
+        ),
       );
     } catch (exportError) {
       setActionError(exportError.message);
@@ -243,7 +279,10 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
     try {
       await client.backups.importEncrypted(await readFileAsBase64(file), passphrase, session.token);
       setBackupStatus(
-        'Sauvegarde chiffrée déchiffrée et ajoutée à la liste : vous pouvez la restaurer.',
+        t(
+          'accountsBackups.backups.importDone',
+          'Sauvegarde chiffrée déchiffrée et ajoutée à la liste : vous pouvez la restaurer.',
+        ),
       );
       await loadAll();
     } catch (importError) {
@@ -315,7 +354,9 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
       {actionError ? <ErrorNotice message={actionError} /> : null}
 
       <section className="session-banner">
-        <h3>Profil connecté : {session.account.name}</h3>
+        <h3>
+          {t('accountsBackups.session.title', 'Profil connecté :')} {session.account.name}
+        </h3>
         <div className="gedcom-panel__actions">
           <Button
             type="button"
@@ -324,41 +365,52 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
             onClick={handleLogout}
             disabled={busy}
           >
-            Se déconnecter
+            {t('accountsBackups.session.logout', 'Se déconnecter')}
           </Button>
         </div>
       </section>
 
       {section === 'profile' ? (
         <section>
-          <h3>Profil local</h3>
+          <h3>{t('accountsBackups.profile.title', 'Profil local')}</h3>
           <dl className="profile-details">
             <div>
-              <dt>Nom du profil</dt>
+              <dt>{t('accountsBackups.profile.name', 'Nom du profil')}</dt>
               <dd>{session.account.name}</dd>
             </div>
             <div>
-              <dt>Protection</dt>
-              <dd>{session.account.hasPin ? 'Code PIN activé' : 'Sans code PIN'}</dd>
+              <dt>{t('accountsBackups.profile.protection', 'Protection')}</dt>
+              <dd>
+                {session.account.hasPin
+                  ? t('accountsBackups.profile.pinEnabled', 'Code PIN activé')
+                  : t('accountsBackups.profile.noPin', 'Sans code PIN')}
+              </dd>
             </div>
             <div>
-              <dt>Stockage</dt>
-              <dd>Local à cet appareil, aucun compte en ligne</dd>
+              <dt>{t('accountsBackups.profile.storage', 'Stockage')}</dt>
+              <dd>
+                {t(
+                  'accountsBackups.profile.localStorage',
+                  'Local à cet appareil, aucun compte en ligne',
+                )}
+              </dd>
             </div>
           </dl>
           <div className="danger-zone">
-            <h4>Zone sensible</h4>
+            <h4>{t('accountsBackups.profile.dangerZone', 'Zone sensible')}</h4>
             <p className="settings-hint">
-              Supprimer le profil retire l’accès aux sauvegardes et à la corbeille pour ce nom. Les
-              personnes de l’arbre ne sont pas supprimées.
+              {t(
+                'accountsBackups.profile.dangerHint',
+                'Supprimer le profil retire l’accès aux sauvegardes et à la corbeille pour ce nom. Les personnes de l’arbre ne sont pas supprimées.',
+              )}
             </p>
             {confirming === 'account' ? (
               <div className="gedcom-panel__actions">
                 {session.account.hasPin ? (
                   <input
                     type="password"
-                    aria-label="Code PIN du profil"
-                    placeholder="Code PIN"
+                    aria-label={t('accountsBackups.profile.pinLabel', 'Code PIN du profil')}
+                    placeholder={t('accountsBackups.profile.pinPlaceholder', 'Code PIN')}
                     value={removePin}
                     onChange={(event) => setRemovePin(event.target.value)}
                   />
@@ -370,7 +422,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                   onClick={handleRemoveAccount}
                   disabled={busy || (session.account.hasPin && !removePin)}
                 >
-                  Confirmer la suppression du profil
+                  {t('accountsBackups.profile.confirmRemove', 'Confirmer la suppression du profil')}
                 </Button>
                 <Button
                   type="button"
@@ -381,7 +433,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                     setRemovePin('');
                   }}
                 >
-                  Annuler
+                  {t('accountsBackups.profile.cancel', 'Annuler')}
                 </Button>
               </div>
             ) : (
@@ -392,7 +444,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                 onClick={() => setConfirming('account')}
                 disabled={busy}
               >
-                Supprimer ce profil
+                {t('accountsBackups.profile.remove', 'Supprimer ce profil')}
               </Button>
             )}
           </div>
@@ -401,11 +453,12 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
 
       {section === 'backups' ? (
         <section>
-          <h3>Sauvegardes</h3>
+          <h3>{t('accountsBackups.backups.title', 'Sauvegardes')}</h3>
           <p className="settings-hint">
-            Sauvegardes automatiques au lancement, avant chaque import GEDCOM et avant chaque mise à
-            jour de la base (10 conservées par motif). Les sauvegardes manuelles ne sont jamais
-            supprimées.
+            {t(
+              'accountsBackups.backups.hint',
+              'Sauvegardes automatiques au lancement, avant chaque import GEDCOM et avant chaque mise à jour de la base (10 conservées par motif). Les sauvegardes manuelles ne sont jamais supprimées.',
+            )}
           </p>
           {backupStatus ? (
             <p role="status" className="notice">
@@ -413,9 +466,16 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
             </p>
           ) : null}
           <fieldset className="encrypted-backup">
-            <legend>Copie chiffrée (clé USB, disque externe)</legend>
+            <legend>
+              {t(
+                'accountsBackups.backups.encryptedLegend',
+                'Copie chiffrée (clé USB, disque externe)',
+              )}
+            </legend>
             <label>
-              <span>Phrase secrète (12 caractères minimum)</span>
+              <span>
+                {t('accountsBackups.backups.passphrase', 'Phrase secrète (12 caractères minimum)')}
+              </span>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -424,7 +484,12 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               />
             </label>
             <label className="gedcom-panel__file">
-              <span>Importer une sauvegarde chiffrée (.gnapenc)</span>
+              <span>
+                {t(
+                  'accountsBackups.backups.importLabel',
+                  'Importer une sauvegarde chiffrée (.gnapenc)',
+                )}
+              </span>
               <input
                 type="file"
                 accept=".gnapenc"
@@ -433,8 +498,10 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               />
             </label>
             <p className="settings-hint">
-              Chiffrement AES-256-GCM. Sans la phrase secrète, la copie est illisible : elle ne peut
-              pas être récupérée.
+              {t(
+                'accountsBackups.backups.encryptionHint',
+                'Chiffrement AES-256-GCM. Sans la phrase secrète, la copie est illisible : elle ne peut pas être récupérée.',
+              )}
             </p>
           </fieldset>
           <div className="gedcom-panel__actions">
@@ -444,7 +511,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               onClick={() => handleCreateBackup('json')}
               disabled={busy}
             >
-              Créer une sauvegarde (JSON)
+              {t('accountsBackups.backups.createJson', 'Créer une sauvegarde (JSON)')}
             </Button>
             <Button
               type="button"
@@ -453,13 +520,15 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               onClick={() => handleCreateBackup('sqlite')}
               disabled={busy}
             >
-              Créer une sauvegarde (SQLite)
+              {t('accountsBackups.backups.createSqlite', 'Créer une sauvegarde (SQLite)')}
             </Button>
           </div>
           {backups === null ? (
-            <p role="status">Chargement…</p>
+            <p role="status">{t('accountsBackups.backups.loading', 'Chargement…')}</p>
           ) : backups.length === 0 ? (
-            <p className="notice">Aucune sauvegarde pour l’instant.</p>
+            <p className="notice">
+              {t('accountsBackups.backups.empty', 'Aucune sauvegarde pour l’instant.')}
+            </p>
           ) : (
             <ul className="search-results">
               {backups.map((backup) => (
@@ -467,14 +536,18 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                   <span className="backup-row__main">
                     <strong>
                       {backup.createdAt
-                        ? new Date(backup.createdAt).toLocaleString('fr-FR')
+                        ? new Date(backup.createdAt).toLocaleString(locale)
                         : backup.filename}
                     </strong>
                     <span className="data-id">
                       {backup.kind === 'sqlite' ? 'SQLite' : 'JSON'} ·{' '}
                       {backup.label?.startsWith('auto:')
-                        ? `Automatique · ${backup.label.slice(5)}`
-                        : (backup.label ?? 'Manuelle')}
+                        ? t(
+                            'accountsBackups.backups.autoLabel',
+                            { reason: backup.label.slice(5) },
+                            `Automatique · ${backup.label.slice(5)}`,
+                          )
+                        : (backup.label ?? t('accountsBackups.backups.manual', 'Manuelle'))}
                       {backup.sizeBytes
                         ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} Ko`
                         : ''}
@@ -490,7 +563,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                     onClick={() => handleRestore(backup)}
                     disabled={busy}
                   >
-                    Restaurer
+                    {t('accountsBackups.backups.restore', 'Restaurer')}
                   </Button>
                   <Button
                     type="button"
@@ -498,9 +571,17 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                     variant="secondary"
                     onClick={() => handleExportEncrypted(backup)}
                     disabled={busy || passphrase.length < 12}
-                    aria-label={`Exporter chiffrée la sauvegarde du ${backup.createdAt ? new Date(backup.createdAt).toLocaleString('fr-FR') : backup.filename}`}
+                    aria-label={t(
+                      'accountsBackups.backups.exportLabel',
+                      {
+                        date: backup.createdAt
+                          ? new Date(backup.createdAt).toLocaleString(locale)
+                          : backup.filename,
+                      },
+                      `Exporter chiffrée la sauvegarde du ${backup.createdAt ? new Date(backup.createdAt).toLocaleString(locale) : backup.filename}`,
+                    )}
                   >
-                    Exporter chiffrée
+                    {t('accountsBackups.backups.export', 'Exporter chiffrée')}
                   </Button>
                 </li>
               ))}
@@ -513,19 +594,24 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
 
       {section === 'trash' ? (
         <section>
-          <h3>Corbeille</h3>
+          <h3>{t('accountsBackups.trash.title', 'Corbeille')}</h3>
           <p className="settings-hint">
-            Suppression logique : tout élément reste restaurable ici tant qu’il n’est pas purgé.
+            {t(
+              'accountsBackups.trash.hint',
+              'Suppression logique : tout élément reste restaurable ici tant qu’il n’est pas purgé.',
+            )}
           </p>
           {trashItems === null ? (
-            <p role="status">Chargement…</p>
+            <p role="status">{t('accountsBackups.trash.loading', 'Chargement…')}</p>
           ) : trashItems.length === 0 ? (
-            <p className="notice">La corbeille est vide.</p>
+            <p className="notice">{t('accountsBackups.trash.empty', 'La corbeille est vide.')}</p>
           ) : (
             <ul className="search-results">
               {trashItems.map((item) => (
                 <li key={`${item.table}:${item.id}`}>
-                  <Badge tone="neutral">{TRASH_TABLE_LABELS[item.table] ?? item.table}</Badge>{' '}
+                  <Badge tone="neutral">
+                    {t(TRASH_TABLE_KEYS[item.table] ?? 'accountsBackups.trash.person', item.table)}
+                  </Badge>{' '}
                   {item.label}
                   <Button
                     type="button"
@@ -534,7 +620,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                     onClick={() => handleTrashRestore(item.table, item.id)}
                     disabled={busy}
                   >
-                    Restaurer
+                    {t('accountsBackups.trash.restore', 'Restaurer')}
                   </Button>
                   {confirming === `${item.table}:${item.id}` ? (
                     <>
@@ -548,7 +634,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                         }}
                         disabled={busy}
                       >
-                        Confirmer la purge
+                        {t('accountsBackups.trash.confirmPurge', 'Confirmer la purge')}
                       </Button>
                       <Button
                         type="button"
@@ -556,7 +642,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                         variant="secondary"
                         onClick={() => setConfirming(null)}
                       >
-                        Annuler
+                        {t('accountsBackups.trash.cancel', 'Annuler')}
                       </Button>
                     </>
                   ) : (
@@ -567,7 +653,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                       onClick={() => setConfirming(`${item.table}:${item.id}`)}
                       disabled={busy}
                     >
-                      Purger définitivement
+                      {t('accountsBackups.trash.purge', 'Purger définitivement')}
                     </Button>
                   )}
                 </li>

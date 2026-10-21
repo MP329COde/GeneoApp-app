@@ -1,38 +1,62 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 
-const STATUS_LABELS = { EXTRACTED: 'Texte', OCR: 'OCR', UNAVAILABLE: 'Titre seul' };
-const RUN_LABELS = { DONE: 'Terminée', FAILED: 'Échec', RUNNING: 'En cours' };
-const TRIGGER_LABELS = { MANUAL: 'manuelle', SCHEDULED: 'planifiée', CLI: 'ligne de commande' };
-const MODE_LABELS = { CRAWL: 'Site', DIRECT: 'Fichier', DATAGOUV: 'data.gouv.fr' };
+// Libellés indexés par code technique, traduits via l'i18n : un code inconnu
+// retombe sur son libellé brut, jamais sur une chaîne vide.
+const STATUS_KEYS = {
+  EXTRACTED: 'indexing.status.extracted',
+  OCR: 'indexing.status.ocr',
+  UNAVAILABLE: 'indexing.status.unavailable',
+};
+const RUN_KEYS = {
+  DONE: 'indexing.run.done',
+  FAILED: 'indexing.run.failed',
+  RUNNING: 'indexing.run.running',
+};
+const TRIGGER_KEYS = {
+  MANUAL: 'indexing.trigger.manual',
+  SCHEDULED: 'indexing.trigger.scheduled',
+  CLI: 'indexing.trigger.cli',
+};
+const MODE_KEYS = {
+  CRAWL: 'indexing.mode.crawl',
+  DIRECT: 'indexing.mode.direct',
+  DATAGOUV: 'indexing.mode.datagouv',
+};
 const OUTCOME_TONES = { DONE: 'success', PARTIAL: 'neutral', FAILED: 'danger', SKIPPED: 'neutral' };
-const OUTCOME_LABELS = { DONE: 'À jour', PARTIAL: 'Partiel', FAILED: 'Échec', SKIPPED: 'Ignoré' };
+const OUTCOME_KEYS = {
+  DONE: 'indexing.outcome.done',
+  PARTIAL: 'indexing.outcome.partial',
+  FAILED: 'indexing.outcome.failed',
+  SKIPPED: 'indexing.outcome.skipped',
+};
 const NETWORK_MODES = [
   {
     mode: 'CRAWL',
-    label: 'Site d’archives (exploration des liens)',
+    labelKey: 'indexing.network.crawl',
     placeholder: 'https://archives.exemple.fr/registres',
   },
   {
     mode: 'DIRECT',
-    label: 'Fichier de données ouvertes (CSV, JSON, TXT, ZIP, PDF)',
+    labelKey: 'indexing.network.direct',
     placeholder: 'https://exemple.fr/donnees/registre.csv',
   },
   {
     mode: 'DATAGOUV',
-    label: 'Jeu de données data.gouv.fr',
+    labelKey: 'indexing.network.datagouv',
     placeholder: 'https://www.data.gouv.fr/fr/datasets/…',
   },
 ];
 const PAGE_SIZE = 25;
 
-function formatDateTime(value) {
-  return value ? new Date(value).toLocaleString('fr-FR') : '—';
+function formatDateTime(value, locale) {
+  return value ? new Date(value).toLocaleString(locale) : '—';
 }
 
 // Documents indexés (ADR 0011) : recherche plein texte d'abord, puis sources
 // (dossiers, sites), réglages de planification et journal.
 export function IndexingPanel({ client }) {
+  const { t, locale } = useTranslation();
   const [status, setStatus] = useState(null);
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState(null);
@@ -95,8 +119,46 @@ export function IndexingPanel({ client }) {
     }
   };
 
-  const runSummary = (result) =>
-    `Indexation ${result.status === 'DONE' ? 'terminée' : 'interrompue'} : ${result.indexed} nouveau(x), ${result.unchanged} inchangé(s), ${result.skipped} ignoré(s), ${result.errors} erreur(s).${result.message ? ` ${result.message}` : ''}`;
+  // Résumé d'une exécution : chaque compteur a son propre pluriel, la phrase
+  // d'assemblage est traduite à part.
+  const runSummary = (result) => {
+    const status =
+      result.status === 'DONE'
+        ? t('indexing.run.done', 'Terminée')
+        : t('indexing.run.interrupted', 'Interrompue');
+    const counts = t(
+      'indexing.runSummary.counts',
+      {
+        indexed: t(
+          'indexing.runSummary.indexed',
+          { count: result.indexed },
+          `${result.indexed} nouveau(x)`,
+        ),
+        unchanged: t(
+          'indexing.runSummary.unchanged',
+          { count: result.unchanged },
+          `${result.unchanged} inchangé(s)`,
+        ),
+        skipped: t(
+          'indexing.runSummary.skipped',
+          { count: result.skipped },
+          `${result.skipped} ignoré(s)`,
+        ),
+        errors: t(
+          'indexing.runSummary.errors',
+          { count: result.errors },
+          `${result.errors} erreur(s)`,
+        ),
+      },
+      '{indexed}, {unchanged}, {skipped}, {errors}',
+    );
+    const summary = t(
+      'indexing.runSummary',
+      { status, counts },
+      `Indexation ${status} : ${counts}.`,
+    );
+    return result.message ? `${summary} ${result.message}` : summary;
+  };
 
   const launch = async (action) => {
     setBusy(true);
@@ -141,7 +203,7 @@ export function IndexingPanel({ client }) {
       </p>
     ) : (
       <p role="status" className="loading-line">
-        Chargement…
+        {t('indexing.loading', 'Chargement…')}
       </p>
     );
   }
@@ -151,7 +213,7 @@ export function IndexingPanel({ client }) {
 
   return (
     <div className="search-panel indexing-panel">
-      <h3>Documents indexés</h3>
+      <h3>{t('indexing.title', 'Documents indexés')}</h3>
       <form
         className="search-panel__form"
         onSubmit={async (event) => {
@@ -161,17 +223,20 @@ export function IndexingPanel({ client }) {
         }}
       >
         <label className="search-box">
-          <span>Rechercher dans les documents</span>
+          <span>{t('indexing.search.label', 'Rechercher dans les documents')}</span>
           <input
             value={query}
-            placeholder='acte, nom, lieu… « "jean baptiste" -paris »'
+            placeholder={t(
+              'indexing.search.placeholder',
+              'acte, nom, lieu… « "jean baptiste" -paris »',
+            )}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
         <label>
-          <span>Source</span>
+          <span>{t('indexing.search.source', 'Source')}</span>
           <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
-            <option value="">Toutes</option>
+            <option value="">{t('indexing.search.allSources', 'Toutes')}</option>
             {sources.map((source) => (
               <option key={source.id} value={source.id}>
                 {source.label}
@@ -180,12 +245,14 @@ export function IndexingPanel({ client }) {
           </select>
         </label>
         <Button type="submit" size="sm">
-          Chercher
+          {t('indexing.search.submit', 'Chercher')}
         </Button>
       </form>
       {hits ? (
         hits.length === 0 ? (
-          <p className="notice">Aucun document ne contient « {query} ».</p>
+          <p className="notice">
+            {t('indexing.search.noResult', { query }, `Aucun document ne contient « ${query} ».`)}
+          </p>
         ) : (
           <ul className="search-results indexing-hits">
             {hits.map((hit) => (
@@ -199,17 +266,26 @@ export function IndexingPanel({ client }) {
                     <span className="indexing-hits__snippet">{hit.snippet}</span>
                   ) : null}
                 </div>
-                <Badge tone="neutral">{STATUS_LABELS[hit.text_status] ?? hit.text_status}</Badge>
+                <Badge tone="neutral">
+                  {t(
+                    STATUS_KEYS[hit.text_status] ?? 'indexing.status.unavailable',
+                    hit.text_status,
+                  )}
+                </Badge>
                 <Button size="sm" variant="secondary" onClick={() => showPreview(hit)}>
-                  {preview?.id === hit.id ? 'Masquer' : 'Aperçu'}
+                  {preview?.id === hit.id
+                    ? t('indexing.hit.hide', 'Masquer')
+                    : t('indexing.hit.preview', 'Aperçu')}
                 </Button>
                 {hit.media_id || /^https?:\/\//.test(hit.location) ? (
                   <Button size="sm" variant="secondary" onClick={() => openHit(hit)}>
-                    Ouvrir
+                    {t('indexing.hit.open', 'Ouvrir')}
                   </Button>
                 ) : null}
                 {preview?.id === hit.id ? (
-                  <pre className="indexing-preview">{preview.text || 'Aucun texte extrait.'}</pre>
+                  <pre className="indexing-preview">
+                    {preview.text || t('indexing.hit.noText', 'Aucun texte extrait.')}
+                  </pre>
                 ) : null}
               </li>
             ))}
@@ -219,7 +295,15 @@ export function IndexingPanel({ client }) {
       {page && page.total > PAGE_SIZE ? (
         <div className="gedcom-panel__actions">
           <span className="data-id">
-            {page.offset + 1}–{Math.min(page.offset + PAGE_SIZE, page.total)} sur {page.total}
+            {t(
+              'indexing.pagination.summary',
+              {
+                start: page.offset + 1,
+                end: Math.min(page.offset + PAGE_SIZE, page.total),
+                total: page.total,
+              },
+              `${page.offset + 1}–${Math.min(page.offset + PAGE_SIZE, page.total)} sur ${page.total}`,
+            )}
           </span>
           <Button
             size="sm"
@@ -227,7 +311,7 @@ export function IndexingPanel({ client }) {
             disabled={page.offset === 0}
             onClick={() => searchAt(Math.max(0, page.offset - PAGE_SIZE))}
           >
-            Précédents
+            {t('indexing.pagination.previous', 'Précédents')}
           </Button>
           <Button
             size="sm"
@@ -235,7 +319,7 @@ export function IndexingPanel({ client }) {
             disabled={page.offset + PAGE_SIZE >= page.total}
             onClick={() => searchAt(page.offset + PAGE_SIZE)}
           >
-            Suivants
+            {t('indexing.pagination.next', 'Suivants')}
           </Button>
         </div>
       ) : null}
@@ -252,10 +336,15 @@ export function IndexingPanel({ client }) {
       ) : null}
 
       <section className="research-section" aria-labelledby="indexing-sources">
-        <h4 id="indexing-sources">Sources ({sources.length})</h4>
+        <h4 id="indexing-sources">
+          {t('indexing.sources.title', { count: sources.length }, `Sources (${sources.length})`)}
+        </h4>
         {sources.length === 0 ? (
           <p className="settings-hint">
-            Ajoutez un dossier (scans, PDF, notes) ou un site d’archives à indexer.
+            {t(
+              'indexing.sources.empty',
+              'Ajoutez un dossier (scans, PDF, notes) ou un site d’archives à indexer.',
+            )}
           </p>
         ) : (
           <ul className="task-list">
@@ -270,12 +359,20 @@ export function IndexingPanel({ client }) {
                     }
                   />
                   <span>
-                    {source.kind === 'FOLDER' ? 'Dossier' : MODE_LABELS[source.mode]} ·{' '}
-                    {source.label}
+                    {source.kind === 'FOLDER'
+                      ? t('indexing.source.folder', 'Dossier')
+                      : t(MODE_KEYS[source.mode] ?? 'indexing.mode.crawl', source.mode)}{' '}
+                    · {source.label}
                     <small className="settings-hint">
                       {' '}
                       {source.location}
-                      {source.resource_filter ? ` · filtre « ${source.resource_filter} »` : ''}
+                      {source.resource_filter
+                        ? ` · ${t(
+                            'indexing.source.resourceFilter',
+                            { filter: source.resource_filter },
+                            `filtre « ${source.resource_filter} »`,
+                          )}`
+                        : ''}
                     </small>
                     {source.last_message ? (
                       <small className="settings-hint"> {source.last_message}</small>
@@ -284,42 +381,71 @@ export function IndexingPanel({ client }) {
                 </label>
                 {source.last_status ? (
                   <Badge tone={OUTCOME_TONES[source.last_status]}>
-                    {OUTCOME_LABELS[source.last_status]}
+                    {t(
+                      OUTCOME_KEYS[source.last_status] ?? 'indexing.outcome.partial',
+                      source.last_status,
+                    )}
                   </Badge>
                 ) : null}
-                <span className="data-id">{source.document_count} document(s)</span>
+                <span className="data-id">
+                  {t(
+                    'indexing.source.documentCount',
+                    { count: source.document_count },
+                    `${source.document_count} document(s)`,
+                  )}
+                </span>
                 <button
                   type="button"
                   className="link-button link-button--small"
                   disabled={busy || status.running}
-                  aria-label={`Indexer maintenant ${source.label}`}
+                  aria-label={t(
+                    'indexing.source.indexNowLabel',
+                    { label: source.label },
+                    `Indexer maintenant ${source.label}`,
+                  )}
                   onClick={() => launch(() => client.indexing.runSource(source.id))}
                 >
-                  Indexer
+                  {t('indexing.source.index', 'Indexer')}
                 </button>
                 <button
                   type="button"
                   className="link-button link-button--small"
                   disabled={busy || status.running}
-                  aria-label={`Vider l’index de ${source.label}`}
+                  aria-label={t(
+                    'indexing.source.clearLabel',
+                    { label: source.label },
+                    `Vider l’index de ${source.label}`,
+                  )}
                   onClick={() =>
                     run(
                       () => client.indexing.clearSource(source.id),
-                      (result) => `${result.removed} document(s) retiré(s) de l’index.`,
+                      (result) =>
+                        t(
+                          'indexing.source.cleared',
+                          { count: result.removed },
+                          `${result.removed} document(s) retiré(s) de l’index.`,
+                        ),
                     )
                   }
                 >
-                  Vider
+                  {t('indexing.source.clear', 'Vider')}
                 </button>
                 <button
                   type="button"
                   className="link-button link-button--small"
-                  aria-label={`Retirer la source ${source.label}`}
+                  aria-label={t(
+                    'indexing.source.removeLabel',
+                    { label: source.label },
+                    `Retirer la source ${source.label}`,
+                  )}
                   onClick={() =>
-                    run(() => client.indexing.removeSource(source.id), 'Source retirée.')
+                    run(
+                      () => client.indexing.removeSource(source.id),
+                      t('indexing.source.removed', 'Source retirée.'),
+                    )
                   }
                 >
-                  Retirer
+                  {t('indexing.source.remove', 'Retirer')}
                 </button>
               </li>
             ))}
@@ -333,7 +459,7 @@ export function IndexingPanel({ client }) {
             if (
               await run(
                 () => client.indexing.addSource({ kind: 'FOLDER', location: folder.trim() }),
-                'Dossier ajouté.',
+                t('indexing.source.folderAdded', 'Dossier ajouté.'),
               )
             ) {
               setFolder('');
@@ -341,7 +467,7 @@ export function IndexingPanel({ client }) {
           }}
         >
           <label>
-            <span>Dossier (chemin complet)</span>
+            <span>{t('indexing.source.folderPath', 'Dossier (chemin complet)')}</span>
             <input
               value={folder}
               placeholder="/Users/moi/Généalogie/scans"
@@ -349,7 +475,7 @@ export function IndexingPanel({ client }) {
             />
           </label>
           <Button type="submit" size="sm" variant="secondary">
-            Ajouter le dossier
+            {t('indexing.source.addFolder', 'Ajouter le dossier')}
           </Button>
         </form>
         <form
@@ -367,7 +493,7 @@ export function IndexingPanel({ client }) {
                     ...(mode === 'CRAWL' ? { maxDepth: depth } : {}),
                     ...(mode === 'DATAGOUV' ? { resourceFilter } : {}),
                   }),
-                'Source ajoutée.',
+                t('indexing.source.added', 'Source ajoutée.'),
               )
             ) {
               setSite('');
@@ -376,18 +502,20 @@ export function IndexingPanel({ client }) {
           }}
         >
           <label>
-            <span>Type de source en ligne</span>
+            <span>{t('indexing.source.onlineType', 'Type de source en ligne')}</span>
             <select value={mode} onChange={(event) => setMode(event.target.value)}>
               {NETWORK_MODES.map((item) => (
                 <option key={item.mode} value={item.mode}>
-                  {item.label}
+                  {t(item.labelKey, item.mode)}
                 </option>
               ))}
             </select>
           </label>
           <label>
             <span>
-              {mode === 'DATAGOUV' ? 'Jeu de données (adresse ou identifiant)' : 'Adresse'}
+              {mode === 'DATAGOUV'
+                ? t('indexing.source.dataset', 'Jeu de données (adresse ou identifiant)')
+                : t('indexing.source.address', 'Adresse')}
             </span>
             <input
               value={site}
@@ -397,7 +525,7 @@ export function IndexingPanel({ client }) {
           </label>
           {mode === 'DATAGOUV' ? (
             <label>
-              <span>Ressources dont le nom contient</span>
+              <span>{t('indexing.source.resourceName', 'Ressources dont le nom contient')}</span>
               <input
                 value={resourceFilter}
                 placeholder="deces-1985"
@@ -407,23 +535,27 @@ export function IndexingPanel({ client }) {
           ) : null}
           {mode === 'CRAWL' ? (
             <label>
-              <span>Profondeur des liens</span>
+              <span>{t('indexing.source.linkDepth', 'Profondeur des liens')}</span>
               <select value={depth} onChange={(event) => setDepth(Number(event.target.value))}>
                 {[0, 1, 2, 3, 4].map((value) => (
                   <option key={value} value={value}>
-                    {value === 0 ? 'Page de départ seule' : `${value} niveau(x)`}
+                    {value === 0
+                      ? t('indexing.source.startPageOnly', 'Page de départ seule')
+                      : t('indexing.source.levels', { count: value }, `${value} niveau(x)`)}
                   </option>
                 ))}
               </select>
             </label>
           ) : null}
           <Button type="submit" size="sm" variant="secondary">
-            Ajouter la source
+            {t('indexing.source.add', 'Ajouter la source')}
           </Button>
         </form>
         {presets.length ? (
           <div className="indexing-presets">
-            <span className="settings-hint">Données ouvertes prêtes à l’emploi :</span>
+            <span className="settings-hint">
+              {t('indexing.presets.hint', 'Données ouvertes prêtes à l’emploi :')}
+            </span>
             {presets.map((preset) => (
               <Button
                 key={preset.id}
@@ -445,7 +577,7 @@ export function IndexingPanel({ client }) {
       </section>
 
       <section className="research-section" aria-labelledby="indexing-settings">
-        <h4 id="indexing-settings">Réglages</h4>
+        <h4 id="indexing-settings">{t('indexing.settings.title', 'Réglages')}</h4>
         <label className="settings-toggle">
           <input
             type="checkbox"
@@ -455,10 +587,15 @@ export function IndexingPanel({ client }) {
             }
           />
           <span>
-            Autoriser l’accès internet pour indexer les sites listés
+            {t(
+              'indexing.settings.networkAllowed',
+              'Autoriser l’accès internet pour indexer les sites listés',
+            )}
             <small className="settings-hint">
-              Désactivé par défaut. Seuls les sites ci-dessus sont visités (robots.txt respecté) ;
-              aucune donnée de votre arbre n’est envoyée.
+              {t(
+                'indexing.settings.networkAllowedHint',
+                'Désactivé par défaut. Seuls les sites ci-dessus sont visités (robots.txt respecté) ; aucune donnée de votre arbre n’est envoyée.',
+              )}
             </small>
           </span>
         </label>
@@ -471,10 +608,12 @@ export function IndexingPanel({ client }) {
                 run(() => client.indexing.updateSettings({ scheduleEnabled: event.target.checked }))
               }
             />
-            <span>Indexer automatiquement chaque nuit</span>
+            <span>
+              {t('indexing.settings.scheduleEnabled', 'Indexer automatiquement chaque nuit')}
+            </span>
           </label>
           <label>
-            <span>Heure</span>
+            <span>{t('indexing.settings.hour', 'Heure')}</span>
             <select
               value={settings.scheduleHour}
               onChange={(event) =>
@@ -492,26 +631,37 @@ export function IndexingPanel({ client }) {
           </label>
         </div>
         <p className="settings-hint">
-          GeneoApp doit être ouverte (ou réduite) à cette heure. Application fermée : planifiez la
-          commande <code>geneoapp index run</code> (cron, Planificateur de tâches).
+          {t(
+            'indexing.settings.scheduleHint',
+            'GeneoApp doit être ouverte (ou réduite) à cette heure. Application fermée : planifiez la commande',
+          )}{' '}
+          <code>geneoapp index run</code>{' '}
+          {t('indexing.settings.scheduleHintEnd', '(cron, Planificateur de tâches).')}
         </p>
         <div className="gedcom-panel__actions">
           <Button
             disabled={busy || status.running}
             onClick={() => launch(() => client.indexing.run())}
           >
-            {busy || status.running ? 'Indexation en cours…' : 'Indexer maintenant'}
+            {busy || status.running
+              ? t('indexing.settings.running', 'Indexation en cours…')
+              : t('indexing.settings.indexNow', 'Indexer maintenant')}
           </Button>
           {status.running ? (
             <Button variant="secondary" onClick={() => run(() => client.indexing.cancel())}>
-              Annuler
+              {t('indexing.settings.cancel', 'Annuler')}
             </Button>
           ) : null}
         </div>
         {progress ? (
           <div className="indexing-progress" role="status" aria-live="polite">
             <span>
-              Source {progress.sourceIndex}/{progress.sourceCount} · {progress.sourceLabel}
+              {t(
+                'indexing.progress.source',
+                { index: progress.sourceIndex, count: progress.sourceCount },
+                `Source ${progress.sourceIndex}/${progress.sourceCount}`,
+              )}{' '}
+              · {progress.sourceLabel}
               {progress.total ? ` · ${progress.done}/${progress.total}` : ` · ${progress.done}`}
             </span>
             {progress.total ? <progress value={progress.done} max={progress.total} /> : null}
@@ -520,16 +670,37 @@ export function IndexingPanel({ client }) {
         ) : null}
         {stats ? (
           <p className="settings-hint">
-            {stats.documents} document(s) indexé(s) · {stats.byStatus.OCR ?? 0} lu(s) par OCR ·{' '}
-            {stats.byStatus.UNAVAILABLE ?? 0} sans texte
+            {t(
+              'indexing.stats.summary',
+              {
+                documents: t(
+                  'indexing.stats.documents',
+                  { count: stats.documents },
+                  `${stats.documents} document(s) indexé(s)`,
+                ),
+                ocr: t(
+                  'indexing.stats.ocr',
+                  { count: stats.byStatus.OCR ?? 0 },
+                  `${stats.byStatus.OCR ?? 0} lu(s) par OCR`,
+                ),
+                unavailable: t(
+                  'indexing.stats.unavailable',
+                  { count: stats.byStatus.UNAVAILABLE ?? 0 },
+                  `${stats.byStatus.UNAVAILABLE ?? 0} sans texte`,
+                ),
+              },
+              '{documents} · {ocr} · {unavailable}',
+            )}
           </p>
         ) : null}
       </section>
 
       <section className="research-section" aria-labelledby="indexing-runs">
-        <h4 id="indexing-runs">Dernières exécutions</h4>
+        <h4 id="indexing-runs">{t('indexing.runs.title', 'Dernières exécutions')}</h4>
         {runs.length === 0 ? (
-          <p className="settings-hint">Aucune indexation pour l’instant.</p>
+          <p className="settings-hint">
+            {t('indexing.runs.empty', 'Aucune indexation pour l’instant.')}
+          </p>
         ) : (
           <ul className="search-results">
             {runs.map((item) => (
@@ -543,14 +714,35 @@ export function IndexingPanel({ client }) {
                         : 'neutral'
                   }
                 >
-                  {RUN_LABELS[item.status]}
+                  {t(RUN_KEYS[item.status] ?? 'indexing.run.failed', item.status)}
                 </Badge>
                 <span>
-                  {formatDateTime(item.started_at)} · {TRIGGER_LABELS[item.trigger]}
+                  {formatDateTime(item.started_at, locale)} ·{' '}
+                  {t(TRIGGER_KEYS[item.trigger] ?? 'indexing.trigger.manual', item.trigger)}
                 </span>
                 <span className="data-id">
                   {item.source_label ? `${item.source_label} · ` : ''}
-                  {item.indexed} indexé(s) · {item.unchanged} inchangé(s) · {item.errors} erreur(s)
+                  {t(
+                    'indexing.runs.counts',
+                    {
+                      indexed: t(
+                        'indexing.runs.indexed',
+                        { count: item.indexed },
+                        `${item.indexed} indexé(s)`,
+                      ),
+                      unchanged: t(
+                        'indexing.runs.unchanged',
+                        { count: item.unchanged },
+                        `${item.unchanged} inchangé(s)`,
+                      ),
+                      errors: t(
+                        'indexing.runs.errors',
+                        { count: item.errors },
+                        `${item.errors} erreur(s)`,
+                      ),
+                    },
+                    '{indexed} · {unchanged} · {errors}',
+                  )}
                 </span>
                 {item.message ? <span className="settings-hint">{item.message}</span> : null}
               </li>

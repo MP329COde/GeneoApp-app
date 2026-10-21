@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../design-system/index.js';
+import { Button, useTranslation } from '../design-system/index.js';
 import { Icon } from './shared.jsx';
 import { useNotifications } from '../hooks/useNotifications.js';
 
@@ -11,6 +11,7 @@ const NOTIFICATION_TONES = {
 };
 
 export function NotificationCenter({ onOpenPerson }) {
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const { notifications, refresh, markRead, markAllRead } = useNotifications();
 
@@ -20,8 +21,16 @@ export function NotificationCenter({ onOpenPerson }) {
         type="button"
         className="icon-button notification-center__trigger"
         aria-expanded={open}
-        aria-label={`Notifications${notifications.unread ? ` (${notifications.unread} non lues)` : ''}`}
-        title="Notifications"
+        aria-label={
+          notifications.unread
+            ? t(
+                'notifications.unread',
+                { count: notifications.unread },
+                `Notifications (${notifications.unread} non lues)`,
+              )
+            : t('notifications.open', 'Ouvrir les notifications')
+        }
+        title={t('notifications.title', 'Notifications')}
         onClick={() => {
           setOpen((value) => !value);
           refresh();
@@ -33,9 +42,12 @@ export function NotificationCenter({ onOpenPerson }) {
         ) : null}
       </button>
       {open ? (
-        <section className="notification-center__panel" aria-label="Notifications">
+        <section
+          className="notification-center__panel"
+          aria-label={t('notifications.title', 'Notifications')}
+        >
           <header className="notification-center__header">
-            <h2>Notifications</h2>
+            <h2>{t('notifications.title', 'Notifications')}</h2>
             <Button
               type="button"
               size="sm"
@@ -43,11 +55,13 @@ export function NotificationCenter({ onOpenPerson }) {
               disabled={!notifications.unread}
               onClick={markAllRead}
             >
-              Tout lire
+              {t('notifications.markAllRead', 'Tout marquer comme lu')}
             </Button>
           </header>
           {notifications.items.length === 0 ? (
-            <p className="notification-center__empty">Aucune notification.</p>
+            <p className="notification-center__empty">
+              {t('notifications.empty', 'Aucune notification.')}
+            </p>
           ) : (
             <ul className="notification-center__list">
               {notifications.items.map((notification) => (
@@ -59,7 +73,7 @@ export function NotificationCenter({ onOpenPerson }) {
                     <strong>{notification.title}</strong>
                     <p>{notification.message}</p>
                     <time dateTime={notification.created_at}>
-                      {new Date(notification.created_at).toLocaleString('fr-FR')}
+                      {new Date(notification.created_at).toLocaleString(locale)}
                     </time>
                     {notification.person_id && onOpenPerson ? (
                       <button
@@ -71,7 +85,7 @@ export function NotificationCenter({ onOpenPerson }) {
                           if (!notification.read_at) await markRead(notification.id);
                         }}
                       >
-                        Voir dans l’arbre
+                        {t('notifications.openInTree', 'Voir dans l’arbre')}
                       </button>
                     ) : null}
                   </div>
@@ -81,7 +95,7 @@ export function NotificationCenter({ onOpenPerson }) {
                       className="notification-center__read"
                       onClick={() => markRead(notification.id)}
                     >
-                      Lire
+                      {t('notifications.read', 'Lire')}
                     </button>
                   ) : null}
                 </li>

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '../design-system/index.js';
+import { Button, useTranslation } from '../design-system/index.js';
 
 // Outils « documents » simples d'usage : portrait d'une personne, déchiffrage
 // des écritures anciennes, et « à qui appartient ce fichier ? ».
 
-export function readFileAsBase64(file) {
+// Le message d'erreur est fourni par l'appelant : la lecture du fichier peut
+// échouer et son texte est affiché à l'écran, donc traduit.
+export function readFileAsBase64(file, errorMessage = 'Lecture du fichier impossible') {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.onerror = () => reject(reader.error ?? new Error('Lecture du fichier impossible'));
+    reader.onerror = () => reject(reader.error ?? new Error(errorMessage));
     reader.readAsDataURL(file);
   });
 }
@@ -72,6 +74,7 @@ export function PortraitAvatar({ client, person, size = 40 }) {
 
 /** Choisir, changer ou retirer la photo d'une personne dans l'arbre. */
 export function PortraitPicker({ client, person, onChange }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -80,7 +83,7 @@ export function PortraitPicker({ client, person, onChange }) {
     event.target.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError('Choisissez une image (JPEG, PNG…).');
+      setError(t('documentTools.error.notAnImage', 'Choisissez une image (JPEG, PNG…).'));
       return;
     }
     setBusy(true);
@@ -88,7 +91,10 @@ export function PortraitPicker({ client, person, onChange }) {
     try {
       const updated = await client.media.uploadPortrait(person.id, {
         filename: file.name,
-        contentBase64: await readFileAsBase64(file),
+        contentBase64: await readFileAsBase64(
+          file,
+          t('documentTools.error.readFailed', 'Lecture du fichier impossible'),
+        ),
       });
       onChange?.(updated);
     } catch (uploadError) {
@@ -115,21 +121,27 @@ export function PortraitPicker({ client, person, onChange }) {
       <PortraitAvatar client={client} person={person} size={72} />
       <div className="portrait-picker__actions">
         <label className="gds-button gds-button--secondary gds-button--sm portrait-picker__file">
-          {person.portrait_media_id ? 'Changer la photo' : 'Ajouter une photo'}
+          {person.portrait_media_id
+            ? t('documentTools.portrait.change', 'Changer la photo')
+            : t('documentTools.portrait.add', 'Ajouter une photo')}
           <input
             type="file"
             accept="image/*"
             onChange={choose}
             disabled={busy}
-            aria-label={`Photo de ${personName(person)}`}
+            aria-label={t(
+              'documentTools.portrait.ariaLabel',
+              { name: personName(person) },
+              `Photo de ${personName(person)}`,
+            )}
           />
         </label>
         {person.portrait_media_id ? (
           <Button type="button" size="sm" variant="ghost" onClick={clear} disabled={busy}>
-            Retirer
+            {t('documentTools.remove', 'Retirer')}
           </Button>
         ) : null}
-        {busy ? <span role="status">Envoi…</span> : null}
+        {busy ? <span role="status">{t('documentTools.uploading', 'Envoi…')}</span> : null}
       </div>
       {error ? (
         <p role="alert" className="notice notice--error">
@@ -167,7 +179,13 @@ function renderFiltered(image, canvas, filters) {
   context.putImageData(pixels, 0, 0);
 }
 
-function Suggestions({ items, onLink, linkLabel = 'Rattacher' }) {
+function Suggestions({
+  items,
+  onLink,
+  linkLabel = 'documentTools.link',
+  linkFallback = 'Rattacher',
+}) {
+  const { t } = useTranslation();
   if (!items?.length) return null;
   return (
     <ul className="doc-suggestions">
@@ -177,7 +195,7 @@ function Suggestions({ items, onLink, linkLabel = 'Rattacher' }) {
           <span className="data-id">{person.reason}</span>
           {onLink ? (
             <Button type="button" size="sm" onClick={() => onLink(person)}>
-              {linkLabel}
+              {t(linkLabel, linkFallback)}
             </Button>
           ) : null}
         </li>
@@ -187,6 +205,7 @@ function Suggestions({ items, onLink, linkLabel = 'Rattacher' }) {
 }
 
 function Clues({ clues }) {
+  const { t } = useTranslation();
   if (!clues) return null;
   const { years = [], dates = [], names = [] } = clues;
   if (!years.length && !dates.length && !names.length) return null;
@@ -194,19 +213,19 @@ function Clues({ clues }) {
     <dl className="doc-clues">
       {years.length ? (
         <>
-          <dt>Années</dt>
+          <dt>{t('documentTools.clues.years', 'Années')}</dt>
           <dd>{years.join(', ')}</dd>
         </>
       ) : null}
       {dates.length ? (
         <>
-          <dt>Dates</dt>
+          <dt>{t('documentTools.clues.dates', 'Dates')}</dt>
           <dd>{dates.map((date) => date.text).join(' · ')}</dd>
         </>
       ) : null}
       {names.length ? (
         <>
-          <dt>Noms repérés</dt>
+          <dt>{t('documentTools.clues.names', 'Noms repérés')}</dt>
           <dd>{names.slice(0, 15).join(', ')}</dd>
         </>
       ) : null}
@@ -220,6 +239,7 @@ function Clues({ clues }) {
  * personnes de l'arbre citées — puis on rattache le document en un clic.
  */
 export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
+  const { t } = useTranslation();
   const [imageUrl, setImageUrl] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [result, setResult] = useState(null);
@@ -273,7 +293,12 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
   const decode = async () => {
     setBusy(true);
     setError(null);
-    setStatus('Lecture en cours… (quelques secondes à une minute)');
+    setStatus(
+      t(
+        'documentTools.decoder.status.running',
+        'Lecture en cours… (quelques secondes à une minute)',
+      ),
+    );
     try {
       const imageBase64 = imageUrl
         ? canvasRef.current?.toDataURL('image/png').split(',')[1]
@@ -283,8 +308,14 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
       setDraft({ raw: decoded.raw, modern: decoded.ai?.text || decoded.modern });
       setStatus(
         decoded.raw
-          ? 'Lecture terminée. Corrigez le texte si besoin puis enregistrez.'
-          : 'Aucun texte reconnu : augmentez le contraste ou essayez un seuil noir/blanc.',
+          ? t(
+              'documentTools.decoder.status.done',
+              'Lecture terminée. Corrigez le texte si besoin puis enregistrez.',
+            )
+          : t(
+              'documentTools.decoder.status.noText',
+              'Aucun texte reconnu : augmentez le contraste ou essayez un seuil noir/blanc.',
+            ),
       );
     } catch (decodeError) {
       setError(decodeError.message);
@@ -299,7 +330,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
     setError(null);
     try {
       await client.media.saveTranscription(mediaId, draft);
-      setStatus('Transcription enregistrée.');
+      setStatus(t('documentTools.decoder.status.saved', 'Transcription enregistrée.'));
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -311,7 +342,13 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
     setError(null);
     try {
       await client.media.link(mediaId, { entityType: 'PERSON', entityId: person.id });
-      setStatus(`Document rattaché à ${personName(person)}.`);
+      setStatus(
+        t(
+          'documentTools.decoder.status.linked',
+          { name: personName(person) },
+          `Document rattaché à ${personName(person)}.`,
+        ),
+      );
       onLinked?.(person);
     } catch (linkError) {
       setError(linkError.message);
@@ -319,19 +356,32 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
   };
 
   return (
-    <section className="doc-decoder" aria-label="Déchiffrer un document ancien">
+    <section
+      className="doc-decoder"
+      aria-label={t('documentTools.decoder.ariaLabel', 'Déchiffrer un document ancien')}
+    >
       <header className="doc-decoder__header">
-        <h3>Déchiffrer un document ancien</h3>
+        <h3>{t('documentTools.decoder.title', 'Déchiffrer un document ancien')}</h3>
         {onClose ? (
           <Button type="button" size="sm" variant="secondary" onClick={onClose}>
-            Fermer
+            {t('documentTools.close', 'Fermer')}
           </Button>
         ) : null}
       </header>
       <ol className="doc-decoder__steps">
-        <li>Ajustez l’image jusqu’à ce que l’écriture soit bien noire sur fond clair.</li>
-        <li>Cliquez sur « Lire le document ».</li>
-        <li>Vérifiez le texte, puis rattachez-le à la bonne personne.</li>
+        <li>
+          {t(
+            'documentTools.decoder.step1',
+            'Ajustez l’image jusqu’à ce que l’écriture soit bien noire sur fond clair.',
+          )}
+        </li>
+        <li>{t('documentTools.decoder.step2', 'Cliquez sur « Lire le document ».')}</li>
+        <li>
+          {t(
+            'documentTools.decoder.step3',
+            'Vérifiez le texte, puis rattachez-le à la bonne personne.',
+          )}
+        </li>
       </ol>
       {error ? (
         <p role="alert" className="notice notice--error">
@@ -342,11 +392,14 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
       {imageUrl ? (
         <div className="doc-decoder__image">
           <img ref={imageRef} src={imageUrl} alt="" onLoad={redraw} hidden />
-          <canvas ref={canvasRef} aria-label="Aperçu amélioré du document" />
+          <canvas
+            ref={canvasRef}
+            aria-label={t('documentTools.decoder.previewLabel', 'Aperçu amélioré du document')}
+          />
           <fieldset className="doc-decoder__filters">
-            <legend>Améliorer la lisibilité</legend>
+            <legend>{t('documentTools.decoder.legend', 'Améliorer la lisibilité')}</legend>
             <label>
-              Contraste
+              {t('documentTools.decoder.contrast', 'Contraste')}
               <input
                 type="range"
                 min="50"
@@ -356,7 +409,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
               />
             </label>
             <label>
-              Luminosité
+              {t('documentTools.decoder.brightness', 'Luminosité')}
               <input
                 type="range"
                 min="50"
@@ -366,7 +419,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
               />
             </label>
             <label>
-              Noir et blanc (seuil)
+              {t('documentTools.decoder.threshold', 'Noir et blanc (seuil)')}
               <input
                 type="range"
                 min="0"
@@ -376,7 +429,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
               />
             </label>
             <label>
-              Agrandir
+              {t('documentTools.decoder.zoom', 'Agrandir')}
               <select value={filters.scale} onChange={setFilter('scale')}>
                 <option value={1}>×1</option>
                 <option value={2}>×2</option>
@@ -385,7 +438,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
             </label>
             <label className="doc-decoder__check">
               <input type="checkbox" checked={filters.invert} onChange={setFilter('invert')} />
-              Inverser (encre claire sur fond sombre)
+              {t('documentTools.decoder.invert', 'Inverser (encre claire sur fond sombre)')}
             </label>
             <Button
               type="button"
@@ -393,13 +446,16 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
               variant="ghost"
               onClick={() => setFilters(DEFAULT_FILTERS)}
             >
-              Réglages par défaut
+              {t('documentTools.decoder.defaults', 'Réglages par défaut')}
             </Button>
           </fieldset>
         </div>
       ) : (
         <p className="notice">
-          Ce fichier n’est pas une image : le texte déjà extrait (PDF) sera modernisé.
+          {t(
+            'documentTools.decoder.notAnImage',
+            'Ce fichier n’est pas une image : le texte déjà extrait (PDF) sera modernisé.',
+          )}
         </p>
       )}
 
@@ -410,21 +466,23 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
             checked={useAi}
             onChange={(event) => setUseAi(event.target.checked)}
           />
-          Faire relire par l’IA locale (si activée)
+          {t('documentTools.decoder.useAi', 'Faire relire par l’IA locale (si activée)')}
         </label>
         <Button type="button" onClick={decode} disabled={busy}>
-          Lire le document
+          {t('documentTools.decoder.read', 'Lire le document')}
         </Button>
       </div>
       {status ? <p role="status">{status}</p> : null}
       {result?.ai?.error ? (
-        <p className="notice">IA locale indisponible : {result.ai.error}</p>
+        <p className="notice">
+          {t('documentTools.decoder.aiUnavailable', 'IA locale indisponible')} : {result.ai.error}
+        </p>
       ) : null}
 
       {result || draft.raw || draft.modern ? (
         <div className="doc-decoder__texts">
           <label>
-            Texte lu (orthographe d’origine)
+            {t('documentTools.decoder.rawText', 'Texte lu (orthographe d’origine)')}
             <textarea
               rows={8}
               value={draft.raw}
@@ -432,7 +490,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
             />
           </label>
           <label>
-            En français moderne
+            {t('documentTools.decoder.modernText', 'En français moderne')}
             <textarea
               rows={8}
               value={draft.modern}
@@ -440,7 +498,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
             />
           </label>
           <Button type="button" size="sm" variant="secondary" onClick={save} disabled={busy}>
-            Enregistrer la transcription
+            {t('documentTools.decoder.save', 'Enregistrer la transcription')}
           </Button>
         </div>
       ) : null}
@@ -448,7 +506,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
       <Clues clues={result?.clues} />
       {result?.suggestions?.length ? (
         <>
-          <h4>Personnes de l’arbre citées</h4>
+          <h4>{t('documentTools.decoder.citedPersons', 'Personnes de l’arbre citées')}</h4>
           <Suggestions items={result.suggestions} onLink={link} />
         </>
       ) : null}
@@ -461,6 +519,7 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
  * s'il est déjà connu et à qui il est relié, sinon qui il semble concerner.
  */
 export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
+  const { t } = useTranslation();
   const [result, setResult] = useState(null);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -477,7 +536,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
       setResult(
         await client.media.identify({
           filename: chosen.name,
-          contentBase64: await readFileAsBase64(chosen),
+          contentBase64: await readFileAsBase64(
+            chosen,
+            t('documentTools.error.readFailed', 'Lecture du fichier impossible'),
+          ),
         }),
       );
     } catch (identifyError) {
@@ -493,14 +555,20 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
     try {
       const media = await client.media.upload({
         filename: file.name,
-        contentBase64: await readFileAsBase64(file),
+        contentBase64: await readFileAsBase64(
+          file,
+          t('documentTools.error.readFailed', 'Lecture du fichier impossible'),
+        ),
         entityType: 'PERSON',
         entityId: person.id,
       });
       setResult(
         await client.media.identify({
           filename: file.name,
-          contentBase64: await readFileAsBase64(file),
+          contentBase64: await readFileAsBase64(
+            file,
+            t('documentTools.error.readFailed', 'Lecture du fichier impossible'),
+          ),
         }),
       );
       return media;
@@ -517,7 +585,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
     try {
       const media = await client.media.upload({
         filename: file.name,
-        contentBase64: await readFileAsBase64(file),
+        contentBase64: await readFileAsBase64(
+          file,
+          t('documentTools.error.readFailed', 'Lecture du fichier impossible'),
+        ),
       });
       onDecode?.(media.id);
     } catch (uploadError) {
@@ -528,11 +599,16 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
   };
 
   return (
-    <section className="who-owns" aria-label="À qui appartient ce fichier ?">
-      <h3>À qui appartient ce fichier ?</h3>
+    <section
+      className="who-owns"
+      aria-label={t('documentTools.whoOwns.ariaLabel', 'À qui appartient ce fichier ?')}
+    >
+      <h3>{t('documentTools.whoOwns.title', 'À qui appartient ce fichier ?')}</h3>
       <p className="notice">
-        Déposez une photo, un scan ou un document : l’application retrouve la ou les personnes
-        auxquelles il est relié, ou propose celles dont le nom apparaît dedans.
+        {t(
+          'documentTools.whoOwns.hint',
+          'Déposez une photo, un scan ou un document : l’application retrouve la ou les personnes auxquelles il est relié, ou propose celles dont le nom apparaît dedans.',
+        )}
       </p>
       <label
         className={`who-owns__drop${dragging ? ' is-dragging' : ''}`}
@@ -547,7 +623,11 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
           analyse(event.dataTransfer.files?.[0]);
         }}
       >
-        <span>{file ? file.name : 'Glissez un fichier ici ou cliquez pour choisir'}</span>
+        <span>
+          {file
+            ? file.name
+            : t('documentTools.whoOwns.drop', 'Glissez un fichier ici ou cliquez pour choisir')}
+        </span>
         <input
           type="file"
           onChange={(event) => {
@@ -557,7 +637,9 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
           disabled={busy}
         />
       </label>
-      {busy ? <p role="status">Analyse du fichier…</p> : null}
+      {busy ? (
+        <p role="status">{t('documentTools.whoOwns.analysing', 'Analyse du fichier…')}</p>
+      ) : null}
       {error ? (
         <p role="alert" className="notice notice--error">
           {error}
@@ -567,27 +649,44 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
       {result?.known ? (
         <div className="who-owns__result">
           <p>
-            <strong>Fichier déjà présent dans l’application.</strong>
+            <strong>
+              {t(
+                'documentTools.whoOwns.alreadyPresent',
+                'Fichier déjà présent dans l’application.',
+              )}
+            </strong>
           </p>
           {result.matches.map((match) => (
             <div key={match.media.id}>
-              <p className="data-id">Enregistré sous « {match.media.original_filename} »</p>
+              <p className="data-id">
+                {t(
+                  'documentTools.whoOwns.savedAs',
+                  { name: match.media.original_filename },
+                  `Enregistré sous « ${match.media.original_filename} »`,
+                )}
+              </p>
               {match.owners.length ? (
                 <Suggestions
                   items={match.owners}
                   onLink={onOpenPerson}
-                  linkLabel="Ouvrir la fiche"
+                  linkLabel="documentTools.openRecord"
+                  linkFallback="Ouvrir la fiche"
                 />
               ) : (
-                <p className="notice">Il n’est encore relié à personne.</p>
+                <p className="notice">
+                  {t('documentTools.whoOwns.notLinked', 'Il n’est encore relié à personne.')}
+                </p>
               )}
               {match.suggestions.length ? (
                 <>
-                  <h4>Il pourrait aussi concerner</h4>
+                  <h4>
+                    {t('documentTools.whoOwns.mayAlsoConcern', 'Il pourrait aussi concerner')}
+                  </h4>
                   <Suggestions
                     items={match.suggestions}
                     onLink={onOpenPerson}
-                    linkLabel="Ouvrir la fiche"
+                    linkLabel="documentTools.openRecord"
+                    linkFallback="Ouvrir la fiche"
                   />
                 </>
               ) : null}
@@ -598,7 +697,7 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
                   variant="secondary"
                   onClick={() => onDecode(match.media.id)}
                 >
-                  Déchiffrer ce document
+                  {t('documentTools.decodeThis', 'Déchiffrer ce document')}
                 </Button>
               ) : null}
             </div>
@@ -607,20 +706,24 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
       ) : result ? (
         <div className="who-owns__result">
           <p>
-            <strong>Nouveau fichier.</strong>{' '}
+            <strong>{t('documentTools.whoOwns.newFile', 'Nouveau fichier.')}</strong>{' '}
             {result.suggestions.length
-              ? 'Voici les personnes de l’arbre qui y sont probablement citées :'
-              : 'Aucun nom de l’arbre n’a été reconnu.'}
+              ? t(
+                  'documentTools.whoOwns.probablePersons',
+                  'Voici les personnes de l’arbre qui y sont probablement citées :',
+                )
+              : t('documentTools.whoOwns.noNameFound', 'Aucun nom de l’arbre n’a été reconnu.')}
           </p>
           <Suggestions
             items={result.suggestions}
             onLink={attach}
-            linkLabel="Relier à cette personne"
+            linkLabel="documentTools.linkToPerson"
+            linkFallback="Relier à cette personne"
           />
           <Clues clues={result.clues} />
           {onDecode ? (
             <Button type="button" size="sm" variant="secondary" onClick={decodeNew} disabled={busy}>
-              Ajouter et déchiffrer (écriture ancienne)
+              {t('documentTools.addAndDecode', 'Ajouter et déchiffrer (écriture ancienne)')}
             </Button>
           ) : null}
         </div>
