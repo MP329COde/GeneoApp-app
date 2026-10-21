@@ -1,5 +1,5 @@
 import { withTransaction, recordAudit } from './base-repository.js';
-import { indexDocument } from './search-index.js';
+import { indexDocument, removeFromIndex } from './search-index.js';
 
 const UPDATABLE_FIELDS = [
   'givenNames',
@@ -229,6 +229,10 @@ export class PersonRepository {
         performedBy,
       });
 
+      // L'index de recherche locale doit suivre la corbeille : une personne
+      // supprimée ne doit plus remonter dans les résultats de recherche.
+      removeFromIndex(this.database, { entityType: 'PERSON', entityId: id });
+
       return true;
     });
   }
@@ -252,6 +256,17 @@ export class PersonRepository {
         rowId: id,
         operation: 'RESTORE',
         performedBy,
+      });
+
+      // La personne having été retirée de l'index à sa suppression, elle doit
+      // y revenir : sinon elle resterait introuvable après restauration.
+      indexDocument(this.database, {
+        entityType: 'PERSON',
+        entityId: id,
+        title: `${existing.given_names} ${existing.family_name}`,
+        body: [existing.birth_family_name, existing.nickname, existing.notes]
+          .filter(Boolean)
+          .join(' — '),
       });
 
       return this.findById(id);

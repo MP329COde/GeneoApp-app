@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createTestDatabase } from './helpers.js';
 import { PersonRepository } from '../../src/db/src/repositories/person-repository.js';
 import { AuditRepository } from '../../src/db/src/repositories/audit-repository.js';
+import { SearchRepository } from '../../src/db/src/repositories/search-repository.js';
 
 test('create insère une personne et journalise l’audit', () => {
   const database = createTestDatabase();
@@ -147,4 +148,42 @@ test('une transaction annule toutes les écritures en cas d’erreur', () => {
 
   const countBefore = database.prepare('SELECT COUNT(*) AS n FROM audit_log').get().n;
   assert.equal(countBefore, 0);
+});
+
+test('une personne supprimée ne remonte plus dans la recherche locale', () => {
+  const database = createTestDatabase();
+  const repository = new PersonRepository(database);
+  const search = new SearchRepository(database);
+
+  const person = repository.create({ givenNames: 'Jean', familyName: 'Dupont', sex: 'M' });
+  assert.equal(search.search('Dupont').length, 1);
+
+  repository.softDelete(person.id);
+
+  // Une personne en corbeille ne doit plus être trouvable par la recherche.
+  assert.equal(search.search('Dupont').length, 0);
+  assert.equal(
+    database
+      .prepare(
+        "SELECT COUNT(*) AS n FROM search_index WHERE entity_type = 'PERSON' AND entity_id = ?",
+      )
+      .get(person.id).n,
+    0,
+  );
+});
+
+test('une personne restaurée redevient trouvable par la recherche locale', () => {
+  const database = createTestDatabase();
+  const repository = new PersonRepository(database);
+  const search = new SearchRepository(database);
+
+  const person = repository.create({ givenNames: 'Ada', familyName: 'Lovelace', sex: 'F' });
+  repository.softDelete(person.id);
+  assert.equal(search.search('Lovelace').length, 0);
+
+  repository.restore(person.id);
+
+  // La restauration remet la personne dans l'index : sans cela, elle
+  // resterait invisible à la recherche.
+  assert.equal(search.search('Lovelace').length, 1);
 });

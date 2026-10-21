@@ -174,6 +174,15 @@ export class MediaRepository {
         performedBy,
       });
 
+      // Le média having été retiré de l'index à sa suppression, il doit y
+      // revenir : sinon il resterait introuvable après restauration.
+      indexDocument(this.database, {
+        entityType: 'MEDIA',
+        entityId: id,
+        title: existing.original_filename,
+        body: existing.ocr_text ?? '',
+      });
+
       return this.findById(id);
     });
   }
