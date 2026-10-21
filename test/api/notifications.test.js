@@ -35,11 +35,17 @@ test('les écritures créent des notifications lisibles et marquables', async ()
 test('les alertes de vérification sont publiées une seule fois et liées à la personne', async () => {
   const server = await startTestServer();
   try {
+    // La notification pointe vers une personne : la clé étrangère exige
+    // qu'elle existe réellement.
+    const { body: person } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
     const alert = {
       type: 'warning',
       title: 'Doublon possible',
       message: 'Ada et Ada se ressemblent à 92 %.',
-      personId: 1,
+      personId: person.id,
       dedupeKey: 'duplicate:1:2',
     };
     const first = await requestJson(server.baseUrl, '/api/notifications', {
@@ -56,9 +62,11 @@ test('les alertes de vérification sont publiées une seule fois et liées à la
     assert.equal(again.body.created, 0);
 
     const listed = await requestJson(server.baseUrl, '/api/notifications');
-    assert.equal(listed.body.items.length, 1);
-    assert.equal(listed.body.items[0].type, 'warning');
-    assert.equal(listed.body.items[0].person_id, 1);
+    // La création de la personne a elle aussi produit une notification.
+    const alertNotification = listed.body.items.find((item) => item.type === 'warning');
+    assert.ok(alertNotification, 'l’alerte est présente');
+    assert.equal(alertNotification.title, 'Doublon possible');
+    assert.equal(alertNotification.person_id, person.id);
   } finally {
     await server.close();
   }
@@ -84,6 +92,59 @@ test('publish() plafonne à 20 notifications non lues créées par appel', async
 
     const listed = await requestJson(server.baseUrl, '/api/notifications?limit=100');
     assert.equal(listed.body.items.length, 20);
+  } finally {
+    await server.close();
+  }
+});
+
+// La clé étrangère de `notifications.person_id` ne doit pas empêcher de
+// vider la corbeille : une notification est un message destiné à
+// l'utilisateur, pas une donnée dérivée de la personne.
+test('la purge d’une personne détache ses notifications sans les supprimer', async () => {
+  const server = await startTestServer();
+  try {
+    const { body: person } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    await requestJson(server.baseUrl, '/api/notifications', {
+      method: 'POST',
+      body: {
+        items: [
+          {
+            type: 'warning',
+            title: 'Doublon possible',
+            message: 'À vérifier.',
+            personId: person.id,
+            dedupeKey: 'duplicate:test',
+          },
+        ],
+      },
+    });
+
+    // Suppression logique puis purge définitive.
+    await requestJson(server.baseUrl, `/api/persons/${person.id}`, { method: 'DELETE' });
+    await requestJson(server.baseUrl, '/api/accounts', {
+      method: 'POST',
+      body: { name: 'Alice' },
+    });
+    const token = (
+      await requestJson(server.baseUrl, '/api/accounts/login', {
+        method: 'POST',
+        body: { name: 'Alice' },
+      })
+    ).body.token;
+    const purge = await requestJson(server.baseUrl, `/api/trash/persons/${person.id}`, {
+      method: 'DELETE',
+      headers: { 'x-geneoapp-session': token },
+    });
+    assert.equal(purge.status, 204, 'la purge ne doit pas être bloquée par la notification');
+
+    // La notification existe toujours, simplement sans lien.
+    const listed = await requestJson(server.baseUrl, '/api/notifications');
+    const notification = listed.body.items.find((item) => item.title === 'Doublon possible');
+    assert.ok(notification, 'la notification est conservée');
+    assert.equal(notification.person_id, null, 'la notification est détachée de la personne');
   } finally {
     await server.close();
   }

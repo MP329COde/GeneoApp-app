@@ -6,13 +6,24 @@ export class NotificationRepository {
   }
 
   create({ type = 'success', title, message, personId = null, dedupeKey = null }) {
+    // Le lien vers une personne est facultatif : une alerte de vérification
+    // peut viser une personne supprimée entre-temps (ou une personne qui
+    // n'existe pas encore). La clé étrangère interdisrait alors l'écriture
+    // entière de la notification, et l'utilisateur perdrait l'alerte — on
+    // préfère une notification sans lien à pas de notification du tout.
+    const linkedPersonId =
+      personId !== null &&
+      this.database.prepare('SELECT 1 FROM persons WHERE id = ?').get(personId) !== undefined
+        ? personId
+        : null;
+
     // Une clé déjà connue (même alerte de vérification) n'est jamais republiée.
     const result = this.database
       .prepare(
         `INSERT OR IGNORE INTO notifications (type, title, message, person_id, dedupe_key)
          VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(type, title, message, personId, dedupeKey);
+      .run(type, title, message, linkedPersonId, dedupeKey);
     return result.changes ? this.get(result.lastInsertRowid) : null;
   }
 
