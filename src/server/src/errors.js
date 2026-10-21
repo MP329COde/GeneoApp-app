@@ -68,6 +68,18 @@ export function toHttpError(error) {
     return error;
   }
   if (typeof error.code === 'string' && error.code.startsWith('SQLITE_CONSTRAINT')) {
+    // Le message doit dire quoi faire, pas seulement nommer la technique :
+    // « Conflit de contrainte de données » ne permettait à l'utilisateur
+    // aucune action. La violation de clé étrangère signale une suppression
+    // refusée parce que des données y sont encore rattachées.
+    if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+      return new ConflictError(
+        'Suppression impossible : des données sont encore rattachées à cet élément',
+      );
+    }
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return new ConflictError('Cet élément existe déjà : une valeur identique est déjà utilisée');
+    }
     return new ConflictError('Conflit de contrainte de données');
   }
   return error;
