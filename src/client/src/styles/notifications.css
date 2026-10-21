@@ -13,8 +13,10 @@
   height: 17px;
   padding: 0 4px;
   border-radius: var(--radius-full);
-  background: #a3231b;
-  color: #ffffff;
+  /* Le badge suit le thème : le rouge d'alerte passe au rouge clair en mode
+     sombre, où un rouge foncé tomberait sous le seuil de contraste AA. */
+  background: var(--danger);
+  color: var(--on-danger);
   font-size: 11px;
   font-weight: 600;
   line-height: 17px;
