@@ -12,6 +12,7 @@ export { SourceRepository } from './repositories/source-repository.js';
 export { PhotoRepository } from './repositories/photo-repository.js';
 export { MediaRepository } from './repositories/media-repository.js';
 export { SearchRepository } from './repositories/search-repository.js';
+export { reindexAll } from './repositories/search-reindex.js';
 export { AuditRepository } from './repositories/audit-repository.js';
 export { NotificationRepository } from './repositories/notification-repository.js';
 export { AccountRepository } from './repositories/account-repository.js';

@@ -445,3 +445,40 @@ test('aller-retour GEDCOM fidèle : filiations sans union, enfant unique par fam
     await target.close();
   }
 });
+
+// L'import écrit en SQL direct, sans passer par les dépôts métier : l'index
+// de recherche locale n'était donc pas alimenté, et les personnes importées
+// restaient introuvables par la recherche.
+test('GEDCOM import alimente la recherche locale', async () => {
+  const server = await startTestServer();
+  try {
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(imported.status, 201);
+
+    const persons = server.database.prepare('SELECT COUNT(*) AS count FROM persons').get().count;
+    const indexed = server.database
+      .prepare("SELECT COUNT(*) AS count FROM search_index WHERE entity_type = 'PERSON'")
+      .get().count;
+    assert.equal(indexed, persons, 'chaque personne importée doit être indexée');
+
+    // Une personne importée est retrouvée par la recherche locale. Le prénom
+    // est choisi car la fixture porte deux personnes de même nom de famille
+    // (Lovelace) : c'est l'indexation complète, et non une correspondance
+    // partielle, qui est vérifiée ici.
+    const givenName = server.database
+      .prepare('SELECT given_names FROM persons ORDER BY id LIMIT 1')
+      .get().given_names;
+    const found = await requestJson(
+      server.baseUrl,
+      `/api/search?q=${encodeURIComponent(givenName)}&entityTypes=PERSON`,
+    );
+    assert.equal(found.status, 200);
+    assert.equal(found.body.length, 1);
+    assert.equal(found.body[0].entity_type, 'PERSON');
+  } finally {
+    await server.close();
+  }
+});

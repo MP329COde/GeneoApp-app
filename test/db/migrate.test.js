@@ -215,3 +215,49 @@ test('la migration 0020 élargit les cibles de note et convertit les notes de fa
     rmSync(earlyDir, { recursive: true, force: true });
   }
 });
+
+// L'index de recherche locale est alimenté à la main par les dépôts métier.
+// L'import GEDCOM écrit en SQL direct : les personnes importées n'étaient pas
+// indexées et restaient introuvables par la recherche. La migration 0021
+// reconstruit l'index à partir des tables sources.
+test('la migration 0021 réindexe les fiches absentes de l’index de recherche', () => {
+  // Un dossier de migrations antérieur à la réindexation (migration 0021) :
+  // base « ancienne », comme celle d'un utilisateur sur une version antérieure.
+  const earlyDir = mkdtempSync(path.join(tmpdir(), 'geneoapp-migrations-reindex-'));
+  for (const name of readdirSync(MIGRATIONS_DIR)) {
+    if (name.endsWith('.sql') && name < '0021') {
+      copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(earlyDir, name));
+    }
+  }
+
+  const database = openDatabase(':memory:');
+  try {
+    runMigrations(database, { migrationsDir: earlyDir });
+
+    // Fiche écrite en SQL direct, comme le fait l'import GEDCOM.
+    database
+      .prepare(
+        "INSERT INTO persons (given_names, family_name, sex) VALUES ('Ada', 'Lovelace', 'F')",
+      )
+      .run();
+    assert.equal(database.prepare('SELECT COUNT(*) AS n FROM search_index').get().n, 0);
+
+    const applied = runMigrations(database);
+    assert.ok(applied.includes('0021_reindex_search_index.sql'));
+
+    // La fiche est indexée et retrouvable.
+    const indexed = database
+      .prepare('SELECT entity_type, entity_id, title FROM search_index')
+      .get();
+    assert.equal(indexed.entity_type, 'PERSON');
+    assert.equal(indexed.title, 'Ada Lovelace');
+
+    const found = database
+      .prepare("SELECT entity_id FROM search_index WHERE search_index MATCH 'Lovelace'")
+      .all();
+    assert.equal(found.length, 1);
+  } finally {
+    database.close();
+    rmSync(earlyDir, { recursive: true, force: true });
+  }
+});

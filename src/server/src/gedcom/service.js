@@ -1,4 +1,5 @@
 import { recordAudit, withTransaction } from '../../../db/src/repositories/base-repository.js';
+import { reindexAll } from '../../../db/src/repositories/search-reindex.js';
 import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
 import { PayloadTooLargeError, ValidationError } from '../errors.js';
@@ -162,9 +163,16 @@ export class GedcomService {
     const report = { ...validation, mapping: buildMappingPreview(records), imported: false };
     if (!validation.valid) return report;
 
-    const result = withTransaction(this.database, () =>
-      applyMapping(this.database, records, performedBy),
-    );
+    const result = withTransaction(this.database, () => {
+      const applied = applyMapping(this.database, records, performedBy);
+      // L'import écrit en SQL direct, sans passer par les dépôts métier :
+      // l'index de recherche locale n'était donc pas alimenté, et les
+      // personnes importées restaient introuvables. On réindexe après
+      // l'import, dans la même transaction (une importation échouée ne
+      // laisse pas d'index à moitié construit).
+      reindexAll(this.database);
+      return applied;
+    });
     return { ...report, imported: true, ids: result.ids, personXrefs: result.personXrefs };
   }
 

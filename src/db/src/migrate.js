@@ -4,8 +4,33 @@ import path from 'node:path';
 import { openDatabase } from './database.js';
 import { installUndoTriggers } from './history/undo-history.js';
 import { backupBeforeMigration } from './backup/pre-migration-backup.js';
+import { reindexAll } from './repositories/search-reindex.js';
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
+
+/**
+ * Étapes JavaScript associées aux migrations.
+ *
+ * Certaines opérations ne peuvent pas s'écrire en SQL : reconstruire un
+ * index de recherche à partir des tables sources, par exemple. Une migration
+ * SQL peut alors déclarer une étape JavaScript sous le même nom
+ * (`0021_xxx.sql` → `0021_xxx.js`), exécutée dans la transaction de la
+ * migration, juste après le SQL.
+ *
+ * L'étape est synchrone : `better-sqlite3` l'exécute dans la transaction de la
+ * migration, et une étape qui échoue annule la migration entière. Elle ne
+ * peut donc pas être asynchrone.
+ */
+const MIGRATION_STEPS = {
+  // Les personnes importées depuis un GEDCOM n'étaient pas indexées (l'import
+  // écrit en SQL direct, sans passer par les dépôts métier) : elles
+  // restaient introuvables par la recherche locale. La réindexation
+  // reconstruit l'index à partir des tables sources, ce qui les fait
+  // réapparaître sans rien changer au contenu déjà indexé.
+  '0021_reindex_search_index': (database) => {
+    reindexAll(database);
+  },
+};
 
 function ensureMigrationsTable(database) {
   database.exec(`
@@ -43,8 +68,12 @@ export function runMigrations(database, { migrationsDir = MIGRATIONS_DIR, backup
 
   for (const name of pending) {
     const sql = readFileSync(path.join(migrationsDir, name), 'utf8');
+    // Étape JavaScript éventuelle, associée à la migration par son nom.
+    const stepName = name.replace(/\.sql$/, '');
+    const step = MIGRATION_STEPS[stepName] ?? null;
     const applyMigration = database.transaction(() => {
       database.exec(sql);
+      if (step) step(database);
       database.prepare('INSERT INTO schema_migrations (name) VALUES (?)').run(name);
     });
     // Une migration qui reconstruit une table (procédure SQLite : créer,
