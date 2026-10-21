@@ -123,11 +123,40 @@ export function recordSearchIndexChange(database, { operation, rowId, oldRow, ne
     );
 }
 
+/**
+ * Synchronise la table de correspondance de l'index FTS5 après un rejeu
+ * d'annulation.
+ *
+ * Le rejeu écrit directement dans `search_index` (FTS5 n'accepte pas de
+ * trigger), sans repasser par le dépôt qui tient la correspondance. Sans
+ * cette synchronisation, la table de correspondance se désynchronise de
+ * l'index et les écritures suivantes cibleraient une ligne périmée.
+ */
+function syncSearchIndexMap(database, operation, row, rowId) {
+  const hasMap = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'search_index_map'")
+    .get();
+  if (!hasMap) return;
+  if (operation === 'delete') {
+    database.prepare('DELETE FROM search_index_map WHERE rowid = ?').run(rowId);
+    return;
+  }
+  if (!row) return;
+  database
+    .prepare(
+      `INSERT INTO search_index_map (entity_type, entity_id, rowid)
+       VALUES (?, ?, ?)
+       ON CONFLICT (entity_type, entity_id) DO UPDATE SET rowid = excluded.rowid`,
+    )
+    .run(row.entity_type, row.entity_id, rowId);
+}
+
 function applyRow(database, table, operation, row, rowId) {
   const t = quote(table);
   const idColumn = table === SEARCH_INDEX ? 'rowid' : 'id';
   if (operation === 'delete') {
     database.prepare(`DELETE FROM ${t} WHERE ${idColumn} = ?`).run(rowId);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'delete', null, rowId);
     return;
   }
   const values = { ...row };
@@ -143,6 +172,7 @@ function applyRow(database, table, operation, row, rowId) {
         `INSERT INTO ${t} (${columns.map(quote).join(', ')}) VALUES (${placeholders.join(', ')})`,
       )
       .run(values);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'insert', values, rowId);
   } else {
     database
       .prepare(
@@ -152,6 +182,7 @@ function applyRow(database, table, operation, row, rowId) {
           .join(', ')} WHERE ${idColumn} = @${idColumn}`,
       )
       .run(values);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'update', values, rowId);
   }
 }
 

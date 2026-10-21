@@ -122,3 +122,60 @@ test('annule une suppression de lien de parenté en le restaurant tel quel', asy
     await server.close();
   }
 });
+
+// Le rejeu d'annulation écrit directement dans l'index FTS5 (qui n'accepte
+// pas de trigger), sans repasser par le dépôt qui tient la correspondance.
+// Sans synchronisation, la correspondance se désynchronise de l'index et les
+// écritures suivantes cibleraient une ligne périmée.
+test('annuler puis rétablir une personne garde l’index et sa correspondance alignés', async () => {
+  const server = await startTestServer();
+  try {
+    const { body: person } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+
+    const coherency = () => {
+      const orphans = server.database
+        .prepare(
+          `SELECT COUNT(*) AS n FROM search_index
+           WHERE rowid NOT IN (SELECT rowid FROM search_index_map)`,
+        )
+        .get().n;
+      const stale = server.database
+        .prepare(
+          `SELECT COUNT(*) AS n FROM search_index_map
+           WHERE rowid NOT IN (SELECT rowid FROM search_index)`,
+        )
+        .get().n;
+      return { orphans, stale };
+    };
+
+    assert.deepEqual(coherency(), { orphans: 0, stale: 0 });
+
+    await requestJson(server.baseUrl, '/api/history/undo', { method: 'POST' });
+    assert.deepEqual(
+      coherency(),
+      { orphans: 0, stale: 0 },
+      'la correspondance ne pointe pas vers une ligne disparue',
+    );
+
+    await requestJson(server.baseUrl, '/api/history/redo', { method: 'POST' });
+    assert.deepEqual(coherency(), { orphans: 0, stale: 0 });
+
+    // La fiche est de nouveau indexée, et l'écriture suivante reste juste.
+    const hits = await requestJson(server.baseUrl, '/api/search?q=Lovelace');
+    assert.ok(JSON.stringify(hits.body).includes('Lovelace'), 'la fiche reste trouvable');
+
+    await requestJson(server.baseUrl, `/api/persons/${person.id}`, {
+      method: 'PATCH',
+      body: { familyName: 'Byron' },
+    });
+    assert.deepEqual(coherency(), { orphans: 0, stale: 0 });
+
+    const after = await requestJson(server.baseUrl, '/api/search?q=Byron');
+    assert.ok(JSON.stringify(after.body).includes('Byron'), 'la modification est indexée');
+  } finally {
+    await server.close();
+  }
+});

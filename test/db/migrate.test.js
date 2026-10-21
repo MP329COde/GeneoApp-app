@@ -261,3 +261,67 @@ test('la migration 0021 réindexe les fiches absentes de l’index de recherche'
     rmSync(earlyDir, { recursive: true, force: true });
   }
 });
+
+// FTS5 n'accepte ni trigger ni index secondaire, et ses colonnes
+// `entity_type`/`entity_id` sont UNINDEXED : retrouver la ligne d'une entité
+// imposait un parcours complet de l'index, à chaque écriture de fiche. La
+// migration 0022 introduit la table de correspondance.
+test('la migration 0022 relie les entités indexées à leurs lignes d’index', () => {
+  const earlyDir = mkdtempSync(path.join(tmpdir(), 'geneoapp-migrations-map-'));
+  for (const name of readdirSync(MIGRATIONS_DIR)) {
+    if (name.endsWith('.sql') && name < '0022') {
+      copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(earlyDir, name));
+    }
+  }
+
+  const database = openDatabase(':memory:');
+  try {
+    runMigrations(database, { migrationsDir: earlyDir });
+
+    // Base déjà peuplée, comme celle d'un utilisateur sur une version
+    // antérieure : l'index contient des entrées, mais pas de correspondance.
+    database
+      .prepare(
+        "INSERT INTO persons (given_names, family_name, sex) VALUES ('Ada', 'Lovelace', 'F')",
+      )
+      .run();
+    database
+      .prepare(
+        "INSERT INTO search_index (entity_type, entity_id, title, body) VALUES ('PERSON', 1, 'Ada Lovelace', '')",
+      )
+      .run();
+    assert.equal(
+      database
+        .prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name = 'search_index_map'")
+        .get().n,
+      0,
+      'la correspondance n’existe pas encore',
+    );
+
+    const applied = runMigrations(database);
+    assert.ok(applied.includes('0022_search_index_map.sql'));
+
+    // La correspondance a été reconstruite depuis l'index existant.
+    const mapped = database
+      .prepare('SELECT entity_type, entity_id, rowid FROM search_index_map')
+      .all();
+    assert.equal(mapped.length, 1);
+    assert.equal(mapped[0].entity_type, 'PERSON');
+    assert.equal(mapped[0].entity_id, 1);
+
+    // Le rowid pointé est bien celui de la ligne d'index.
+    const indexed = database
+      .prepare('SELECT rowid FROM search_index WHERE entity_type = ? AND entity_id = ?')
+      .get('PERSON', 1);
+    assert.equal(mapped[0].rowid, indexed.rowid);
+
+    // La fiche reste trouvable par la recherche.
+    const found = database
+      .prepare("SELECT entity_id FROM search_index WHERE search_index MATCH 'Lovelace'")
+      .all();
+    assert.equal(found.length, 1);
+  } finally {
+    database.close();
+    rmSync(earlyDir, { recursive: true, force: true });
+  }
+});

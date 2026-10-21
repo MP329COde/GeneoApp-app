@@ -89,8 +89,31 @@ export function reindexAll(database) {
     `INSERT INTO search_index (entity_type, entity_id, title, body)
      VALUES (@entityType, @entityId, @title, @body)`,
   );
+
+  // La table de correspondance est un miroir de l'index : elle est
+  // reconstruite avec lui, sinon elle pointerait vers des rowids périmés.
+  const hasMap = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'search_index_map'")
+    .get();
+  if (hasMap) {
+    database.prepare('DELETE FROM search_index_map').run();
+  }
+
+  const remember = hasMap
+    ? database.prepare(
+        `INSERT INTO search_index_map (entity_type, entity_id, rowid) VALUES (?, ?, ?)`,
+      )
+    : null;
+
   for (const row of rows) {
-    insert.run({ ...row, title: row.title ?? '', body: row.body ?? '' });
+    // `RETURNING rowid` ne fonctionne pas sur une table FTS5 : le rowid
+    // vient de `lastInsertRowid`.
+    const inserted = insert.run({
+      ...row,
+      title: row.title ?? '',
+      body: row.body ?? '',
+    });
+    if (remember) remember.run(row.entityType, row.entityId, inserted.lastInsertRowid);
   }
 
   // Les entrées d'historique portant sur `search_index` référencent des
