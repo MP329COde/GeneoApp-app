@@ -6,7 +6,7 @@ import { Button, useTranslation } from '../design-system/index.js';
 
 // Le message d'erreur est fourni par l'appelant : la lecture du fichier peut
 // échouer et son texte est affiché à l'écran, donc traduit.
-export function readFileAsBase64(file, errorMessage = 'Lecture du fichier impossible') {
+export function readFileAsBase64(file, errorMessage) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
@@ -179,12 +179,9 @@ function renderFiltered(image, canvas, filters) {
   context.putImageData(pixels, 0, 0);
 }
 
-function Suggestions({
-  items,
-  onLink,
-  linkLabel = 'documentTools.link',
-  linkFallback = 'Rattacher',
-}) {
+// Le libellé du bouton est une clé de traduction ; le repli est fourni avec
+// elle pour rester lisible même si la clé manque.
+function Suggestions({ items, onLink, link = { key: 'documentTools.link', fallback: '' } }) {
   const { t } = useTranslation();
   if (!items?.length) return null;
   return (
@@ -195,7 +192,7 @@ function Suggestions({
           <span className="data-id">{person.reason}</span>
           {onLink ? (
             <Button type="button" size="sm" onClick={() => onLink(person)}>
-              {t(linkLabel, linkFallback)}
+              {t(link.key, link.fallback)}
             </Button>
           ) : null}
         </li>
@@ -431,9 +428,9 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
             <label>
               {t('documentTools.decoder.zoom', 'Agrandir')}
               <select value={filters.scale} onChange={setFilter('scale')}>
-                <option value={1}>×1</option>
-                <option value={2}>×2</option>
-                <option value={3}>×3</option>
+                <option value={1}>{`×${1}`}</option>
+                <option value={2}>{`×${2}`}</option>
+                <option value={3}>{`×${3}`}</option>
               </select>
             </label>
             <label className="doc-decoder__check">
@@ -507,7 +504,11 @@ export function OldDocumentDecoder({ client, mediaId, onClose, onLinked }) {
       {result?.suggestions?.length ? (
         <>
           <h4>{t('documentTools.decoder.citedPersons', 'Personnes de l’arbre citées')}</h4>
-          <Suggestions items={result.suggestions} onLink={link} />
+          <Suggestions
+            items={result.suggestions}
+            onLink={link}
+            link={{ key: 'documentTools.link', fallback: t('documentTools.link', 'Rattacher') }}
+          />
         </>
       ) : null}
     </section>
@@ -669,8 +670,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
                 <Suggestions
                   items={match.owners}
                   onLink={onOpenPerson}
-                  linkLabel="documentTools.openRecord"
-                  linkFallback="Ouvrir la fiche"
+                  link={{
+                    key: 'documentTools.openRecord',
+                    fallback: t('documentTools.openRecord', 'Ouvrir la fiche'),
+                  }}
                 />
               ) : (
                 <p className="notice">
@@ -685,8 +688,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
                   <Suggestions
                     items={match.suggestions}
                     onLink={onOpenPerson}
-                    linkLabel="documentTools.openRecord"
-                    linkFallback="Ouvrir la fiche"
+                    link={{
+                      key: 'documentTools.openRecord',
+                      fallback: t('documentTools.openRecord', 'Ouvrir la fiche'),
+                    }}
                   />
                 </>
               ) : null}
@@ -717,8 +722,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
           <Suggestions
             items={result.suggestions}
             onLink={attach}
-            linkLabel="documentTools.linkToPerson"
-            linkFallback="Relier à cette personne"
+            link={{
+              key: 'documentTools.linkToPerson',
+              fallback: t('documentTools.linkToPerson', 'Relier à cette personne'),
+            }}
           />
           <Clues clues={result.clues} />
           {onDecode ? (

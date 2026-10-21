@@ -3,6 +3,10 @@ import { useTranslation } from '../design-system/index.js';
 
 const fold = (value) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+// Raccourci clavier affiché en pastille : c'est une touche, pas un texte,
+// et il reste le même quelle que soit la langue.
+const SHORTCUT = '⌘K';
+
 /**
  * Recherche rapide d'une personne (⌘K / Ctrl+K) : liste déroulante
  * accessible (combobox ARIA), flèches pour parcourir, Entrée pour ouvrir.
@@ -59,7 +63,7 @@ export const QuickSearch = forwardRef(function QuickSearch({ persons, lifespans,
         }}
       />
       <kbd className="quick-search__kbd" aria-hidden="true">
-        ⌘K
+        {SHORTCUT}
       </kbd>
       {open ? (
         <ul id="quick-search-results" role="listbox" className="quick-search__results">

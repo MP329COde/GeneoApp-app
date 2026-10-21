@@ -42,18 +42,6 @@ const TEXT_ATTRIBUTES = new Set([
 const TECHNICAL_ATTRIBUTES = new Set(['className', 'style', 'id', 'key', 'type', 'href', 'src']);
 
 /**
- * Noms de fonctions de rendu dont l'argument est du texte affiché.
- */
-const TEXT_FUNCTIONS = new Set([
-  'setError',
-  'setMessage',
-  'setStatus',
-  'confirm',
-  'alert',
-  'ErrorNotice',
-]);
-
-/**
  * Un littéral est-il du texte destiné à l'utilisateur ?
  *
  * On écarte les valeurs techniques : noms de classes, URLs, chemins,
