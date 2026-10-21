@@ -2119,8 +2119,10 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(quality).toHaveBeenCalledWith(1));
     expect(await screen.findByText('1 / 3')).toBeInTheDocument();
-    expect(screen.getByText(/2 fait\(s\) sans source : identité, décès/)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Qualité : 1 sur 4' })).toBeInTheDocument();
+    // Le libellé est désormais traduit et porte la forme plurielle
+    // correcte (« 2 faits sans source »), sans le suffixe « (s) ».
+    expect(screen.getByText(/2 faits sans source : identité, décès/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Qualité des données : 1 sur 4' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'examiner' })).toBeInTheDocument();
   });
   it('ouvre les recherches de la personne sur les sites choisis, sans les contacter', async () => {

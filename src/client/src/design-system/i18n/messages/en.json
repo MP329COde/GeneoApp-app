@@ -101,5 +101,29 @@
   "tree.fan": "Fan",
   "tree.graph": "Graph",
   "nav.annotations": "Annotations",
-  "nav.indexing": "Indexed documents"
+  "nav.indexing": "Indexed documents",
+  "quality.title": "Data quality",
+  "quality.sourcedFacts": "Sourced facts",
+  "quality.unsourced": {
+    "one": "1 unsourced fact:",
+    "other": "{count} unsourced facts:"
+  },
+  "quality.identity": "identity",
+  "quality.citeSource": "cite a source",
+  "quality.allSourced": "All facts are sourced.",
+  "quality.confidence.label": "Confidence:",
+  "quality.confidence.high": "high",
+  "quality.confidence.medium": "medium",
+  "quality.confidence.low": "low",
+  "quality.issues": {
+    "one": "1 inconsistency",
+    "other": "{count} inconsistencies"
+  },
+  "quality.certainIssues": {
+    "one": "(1 certain)",
+    "other": "({count} certain)"
+  },
+  "quality.examine": "examine",
+  "quality.score": "Quality score",
+  "quality.meterLabel": "{label}: {score} out of 4"
 }

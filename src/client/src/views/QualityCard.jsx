@@ -1,11 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../design-system/index.js';
 import { EVENT_LABELS } from './PersonTimeline.jsx';
 
-const CONFIDENCE_LABELS = { HIGH: 'élevée', MEDIUM: 'moyenne', LOW: 'faible' };
+// La confiance d'un fait est une valeur d'énumération renvoyée par le
+// serveur : la table ci-dessous en donne la formulation dans chaque langue.
+const CONFIDENCE_KEYS = {
+  HIGH: 'quality.confidence.high',
+  MEDIUM: 'quality.confidence.medium',
+  LOW: 'quality.confidence.low',
+};
 
-export function QualityMeter({ score, label = 'Qualité' }) {
+export function QualityMeter({ score, label }) {
+  const { t } = useTranslation();
+  const meterLabel = label ?? t('quality.title');
   return (
-    <span className="quality-meter" role="img" aria-label={`${label} : ${score} sur 4`}>
+    <span
+      className="quality-meter"
+      role="img"
+      aria-label={t('quality.meterLabel', { label: meterLabel, score })}
+    >
       {[1, 2, 3, 4].map((level) => (
         <span key={level} className={`quality-meter__bar${level <= score ? ' is-on' : ''}`} />
       ))}
@@ -15,6 +28,7 @@ export function QualityMeter({ score, label = 'Qualité' }) {
 
 // Qualité des données d'une personne (faits sourcés, confiance, contradictions).
 export function QualityCard({ client, personId, version, onOpenCoherence, onOpenSources }) {
+  const { t } = useTranslation();
   const [quality, setQuality] = useState(null);
   const [error, setError] = useState(null);
 
@@ -39,9 +53,9 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
 
   return (
     <section className="detail-section quality-card" aria-labelledby="quality-title">
-      <h3 id="quality-title">Qualité des données</h3>
+      <h3 id="quality-title">{t('quality.title')}</h3>
       <div className="quality-card__ratio">
-        <span>Faits sourcés</span>
+        <span>{t('quality.sourcedFacts')}</span>
         <strong className="data-id">
           {totals.sourced} / {totals.facts}
         </strong>
@@ -49,7 +63,7 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
       <div
         className="quality-card__progress"
         role="progressbar"
-        aria-label="Faits sourcés"
+        aria-label={t('quality.sourcedFacts')}
         aria-valuemin={0}
         aria-valuemax={totals.facts}
         aria-valuenow={totals.sourced}
@@ -59,11 +73,11 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
       <ul className="quality-card__list">
         {unsourced.length > 0 ? (
           <li>
-            {unsourced.length} fait(s) sans source :{' '}
+            {t('quality.unsourced', { count: unsourced.length })}{' '}
             {unsourced
               .map((fact) =>
                 fact.kind === 'IDENTITY'
-                  ? 'identité'
+                  ? t('quality.identity')
                   : (EVENT_LABELS[fact.type] ?? fact.type).toLowerCase(),
               )
               .join(', ')}
@@ -75,27 +89,29 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
                   className="link-button link-button--small"
                   onClick={onOpenSources}
                 >
-                  citer une source
+                  {t('quality.citeSource')}
                 </button>
               </>
             ) : null}
           </li>
         ) : (
-          <li>Tous les faits sont sourcés.</li>
+          <li>{t('quality.allSourced')}</li>
         )}
         {totals.sourced > 0 ? (
           <li>
-            Confiance :{' '}
+            {t('quality.confidence.label')}{' '}
             {Object.entries(confidence)
               .filter(([, count]) => count > 0)
-              .map(([level, count]) => `${count} ${CONFIDENCE_LABELS[level]}`)
+              .map(([level, count]) => `${count} ${t(CONFIDENCE_KEYS[level] ?? level)}`)
               .join(', ')}
           </li>
         ) : null}
         {issues.length > 0 ? (
           <li className="quality-card__issue">
-            {issues.length} incohérence(s) (
-            {issues.filter((issue) => issue.severity === 'CERTAIN').length} certaine(s))
+            {t('quality.issues', { count: issues.length })}{' '}
+            {t('quality.certainIssues', {
+              count: issues.filter((issue) => issue.severity === 'CERTAIN').length,
+            })}
             {onOpenCoherence ? (
               <>
                 {' — '}
@@ -104,7 +120,7 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
                   className="link-button link-button--small"
                   onClick={onOpenCoherence}
                 >
-                  examiner
+                  {t('quality.examine')}
                 </button>
               </>
             ) : null}
@@ -112,7 +128,7 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
         ) : null}
       </ul>
       <p className="quality-card__score">
-        Indice de qualité <QualityMeter score={quality.score} />
+        {t('quality.score')} <QualityMeter score={quality.score} />
       </p>
     </section>
   );

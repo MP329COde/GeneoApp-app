@@ -101,5 +101,29 @@
   "tree.fan": "Éventail",
   "tree.graph": "Graphe",
   "nav.annotations": "Annotations",
-  "nav.indexing": "Documents indexés"
+  "nav.indexing": "Documents indexés",
+  "quality.title": "Qualité des données",
+  "quality.sourcedFacts": "Faits sourcés",
+  "quality.unsourced": {
+    "one": "1 fait sans source :",
+    "other": "{count} faits sans source :"
+  },
+  "quality.identity": "identité",
+  "quality.citeSource": "citer une source",
+  "quality.allSourced": "Tous les faits sont sourcés.",
+  "quality.confidence.label": "Confiance :",
+  "quality.confidence.high": "élevée",
+  "quality.confidence.medium": "moyenne",
+  "quality.confidence.low": "faible",
+  "quality.issues": {
+    "one": "1 incohérence",
+    "other": "{count} incohérences"
+  },
+  "quality.certainIssues": {
+    "one": "(1 certaine)",
+    "other": "({count} certaines)"
+  },
+  "quality.examine": "examiner",
+  "quality.score": "Indice de qualité",
+  "quality.meterLabel": "{label} : {score} sur 4"
 }
