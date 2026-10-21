@@ -13,7 +13,6 @@ import '@fontsource/ibm-plex-mono/500.css';
 import App from './App.jsx';
 import './design-system/tokens/tokens.css';
 import './design-system/tokens/a11y.css';
-import './App.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

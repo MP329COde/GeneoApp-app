@@ -1,0 +1,25 @@
+/* ---------- Espace de travail et canevas ---------- */
+.app-error {
+  grid-area: err;
+  margin: var(--space-3) var(--space-4) 0;
+}
+
+.workspace {
+  grid-area: main;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-inspector);
+}
+.canvas-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-app);
+}
+.genealogy-canvas {
+  min-height: 100%;
+}
+.genealogy-canvas--tree,
+.genealogy-canvas--relations {
+  padding: var(--space-8) var(--space-6);
+}

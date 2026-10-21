@@ -1,0 +1,32 @@
+/* ---------- Inspecteur allégé ---------- */
+.inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.inspector-relations div {
+  align-items: baseline;
+}
+.inspector-relations dd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
+  text-align: right;
+}
+.inspector-relations__names {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
+  flex-basis: 100%;
+}
+.inspector-edit {
+  padding: var(--space-3) 0;
+  border-top: var(--border-hairline) solid var(--border-subtle);
+}
+.inspector-edit summary {
+  cursor: pointer;
+  font: var(--type-heading);
+}

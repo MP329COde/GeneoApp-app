@@ -1,0 +1,45 @@
+/* ---------- Préférences appliquées (Paramètres) ---------- */
+:root[data-text-size='large'] body {
+  zoom: 1.125;
+}
+:root[data-text-size='xlarge'] body {
+  zoom: 1.25;
+}
+:root[data-text-size] .genealogy-app {
+  height: calc(100vh / var(--app-zoom, 1));
+}
+:root[data-text-size='large'] {
+  --app-zoom: 1.125;
+}
+:root[data-text-size='xlarge'] {
+  --app-zoom: 1.25;
+}
+:root[data-density='compact'] {
+  --control-md: 28px;
+  --row-standard: 28px;
+  --space-4: 12px;
+}
+:root[data-density='comfortable'] {
+  --control-md: 40px;
+  --row-standard: 44px;
+}
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.icon-button {
+  width: var(--control-md);
+  height: var(--control-md);
+  display: inline-grid;
+  place-items: center;
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.icon-button:hover {
+  background: var(--surface-hover);
+}

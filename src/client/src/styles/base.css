@@ -1,0 +1,47 @@
+/*
+ * GeneoApp — « le cabinet d'archives lumineux ».
+ * Tout est exprimé en tokens du design système (tokens.css) : le bleu
+ * `action` est réservé à ce qu'on peut faire, le reste reste neutre et chaud.
+ */
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text);
+  font: var(--type-body);
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+a {
+  color: var(--text-link);
+}
+:focus-visible {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+kbd {
+  font: var(--type-id);
+}

@@ -1,0 +1,47 @@
+/* ---------- Démarrage ---------- */
+.startup {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.startup__card {
+  width: min(100%, var(--modal-sm));
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-3);
+}
+.startup__logo {
+  border-radius: var(--radius-lg);
+}
+.startup h1 {
+  margin: var(--space-4) 0 var(--space-5);
+  font: var(--type-display);
+}
+.startup__progress {
+  height: var(--loading-bar-height);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--border-subtle);
+}
+.startup__progress span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--action);
+  animation: progress var(--duration-skeleton) var(--ease-standard) infinite;
+}
+.startup p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}

@@ -1,0 +1,265 @@
+/* ---------- Explorateur d'arbre ---------- */
+.genealogy-canvas--tree {
+  padding: 0;
+  height: 100%;
+}
+.tree-explorer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.tree-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--border);
+  background: var(--surface);
+}
+.segmented {
+  display: inline-flex;
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segmented button,
+.tree-toolbar__zoom button {
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: 0;
+  background: var(--surface-raised);
+}
+.segmented button + button {
+  border-left: var(--border-hairline) solid var(--border);
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface-selected);
+  color: var(--action-subtle-text);
+  font-weight: 700;
+}
+.tree-toolbar__depth {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--type-label);
+}
+.tree-toolbar__depth input {
+  width: 64px;
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.tree-toolbar__zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.tree-toolbar__zoom button {
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.tree-toolbar__zoom output {
+  min-width: 48px;
+  text-align: center;
+  font: var(--type-date);
+}
+.tree-viewport {
+  flex: 1;
+  min-height: 480px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.tree-viewport:active {
+  cursor: grabbing;
+}
+.tree-stage {
+  padding: var(--space-8) var(--space-6);
+  transform-origin: 0 0;
+  width: max-content;
+  min-width: 100%;
+}
+/* Transition seulement pour les zooms/recentrages ponctuels : pendant un
+   glisser ou un défilement, elle retarderait chaque image (saccades). */
+.tree-stage {
+  will-change: transform;
+}
+.tree-viewport.is-panning {
+  cursor: grabbing;
+}
+.tree-viewport.is-loading .tree-stage__content {
+  opacity: 0.55;
+}
+.tree-stage__content {
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tree-stage {
+    transition: transform var(--duration-slow) var(--ease-standard);
+  }
+  .tree-viewport.is-panning .tree-stage {
+    transition: none;
+  }
+  .tree-stage__content {
+    animation: tree-enter var(--duration-slow) var(--ease-enter);
+  }
+  .tree-branch__children {
+    animation: tree-branch-open var(--duration-base) var(--ease-enter);
+    transform-origin: left center;
+  }
+  .tree-node,
+  .person-card,
+  .tree-branch__toggle {
+    transition:
+      box-shadow var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard);
+  }
+  .tree-node:hover,
+  .tree-layout .person-card:hover {
+    transform: translateY(-2px);
+  }
+  .tree-node:active,
+  .tree-layout .person-card:active {
+    transform: translateY(0) scale(0.98);
+  }
+  .tree-node--focus {
+    animation: tree-focus-pulse 900ms var(--ease-standard) 1;
+  }
+  .fan-chart__cell {
+    transition:
+      opacity var(--duration-fast) var(--ease-standard),
+      filter var(--duration-fast) var(--ease-standard);
+  }
+  .fan-chart__sector:hover .fan-chart__cell,
+  .fan-chart__sector:focus-visible .fan-chart__cell {
+    filter: brightness(1.12);
+  }
+  .tree-layout .tree-row {
+    animation: tree-enter var(--duration-slow) var(--ease-enter) both;
+  }
+  .tree-layout .tree-row--focus {
+    animation-delay: 60ms;
+  }
+  .tree-layout .tree-row:last-of-type {
+    animation-delay: 120ms;
+  }
+}
+@keyframes tree-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes tree-branch-open {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes tree-focus-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--action) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--action) 0%, transparent);
+  }
+}
+
+.tree-branch {
+  display: flex;
+  align-items: center;
+}
+.tree-branch__children {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-left: var(--space-6);
+}
+.tree-branch__children::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(var(--space-6) * -1);
+  width: var(--space-6);
+  border-top: var(--border-thick) solid var(--rel-biological);
+}
+.tree-branch__children > .tree-branch {
+  position: relative;
+  padding-left: var(--space-6);
+}
+.tree-branch__children > .tree-branch::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--space-6);
+  border-top: var(--border-thick) solid var(--rel-biological);
+}
+.tree-branch__children > .tree-branch::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: var(--border-thick) solid var(--rel-biological);
+}
+.tree-branch__children > .tree-branch:first-child::after {
+  top: 50%;
+}
+.tree-branch__children > .tree-branch:last-child::after {
+  bottom: 50%;
+}
+.tree-branch__children > .tree-branch:only-child::after {
+  display: none;
+}
+.tree-node {
+  width: 200px;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--border);
+  border-left: var(--border-accent) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  text-align: left;
+}
+.tree-node:hover {
+  box-shadow: var(--shadow-1);
+}
+.tree-node--paternal {
+  border-left-color: var(--branch-paternal);
+}
+.tree-node--maternal {
+  border-left-color: var(--branch-maternal);
+}
+.tree-node--focus {
+  border: var(--border-thick) solid var(--action);
+  background: var(--surface-selected);
+}
+.tree-node__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tree-node__branch {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font: var(--type-caption);
+}

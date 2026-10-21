@@ -1,0 +1,54 @@
+/* ---------- Inspecteur ---------- */
+.details-panel {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-left: var(--border-hairline) solid var(--border);
+  background: var(--surface);
+}
+.details-panel__top {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+.details-panel__top h2 {
+  font: var(--type-person-name-lg);
+}
+.avatar {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+.avatar .icon {
+  width: 24px;
+  height: 24px;
+}
+.detail-section {
+  padding: var(--space-4) 0;
+  border-top: var(--border-hairline) solid var(--border-subtle);
+}
+dl {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+dt {
+  color: var(--text-secondary);
+  font: var(--type-label);
+}
+dd {
+  margin: 0;
+  font: var(--type-date);
+}

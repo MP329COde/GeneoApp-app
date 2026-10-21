@@ -1,0 +1,31 @@
+/* ---------- Menu latéral : personnes toujours visibles ---------- */
+.sidenav__people {
+  flex: 0 1 auto;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-2) var(--space-2);
+  border-bottom: var(--border-hairline) solid var(--border);
+}
+.sidenav__people .create-person-form {
+  grid-template-columns: 1fr 1fr;
+  margin: var(--space-2);
+}
+.sidenav__people .create-person-form .gds-button {
+  grid-column: 1 / -1;
+}
+.person-filter input {
+  width: calc(100% - var(--space-3));
+  min-height: 34px;
+  margin: 0 var(--space-2) var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.sidenav__scroll .sidenav__group:first-child {
+  margin-top: var(--space-1);
+}
+.sidenav__people.sidenav__persons {
+  padding-top: var(--space-2);
+  border-top: 0;
+}

@@ -1,0 +1,62 @@
+/* ---------- Composants : boutons et modales ---------- */
+.new-person-button,
+.verification-rerun-button {
+  display: grid;
+  margin: var(--space-2) var(--space-2) var(--space-1);
+}
+.new-person-button .gds-button,
+.gds-button {
+  min-height: var(--control-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+.gds-modal .create-person-form {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.create-person-form__header {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-selected);
+}
+.create-person-form__label {
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.create-person-form__header strong {
+  font: var(--type-person-name);
+}
+.gds-modal .create-person-form label {
+  display: grid;
+  gap: var(--space-1);
+  font: var(--type-label);
+}
+.gds-modal .create-person-form input,
+.gds-modal .create-person-form select {
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  font: var(--type-body);
+  transition:
+    border-color var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-instant) var(--ease-standard);
+}
+.gds-modal .create-person-form input:focus,
+.gds-modal .create-person-form select:focus {
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--action) 18%, transparent);
+  outline: none;
+}
+.gds-modal .settings-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}

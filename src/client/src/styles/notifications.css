@@ -1,0 +1,91 @@
+/* ---------- Centre de notifications ---------- */
+.notification-center {
+  position: relative;
+}
+.notification-center__trigger {
+  position: relative;
+}
+.notification-center__count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: #a3231b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
+}
+.notification-center__panel {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(380px, calc(100vw - var(--space-6)));
+  max-height: min(560px, calc(100vh - 80px));
+  overflow: auto;
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-3);
+}
+.notification-center__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+}
+.notification-center__header h2 {
+  margin: 0;
+  font: var(--type-heading);
+}
+.notification-center__empty {
+  margin: 0;
+  padding: var(--space-5) var(--space-4);
+  color: var(--text-secondary);
+}
+.notification-center__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notification-center__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+}
+.notification-center__item.is-unread {
+  background: var(--surface-selected);
+}
+.notification-center__item strong,
+.notification-center__item p,
+.notification-center__item time {
+  display: block;
+}
+.notification-center__item p {
+  margin: var(--space-1) 0;
+  color: var(--text-secondary);
+}
+.notification-center__item time {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.notification-center__read {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--text-link);
+  font-size: 12px;
+  text-decoration: underline;
+}

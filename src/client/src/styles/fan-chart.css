@@ -1,0 +1,37 @@
+/* ---------- Éventail ---------- */
+.fan-chart {
+  max-width: 100%;
+  height: auto;
+}
+.fan-chart__cell {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.fan-chart__cell--root {
+  fill: var(--surface-selected);
+  stroke: var(--action);
+  stroke-width: 2;
+}
+.fan-chart__cell--paternal {
+  fill: color-mix(in srgb, var(--branch-paternal) 14%, var(--surface-raised));
+}
+.fan-chart__cell--maternal {
+  fill: color-mix(in srgb, var(--branch-maternal) 14%, var(--surface-raised));
+}
+.fan-chart__sector {
+  cursor: pointer;
+  outline: none;
+}
+.fan-chart__sector:hover .fan-chart__cell,
+.fan-chart__sector:focus-visible .fan-chart__cell {
+  stroke: var(--focus-ring);
+  stroke-width: 2.5;
+}
+.fan-chart__text {
+  fill: var(--text);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 9px;
+  pointer-events: none;
+}
