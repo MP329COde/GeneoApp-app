@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../design-system/index.js';
-import { EVENT_LABELS } from './PersonTimeline.jsx';
+import { useEventLabels } from '../genealogy/event-labels.js';
 
 // La confiance d'un fait est une valeur d'énumération renvoyée par le
 // serveur : la table ci-dessous en donne la formulation dans chaque langue.
@@ -29,6 +29,7 @@ export function QualityMeter({ score, label }) {
 // Qualité des données d'une personne (faits sourcés, confiance, contradictions).
 export function QualityCard({ client, personId, version, onOpenCoherence, onOpenSources }) {
   const { t } = useTranslation();
+  const eventLabels = useEventLabels();
   const [quality, setQuality] = useState(null);
   const [error, setError] = useState(null);
 
@@ -78,7 +79,7 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
               .map((fact) =>
                 fact.kind === 'IDENTITY'
                   ? t('quality.identity')
-                  : (EVENT_LABELS[fact.type] ?? fact.type).toLowerCase(),
+                  : (eventLabels[fact.type] ?? fact.type).toLowerCase(),
               )
               .join(', ')}
             {onOpenSources ? (

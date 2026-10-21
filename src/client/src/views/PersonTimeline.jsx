@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../design-system/index.js';
+import { useEventLabels } from '../genealogy/event-labels.js';
 import {
   compareGenealogyDates,
   formatGenealogyDate,
   parseGenealogyDate,
   yearsBetween,
 } from '../../../db/src/dates/genealogy-date.js';
-
-export const EVENT_LABELS = {
-  BIRTH: 'Naissance',
-  BAPTISM: 'Baptême',
-  DEATH: 'Décès',
-  BURIAL: 'Inhumation',
-  MARRIAGE: 'Mariage',
-  DIVORCE: 'Divorce',
-  ADOPTION: 'Adoption',
-  OTHER: 'Événement',
-};
 
 function personName(person) {
   return `${person.given_names} ${person.family_name}`;
@@ -85,6 +76,8 @@ export function buildPersonTimeline(person, relations, events) {
 }
 
 export function PersonTimeline({ client, person, relations }) {
+  const { t } = useTranslation();
+  const eventLabels = useEventLabels();
   const [events, setEvents] = useState(null);
   const [withFamily, setWithFamily] = useState(true);
   const [error, setError] = useState(null);
@@ -110,7 +103,7 @@ export function PersonTimeline({ client, person, relations }) {
   if (!events) {
     return (
       <p role="status" className="loading-line">
-        Chargement de la chronologie…
+        {t('personTimeline.loading', 'Chargement de la chronologie…')}
       </p>
     );
   }
@@ -120,17 +113,30 @@ export function PersonTimeline({ client, person, relations }) {
 
   return (
     <section className="search-panel person-timeline" aria-labelledby="person-timeline-title">
-      <h3 id="person-timeline-title">Chronologie de {personName(person)}</h3>
+      <h3 id="person-timeline-title">
+        {t(
+          'personTimeline.title',
+          { name: personName(person) },
+          `Chronologie de ${personName(person)}`,
+        )}
+      </h3>
       <label className="settings-toggle">
         <input
           type="checkbox"
           checked={withFamily}
           onChange={(event) => setWithFamily(event.target.checked)}
         />
-        <span>Inclure la famille proche (fratrie, enfants, décès des parents et conjoints)</span>
+        <span>
+          {t(
+            'personTimeline.includeFamily',
+            'Inclure la famille proche (fratrie, enfants, décès des parents et conjoints)',
+          )}
+        </span>
       </label>
       {rows.length === 0 ? (
-        <p className="notice">Aucun événement daté pour cette personne.</p>
+        <p className="notice">
+          {t('personTimeline.empty', 'Aucun événement daté pour cette personne.')}
+        </p>
       ) : (
         <ol className="life-timeline">
           {rows.map((row) => (
@@ -139,17 +145,23 @@ export function PersonTimeline({ client, person, relations }) {
               className={row.self ? 'life-timeline__own' : 'life-timeline__family'}
             >
               <span className="life-timeline__date">
-                {row.date.valid ? formatGenealogyDate(row.date) : 'date inconnue'}
+                {row.date.valid
+                  ? formatGenealogyDate(row.date)
+                  : t('personTimeline.unknownDate', 'date inconnue')}
               </span>
               <span className="life-timeline__what">
-                <strong>{EVENT_LABELS[row.type] ?? row.type}</strong>
+                <strong>{eventLabels[row.type] ?? row.type}</strong>
                 {row.relation ? ` · ${row.relation} : ${row.relativeName}` : ''}
                 {row.place ? ` · ${row.place}` : ''}
               </span>
               {row.age !== null ? (
                 <span className="life-timeline__age">
-                  {row.approximateAge ? 'vers ' : ''}
-                  {row.age} an{row.age > 1 ? 's' : ''}
+                  {row.approximateAge ? t('personTimeline.around', 'vers ') : ''}
+                  {t(
+                    'personTimeline.age',
+                    { count: row.age },
+                    `${row.age} an${row.age > 1 ? 's' : ''}`,
+                  )}
                 </span>
               ) : null}
             </li>
