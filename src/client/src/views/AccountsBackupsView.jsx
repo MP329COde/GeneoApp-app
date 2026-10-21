@@ -4,6 +4,18 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice } from '../components/shared.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
+// Libellés lisibles des tables de la corbeille : le nom technique de la
+// table (« research_notebook ») n'a pas de sens pour l'utilisateur.
+const TRASH_TABLE_LABELS = {
+  persons: 'Personne',
+  places: 'Lieu',
+  events: 'Événement',
+  unions: 'Union',
+  parentages: 'Lien de parenté',
+  media: 'Média',
+  research_notebook: 'Carnet de recherche',
+};
+
 export function LoginForm({ onLogin, loginError }) {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -513,7 +525,8 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
             <ul className="search-results">
               {trashItems.map((item) => (
                 <li key={`${item.table}:${item.id}`}>
-                  <Badge tone="neutral">{item.table}</Badge> {item.label}
+                  <Badge tone="neutral">{TRASH_TABLE_LABELS[item.table] ?? item.table}</Badge>{' '}
+                  {item.label}
                   <Button
                     type="button"
                     size="sm"
