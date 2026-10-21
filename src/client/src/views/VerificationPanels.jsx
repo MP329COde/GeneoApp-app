@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { countedFr, SEVERITY_LABELS, TIMELINE_ISSUE_LABELS } from '../hooks/useVerification.js';
-import { MERGE_REASSIGNMENT_LABELS } from './PersonListPanels.jsx';
+import { SEVERITY_LABELS, TIMELINE_ISSUE_LABELS } from '../hooks/useVerification.js';
+import { MERGE_REASSIGNMENT_KEYS } from './PersonListPanels.jsx';
 
 export function VerificationSection({
   selected,
@@ -13,6 +13,7 @@ export function VerificationSection({
   onMerged,
   anchorId,
 }) {
+  const { t } = useTranslation();
   const [pendingMerge, setPendingMerge] = useState(null);
   const [busy, setBusy] = useState(false);
   const [mergeError, setMergeError] = useState(null);
@@ -137,9 +138,7 @@ export function VerificationSection({
             {Object.entries(pendingMerge.preview.reassignments)
               .filter(([, count]) => count > 0)
               .map(([key, count]) => (
-                <li key={key}>
-                  {countedFr(count, MERGE_REASSIGNMENT_LABELS[key] ?? { one: key, other: key })}
-                </li>
+                <li key={key}>{t(MERGE_REASSIGNMENT_KEYS[key] ?? '', { count, key })}</li>
               ))}
           </ul>
           <div className="verification__actions">

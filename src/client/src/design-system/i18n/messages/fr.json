@@ -148,5 +148,79 @@
   "relations.commonAncestors": "Ancêtres communs",
   "relations.noCommonAncestor": "Aucun ancêtre commun enregistré.",
   "relations.generation": "génération {fromA} / {fromB}",
-  "relations.unknownPerson": "Personne #{id}"
+  "relations.unknownPerson": "Personne #{id}",
+  "personForm.preview": "Prévisualisation",
+  "personForm.newPerson": "Nouvelle personne",
+  "personForm.givenNames": "Prénom(s)",
+  "personForm.givenNamesExample": "Ex. Jean",
+  "personForm.familyName": "Nom",
+  "personForm.familyNameExample": "Ex. Dupont",
+  "personForm.sex": "Sexe",
+  "personForm.sexUnknown": "Inconnu",
+  "personForm.sexFemale": "Femme",
+  "personForm.sexMale": "Homme",
+  "personForm.hint": "Les dates, lieux et liens se complètent ensuite en quelques clics.",
+  "personForm.submit": "Ajouter une personne",
+  "searchPanel.label": "Rechercher",
+  "searchPanel.placeholder": "Nom, lieu, source...",
+  "searchPanel.submit": "Rechercher",
+  "searchPanel.noResult": "Aucun résultat pour « {term} ».",
+  "search.entity.person": "Personne",
+  "search.entity.media": "Média",
+  "search.entity.source": "Source",
+  "search.entity.event": "Événement",
+  "search.entity.place": "Lieu",
+  "search.entity.union": "Union",
+  "search.entity.parentage": "Lien de parenté",
+  "duplicates.scan": "Analyser les doublons potentiels",
+  "duplicates.confirmLabel": "Confirmer la fusion",
+  "duplicates.confirmIntro": "Fusionner {duplicate} dans {survivor} ? Cette action réattribue :",
+  "duplicates.noReassignment": "Aucune donnée liée à réattribuer.",
+  "duplicates.softDeleteHint": "La fiche de {duplicate} sera supprimée en douceur.",
+  "duplicates.confirm": "Confirmer la fusion",
+  "duplicates.cancel": "Annuler",
+  "duplicates.none": "Aucun doublon potentiel détecté.",
+  "duplicates.total": {
+    "one": "{count} doublon possible détecté au total — les {shown} scores les plus élevés sont affichés ci-dessous.",
+    "other": "{count} doublons possibles détectés au total — les {shown} scores les plus élevés sont affichés ci-dessous."
+  },
+  "duplicates.viewA": "Voir la fiche A",
+  "duplicates.viewB": "Voir la fiche B",
+  "duplicates.mergeKeepA": "Fusionner (garder A)",
+  "duplicates.mergeKeepB": "Fusionner (garder B)",
+  "merge.reassignment.parentagesAsParent": {
+    "one": "1 lien parent → enfant",
+    "other": "{count} liens parent → enfant"
+  },
+  "merge.reassignment.parentagesAsChild": {
+    "one": "1 lien enfant → parent",
+    "other": "{count} liens enfant → parent"
+  },
+  "merge.reassignment.unionPartnerships": {
+    "one": "1 union",
+    "other": "{count} unions"
+  },
+  "merge.reassignment.eventParticipations": {
+    "one": "1 participation à un événement",
+    "other": "{count} participations à un événement"
+  },
+  "merge.reassignment.citations": {
+    "one": "1 citation de source",
+    "other": "{count} citations de source"
+  },
+  "merge.reassignment.notes": {
+    "one": "1 note",
+    "other": "{count} notes"
+  },
+  "merge.reassignment.media": {
+    "one": "1 média",
+    "other": "{count} médias"
+  },
+  "union.type.marriage": "Mariage",
+  "union.type.civil": "Union civile (PACS)",
+  "union.type.cohabitation": "Concubinage",
+  "union.type.other": "Autre union",
+  "parentRole.father": "Père",
+  "parentRole.mother": "Mère",
+  "parentRole.parent": "Parent"
 }

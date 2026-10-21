@@ -148,5 +148,79 @@
   "relations.commonAncestors": "Common ancestors",
   "relations.noCommonAncestor": "No common ancestor recorded.",
   "relations.generation": "generation {fromA} / {fromB}",
-  "relations.unknownPerson": "Person #{id}"
+  "relations.unknownPerson": "Person #{id}",
+  "personForm.preview": "Preview",
+  "personForm.newPerson": "New person",
+  "personForm.givenNames": "First name(s)",
+  "personForm.givenNamesExample": "e.g. John",
+  "personForm.familyName": "Last name",
+  "personForm.familyNameExample": "e.g. Smith",
+  "personForm.sex": "Sex",
+  "personForm.sexUnknown": "Unknown",
+  "personForm.sexFemale": "Female",
+  "personForm.sexMale": "Male",
+  "personForm.hint": "Dates, places and links are filled in afterwards in a few clicks.",
+  "personForm.submit": "Add a person",
+  "searchPanel.label": "Search",
+  "searchPanel.placeholder": "Name, place, source...",
+  "searchPanel.submit": "Search",
+  "searchPanel.noResult": "No result for “{term}”.",
+  "search.entity.person": "Person",
+  "search.entity.media": "Media",
+  "search.entity.source": "Source",
+  "search.entity.event": "Event",
+  "search.entity.place": "Place",
+  "search.entity.union": "Union",
+  "search.entity.parentage": "Parentage link",
+  "duplicates.scan": "Scan for potential duplicates",
+  "duplicates.confirmLabel": "Confirm merge",
+  "duplicates.confirmIntro": "Merge {duplicate} into {survivor}? This action reassigns:",
+  "duplicates.noReassignment": "No linked data to reassign.",
+  "duplicates.softDeleteHint": "The record for {duplicate} will be soft-deleted.",
+  "duplicates.confirm": "Confirm merge",
+  "duplicates.cancel": "Cancel",
+  "duplicates.none": "No potential duplicate detected.",
+  "duplicates.total": {
+    "one": "{count} potential duplicate in total — the {shown} highest scores are shown below.",
+    "other": "{count} potential duplicates in total — the {shown} highest scores are shown below."
+  },
+  "duplicates.viewA": "View record A",
+  "duplicates.viewB": "View record B",
+  "duplicates.mergeKeepA": "Merge (keep A)",
+  "duplicates.mergeKeepB": "Merge (keep B)",
+  "merge.reassignment.parentagesAsParent": {
+    "one": "1 parent → child link",
+    "other": "{count} parent → child links"
+  },
+  "merge.reassignment.parentagesAsChild": {
+    "one": "1 child → parent link",
+    "other": "{count} child → parent links"
+  },
+  "merge.reassignment.unionPartnerships": {
+    "one": "1 union",
+    "other": "{count} unions"
+  },
+  "merge.reassignment.eventParticipations": {
+    "one": "1 event participation",
+    "other": "{count} event participations"
+  },
+  "merge.reassignment.citations": {
+    "one": "1 source citation",
+    "other": "{count} source citations"
+  },
+  "merge.reassignment.notes": {
+    "one": "1 note",
+    "other": "{count} notes"
+  },
+  "merge.reassignment.media": {
+    "one": "1 media",
+    "other": "{count} media"
+  },
+  "union.type.marriage": "Marriage",
+  "union.type.civil": "Civil partnership (PACS)",
+  "union.type.cohabitation": "Cohabitation",
+  "union.type.other": "Other union",
+  "parentRole.father": "Father",
+  "parentRole.mother": "Mother",
+  "parentRole.parent": "Parent"
 }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { UNION_TYPES, UNION_TYPE_LABELS } from './PersonListPanels.jsx';
+import { UNION_TYPES, UNION_TYPE_KEYS } from './PersonListPanels.jsx';
 import { ParentageSection } from './PersonRelationsView.jsx';
 
 export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
+  const { t } = useTranslation();
   const [unions, setUnions] = useState(null);
   const [type, setType] = useState('MARRIAGE');
   const [partnerId, setPartnerId] = useState('');
@@ -91,7 +92,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
           <select value={type} onChange={(event) => setType(event.target.value)}>
             {UNION_TYPES.map((unionType) => (
               <option key={unionType} value={unionType}>
-                {UNION_TYPE_LABELS[unionType] ?? unionType}
+                {t(UNION_TYPE_KEYS[unionType] ?? '', unionType)}
               </option>
             ))}
           </select>
@@ -120,7 +121,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
         <ul className="search-results">
           {unions.map((union) => (
             <li key={union.id}>
-              <Badge tone="neutral">{UNION_TYPE_LABELS[union.type] ?? union.type}</Badge>{' '}
+              <Badge tone="neutral">{t(UNION_TYPE_KEYS[union.type] ?? '', union.type)}</Badge>{' '}
               {union.partnerIds
                 .filter((id) => id !== selected.id)
                 .map((id) => (

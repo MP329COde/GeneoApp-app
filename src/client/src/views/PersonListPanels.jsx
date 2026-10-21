@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { countedFr } from '../hooks/useVerification.js';
 import { AdvancedSearch } from './AdvancedSearch.jsx';
 import { SiteSearch } from './SiteSearch.jsx';
+import {
+  MERGE_REASSIGNMENT_KEYS,
+  PARENT_ROLE_KEYS as PARENT_ROLE_KEYS_EXPORT,
+  SEARCH_ENTITY_KEYS,
+  UNION_TYPE_KEYS as UNION_TYPE_KEYS_EXPORT,
+} from './entity-labels.js';
 
 export function CreatePersonForm({ onCreate, creating }) {
+  const { t } = useTranslation();
   const [givenNames, setGivenNames] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [sex, setSex] = useState('');
@@ -17,7 +23,7 @@ export function CreatePersonForm({ onCreate, creating }) {
   }, []);
 
   const previewName =
-    [givenNames.trim(), familyName.trim()].filter(Boolean).join(' ') || 'Nouvelle personne';
+    [givenNames.trim(), familyName.trim()].filter(Boolean).join(' ') || t('personForm.newPerson');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -37,45 +43,44 @@ export function CreatePersonForm({ onCreate, creating }) {
   return (
     <form className="create-person-form" onSubmit={handleSubmit}>
       <div className="create-person-form__header">
-        <span className="create-person-form__label">Prévisualisation</span>
+        <span className="create-person-form__label">{t('personForm.preview')}</span>
         <strong>{previewName}</strong>
       </div>
       <label>
-        <span>Prénom(s)</span>
+        <span>{t('personForm.givenNames')}</span>
         <input
           ref={firstNameRef}
           value={givenNames}
           onChange={(event) => setGivenNames(event.target.value)}
-          placeholder="Ex. Jean"
+          placeholder={t('personForm.givenNamesExample')}
         />
       </label>
       <label>
-        <span>Nom</span>
+        <span>{t('personForm.familyName')}</span>
         <input
           value={familyName}
           onChange={(event) => setFamilyName(event.target.value)}
-          placeholder="Ex. Dupont"
+          placeholder={t('personForm.familyNameExample')}
         />
       </label>
       <label>
-        <span>Sexe</span>
+        <span>{t('personForm.sex')}</span>
         <select value={sex} onChange={(event) => setSex(event.target.value)}>
-          <option value="">Inconnu</option>
-          <option value="F">Femme</option>
-          <option value="M">Homme</option>
+          <option value="">{t('personForm.sexUnknown')}</option>
+          <option value="F">{t('personForm.sexFemale')}</option>
+          <option value="M">{t('personForm.sexMale')}</option>
         </select>
       </label>
-      <p className="settings-hint">
-        Les dates, lieux et liens se complètent ensuite en quelques clics.
-      </p>
+      <p className="settings-hint">{t('personForm.hint')}</p>
       <Button type="submit" disabled={creating || !givenNames.trim() || !familyName.trim()}>
-        Ajouter une personne
+        {t('personForm.submit')}
       </Button>
     </form>
   );
 }
 
 export function SearchPanel({ onNavigate, selected, lifespan }) {
+  const { t } = useTranslation();
   const [term, setTerm] = useState('');
   const [results, setResults] = useState(null);
   const [searchError, setSearchError] = useState(null);
@@ -97,25 +102,28 @@ export function SearchPanel({ onNavigate, selected, lifespan }) {
     <div className="search-panel">
       <form onSubmit={handleSubmit} className="search-panel__form">
         <label className="search-box">
-          <span>Rechercher</span>
+          <span>{t('searchPanel.label')}</span>
           <input
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Nom, lieu, source..."
+            placeholder={t('searchPanel.placeholder')}
           />
         </label>
         <Button type="submit" size="sm">
-          Rechercher
+          {t('searchPanel.submit')}
         </Button>
       </form>
       {searchError ? <ErrorNotice message={searchError} /> : null}
       {results === null ? null : results.length === 0 ? (
-        <p className="notice">Aucun résultat pour « {term} ».</p>
+        <p className="notice">{t('searchPanel.noResult', { term })}</p>
       ) : (
         <ul className="search-results">
           {results.map((result) => (
             <li key={`${result.entity_type}:${result.entity_id}`}>
-              <Badge tone="neutral">{result.entity_type}</Badge> {result.title}
+              <Badge tone="neutral">
+                {t(SEARCH_ENTITY_KEYS[result.entity_type] ?? '', result.entity_type)}
+              </Badge>{' '}
+              {result.title}
             </li>
           ))}
         </ul>
@@ -126,20 +134,8 @@ export function SearchPanel({ onNavigate, selected, lifespan }) {
   );
 }
 
-export const MERGE_REASSIGNMENT_LABELS = {
-  parentagesAsParent: { one: 'lien parent → enfant', other: 'liens parent → enfant' },
-  parentagesAsChild: { one: 'lien enfant → parent', other: 'liens enfant → parent' },
-  unionPartnerships: { one: 'union', other: 'unions' },
-  eventParticipations: {
-    one: 'participation à un événement',
-    other: 'participations à un événement',
-  },
-  citations: { one: 'citation de source', other: 'citations de source' },
-  notes: { one: 'note', other: 'notes' },
-  media: { one: 'média', other: 'médias' },
-};
-
 export function DuplicatesPanel({ onSelect, onMerged }) {
+  const { t } = useTranslation();
   const [pairs, setPairs] = useState(null);
   const [duplicatesError, setDuplicatesError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -196,33 +192,35 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
     <div className="search-panel">
       <div className="gedcom-panel__actions">
         <Button type="button" size="sm" onClick={handleScan} disabled={busy}>
-          Analyser les doublons potentiels
+          {t('duplicates.scan')}
         </Button>
       </div>
       {duplicatesError ? <ErrorNotice message={duplicatesError} /> : null}
       {pendingMerge ? (
-        <div className="notice" role="alertdialog" aria-label="Confirmer la fusion">
+        <div className="notice" role="alertdialog" aria-label={t('duplicates.confirmLabel')}>
           <p>
-            Fusionner {personLabel(pendingMerge.preview.duplicate)} dans{' '}
-            {personLabel(pendingMerge.preview.survivor)} ? Cette action réattribue :
+            {t('duplicates.confirmIntro', {
+              duplicate: personLabel(pendingMerge.preview.duplicate),
+              survivor: personLabel(pendingMerge.preview.survivor),
+            })}
           </p>
           <ul>
             {Object.entries(pendingMerge.preview.reassignments)
               .filter(([, count]) => count > 0)
               .map(([key, count]) => (
-                <li key={key}>
-                  {countedFr(count, MERGE_REASSIGNMENT_LABELS[key] ?? { one: key, other: key })}
-                </li>
+                <li key={key}>{t(MERGE_REASSIGNMENT_KEYS[key] ?? '', { count, key })}</li>
               ))}
             {Object.values(pendingMerge.preview.reassignments).every((count) => count === 0) ? (
-              <li>Aucune donnée liée à réattribuer.</li>
+              <li>{t('duplicates.noReassignment')}</li>
             ) : null}
           </ul>
           <p>
-            La fiche de {personLabel(pendingMerge.preview.duplicate)} sera supprimée en douceur.
+            {t('duplicates.softDeleteHint', {
+              duplicate: personLabel(pendingMerge.preview.duplicate),
+            })}
           </p>
           <Button type="button" size="sm" onClick={handleConfirmMerge} disabled={busy}>
-            Confirmer la fusion
+            {t('duplicates.confirm')}
           </Button>
           <Button
             type="button"
@@ -231,21 +229,17 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
             onClick={() => setPendingMerge(null)}
             disabled={busy}
           >
-            Annuler
+            {t('duplicates.cancel')}
           </Button>
         </div>
       ) : null}
       {pairs === null ? null : pairs.items.length === 0 ? (
-        <p className="notice">Aucun doublon potentiel détecté.</p>
+        <p className="notice">{t('duplicates.none')}</p>
       ) : (
         <ul className="search-results">
           {pairs.total > pairs.items.length ? (
             <li className="notice">
-              {countedFr(pairs.total, {
-                one: 'doublon possible détecté au total',
-                other: 'doublons possibles détectés au total',
-              })}{' '}
-              — les {pairs.items.length} scores les plus élevés sont affichés ci-dessous.
+              {t('duplicates.total', { count: pairs.total, shown: pairs.items.length })}
             </li>
           ) : null}
           {pairs.items.map((pair) => {
@@ -260,7 +254,7 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
                   variant="secondary"
                   onClick={() => onSelect(left.id)}
                 >
-                  Voir la fiche A
+                  {t('duplicates.viewA')}
                 </Button>
                 <Button
                   type="button"
@@ -268,7 +262,7 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
                   variant="secondary"
                   onClick={() => onSelect(right.id)}
                 >
-                  Voir la fiche B
+                  {t('duplicates.viewB')}
                 </Button>
                 <Button
                   type="button"
@@ -276,7 +270,7 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
                   onClick={() => handlePreviewMerge(left.id, right.id)}
                   disabled={busy}
                 >
-                  Fusionner (garder A)
+                  {t('duplicates.mergeKeepA')}
                 </Button>
                 <Button
                   type="button"
@@ -284,7 +278,7 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
                   onClick={() => handlePreviewMerge(right.id, left.id)}
                   disabled={busy}
                 >
-                  Fusionner (garder B)
+                  {t('duplicates.mergeKeepB')}
                 </Button>
               </li>
             );
@@ -295,22 +289,15 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
   );
 }
 
-// Constantes réutilisées par les vues Familles (unions) et Parenté (rôles),
-// conservées ici pour rester à côté de DuplicatesPanel qui les référence
-// aussi via le regroupement de réassignations (voir MERGE_REASSIGNMENT_LABELS).
+// Constantes réutilisées par les vues Familles (unions) et Parenté (rôles).
+// Les libellés correspondants vivent dans les messages de traduction : voir
+// `entity-labels.js` pour les clés.
 export const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
 
-export const UNION_TYPE_LABELS = {
-  MARRIAGE: 'Mariage',
-  CIVIL_PARTNERSHIP: 'Union civile (PACS)',
-  COHABITATION: 'Concubinage',
-  OTHER: 'Autre union',
-};
+export const UNION_TYPE_KEYS = UNION_TYPE_KEYS_EXPORT;
 
 export const PARENT_ROLES = ['FATHER', 'MOTHER', 'PARENT'];
 
-export const PARENT_ROLE_LABELS = {
-  FATHER: 'Père',
-  MOTHER: 'Mère',
-  PARENT: 'Parent',
-};
+export const PARENT_ROLE_KEYS = PARENT_ROLE_KEYS_EXPORT;
+
+export { MERGE_REASSIGNMENT_KEYS };

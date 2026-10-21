@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { PARENT_ROLES, PARENT_ROLE_LABELS } from './PersonListPanels.jsx';
+import { PARENT_ROLES, PARENT_ROLE_KEYS } from './PersonListPanels.jsx';
 
 export function ParentageSection({ persons, selected, onNavigate, onChange }) {
+  const { t } = useTranslation();
   const [parents, setParents] = useState(null);
   const [children, setChildren] = useState(null);
   const [parentId, setParentId] = useState('');
@@ -130,7 +131,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           <select value={parentRole} onChange={(event) => setParentRole(event.target.value)}>
             {PARENT_ROLES.map((role) => (
               <option key={role} value={role}>
-                {PARENT_ROLE_LABELS[role] ?? role}
+                {t(PARENT_ROLE_KEYS[role] ?? '', role)}
               </option>
             ))}
           </select>
@@ -147,7 +148,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           {parents.map((parentage) => (
             <li key={parentage.id}>
               <Badge tone="neutral">
-                {PARENT_ROLE_LABELS[parentage.parent_role] ?? parentage.parent_role}
+                {t(PARENT_ROLE_KEYS[parentage.parent_role] ?? '', parentage.parent_role)}
               </Badge>{' '}
               <button
                 type="button"
