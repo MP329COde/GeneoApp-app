@@ -118,3 +118,100 @@ test('runMigrations applique les migrations sur une base contenant des données'
     rmSync(earlyDir, { recursive: true, force: true });
   }
 });
+
+// Les notes ne pouvaient viser ni une union ni une filiation, et 'FAMILY'
+// était accepté alors qu'aucune table ne le porte : une note de famille était
+// donc inaccessible. La migration élargit les cibles et convertit les notes
+// de famille en notes d'union.
+test('la migration 0020 élargit les cibles de note et convertit les notes de famille', () => {
+  // Un dossier de migrations antérieur à la reconstruction de la table `notes`
+  // (migration 0020) : base « ancienne », comme celle d'un utilisateur sur une
+  // version antérieure.
+  const earlyDir = mkdtempSync(path.join(tmpdir(), 'geneoapp-migrations-notes-'));
+  for (const name of readdirSync(MIGRATIONS_DIR)) {
+    if (name.endsWith('.sql') && name < '0020') {
+      copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(earlyDir, name));
+    }
+  }
+
+  const database = openDatabase(':memory:');
+  try {
+    runMigrations(database, { migrationsDir: earlyDir });
+
+    const person = database
+      .prepare(
+        "INSERT INTO persons (given_names, family_name, sex) VALUES ('Ada', 'Lovelace', 'F')",
+      )
+      .run();
+    const union = database.prepare("INSERT INTO unions (type) VALUES ('MARRIAGE')").run();
+    database
+      .prepare('INSERT INTO union_partners (union_id, person_id) VALUES (?, ?)')
+      .run(union.lastInsertRowid, person.lastInsertRowid);
+
+    // Une note de famille (inaccessible : aucune table ne la porte), une note
+    // de personne (valide) et une note d'union (alors refusée par le CHECK).
+    const familyNote = database
+      .prepare(
+        "INSERT INTO notes (entity_type, entity_id, body) VALUES ('FAMILY', ?, 'Note de famille')",
+      )
+      .run(union.lastInsertRowid);
+    const personNote = database
+      .prepare(
+        "INSERT INTO notes (entity_type, entity_id, body) VALUES ('PERSON', ?, 'Note de personne')",
+      )
+      .run(person.lastInsertRowid);
+
+    // La cible 'UNION' est refusée avant la migration : c'est le défaut corrigé.
+    assert.throws(
+      () =>
+        database
+          .prepare("INSERT INTO notes (entity_type, entity_id, body) VALUES ('UNION', ?, 'x')")
+          .run(union.lastInsertRowid),
+      /CHECK constraint failed/,
+    );
+
+    const applied = runMigrations(database);
+    assert.ok(applied.includes('0020_expand_note_entity_types.sql'));
+
+    // La note de famille est devenue une note d'union, et la note de personne
+    // est intacte.
+    const converted = database
+      .prepare('SELECT entity_type, entity_id, body FROM notes WHERE id = ?')
+      .get(familyNote.lastInsertRowid);
+    assert.equal(converted.entity_type, 'UNION');
+    assert.equal(converted.entity_id, union.lastInsertRowid);
+    assert.equal(converted.body, 'Note de famille');
+
+    const kept = database
+      .prepare('SELECT entity_type, body FROM notes WHERE id = ?')
+      .get(personNote.lastInsertRowid);
+    assert.equal(kept.entity_type, 'PERSON');
+    assert.equal(kept.body, 'Note de personne');
+
+    // Les nouvelles cibles sont désormais acceptées.
+    database
+      .prepare(
+        "INSERT INTO notes (entity_type, entity_id, body) VALUES ('UNION', ?, 'Sur l’union')",
+      )
+      .run(union.lastInsertRowid);
+    database
+      .prepare(
+        "INSERT INTO notes (entity_type, entity_id, body) VALUES ('PARENTAGE', ?, 'Sur la filiation')",
+      )
+      .run(1);
+
+    // Et 'FAMILY' ne l'est plus.
+    assert.throws(
+      () =>
+        database
+          .prepare("INSERT INTO notes (entity_type, entity_id, body) VALUES ('FAMILY', 1, 'x')")
+          .run(),
+      /CHECK constraint failed/,
+    );
+
+    assert.deepEqual(database.pragma('foreign_key_check'), []);
+  } finally {
+    database.close();
+    rmSync(earlyDir, { recursive: true, force: true });
+  }
+});

@@ -5,8 +5,9 @@ import { RichText, applyFormat } from '../genealogy/rich-text.jsx';
 export const CONFIDENCE_LABELS = { HIGH: 'Élevée', MEDIUM: 'Moyenne', LOW: 'Faible' };
 export const TARGET_LABELS = {
   PERSON: 'Personne',
-  FAMILY: 'Famille',
   EVENT: 'Événement',
+  UNION: 'Union',
+  PARENTAGE: 'Lien de parenté',
   SOURCE: 'Source',
   CITATION: 'Citation',
   PLACE: 'Lieu',
@@ -152,8 +153,9 @@ export function NoteItem({ note, onEdit, onRemove, showTarget = false }) {
 }
 
 /**
- * Annotations d'une cible (personne, famille, événement, source, citation,
- * lieu, arbre, recherche) : texte riche, confiance, contradiction explicite.
+ * Annotations d'une cible (personne, événement, union, lien de parenté,
+ * source, citation, lieu, arbre, recherche) : texte riche, confiance,
+ * contradiction explicite.
  */
 export function AnnotationsPanel({ client, entityType, entityId, heading, emptyLabel }) {
   const [notes, setNotes] = useState(null);

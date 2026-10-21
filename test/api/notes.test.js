@@ -174,3 +174,73 @@ test('modifie, recherche et supprime (logiquement, annulable) des annotations de
     await server.close();
   }
 });
+
+// Les notes ne pouvaient viser ni une union ni une filiation, alors que les
+// citations le permettaient : une note de recherche sur un couple ou sur un
+// lien de parenté était impossible à saisir. Inversement, 'FAMILY' était
+// accepté sans table backing — une note de famille était inaccessible.
+test('une note peut viser une union et un lien de parenté', async () => {
+  const server = await startTestServer();
+  try {
+    const ada = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const byron = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Byron', familyName: 'King' },
+    });
+    const anne = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Anne', familyName: 'King' },
+    });
+    const union = await requestJson(server.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { type: 'MARRIAGE', partnerIds: [ada.body.id, byron.body.id] },
+    });
+    const parentage = await requestJson(server.baseUrl, '/api/parentages', {
+      method: 'POST',
+      body: { childId: anne.body.id, parentId: ada.body.id, parentRole: 'MOTHER' },
+    });
+
+    const onUnion = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: {
+        entityType: 'UNION',
+        entityId: union.body.id,
+        body: 'Le mariage a pu être célébré en secret.',
+      },
+    });
+    assert.equal(onUnion.status, 201);
+    assert.equal(onUnion.body.entity_type, 'UNION');
+
+    const onParentage = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: {
+        entityType: 'PARENTAGE',
+        entityId: parentage.body.id,
+        body: 'Filiation adoptive à confirmer.',
+      },
+    });
+    assert.equal(onParentage.status, 201);
+    assert.equal(onParentage.body.entity_type, 'PARENTAGE');
+
+    // Les notes sont retrouvées par cible.
+    const listed = await requestJson(server.baseUrl, `/api/notes/UNION/${union.body.id}`);
+    assert.equal(listed.body.length, 1);
+    assert.equal(listed.body[0].body, 'Le mariage a pu être célébré en secret.');
+
+    // Le filtre par cible fonctionne aussi.
+    const filtered = await requestJson(server.baseUrl, '/api/notes?entityType=PARENTAGE');
+    assert.equal(filtered.body.length, 1);
+
+    // 'FAMILY' n'a aucune table backing : la cible est refusée.
+    const family = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: { entityType: 'FAMILY', entityId: union.body.id, body: 'Note de famille' },
+    });
+    assert.equal(family.status, 400);
+  } finally {
+    await server.close();
+  }
+});

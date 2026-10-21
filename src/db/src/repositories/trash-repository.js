@@ -59,8 +59,12 @@ const CASCADE_DEPENDENCIES = {
     { table: 'union_partners', column: 'union_id', mode: 'row' },
     { table: 'parentages', column: 'union_id', mode: 'row' },
     { table: 'citations', entityType: 'UNION', mode: 'link' },
+    { table: 'notes', entityType: 'UNION', mode: 'link' },
   ],
-  parentages: [{ table: 'citations', entityType: 'PARENTAGE', mode: 'link' }],
+  parentages: [
+    { table: 'citations', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'notes', entityType: 'PARENTAGE', mode: 'link' },
+  ],
   media: [
     { table: 'media_regions', column: 'media_id', mode: 'row' },
     { table: 'indexed_documents', column: 'media_id', mode: 'row' },

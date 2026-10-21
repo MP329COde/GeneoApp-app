@@ -1,9 +1,14 @@
 import { NotFoundError, ValidationError } from '../errors.js';
 
+// Cibles valides d'une note. `FAMILY` a été retiré : aucune table ne le
+// porte (une famille est une `union` dans ce modèle), une note de ce type
+// était donc inaccessible. `UNION` et `PARENTAGE` ont été ajoutés : ces
+// cibles ont bien une table et une citation pouvait déjà les viser.
 const ENTITY_TYPES = new Set([
   'PERSON',
-  'FAMILY',
   'EVENT',
+  'UNION',
+  'PARENTAGE',
   'SOURCE',
   'CITATION',
   'PLACE',

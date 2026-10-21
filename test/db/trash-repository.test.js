@@ -8,6 +8,9 @@ import { AuditRepository } from '../../src/db/src/repositories/audit-repository.
 import { EventRepository } from '../../src/db/src/repositories/event-repository.js';
 import { ResearchRepository } from '../../src/db/src/repositories/research-repository.js';
 import { MediaRepository } from '../../src/db/src/repositories/media-repository.js';
+import { UnionRepository } from '../../src/db/src/repositories/union-repository.js';
+import { ParentageRepository } from '../../src/db/src/repositories/parentage-repository.js';
+import { NoteRepository } from '../../src/db/src/repositories/note-repository.js';
 
 test('list agrège les entités supprimées de plusieurs tables', () => {
   const database = createTestDatabase();
@@ -143,6 +146,57 @@ test('purge d’un média conserve la personne dont il est le portrait', () => {
     database.prepare('SELECT portrait_media_id FROM persons WHERE id = ?').get(person.id)
       .portrait_media_id,
     null,
+  );
+  assert.deepEqual(database.pragma('foreign_key_check'), []);
+});
+
+test('purge d’une union et d’une filiation emporte leurs notes', () => {
+  const database = createTestDatabase();
+  const trash = new TrashRepository(database);
+  const persons = new PersonRepository(database);
+  const unions = new UnionRepository(database);
+  const parentages = new ParentageRepository(database);
+  const notes = new NoteRepository(database);
+
+  const ada = persons.create({ givenNames: 'Ada', familyName: 'Lovelace', sex: 'F' });
+  const byron = persons.create({ givenNames: 'Byron', familyName: 'King', sex: 'M' });
+  const child = persons.create({ givenNames: 'Anne', familyName: 'King', sex: 'F' });
+
+  const union = unions.create({ type: 'MARRIAGE', partnerIds: [ada.id, byron.id] });
+  const parentage = parentages.create({
+    childId: child.id,
+    parentId: ada.id,
+    parentRole: 'MOTHER',
+  });
+
+  notes.create({ entityType: 'UNION', entityId: union.id, body: 'Note sur le mariage' });
+  notes.create({ entityType: 'PARENTAGE', entityId: parentage.id, body: 'Note sur la filiation' });
+  notes.create({ entityType: 'PERSON', entityId: ada.id, body: 'Note sur la personne' });
+
+  unions.softDelete(union.id);
+  assert.equal(trash.purge('unions', union.id), true);
+
+  // La note d'union disparaît avec elle ; les autres sont intactes.
+  assert.equal(
+    database.prepare("SELECT COUNT(*) AS n FROM notes WHERE entity_type = 'UNION'").get().n,
+    0,
+  );
+  assert.equal(
+    database.prepare("SELECT COUNT(*) AS n FROM notes WHERE entity_type = 'PARENTAGE'").get().n,
+    1,
+  );
+  assert.equal(
+    database.prepare("SELECT COUNT(*) AS n FROM notes WHERE entity_type = 'PERSON'").get().n,
+    1,
+  );
+  assert.deepEqual(database.pragma('foreign_key_check'), []);
+
+  parentages.softDelete(parentage.id);
+  assert.equal(trash.purge('parentages', parentage.id), true);
+
+  assert.equal(
+    database.prepare("SELECT COUNT(*) AS n FROM notes WHERE entity_type = 'PARENTAGE'").get().n,
+    0,
   );
   assert.deepEqual(database.pragma('foreign_key_check'), []);
 });
