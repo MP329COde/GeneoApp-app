@@ -1,4 +1,5 @@
-import { NotFoundError, ValidationError } from '../errors.js';
+import { NotFoundError } from '../errors.js';
+import { invalidError, requiredError, tooLongError } from '../validation/field-errors.js';
 
 const STATUSES = new Set(['TODO', 'IN_PROGRESS', 'DONE', 'ABANDONED']);
 const PRIORITIES = new Set(['LOW', 'MEDIUM', 'HIGH']);
@@ -10,12 +11,10 @@ const TEXT_MAX = 20_000;
 
 function requiredText(value, field, max = TITLE_MAX) {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new ValidationError(`${field} est obligatoire`, { fields: { [field]: 'obligatoire' } });
+    throw requiredError(field);
   }
   if (value.length > max) {
-    throw new ValidationError(`${field} dépasse ${max} caractères`, {
-      fields: { [field]: 'trop long' },
-    });
+    throw tooLongError(field, max, `${field} dépasse ${max} caractères`);
   }
   return value.trim();
 }
@@ -24,15 +23,14 @@ function optionalText(value, field, max = TEXT_MAX) {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
   if (typeof value !== 'string' || value.length > max) {
-    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+    throw invalidError(field);
   }
   return value;
 }
 
 function oneOf(value, allowed, field) {
   if (value === undefined) return undefined;
-  if (!allowed.has(value))
-    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+  if (!allowed.has(value)) throw invalidError(field);
   return value;
 }
 
@@ -40,9 +38,7 @@ function optionalDate(value, field) {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
   if (typeof value !== 'string' || !ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
-    throw new ValidationError(`${field} doit être une date AAAA-MM-JJ`, {
-      fields: { [field]: 'invalide' },
-    });
+    throw invalidError(field, `${field} doit être une date AAAA-MM-JJ`);
   }
   return value;
 }
@@ -52,14 +48,14 @@ function optionalId(value, field) {
   if (value === null || value === '') return null;
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+    throw invalidError(field);
   }
   return id;
 }
 
 function positiveId(value, label) {
   const id = Number(value);
-  if (!Number.isInteger(id) || id <= 0) throw new ValidationError(`${label} invalide`);
+  if (!Number.isInteger(id) || id <= 0) throw invalidError(label);
   return id;
 }
 
@@ -74,7 +70,7 @@ export class ResearchService {
 
   create(payload, options) {
     const data = payload ?? {};
-    if (typeof data.content !== 'string') throw new ValidationError('content est obligatoire');
+    if (typeof data.content !== 'string') throw requiredError('content');
     return this.repository.create(
       withoutUndefined({
         title: requiredText(data.title, 'title'),

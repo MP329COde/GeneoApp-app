@@ -9,14 +9,26 @@ export function errorHandler(error, request, response, next) {
     console.error(error);
   }
 
+  const internal = status >= 500 && status !== 503;
   response.status(status).json({
     error: {
-      message: status >= 500 && status !== 503 ? 'Erreur interne du serveur' : httpError.message,
+      message: internal ? 'Erreur interne du serveur' : httpError.message,
       fields: httpError.fields ?? undefined,
+      // Le serveur ignore la langue de l'utilisateur : il renvoie le code et
+      // la clé i18n, et le client traduit dans sa langue.
+      code: httpError.code ?? undefined,
+      translationKey: httpError.translationKey ?? undefined,
+      variables: httpError.variables ?? undefined,
     },
   });
 }
 
 export function notFoundHandler(request, response) {
-  response.status(404).json({ error: { message: 'Route introuvable' } });
+  response.status(404).json({
+    error: {
+      message: 'Route introuvable',
+      code: 'ROUTE_NOT_FOUND',
+      translationKey: 'server.route.notFound',
+    },
+  });
 }

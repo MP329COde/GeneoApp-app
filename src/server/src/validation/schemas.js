@@ -10,7 +10,7 @@ import {
   isArray,
   isPlainObject,
 } from './validators.js';
-import { ValidationError } from '../errors.js';
+import { ValidationError, fieldError } from '../errors.js';
 
 const SEX_VALUES = ['M', 'F', 'U'];
 const EVENT_TYPES = [
@@ -46,7 +46,11 @@ const SEARCH_ENTITY_TYPES = ['PERSON', 'PLACE', 'EVENT', 'SOURCE', 'MEDIA'];
 
 export function assertId(value, label = 'id') {
   if (!Number.isInteger(value) || value <= 0) {
-    throw new ValidationError(`${label} doit être un identifiant entier positif`);
+    throw new ValidationError(`${label} doit être un identifiant entier positif`, {
+      code: 'INVALID_ID',
+      translationKey: 'server.validation.invalidId',
+      variables: { field: label },
+    });
   }
 }
 
@@ -99,11 +103,24 @@ function assertAtLeastOneName(givenNames, familyName) {
   const hasGivenNames = typeof givenNames === 'string' && givenNames.trim() !== '';
   const hasFamilyName = typeof familyName === 'string' && familyName.trim() !== '';
   if (!hasGivenNames && !hasFamilyName) {
+    const message = 'givenNames ou familyName doit être renseigné';
     throw new ValidationError('Validation échouée', {
       fields: {
-        givenNames: 'givenNames ou familyName doit être renseigné',
-        familyName: 'givenNames ou familyName doit être renseigné',
+        givenNames: {
+          code: 'NAME_REQUIRED',
+          translationKey: 'server.validation.nameRequired',
+          message,
+          variables: { field: 'givenNames' },
+        },
+        familyName: {
+          code: 'NAME_REQUIRED',
+          translationKey: 'server.validation.nameRequired',
+          message,
+          variables: { field: 'familyName' },
+        },
       },
+      code: 'VALIDATION_FAILED',
+      translationKey: 'server.validation.failed',
     });
   }
 }
@@ -151,7 +168,10 @@ export function validatePersonUpdate(payload) {
     }
   }
   if (Object.keys(patch).length === 0) {
-    throw new ValidationError('Aucun champ modifiable fourni');
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
   }
   // Une mise à jour qui toucherait givenNames/familyName ne doit pas pouvoir
   // vider les deux à la fois (même règle qu'à la création).
@@ -212,7 +232,11 @@ export function validateEventCreate(payload) {
 
 function validateEventParticipant(participant, index) {
   if (!isPlainObject(participant)) {
-    throw new ValidationError(`participants[${index}] doit être un objet`);
+    throw new ValidationError(`participants[${index}] doit être un objet`, {
+      code: 'NOT_AN_OBJECT',
+      translationKey: 'server.validation.notAnObject',
+      variables: { field: `participants[${index}]` },
+    });
   }
   const { personId, role } = participant;
   assertValid({
@@ -246,9 +270,13 @@ export function validateUnionCreate(payload) {
   });
 
   if (!Array.isArray(partnerIds) || partnerIds.length < 2) {
-    throw new ValidationError('Une union nécessite au moins deux partenaires', {
-      fields: { partnerIds: 'doit contenir au moins deux identifiants' },
-    });
+    throw fieldError(
+      'partnerIds',
+      'TOO_FEW',
+      'server.validation.tooFewPartners',
+      'Une union nécessite au moins deux partenaires',
+      { field: 'partnerIds', min: 2 },
+    );
   }
   partnerIds.forEach((id, index) => assertId(id, `partnerIds[${index}]`));
 
@@ -275,9 +303,13 @@ export function validateParentageCreate(payload) {
   });
 
   if (childId === parentId) {
-    throw new ValidationError('Une personne ne peut pas être son propre parent', {
-      fields: { parentId: 'doit être différent de childId' },
-    });
+    throw fieldError(
+      'parentId',
+      'SAME_AS_CHILD',
+      'server.validation.sameAsChild',
+      'Une personne ne peut pas être son propre parent',
+      { field: 'parentId' },
+    );
   }
 
   return {
@@ -352,18 +384,26 @@ export function validateMediaUpload(payload) {
   });
 
   if (typeof contentBase64 !== 'string' || !BASE64_PATTERN.test(contentBase64.trim())) {
-    throw new ValidationError('Validation échouée', {
-      fields: { contentBase64: 'doit être encodé en base64 valide' },
-    });
+    throw fieldError(
+      'contentBase64',
+      'INVALID_BASE64',
+      'server.validation.invalidBase64',
+      'doit être encodé en base64 valide',
+      { field: 'contentBase64' },
+    );
   }
 
   if (
     (entityType === undefined || entityType === null) !==
     (entityId === undefined || entityId === null)
   ) {
-    throw new ValidationError('Validation échouée', {
-      fields: { entityType: 'entityType et entityId doivent être fournis ensemble' },
-    });
+    throw fieldError(
+      'entityType',
+      'INCOMPLETE_PAIR',
+      'server.validation.incompletePair',
+      'entityType et entityId doivent être fournis ensemble',
+      { field: 'entityType' },
+    );
   }
 
   return {
@@ -390,9 +430,13 @@ export function validateSearchQuery(payload) {
     normalizedTypes = normalizedTypes.map((type) => String(type).trim().toUpperCase());
     const invalid = normalizedTypes.find((type) => !SEARCH_ENTITY_TYPES.includes(type));
     if (invalid) {
-      throw new ValidationError('Validation échouée', {
-        fields: { entityTypes: `valeur invalide : ${invalid}` },
-      });
+      throw fieldError(
+        'entityTypes',
+        'INVALID_VALUE',
+        'server.validation.invalidValue',
+        `valeur invalide : ${invalid}`,
+        { field: 'entityTypes', value: invalid },
+      );
     }
   }
 
@@ -434,7 +478,10 @@ export function validateAccountLogin(payload) {
 export function validateBackupCreate(payload) {
   const body = payload ?? {};
   if (!isPlainObject(body)) {
-    throw new ValidationError('Le corps de la requête doit être un objet JSON');
+    throw new ValidationError('Le corps de la requête doit être un objet JSON', {
+      code: 'INVALID_BODY',
+      translationKey: 'server.validation.invalidBody',
+    });
   }
   const { kind = 'sqlite', label = null } = body;
 
@@ -448,6 +495,9 @@ export function validateBackupCreate(payload) {
 
 function assertPayload(payload) {
   if (!isPlainObject(payload)) {
-    throw new ValidationError('Le corps de la requête doit être un objet JSON');
+    throw new ValidationError('Le corps de la requête doit être un objet JSON', {
+      code: 'INVALID_BODY',
+      translationKey: 'server.validation.invalidBody',
+    });
   }
 }

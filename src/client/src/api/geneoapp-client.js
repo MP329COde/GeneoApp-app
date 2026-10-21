@@ -13,6 +13,61 @@
 //   directement l'API REST locale via `fetch`, relayée par le proxy Vite
 //   `/api` (voir vite.config.js) vers le serveur Express local.
 
+// Point d'accès unique aux données métier depuis le renderer.
+//
+// Le frontend ne doit jamais contenir de logique généalogique : ce module ne
+// fait qu'appeler l'API locale, via l'un des deux transports possibles selon
+// le contexte d'exécution -- jamais de données fictives en repli.
+//
+// - Dans Electron (production) : `window.geneoapp`, exposé par le preload via
+//   contextBridge, qui relaie chaque appel à travers l'allowlist IPC
+//   (`src/electron/src/ipc/channels.js`). Le renderer n'a jamais accès direct
+//   à Node ni à ipcRenderer.
+// - En développement navigateur (`npm run dev`, ou tests) : `window.geneoapp`
+//   n'existe pas, le client tourne sur le serveur Vite. On appelle alors
+//   directement l'API REST locale via `fetch`, relayée par le proxy Vite
+//   `/api` (voir vite.config.js) vers le serveur Express local.
+
+import { translate } from '../design-system/i18n/I18nProvider.jsx';
+
+const LOCALE_STORAGE_KEY = 'geneoapp.locale';
+
+/**
+ * Locale courante, lue dans le même stockage que le sélecteur de langue.
+ * Le module n'est pas un composant React : on lit donc directement, avec un
+ * repli sur le français si le stockage est indisponible.
+ */
+function currentLocale() {
+  try {
+    return localStorage.getItem(LOCALE_STORAGE_KEY) ?? 'fr';
+  } catch {
+    return 'fr';
+  }
+}
+
+/**
+ * Traduit le message d'une erreur serveur.
+ *
+ * Le serveur ne connaît pas la langue de l'utilisateur : il renvoie un code
+ * stable et une clé i18n. Le message français reste le repli quand la
+ * traduction n'est pas disponible.
+ */
+function translateError(payload, fallback) {
+  const key = payload?.translationKey;
+  if (!key) return fallback;
+  return translate(currentLocale(), key, payload.variables ?? {}, fallback);
+}
+
+function buildError(payload, fallback, status) {
+  const error = new Error(translateError(payload, fallback));
+  error.status = status;
+  error.fields = payload?.fields;
+  error.code = payload?.code;
+  error.translationKey = payload?.translationKey;
+  error.variables = payload?.variables;
+  return error;
+}
+
 async function fetchJson(path, { method = 'GET', body, token } = {}) {
   const response = await fetch(path, {
     method,
@@ -25,10 +80,7 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    const error = new Error(data?.error?.message ?? 'Erreur API inconnue');
-    error.status = response.status;
-    error.fields = data?.error?.fields;
-    throw error;
+    throw buildError(data?.error, data?.error?.message ?? 'Erreur API inconnue', response.status);
   }
   return data;
 }
@@ -325,7 +377,37 @@ function createHttpClient() {
   };
 }
 
-function createIpcClient(bridge) {
+/**
+ * Enveloppe le pont IPC pour traduire les erreurs qu'il rejette.
+ *
+ * Le preload ne peut pas utiliser l'i18n du renderer : il transmet donc le
+ * code, la clé et les variables, et c'est ici, dans le renderer, que le
+ * message est traduit dans la langue courante.
+ */
+function withTranslatedErrors(bridge) {
+  const wrap = (value) => {
+    if (typeof value === 'function') {
+      return async (...args) => {
+        try {
+          return await value(...args);
+        } catch (error) {
+          if (error instanceof Error && error.translationKey) {
+            throw buildError(error, error.message, error.status);
+          }
+          throw error;
+        }
+      };
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, wrap(item)]));
+    }
+    return value;
+  };
+  return wrap(bridge);
+}
+
+function createIpcClient(rawBridge) {
+  const bridge = withTranslatedErrors(rawBridge);
   return {
     persons: {
       list: () => bridge.persons.list(),

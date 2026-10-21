@@ -1,4 +1,4 @@
-import { ValidationError } from '../errors.js';
+import { invalidError } from '../validation/field-errors.js';
 import { normalize, phonetic, similarity } from './search.service.js';
 import { parseGenealogyDate, yearOf } from '../../../db/src/dates/genealogy-date.js';
 
@@ -18,7 +18,7 @@ const FUZZY_THRESHOLD = 0.75;
 function text(value, field, max = 120) {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string' || value.length > max) {
-    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+    throw invalidError(field);
   }
   return value.trim() || null;
 }
@@ -27,7 +27,7 @@ function year(value, field) {
   if (value === undefined || value === null || value === '') return null;
   const number = Number(value);
   if (!Number.isInteger(number) || number < 100 || number > 2999) {
-    throw new ValidationError(`${field} doit être une année`, { fields: { [field]: 'invalide' } });
+    throw invalidError(field, `${field} doit être une année`);
   }
   return number;
 }
@@ -74,13 +74,13 @@ export class AdvancedSearchService {
       fuzzy: payload.fuzzy !== false && payload.fuzzy !== 'false',
     };
     if (filters.eventType && !EVENT_TYPES.has(filters.eventType)) {
-      throw new ValidationError('Type d’événement invalide', { fields: { eventType: 'invalide' } });
+      throw invalidError('eventType', 'Type d’événement invalide');
     }
     if (filters.sex && !['M', 'F', 'U'].includes(filters.sex)) {
-      throw new ValidationError('Sexe invalide', { fields: { sex: 'invalide' } });
+      throw invalidError('sex', 'Sexe invalide');
     }
     if (filters.yearFrom && filters.yearTo && filters.yearFrom > filters.yearTo) {
-      throw new ValidationError('La période est inversée', { fields: { yearTo: 'invalide' } });
+      throw invalidError('yearTo', 'La période est inversée');
     }
     const active = Object.entries(filters).some(
       ([key, value]) => key !== 'fuzzy' && value !== null,

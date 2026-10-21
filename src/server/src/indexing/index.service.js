@@ -1,6 +1,7 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { ConflictError, NotFoundError, ValidationError } from '../errors.js';
+import { ConflictError, NotFoundError } from '../errors.js';
+import { invalidError, notFoundError } from '../validation/field-errors.js';
 import { IndexRepository } from './index-repository.js';
 import { scanFolder } from './folder-scanner.js';
 import { crawlSite } from './crawler.js';
@@ -45,9 +46,7 @@ function boundedInteger(value, field, min, max, fallback) {
   if (value === undefined || value === null || value === '') return fallback;
   const number = Number(value);
   if (!Number.isInteger(number) || number < min || number > max) {
-    throw new ValidationError(`${field} doit être compris entre ${min} et ${max}`, {
-      fields: { [field]: 'invalide' },
-    });
+    throw invalidError(field, `${field} doit être compris entre ${min} et ${max}`, { min, max });
   }
   return number;
 }
@@ -97,7 +96,7 @@ export class IndexService {
       ? OPEN_DATA_PRESETS.find((item) => item.id === payload.preset)
       : null;
     if (payload.preset && !preset) {
-      throw new ValidationError('Préréglage inconnu', { fields: { preset: 'invalide' } });
+      throw invalidError('preset', 'Préréglage inconnu');
     }
     const merged = preset
       ? {
@@ -111,41 +110,38 @@ export class IndexService {
       : payload;
     const kind = merged.kind;
     if (!['FOLDER', 'SITE'].includes(kind)) {
-      throw new ValidationError('Type de source invalide', { fields: { kind: 'invalide' } });
+      throw invalidError('kind', 'Type de source invalide');
     }
     const mode = kind === 'SITE' ? (merged.mode ?? 'CRAWL') : 'CRAWL';
     if (!MODES.includes(mode)) {
-      throw new ValidationError('Mode de source invalide', { fields: { mode: 'invalide' } });
+      throw invalidError('mode', 'Mode de source invalide');
     }
     let location = typeof merged.location === 'string' ? merged.location.trim() : '';
     let defaultLabel;
     if (kind === 'FOLDER') {
       if (!path.isAbsolute(location)) {
-        throw new ValidationError('Le dossier doit être un chemin absolu', {
-          fields: { location: 'invalide' },
-        });
+        throw invalidError('location', 'Le dossier doit être un chemin absolu');
       }
       location = path.resolve(location);
       const info = await stat(location).catch(() => null);
       if (!info?.isDirectory()) {
-        throw new ValidationError('Dossier introuvable', { fields: { location: 'introuvable' } });
+        throw notFoundError('location', 'Dossier introuvable');
       }
       defaultLabel = path.basename(location);
     } else if (mode === 'DATAGOUV') {
       const slug = dataGouvSlug(location);
       if (!slug) {
-        throw new ValidationError('Jeu de données data.gouv.fr invalide (adresse ou identifiant)', {
-          fields: { location: 'invalide' },
-        });
+        throw invalidError(
+          'location',
+          'Jeu de données data.gouv.fr invalide (adresse ou identifiant)',
+        );
       }
       location = dataGouvPage(slug);
       defaultLabel = `data.gouv.fr · ${slug}`;
     } else {
       const url = normalizeUrl(location);
       if (!url || !/^https?:\/\//i.test(location)) {
-        throw new ValidationError('Adresse http(s) invalide ou avec identifiants', {
-          fields: { location: 'invalide' },
-        });
+        throw invalidError('location', 'Adresse http(s) invalide ou avec identifiants');
       }
       location = url.href;
       defaultLabel =

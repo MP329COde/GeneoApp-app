@@ -2,7 +2,8 @@ import { recordAudit, withTransaction } from '../../../db/src/repositories/base-
 import { reindexAll } from '../../../db/src/repositories/search-reindex.js';
 import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
-import { PayloadTooLargeError, ValidationError } from '../errors.js';
+import { PayloadTooLargeError, fieldError } from '../errors.js';
+import { invalidError, requiredError } from '../validation/field-errors.js';
 import { createZip, readZip } from './zip.js';
 
 // Tags GEDCOM 5.5.1 individuels (INDIVIDUAL_EVENT_STRUCTURE / INDIVIDUAL_ATTRIBUTE_STRUCTURE)
@@ -94,9 +95,7 @@ export class GedcomService {
 
   async importArchive(contentBase64, { performedBy = null } = {}) {
     if (typeof contentBase64 !== 'string' || contentBase64 === '') {
-      throw new ValidationError('Archive GEDZIP manquante', {
-        fields: { contentBase64: 'obligatoire' },
-      });
+      throw requiredError('contentBase64', 'Archive GEDZIP manquante');
     }
     if (contentBase64.length > MAX_ARCHIVE_BASE64) {
       throw new PayloadTooLargeError('Archive GEDZIP trop volumineuse');
@@ -105,7 +104,15 @@ export class GedcomService {
     const gedcomEntry =
       entries.find((entry) => entry.name === 'gedcom.ged') ??
       entries.find((entry) => entry.name.toLowerCase().endsWith('.ged'));
-    if (!gedcomEntry) throw new ValidationError('Aucun fichier .ged dans l’archive');
+    if (!gedcomEntry) {
+      throw fieldError(
+        'contentBase64',
+        'NO_GEDCOM_FILE',
+        'server.validation.noGedcomFile',
+        'Aucun fichier .ged dans l’archive',
+        { field: 'contentBase64' },
+      );
+    }
     const text = gedcomEntry.content.toString('utf8');
     const report = await this.importSafely(text, { performedBy });
     if (!report.imported) return { ...report, media: { attached: 0, missing: [], rejected: [] } };
@@ -192,15 +199,16 @@ export class GedcomService {
     side = null,
   } = {}) {
     if (!['5.5.1', '7'].includes(format)) {
-      throw new ValidationError(`Format GEDCOM non supporté pour l’export : ${format}`, {
-        format: 'invalide',
+      throw invalidError('format', `Format GEDCOM non supporté pour l’export : ${format}`, {
+        format,
+        allowed: '5.5.1, 7',
       });
     }
     const asId = (value, field) => {
       if (value === null || value === undefined) return null;
       const id = Number(value);
       if (!Number.isInteger(id) || id <= 0) {
-        throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+        throw invalidError(field);
       }
       return id;
     };
@@ -209,14 +217,12 @@ export class GedcomService {
     const descendantsId = asId(descendantsOf, 'descendantsOf');
     const branchId = asId(branchOf, 'branchOf');
     if (branchId !== null && !['PATERNAL', 'MATERNAL'].includes(side)) {
-      throw new ValidationError('side doit valoir PATERNAL ou MATERNAL', {
-        fields: { side: 'invalide' },
+      throw invalidError('side', 'side doit valoir PATERNAL ou MATERNAL', {
+        allowed: 'PATERNAL, MATERNAL',
       });
     }
     if (personIds !== null && !Array.isArray(personIds)) {
-      throw new ValidationError('personIds doit être une liste', {
-        fields: { personIds: 'invalide' },
-      });
+      throw invalidError('personIds', 'personIds doit être une liste');
     }
 
     const allPersons = this.database

@@ -192,6 +192,9 @@ async function invoke(channel, payload) {
     const error = new Error(response?.error?.message ?? 'Erreur IPC inconnue');
     error.status = response?.error?.status;
     error.fields = response?.error?.fields;
+    error.code = response?.error?.code;
+    error.translationKey = response?.error?.translationKey;
+    error.variables = response?.error?.variables;
     throw error;
   }
   return response.data;

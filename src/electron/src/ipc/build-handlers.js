@@ -34,6 +34,11 @@ function wrap(handler) {
           message: status >= 500 ? 'Erreur interne' : httpError.message,
           status,
           fields: httpError.fields,
+          // Le client traduit le message : le serveur renvoie le code et la
+          // clé i18n, jamais une phrase dans une langue choisie ici.
+          code: httpError.code,
+          translationKey: httpError.translationKey,
+          variables: httpError.variables,
         },
       };
     }

@@ -1,4 +1,5 @@
-import { ServiceUnavailableError, ValidationError } from '../errors.js';
+import { ServiceUnavailableError } from '../errors.js';
+import { requiredError } from '../validation/field-errors.js';
 
 const DEFAULT_ENDPOINT = process.env.GENEOAPP_LOCAL_AI_ENDPOINT ?? 'http://127.0.0.1:11434';
 const DEFAULT_MODEL = process.env.GENEOAPP_LOCAL_AI_MODEL ?? 'llama3';
@@ -24,7 +25,7 @@ export class LocalAiService {
 
     const prompt = payload?.prompt;
     if (typeof prompt !== 'string' || prompt.trim() === '') {
-      throw new ValidationError('prompt est obligatoire', { fields: { prompt: 'obligatoire' } });
+      throw requiredError('prompt');
     }
 
     let response;

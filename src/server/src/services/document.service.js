@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { NotFoundError, PayloadTooLargeError, ValidationError } from '../errors.js';
+import { NotFoundError, PayloadTooLargeError, fieldError } from '../errors.js';
 import { ocrImage, pdfContent } from '../indexing/content-extract.js';
 import { transcribe } from '../paleography/modernize.js';
+import { invalidError, requiredError } from '../validation/field-errors.js';
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const ENTITY_TYPES = new Set(['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE']);
@@ -9,14 +10,14 @@ const ENTITY_TYPES = new Set(['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE']
 function positiveId(value, field) {
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+    throw invalidError(field);
   }
   return id;
 }
 
 function decodeBase64(value, field = 'contentBase64') {
   if (typeof value !== 'string' || value.length === 0) {
-    throw new ValidationError(`${field} est obligatoire`, { fields: { [field]: 'obligatoire' } });
+    throw requiredError(field);
   }
   const clean = value.replace(/^data:[^,]*,/, '');
   if (clean.length > Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 4) {
@@ -121,7 +122,7 @@ export class DocumentService {
     const media = this.requireMedia(mediaId);
     for (const [field, value] of Object.entries({ raw, modern })) {
       if (value !== undefined && value !== null && typeof value !== 'string') {
-        throw new ValidationError(`${field} invalide`, { fields: { [field]: 'invalide' } });
+        throw invalidError(field);
       }
     }
     this.database
@@ -283,7 +284,7 @@ export class DocumentService {
   link(mediaId, { entityType, entityId } = {}, { performedBy = null } = {}) {
     const media = this.requireMedia(mediaId);
     if (!ENTITY_TYPES.has(entityType)) {
-      throw new ValidationError('entityType invalide', { fields: { entityType: 'invalide' } });
+      throw invalidError('entityType', 'entityType invalide');
     }
     const id = positiveId(entityId, 'entityId');
     const table = {
@@ -320,7 +321,13 @@ export class DocumentService {
     if (mediaId !== null && mediaId !== undefined && mediaId !== '') {
       const media = this.requireMedia(mediaId);
       if (!media.mime_type.startsWith('image/')) {
-        throw new ValidationError('Le portrait doit être une image');
+        throw fieldError(
+          'mediaId',
+          'NOT_AN_IMAGE',
+          'server.validation.portraitNotImage',
+          'Le portrait doit être une image',
+          { field: 'mediaId' },
+        );
       }
       value = media.id;
     }

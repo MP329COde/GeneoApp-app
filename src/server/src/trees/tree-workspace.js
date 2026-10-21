@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createDatabase } from '../db.js';
 import { DEFAULT_BACKUP_DIR, createServices } from '../services/index.js';
 import { NotFoundError, ValidationError } from '../errors.js';
+import { invalidError, requiredError, tooLongError } from '../validation/field-errors.js';
 import { copyDirectoryIfExists } from '../storage/storage-config.js';
 
 const CATALOG_FILE = 'trees.json';
@@ -16,14 +17,14 @@ const TREE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
 function validateName(name) {
   if (typeof name !== 'string' || name.trim() === '') {
-    throw new ValidationError('Le nom de l’arbre est obligatoire', {
-      fields: { name: 'obligatoire' },
-    });
+    throw requiredError('name', 'Le nom de l’arbre est obligatoire');
   }
   if (name.trim().length > NAME_MAX_LENGTH) {
-    throw new ValidationError(`Le nom de l’arbre dépasse ${NAME_MAX_LENGTH} caractères`, {
-      fields: { name: 'trop long' },
-    });
+    throw tooLongError(
+      'name',
+      NAME_MAX_LENGTH,
+      `Le nom de l’arbre dépasse ${NAME_MAX_LENGTH} caractères`,
+    );
   }
   return name.trim();
 }
@@ -31,7 +32,7 @@ function validateName(name) {
 function validateDescription(description) {
   if (description === undefined || description === null) return null;
   if (typeof description !== 'string' || description.length > DESCRIPTION_MAX_LENGTH) {
-    throw new ValidationError('Description invalide', { fields: { description: 'invalide' } });
+    throw invalidError('description', 'Description invalide');
   }
   return description.trim() || null;
 }
@@ -107,7 +108,7 @@ export class TreeWorkspace {
 
   find(id) {
     if (typeof id !== 'string' || !TREE_ID_PATTERN.test(id)) {
-      throw new ValidationError('Identifiant d’arbre invalide', { fields: { id: 'invalide' } });
+      throw invalidError('id', 'Identifiant d’arbre invalide');
     }
     const tree = this.catalog.trees.find(
       (candidate) => candidate.id === id && !candidate.deletedAt,
@@ -234,6 +235,10 @@ export class TreeWorkspace {
     if (tree.id === this.catalog.activeId) {
       throw new ValidationError(
         'Impossible de supprimer l’arbre ouvert : ouvrez-en un autre d’abord',
+        {
+          code: 'ACTIVE_TREE',
+          translationKey: 'server.tree.activeTree',
+        },
       );
     }
     tree.deletedAt = new Date().toISOString();
@@ -243,7 +248,7 @@ export class TreeWorkspace {
 
   restore(id) {
     if (typeof id !== 'string' || !TREE_ID_PATTERN.test(id)) {
-      throw new ValidationError('Identifiant d’arbre invalide', { fields: { id: 'invalide' } });
+      throw invalidError('id', 'Identifiant d’arbre invalide');
     }
     const tree = this.catalog.trees.find((candidate) => candidate.id === id && candidate.deletedAt);
     if (!tree) throw new NotFoundError('Arbre supprimé introuvable');

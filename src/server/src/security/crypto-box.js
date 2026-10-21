@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
-import { ValidationError } from '../errors.js';
+import { ValidationError, fieldError } from '../errors.js';
 
 // Format « boîte chiffrée » GeneoApp : MAGIC | sel (16) | IV (12) | tag (16) | données.
 // AES-256-GCM (confidentialité + intégrité), clé dérivée par scrypt.
@@ -12,15 +12,22 @@ export const MIN_PASSPHRASE_LENGTH = 12;
 
 function assertPassphrase(passphrase) {
   if (typeof passphrase !== 'string' || passphrase.length < MIN_PASSPHRASE_LENGTH) {
-    throw new ValidationError(
+    throw fieldError(
+      'passphrase',
+      'TOO_SHORT',
+      'server.validation.tooShort',
       `La phrase secrète doit contenir au moins ${MIN_PASSPHRASE_LENGTH} caractères`,
-      { fields: { passphrase: 'trop courte' } },
+      { field: 'passphrase', min: MIN_PASSPHRASE_LENGTH },
     );
   }
   if (passphrase.length > 1024) {
-    throw new ValidationError('Phrase secrète trop longue', {
-      fields: { passphrase: 'trop longue' },
-    });
+    throw fieldError(
+      'passphrase',
+      'TOO_LONG',
+      'server.validation.passphraseTooLong',
+      'Phrase secrète trop longue',
+      { field: 'passphrase', max: 1024 },
+    );
   }
 }
 
@@ -46,7 +53,10 @@ export function decryptBuffer(box, passphrase) {
     box.length < header ||
     !box.subarray(0, MAGIC.length).equals(MAGIC)
   ) {
-    throw new ValidationError('Fichier chiffré GeneoApp invalide');
+    throw new ValidationError('Fichier chiffré GeneoApp invalide', {
+      code: 'INVALID_ENCRYPTED_FILE',
+      translationKey: 'server.crypto.invalidFile',
+    });
   }
   let offset = MAGIC.length;
   const salt = box.subarray(offset, (offset += SALT_BYTES));
@@ -59,6 +69,9 @@ export function decryptBuffer(box, passphrase) {
     return Buffer.concat([decipher.update(box.subarray(offset)), decipher.final()]);
   } catch {
     // Même message pour une mauvaise phrase et un fichier altéré (pas d'oracle).
-    throw new ValidationError('Phrase secrète incorrecte ou fichier altéré');
+    throw new ValidationError('Phrase secrète incorrecte ou fichier altéré', {
+      code: 'WRONG_PASSPHRASE',
+      translationKey: 'server.crypto.wrongPassphrase',
+    });
   }
 }
