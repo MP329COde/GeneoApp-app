@@ -75,6 +75,8 @@ export function createServices(
 
   const localAi = new LocalAiService();
 
+  const research = new ResearchService(new ResearchRepository(database));
+
   return {
     ...entityServices,
     sources,
@@ -83,11 +85,13 @@ export function createServices(
     notifications: new NotificationService(new NotificationRepository(database)),
     gedcom: new GedcomService(database, { media: entityServices.media, backups }),
     accounts,
-    trash: new TrashService(new TrashRepository(database), entityServices),
+    // Le carnet de recherche est lui aussi restaurable depuis la corbeille :
+    // son service est donc passé à la corbeille aux côtés des autres tables.
+    trash: new TrashService(new TrashRepository(database), { ...entityServices, research }),
     backups,
     graph: new GenealogyGraphService(database),
     notes: new NoteService(new NoteRepository(database)),
-    research: new ResearchService(new ResearchRepository(database)),
+    research,
     statistics: new StatisticsService(database),
     localAi,
     merge: new MergeService(database),

@@ -128,6 +128,19 @@ export class ResearchService {
     }
   }
 
+  /**
+   * Restaure un carnet supprimé depuis la corbeille. La page de recherche
+   * (hypothèses, tâches, preuves) redevient visible en l'état.
+   */
+  restore(id, options) {
+    const researchId = positiveId(id, 'Identifiant de recherche');
+    const existing = this.repository.findById(researchId, { includeDeleted: true });
+    if (!existing || existing.deleted_at === null) {
+      throw new NotFoundError(`Recherche non supprimée ou introuvable : ${researchId}`);
+    }
+    return this.repository.restore(researchId, options);
+  }
+
   addHypothesis(researchId, payload, options) {
     const id = positiveId(researchId, 'Identifiant de recherche');
     this.get(id);

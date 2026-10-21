@@ -150,6 +150,131 @@ test('purge d’un média conserve la personne dont il est le portrait', () => {
   assert.deepEqual(database.pragma('foreign_key_check'), []);
 });
 
+test('un carnet de recherche supprimé apparaît dans la corbeille', () => {
+  const database = createTestDatabase();
+  const trash = new TrashRepository(database);
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  research.remove(notebook.id);
+
+  // Avant correction, `research_notebook` n'était pas dans TRASH_TABLES : le
+  // carnet disparaissait des vues sans jamais être proposé à la restauration.
+  const entries = trash.list();
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].table, 'research_notebook');
+  assert.equal(entries[0].id, notebook.id);
+  assert.equal(entries[0].label, 'Origine de la famille');
+  assert.ok(entries[0].deletedAt);
+});
+
+test('un carnet de recherche supprimé sort de la corbeille une fois restauré', () => {
+  const database = createTestDatabase();
+  const trash = new TrashRepository(database);
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  research.remove(notebook.id);
+  assert.equal(trash.list().length, 1);
+
+  const restored = research.restore(notebook.id);
+
+  assert.equal(restored.id, notebook.id);
+  assert.equal(restored.deleted_at, null);
+  assert.deepEqual(trash.list(), []);
+  // Le carnet redevient visible dans la liste des carnets.
+  assert.equal(research.list().length, 1);
+});
+
+test('la restauration d’un carnet rend ses hypothèses, tâches et preuves visibles', () => {
+  const database = createTestDatabase();
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  const hypothesis = research.addHypothesis(notebook.id, { title: 'Hypothèse', content: 'x' });
+  research.addEvidence(hypothesis.id, { stance: 'SUPPORTS', sourceId: null, content: 'preuve' });
+  research.addTask(notebook.id, { title: 'Tâche', content: 'y' });
+
+  research.remove(notebook.id);
+
+  // Le carnet seul est supprimé : ses enfants restent en base mais sont
+  // inaccessibles tant que le carnet parent est supprimé.
+  assert.equal(research.findDetailed(notebook.id), null);
+
+  const restored = research.restore(notebook.id);
+
+  assert.equal(restored.hypotheses.length, 1);
+  assert.equal(restored.hypotheses[0].evidence.length, 1);
+  assert.equal(restored.tasks.length, 1);
+});
+
+test('la restauration d’un carnet ne ressuscite pas un enfant supprimé séparément', () => {
+  const database = createTestDatabase();
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  const kept = research.addHypothesis(notebook.id, { title: 'Conservée', content: 'x' });
+  const removed = research.addHypothesis(notebook.id, { title: 'Supprimée', content: 'y' });
+  research.removeHypothesis(removed.id);
+
+  research.remove(notebook.id);
+  const restored = research.restore(notebook.id);
+
+  // L'hypothèse écartée par l'utilisateur reste écartée : la restauration
+  // ne ressuscite que le carnet, elle ne défait pas les suppressions faites
+  // séparément, qui seraient sinon impossibles à distinguer du carnet.
+  assert.equal(restored.hypotheses.length, 1);
+  assert.equal(restored.hypotheses[0].id, kept.id);
+  assert.equal(research.findHypothesis(removed.id), null);
+});
+
+test('restore refuse un carnet absent ou non supprimé', () => {
+  const database = createTestDatabase();
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+
+  assert.throws(() => research.restore(9999));
+  assert.throws(() => research.restore(notebook.id));
+});
+
+test('purge d’un carnet de recherche emporte ses hypothèses, tâches et preuves', () => {
+  const database = createTestDatabase();
+  const trash = new TrashRepository(database);
+  const research = new ResearchRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  const hypothesis = research.addHypothesis(notebook.id, { title: 'Hypothèse', content: 'x' });
+  research.addEvidence(hypothesis.id, { stance: 'SUPPORTS', sourceId: null, content: 'preuve' });
+  research.addTask(notebook.id, { title: 'Tâche', content: 'y' });
+  research.remove(notebook.id);
+
+  // Avant correction, la purge échouait : le carnet n'était pas dans
+  // TRASH_TABLES, donc hors du périmètre de la corbeille.
+  assert.equal(trash.purge('research_notebook', notebook.id), true);
+
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM research_notebook').get().n, 0);
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM research_hypotheses').get().n, 0);
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM research_tasks').get().n, 0);
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM research_evidence').get().n, 0);
+  assert.deepEqual(database.pragma('foreign_key_check'), []);
+});
+
+test('purge d’un carnet de recherche journalise la suppression définitive', () => {
+  const database = createTestDatabase();
+  const trash = new TrashRepository(database);
+  const research = new ResearchRepository(database);
+  const audit = new AuditRepository(database);
+
+  const notebook = research.create({ title: 'Origine de la famille', content: 'Rechercher' });
+  research.remove(notebook.id);
+
+  trash.purge('research_notebook', notebook.id, { performedBy: 'tester' });
+
+  const entries = audit.findForEntity('research_notebook', notebook.id);
+  assert.ok(entries.some((e) => e.operation === 'DELETE' && e.changes?.includes('purged')));
+});
+
 test('purge d’une union et d’une filiation emporte leurs notes', () => {
   const database = createTestDatabase();
   const trash = new TrashRepository(database);

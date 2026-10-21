@@ -59,11 +59,11 @@ export class ResearchRepository {
     });
   }
 
-  findById(id) {
+  findById(id, { includeDeleted = false } = {}) {
+    const clause = includeDeleted ? '' : 'AND deleted_at IS NULL';
     return (
-      this.database
-        .prepare('SELECT * FROM research_notebook WHERE id = ? AND deleted_at IS NULL')
-        .get(id) ?? null
+      this.database.prepare(`SELECT * FROM research_notebook WHERE id = ? ${clause}`).get(id) ??
+      null
     );
   }
 
@@ -162,6 +162,42 @@ export class ResearchRepository {
     return withTransaction(this.database, () =>
       this.softDelete('research_notebook', id, performedBy),
     );
+  }
+
+  /**
+   * Restaure un carnet de recherche depuis la corbeille.
+   *
+   * La suppression d'un carnet est logique et ne touche que la ligne
+   * `research_notebook` : ses hypothèses, ses tâches et ses preuves restent
+   * vivantes (`deleted_at IS NULL`) et sont simplement inaccessibles, faute de
+   * carnet parent. La restauration rend donc la page entière de nouveau
+   * visible, sans avoir à deviner quelles lignes enfants avaient été
+   * supprimées avec le carnet et lesquelles l'utilisateur avait écartées
+   * séparément : ces dernières restent supprimées.
+   */
+  restore(id, { performedBy = null } = {}) {
+    return withTransaction(this.database, () => {
+      const existing = this.findById(id, { includeDeleted: true });
+      if (!existing || existing.deleted_at === null) {
+        throw new Error(`Recherche non supprimée ou introuvable : ${id}`);
+      }
+
+      this.database
+        .prepare(
+          `UPDATE research_notebook SET deleted_at = NULL, updated_at = ${NOW_EXPRESSION}
+           WHERE id = ?`,
+        )
+        .run(id);
+
+      recordAudit(this.database, {
+        tableName: 'research_notebook',
+        rowId: id,
+        operation: 'RESTORE',
+        performedBy,
+      });
+
+      return this.findDetailed(id);
+    });
   }
 
   addHypothesis(researchId, { title, content = '', status = 'OPEN' }, { performedBy = null } = {}) {

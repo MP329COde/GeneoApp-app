@@ -10,6 +10,10 @@ const TRASH_TABLES = {
   unions: (row) => row.type,
   parentages: (row) => `parent #${row.parent_id} -> enfant #${row.child_id}`,
   media: (row) => row.original_filename,
+  // Un carnet de recherche supprimé est restaurable comme les autres tables :
+  // sans cette entrée, la donnée disparaissait de toutes les vues (le carnet
+  // est filtré par `deleted_at IS NULL`) sans jamais apparaître en corbeille.
+  research_notebook: (row) => row.title,
 };
 
 export const TRASH_TABLE_NAMES = Object.keys(TRASH_TABLES);
