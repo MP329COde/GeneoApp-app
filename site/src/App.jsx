@@ -77,11 +77,7 @@ export function App() {
           ))}
         </section>
 
-        <section
-          className="site__gallery"
-          aria-labelledby="site-gallery-title"
-          aria-label={t('site.gallery.label', 'Captures d’écran')}
-        >
+        <section className="site__gallery" aria-labelledby="site-gallery-title">
           <h2 id="site-gallery-title">{t('site.gallery.label', 'Captures d’écran')}</h2>
           <p className="site__gallery-intro">
             {t('site.gallery.intro', 'L’application, telle qu’elle fonctionne sur votre machine.')}
@@ -92,7 +88,9 @@ export function App() {
                 <img
                   className="site__gallery-image"
                   src={`captures/${shot.file}`}
-                  alt={t(shot.caption)}
+                  // Image décorative : la légende visible juste en dessous porte déjà
+                  // l'information, l'alternative serait doublée par le lecteur d'écran.
+                  alt=""
                   loading="lazy"
                   width={1440}
                   height={900}
