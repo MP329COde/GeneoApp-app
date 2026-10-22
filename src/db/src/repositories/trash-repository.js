@@ -6,6 +6,8 @@ import { withTransaction, recordAudit } from './base-repository.js';
 const TRASH_TABLES = {
   persons: (row) => `${row.given_names} ${row.family_name}`.trim(),
   places: (row) => row.name,
+  sources: (row) => row.title,
+  citations: (row) => `citation #${row.id} (source #${row.source_id})`,
   assertions: (row) => `${row.field} : ${row.value}`,
   events: (row) => row.type,
   unions: (row) => row.type,
@@ -92,6 +94,11 @@ const CASCADE_DEPENDENCIES = {
     { table: 'research_tasks', column: 'research_id', mode: 'row' },
   ],
   research_hypotheses: [{ table: 'research_evidence', column: 'hypothesis_id', mode: 'row' }],
+  sources: [
+    { table: 'citations', column: 'source_id', mode: 'row' },
+    { table: 'media', column: 'source_id', mode: 'detach' },
+    { table: 'research_evidence', column: 'source_id', mode: 'detach' },
+  ],
   // Les citations d'une affirmation disparaissent avec elle.
   assertions: [{ table: 'citations', entityType: 'ASSERTION', mode: 'link' }],
 };

@@ -96,6 +96,9 @@ export function createServices(
       ...entityServices,
       research,
       assertions,
+      sources,
+      // Les citations se restaurent par le service des sources.
+      citations: { restore: (id, options) => sources.restoreCitation(id, options) },
     }),
     backups,
     graph: new GenealogyGraphService(database, { search }),

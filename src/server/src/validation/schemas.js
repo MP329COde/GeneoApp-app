@@ -647,6 +647,72 @@ export function validateSourceCreate(payload) {
   };
 }
 
+export function validateSourceUpdate(payload) {
+  assertPayload(payload);
+  const { title, author, publicationInfo, sourceKind } = payload;
+  assertValid({
+    title: [isString(title, 'title'), maxLength(title, 300, 'title')],
+    author: [isString(author, 'author'), maxLength(author, 300, 'author')],
+    publicationInfo: [
+      isString(publicationInfo, 'publicationInfo'),
+      maxLength(publicationInfo, 500, 'publicationInfo'),
+    ],
+    sourceKind: [oneOf(sourceKind, SOURCE_KINDS, 'sourceKind')],
+  });
+  for (const key of ['title', 'sourceKind']) {
+    if (key in payload && (payload[key] === null || String(payload[key]).trim() === '')) {
+      throw fieldError(key, 'REQUIRED', 'server.validation.required', `${key} est obligatoire`);
+    }
+  }
+  const patch = {};
+  for (const key of ['title', 'author', 'publicationInfo', 'sourceKind']) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
+}
+
+export function validateCitationUpdate(payload) {
+  assertPayload(payload);
+  const { page, confidence, notes, evidenceType, informationQuality, quotation } = payload;
+  assertValid({
+    page: [isString(page, 'page'), maxLength(page, 100, 'page')],
+    confidence: [oneOf(confidence, CONFIDENCE_LEVELS, 'confidence')],
+    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+    evidenceType: [oneOf(evidenceType, EVIDENCE_TYPES, 'evidenceType')],
+    informationQuality: [oneOf(informationQuality, INFORMATION_QUALITIES, 'informationQuality')],
+    quotation: [isString(quotation, 'quotation'), maxLength(quotation, 5000, 'quotation')],
+  });
+  for (const key of ['confidence', 'evidenceType', 'informationQuality']) {
+    if (key in payload && payload[key] === null) {
+      throw fieldError(key, 'REQUIRED', 'server.validation.required', `${key} est obligatoire`);
+    }
+  }
+  const patch = {};
+  for (const key of [
+    'page',
+    'confidence',
+    'notes',
+    'evidenceType',
+    'informationQuality',
+    'quotation',
+  ]) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
+}
+
 export function validateCitationCreate(payload) {
   assertPayload(payload);
   const {
