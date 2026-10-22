@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import {
@@ -31,7 +31,18 @@ const EVENT_TYPES = [
 ];
 const DATE_PRECISIONS = ['EXACT', 'ABOUT', 'BEFORE', 'AFTER', 'BETWEEN', 'UNKNOWN'];
 
+/** Clé de traduction de la précision de date, par code enregistré en base. */
+const DATE_PRECISION_KEYS = {
+  EXACT: 'eventsTimeline.precision.exact',
+  ABOUT: 'eventsTimeline.precision.about',
+  BEFORE: 'eventsTimeline.precision.before',
+  AFTER: 'eventsTimeline.precision.after',
+  BETWEEN: 'eventsTimeline.precision.between',
+  UNKNOWN: 'eventsTimeline.precision.unknown',
+};
+
 export function EventsPanel({ selected }) {
+  const { t } = useTranslation();
   const [events, setEvents] = useState(null);
   const [places, setPlaces] = useState([]);
   const [type, setType] = useState('BIRTH');
@@ -66,10 +77,19 @@ export function EventsPanel({ selected }) {
       .catch((loadError) => setEventsError(loadError.message));
   }, []);
 
-  const placeLabelById = (id) => places.find((place) => place.id === id)?.name ?? `Lieu #${id}`;
+  const placeLabelById = (id) =>
+    places.find((place) => place.id === id)?.name ??
+    t('eventsTimeline.placeFallback', { id }, 'Lieu #{id}');
 
   if (!selected) {
-    return <p className="notice">Sélectionnez une personne pour voir et ajouter des événements.</p>;
+    return (
+      <p className="notice">
+        {t(
+          'eventsTimeline.selectPerson',
+          'Sélectionnez une personne pour voir et ajouter des événements.',
+        )}
+      </p>
+    );
   }
 
   const handleSubmit = async (event) => {
@@ -124,12 +144,12 @@ export function EventsPanel({ selected }) {
 
   return (
     <div className="search-panel">
-      <h3>Événements de {personLabel(selected)}</h3>
+      <h3>{t('eventsTimeline.title', { name: personLabel(selected) }, 'Événements de {name}')}</h3>
       {eventsError ? <ErrorNotice message={eventsError} /> : null}
 
       <form className="create-person-form" onSubmit={handleSubmit}>
         <label>
-          <span>Type</span>
+          <span>{t('eventsTimeline.field.type', 'Type')}</span>
           <select value={type} onChange={(event) => setType(event.target.value)}>
             {EVENT_TYPES.map((eventType) => (
               <option key={eventType} value={eventType}>
@@ -139,11 +159,16 @@ export function EventsPanel({ selected }) {
           </select>
         </label>
         <label>
-          <span>Valeur (optionnel — ex. profession, mention de diplôme, confession…)</span>
+          <span>
+            {t(
+              'eventsTimeline.field.value',
+              'Valeur (optionnel — ex. profession, mention de diplôme, confession…)',
+            )}
+          </span>
           <input value={value} onChange={(event) => setValue(event.target.value)} />
         </label>
         <label>
-          <span>Date (texte libre)</span>
+          <span>{t('eventsTimeline.field.date', 'Date (texte libre)')}</span>
           <input
             value={dateText}
             aria-describedby="event-date-reading"
@@ -157,24 +182,34 @@ export function EventsPanel({ selected }) {
         <small id="event-date-reading" className="date-reading" aria-live="polite">
           {dateText.trim()
             ? parseGenealogyDate(dateText).valid
-              ? `Lu comme : ${formatGenealogyDate(dateText)}`
-              : 'Date non reconnue : elle sera conservée telle quelle.'
-            : 'Ex. : 25 avril 1998, avril 1998, vers 1998, avant 1998, entre 1995 et 1998, 1998 ?'}
+              ? t(
+                  'eventsTimeline.date.readAs',
+                  { date: formatGenealogyDate(dateText) },
+                  'Lu comme : {date}',
+                )
+              : t(
+                  'eventsTimeline.date.unrecognized',
+                  'Date non reconnue : elle sera conservée telle quelle.',
+                )
+            : t(
+                'eventsTimeline.date.examples',
+                'Ex. : 25 avril 1998, avril 1998, vers 1998, avant 1998, entre 1995 et 1998, 1998 ?',
+              )}
         </small>
         <label>
-          <span>Précision de date</span>
+          <span>{t('eventsTimeline.field.precision', 'Précision de date')}</span>
           <select value={datePrecision} onChange={(event) => setDatePrecision(event.target.value)}>
             {DATE_PRECISIONS.map((precision) => (
               <option key={precision} value={precision}>
-                {precision}
+                {t(DATE_PRECISION_KEYS[precision] ?? 'eventsTimeline.precision.unknown', precision)}
               </option>
             ))}
           </select>
         </label>
         <label>
-          <span>Lieu existant (optionnel)</span>
+          <span>{t('eventsTimeline.field.existingPlace', 'Lieu existant (optionnel)')}</span>
           <select value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
-            <option value="">— Aucun —</option>
+            <option value="">{t('eventsTimeline.noPlace', '— Aucun —')}</option>
             {places.map((place) => (
               <option key={place.id} value={place.id}>
                 {place.name}
@@ -183,11 +218,11 @@ export function EventsPanel({ selected }) {
           </select>
         </label>
         <label>
-          <span>Ou nouveau lieu (optionnel)</span>
+          <span>{t('eventsTimeline.field.newPlace', 'Ou nouveau lieu (optionnel)')}</span>
           <input value={newPlaceName} onChange={(event) => setNewPlaceName(event.target.value)} />
         </label>
         <label>
-          <span>Latitude (optionnel)</span>
+          <span>{t('eventsTimeline.field.latitude', 'Latitude (optionnel)')}</span>
           <input
             value={newPlaceLatitude}
             onChange={(event) => setNewPlaceLatitude(event.target.value)}
@@ -195,7 +230,7 @@ export function EventsPanel({ selected }) {
           />
         </label>
         <label>
-          <span>Longitude (optionnel)</span>
+          <span>{t('eventsTimeline.field.longitude', 'Longitude (optionnel)')}</span>
           <input
             value={newPlaceLongitude}
             onChange={(event) => setNewPlaceLongitude(event.target.value)}
@@ -203,21 +238,23 @@ export function EventsPanel({ selected }) {
           />
         </label>
         <Button type="submit" size="sm" disabled={busy}>
-          Ajouter l’événement
+          {t('eventsTimeline.submit', 'Ajouter l’événement')}
         </Button>
       </form>
 
       {events === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('eventsTimeline.loading', 'Chargement…')}</p>
       ) : events.length === 0 ? (
-        <p className="notice">Aucun événement pour cette personne.</p>
+        <p className="notice">
+          {t('eventsTimeline.empty', 'Aucun événement pour cette personne.')}
+        </p>
       ) : (
         <ul className="search-results">
           {events.map((item) => (
             <li key={item.id}>
               <Badge tone="neutral">{item.type}</Badge>{' '}
               {item.value ? <strong>{item.value}</strong> : null}{' '}
-              {item.date_text ?? '(date inconnue)'}
+              {item.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
               {item.place_id ? ` — ${placeLabelById(item.place_id)}` : ''}
               <Button
                 type="button"
@@ -226,7 +263,7 @@ export function EventsPanel({ selected }) {
                 onClick={() => handleRemove(item.id)}
                 disabled={busy}
               >
-                Supprimer
+                {t('eventsTimeline.remove', 'Supprimer')}
               </Button>
             </li>
           ))}
@@ -237,6 +274,7 @@ export function EventsPanel({ selected }) {
 }
 
 export function TimelinePanel({ onNavigate }) {
+  const { t } = useTranslation();
   const [events, setEvents] = useState(null);
   const [timelineError, setTimelineError] = useState(null);
 
@@ -260,11 +298,13 @@ export function TimelinePanel({ onNavigate }) {
   }
 
   if (events === null) {
-    return <p role="status">Chargement…</p>;
+    return <p role="status">{t('eventsTimeline.loading', 'Chargement…')}</p>;
   }
 
   if (events.length === 0) {
-    return <p className="notice">Aucun événement enregistré.</p>;
+    return (
+      <p className="notice">{t('eventsTimeline.emptyGlobal', 'Aucun événement enregistré.')}</p>
+    );
   }
 
   return (
@@ -273,7 +313,7 @@ export function TimelinePanel({ onNavigate }) {
         <li key={event.id}>
           <Badge tone="neutral">{event.type}</Badge>{' '}
           {event.value ? <strong>{event.value}</strong> : null}{' '}
-          {event.date_text ?? '(date inconnue)'}
+          {event.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
           {event.place_name ? ` — ${event.place_name}` : ''}
           {event.participants.length > 0 ? (
             <span>
@@ -296,7 +336,7 @@ export function TimelinePanel({ onNavigate }) {
               variant="secondary"
               onClick={() => onNavigate(participant.personId)}
             >
-              Voir {participant.personGivenNames}
+              {t('eventsTimeline.view', { name: participant.personGivenNames }, 'Voir {name}')}
             </Button>
           ))}
         </li>

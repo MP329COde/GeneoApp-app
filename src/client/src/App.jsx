@@ -98,59 +98,62 @@ import './styles/doc-decoder.css';
 // Documents & sources, Outils & import, Paramètres). La vérification au fil
 // de l'eau reste intégrée aux fiches et à l'arbre ; l'écran « Cohérence »
 // permet en plus un contrôle global sur tout l'arbre en un clic.
+// Chaque entrée porte la clé i18n de son libellé : la navigation est rendue
+// dans la langue de l'utilisateur, et `SettingsPanel` reçoit les mêmes clés
+// pour proposer le renommage des entrées.
 const NAV_GROUPS = [
   {
     key: 'people',
-    label: 'Personnes & familles',
+    labelKey: 'nav.group.people',
     items: [
-      { id: 'tree', label: 'Arbre', icon: 'tree', shortcut: '⌘1' },
-      { id: 'person', label: 'Personne', icon: 'person', shortcut: '⌘2' },
-      { id: 'families', label: 'Familles', icon: 'family', shortcut: '⌘3' },
-      { id: 'relations', label: 'Parenté', icon: 'family' },
+      { id: 'tree', labelKey: 'nav.tree', icon: 'tree', shortcut: '⌘1' },
+      { id: 'person', labelKey: 'nav.person', icon: 'person', shortcut: '⌘2' },
+      { id: 'families', labelKey: 'nav.families', icon: 'family', shortcut: '⌘3' },
+      { id: 'relations', labelKey: 'nav.relations', icon: 'family' },
     ],
   },
   {
     key: 'search',
-    label: 'Recherche & vérification',
+    labelKey: 'nav.group.search',
     items: [
-      { id: 'search', label: 'Recherche', icon: 'search', shortcut: '⌘4' },
-      { id: 'compare', label: 'Comparaison', icon: 'duplicate' },
-      { id: 'consistency', label: 'Cohérence', icon: 'family' },
-      { id: 'statistics', label: 'Statistiques', icon: 'stats' },
+      { id: 'search', labelKey: 'nav.search', icon: 'search', shortcut: '⌘4' },
+      { id: 'compare', labelKey: 'nav.compare', icon: 'duplicate' },
+      { id: 'consistency', labelKey: 'nav.consistency', icon: 'family' },
+      { id: 'statistics', labelKey: 'nav.statistics', icon: 'stats' },
     ],
   },
   {
     key: 'documents',
-    label: 'Documents & sources',
+    labelKey: 'nav.group.documents',
     items: [
-      { id: 'sources', label: 'Sources', icon: 'source' },
-      { id: 'media', label: 'Médias', icon: 'media' },
-      { id: 'documents', label: 'Déchiffrer & identifier', icon: 'file' },
-      { id: 'events', label: 'Événements', icon: 'event' },
-      { id: 'timeline', label: 'Chronologie', icon: 'timeline' },
-      { id: 'map', label: 'Carte', icon: 'map' },
-      { id: 'annotations', label: 'Annotations', icon: 'notebook' },
-      { id: 'indexing', label: 'Indexation', icon: 'search' },
-      { id: 'notebook', label: 'Carnet', icon: 'notebook' },
+      { id: 'sources', labelKey: 'nav.sources', icon: 'source' },
+      { id: 'media', labelKey: 'nav.media', icon: 'media' },
+      { id: 'documents', labelKey: 'nav.decode', icon: 'file' },
+      { id: 'events', labelKey: 'nav.events', icon: 'event' },
+      { id: 'timeline', labelKey: 'nav.timeline', icon: 'timeline' },
+      { id: 'map', labelKey: 'nav.map', icon: 'map' },
+      { id: 'annotations', labelKey: 'nav.annotations', icon: 'notebook' },
+      { id: 'indexing', labelKey: 'nav.indexing', icon: 'search' },
+      { id: 'notebook', labelKey: 'nav.notebook', icon: 'notebook' },
     ],
   },
   {
     key: 'tools',
-    label: 'Outils & import',
+    labelKey: 'nav.group.tools',
     items: [
-      { id: 'trees', label: 'Arbres', icon: 'tree' },
-      { id: 'gedcom', label: 'GEDCOM', icon: 'file' },
-      { id: 'backups', label: 'Sauvegardes', icon: 'backup' },
-      { id: 'trash', label: 'Corbeille', icon: 'trash' },
-      { id: 'ai', label: 'IA', icon: 'chip' },
+      { id: 'trees', labelKey: 'nav.trees', icon: 'tree' },
+      { id: 'gedcom', labelKey: 'nav.gedcom', icon: 'file' },
+      { id: 'backups', labelKey: 'nav.backups', icon: 'backup' },
+      { id: 'trash', labelKey: 'nav.trash', icon: 'trash' },
+      { id: 'ai', labelKey: 'nav.ai', icon: 'chip' },
     ],
   },
   {
     key: 'settings',
-    label: 'Paramètres',
+    labelKey: 'nav.group.settings',
     items: [
-      { id: 'profile', label: 'Profil', icon: 'person' },
-      { id: 'settings', label: 'Paramètres', icon: 'settings' },
+      { id: 'profile', labelKey: 'nav.profile', icon: 'person' },
+      { id: 'settings', labelKey: 'nav.settings', icon: 'settings' },
     ],
   },
 ];
@@ -160,10 +163,10 @@ const NAV_GROUPS = [
 // ruban horizontal d'icônes de la version précédente, illisible sur un
 // écran de 390px (aucun libellé visible, défilement latéral au doigt).
 const MOBILE_TABS = [
-  { id: 'tree', label: 'Arbre', icon: 'tree' },
-  { id: 'person', label: 'Personne', icon: 'person' },
-  { id: 'search', label: 'Recherche', icon: 'search' },
-  { id: 'documents', label: 'Documents', icon: 'file' },
+  { id: 'tree', labelKey: 'nav.tree', icon: 'tree' },
+  { id: 'person', labelKey: 'nav.person', icon: 'person' },
+  { id: 'search', labelKey: 'nav.search', icon: 'search' },
+  { id: 'documents', labelKey: 'nav.documents', icon: 'file' },
 ];
 
 // Années de vie partagées par toutes les fiches (calculées depuis les événements).
@@ -253,7 +256,7 @@ function ThemeToggle() {
       type="button"
       className="icon-button"
       aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}
-      title={isDark ? 'Thème clair' : 'Thème sombre'}
+      title={isDark ? t('theme.toLight') : t('theme.toDark')}
       onClick={() => update({ theme: isDark ? 'light' : 'dark' })}
     >
       <Icon name={isDark ? 'sun' : 'moon'} />
@@ -264,6 +267,7 @@ function ThemeToggle() {
 // Poignée de redimensionnement de l'inspecteur (souris, pavé tactile, clavier).
 function InspectorResizer() {
   const { settings, update } = useSettings();
+  const { t } = useI18n();
   const clamp = (width) => Math.min(520, Math.max(280, Math.round(width)));
   // Motif ARIA « window splitter » : séparateur focusable réglé au clavier.
   return (
@@ -272,7 +276,7 @@ function InspectorResizer() {
       className="inspector-resizer"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Largeur du panneau de la personne"
+      aria-label={t('shell.inspectorWidth', 'Largeur du panneau de la personne')}
       aria-valuemin={280}
       aria-valuemax={520}
       aria-valuenow={settings.inspectorWidth}
@@ -619,7 +623,7 @@ function AppContent() {
           <div className="startup__progress" aria-hidden="true">
             <span />
           </div>
-          <p role="status">Chargement des données locales…</p>
+          <p role="status">{t('shell.loadingLocalData', 'Chargement des données locales…')}</p>
         </div>
       </main>
     );
@@ -665,7 +669,7 @@ function AppContent() {
               </h2>
               <div className="new-person-button">
                 <Button size="sm" onClick={() => setCreatingOpen(true)}>
-                  + Nouvelle personne
+                  {t('shell.newPerson', '+ Nouvelle personne')}
                 </Button>
               </div>
               <div className="verification-rerun-button">
@@ -686,27 +690,31 @@ function AppContent() {
               </div>
               <Modal
                 isOpen={creatingOpen}
-                title="Nouvelle personne"
+                title={t('shell.newPersonTitle', 'Nouvelle personne')}
                 onClose={() => setCreatingOpen(false)}
               >
                 <CreatePersonForm onCreate={handleCreate} creating={creating} />
               </Modal>
               {persons.length > 5 ? (
                 <label className="person-filter">
-                  <span className="gds-visually-hidden">Filtrer les personnes</span>
+                  <span className="gds-visually-hidden">
+                    {t('shell.filterPersons', 'Filtrer les personnes')}
+                  </span>
                   <input
                     type="search"
-                    placeholder="Filtrer les personnes…"
+                    placeholder={t('shell.filterPersonsPlaceholder', 'Filtrer les personnes…')}
                     value={personFilter}
                     onChange={(event) => setPersonFilter(event.target.value)}
                   />
                 </label>
               ) : null}
-              <nav className="person-list" aria-label="Personnes">
+              <nav className="person-list" aria-label={t('shell.persons', 'Personnes')}>
                 {persons.length === 0 ? (
                   <p className="notice">
-                    Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre
-                    arbre.
+                    {t(
+                      'shell.noPersons',
+                      'Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre arbre.',
+                    )}
                   </p>
                 ) : visiblePersons.length > VIRTUALIZATION_THRESHOLD ? (
                   <List
@@ -746,18 +754,18 @@ function AppContent() {
                     collapsedNavGroups.has(group.key) &&
                     !group.items.some((item) => item.id === view);
                   return (
-                    <div className="sidenav__group" key={group.label}>
+                    <div className="sidenav__group" key={group.key}>
                       <button
                         type="button"
                         className="sidenav__label sidenav__label--toggle"
                         aria-expanded={!isCollapsed}
                         aria-label={t(
                           isCollapsed ? 'nav.group.toggleExpand' : 'nav.group.toggleCollapse',
-                          { section: t(`nav.group.${group.key}`, group.label) },
+                          { section: t(group.labelKey) },
                         )}
                         onClick={() => toggleNavGroup(group.key)}
                       >
-                        <span aria-hidden="true">{t(`nav.group.${group.key}`, group.label)}</span>
+                        <span aria-hidden="true">{t(group.labelKey)}</span>
                         <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} />
                       </button>
                       {isCollapsed
@@ -769,13 +777,11 @@ function AppContent() {
                               aria-current={view === item.id ? 'page' : undefined}
                               onClick={() => setView(item.id)}
                               type="button"
-                              title={t(`nav.${item.id}`, item.label)}
-                              aria-label={t(`nav.${item.id}`, item.label)}
+                              title={t(item.labelKey)}
+                              aria-label={t(item.labelKey)}
                             >
                               <Icon name={item.icon} />
-                              <span className="sidenav__text">
-                                {t(`nav.${item.id}`, item.label)}
-                              </span>
+                              <span className="sidenav__text">{t(item.labelKey)}</span>
                               {item.shortcut && settings.showShortcuts ? (
                                 <kbd className="sidenav__kbd" aria-hidden="true">
                                   {item.shortcut}
@@ -808,7 +814,7 @@ function AppContent() {
                 }}
               >
                 <Icon name={tab.icon} />
-                <span>{tab.label}</span>
+                <span>{t(tab.labelKey)}</span>
               </button>
             ))}
             <button
@@ -818,22 +824,24 @@ function AppContent() {
               onClick={() => setMobileMenuOpen((open) => !open)}
             >
               <Icon name="panel" />
-              <span>Plus</span>
+              <span>{t('shell.more', 'Plus')}</span>
             </button>
           </nav>
           {mobileMenuOpen ? (
-            <div className="mobile-menu-sheet" role="dialog" aria-label="Menu complet">
+            <div
+              className="mobile-menu-sheet"
+              role="dialog"
+              aria-label={t('shell.fullMenu', 'Menu complet')}
+            >
               <div className="mobile-menu-sheet__header">
-                <strong>Menu</strong>
+                <strong>{t('shell.menu', 'Menu')}</strong>
                 <Button size="sm" variant="secondary" onClick={() => setMobileMenuOpen(false)}>
-                  Fermer
+                  {t('modal.close', 'Fermer')}
                 </Button>
               </div>
               {navGroups.map((group) => (
-                <div className="mobile-menu-sheet__group" key={group.label}>
-                  <p className="mobile-menu-sheet__label">
-                    {t(`nav.group.${group.key}`, group.label)}
-                  </p>
+                <div className="mobile-menu-sheet__group" key={group.key}>
+                  <p className="mobile-menu-sheet__label">{t(group.labelKey)}</p>
                   {group.items.map((item) => (
                     <button
                       key={item.id}
@@ -846,7 +854,7 @@ function AppContent() {
                       }}
                     >
                       <Icon name={item.icon} />
-                      <span>{t(`nav.${item.id}`, item.label)}</span>
+                      <span>{t(item.labelKey)}</span>
                     </button>
                   ))}
                 </div>
@@ -857,12 +865,10 @@ function AppContent() {
           <header className="topbar">
             <p className="topbar__crumbs">
               <button type="button" className="topbar__tree" onClick={() => setView('trees')}>
-                {activeTree?.name ?? 'Arbre local'}
+                {activeTree?.name ?? t('shell.localTree', 'Arbre local')}
               </button>
               <span aria-hidden="true">›</span>
-              <strong>
-                {currentView ? t(`nav.${currentView.id}`, currentView.label) : t('nav.tree')}
-              </strong>
+              <strong>{currentView ? t(currentView.labelKey) : t('nav.tree')}</strong>
             </p>
             {selected ? (
               <p className="topbar__context">
@@ -929,10 +935,10 @@ function AppContent() {
                 aria-pressed={settings.showInspector}
                 aria-label={
                   settings.showInspector
-                    ? 'Masquer le panneau de la personne'
-                    : 'Afficher le panneau de la personne'
+                    ? t('shell.hideInspector', 'Masquer le panneau de la personne')
+                    : t('shell.showInspector', 'Afficher le panneau de la personne')
                 }
-                title="Panneau de la personne"
+                title={t('shell.inspector', 'Panneau de la personne')}
                 onClick={() => updateSettings({ showInspector: !settings.showInspector })}
               >
                 <Icon name="panel" />
@@ -945,9 +951,9 @@ function AppContent() {
 
           <section
             className={`workspace${settings.showInspector ? '' : ' workspace--no-inspector'}`}
-            aria-label="Espace de généalogie"
+            aria-label={t('shell.genealogySpace', 'Espace de généalogie')}
           >
-            <section className="canvas-panel" aria-label="Vue de l'arbre">
+            <section className="canvas-panel" aria-label={t('shell.treeView', 'Vue de l’arbre')}>
               {/* L'arbre se recharge lui-même (refreshKey) : le remonter à chaque
                 écriture perdait mode, zoom et replis, et faisait sauter l'écran. */}
               <div
@@ -1089,52 +1095,75 @@ function AppContent() {
                     <img src={appIcon} alt="" width="56" height="56" />
                     {persons.length === 0 ? (
                       <>
-                        <div className="empty-state__eyebrow">Assistant de départ</div>
-                        <h2>Profil prêt, arbre vide</h2>
+                        <div className="empty-state__eyebrow">
+                          {t('shell.startAssistant', 'Assistant de départ')}
+                        </div>
+                        <h2>{t('shell.readyProfile', 'Profil prêt, arbre vide')}</h2>
                         <p>
-                          Commencez par la personne centrale de votre arbre : vous-même, un parent
-                          ou un ancêtre connu. Ensuite, les liens, dates et vérifications
-                          s’assemblent automatiquement.
+                          {t(
+                            'shell.startIntro',
+                            'Commencez par la personne centrale de votre arbre : vous-même, un parent ou un ancêtre connu. Ensuite, les liens, dates et vérifications s’assemblent automatiquement.',
+                          )}
                         </p>
-                        <ol className="assistant-steps" aria-label="Étapes pour commencer">
+                        <ol
+                          className="assistant-steps"
+                          aria-label={t('shell.startSteps', 'Étapes pour commencer')}
+                        >
                           <li>
-                            <strong>1. Ajouter une personne</strong>
-                            <span>Commencez par la racine de votre histoire familiale.</span>
+                            <strong>{t('shell.step1', '1. Ajouter une personne')}</strong>
+                            <span>
+                              {t(
+                                'shell.step1Hint',
+                                'Commencez par la racine de votre histoire familiale.',
+                              )}
+                            </span>
                           </li>
                           <li>
-                            <strong>2. Compléter la fiche</strong>
-                            <span>Dates, lieux, événements et liens entre proches.</span>
+                            <strong>{t('shell.step2', '2. Compléter la fiche')}</strong>
+                            <span>
+                              {t(
+                                'shell.step2Hint',
+                                'Dates, lieux, événements et liens entre proches.',
+                              )}
+                            </span>
                           </li>
                           <li>
-                            <strong>3. Vérifier l’arbre</strong>
-                            <span>Les contrôles de cohérence vous guident ensuite.</span>
+                            <strong>{t('shell.step3', '3. Vérifier l’arbre')}</strong>
+                            <span>
+                              {t(
+                                'shell.step3Hint',
+                                'Les contrôles de cohérence vous guident ensuite.',
+                              )}
+                            </span>
                           </li>
                         </ol>
                         <div className="empty-state__actions">
                           <Button onClick={() => setCreatingOpen(true)}>
-                            Ajouter la première personne
+                            {t('shell.addFirstPerson', 'Ajouter la première personne')}
                           </Button>
                           <Button variant="secondary" onClick={() => setView('gedcom')}>
-                            Importer un fichier GEDCOM
+                            {t('shell.importGedcom', 'Importer un fichier GEDCOM')}
                           </Button>
                           <Button variant="secondary" onClick={() => setView('backups')}>
-                            Restaurer une sauvegarde
+                            {t('shell.restoreBackup', 'Restaurer une sauvegarde')}
                           </Button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <h2>Choisissez une personne</h2>
+                        <h2>{t('shell.choosePerson', 'Choisissez une personne')}</h2>
                         <p className="notice">
-                          Sélectionnez une personne dans la liste ou avec la recherche rapide
-                          (Ctrl+K) pour afficher son arbre.
+                          {t(
+                            'shell.choosePersonHint',
+                            'Sélectionnez une personne dans la liste ou avec la recherche rapide (Ctrl+K) pour afficher son arbre.',
+                          )}
                         </p>
                       </>
                     )}
                   </div>
                 ) : !relations ? (
                   <p role="status" className="loading-line">
-                    Chargement des relations…
+                    {t('shell.loadingRelations', 'Chargement des relations…')}
                   </p>
                 ) : (
                   <TreeExplorer
@@ -1228,25 +1257,25 @@ function AppContent() {
                     {settings.inspectorSections.includes('actions') ? (
                       <div className="inspector-actions">
                         <Button size="sm" onClick={() => setView('person')}>
-                          Ouvrir la fiche
+                          {t('shell.openRecord', 'Ouvrir la fiche')}
                         </Button>
                         <Button size="sm" variant="secondary" onClick={() => setView('relations')}>
-                          Ouvrir la parenté
+                          {t('shell.openRelations', 'Ouvrir la parenté')}
                         </Button>
                       </div>
                     ) : null}
                     {relations && settings.inspectorSections.includes('relations') ? (
                       <div className="detail-section">
-                        <h3>Relations</h3>
+                        <h3>{t('shell.relations', 'Relations')}</h3>
                         <dl className="inspector-relations">
                           {[
-                            ['Parents', relations.parents],
-                            ['Conjoints', relations.spouses],
-                            ['Enfants', relations.children],
-                            ['Fratrie', relations.siblings],
-                          ].map(([label, list]) => (
-                            <div key={label}>
-                              <dt>{label}</dt>
+                            ['shell.parents', 'Parents', relations.parents],
+                            ['shell.spouses', 'Conjoints', relations.spouses],
+                            ['shell.children', 'Enfants', relations.children],
+                            ['shell.siblings', 'Fratrie', relations.siblings],
+                          ].map(([key, label, list]) => (
+                            <div key={key}>
+                              <dt>{t(key, label)}</dt>
                               <dd>
                                 {list.length}
                                 {list.length > 0 ? (
@@ -1292,13 +1321,15 @@ function AppContent() {
                     ) : null}
                     {settings.inspectorSections.includes('identity') ? (
                       <details className="inspector-edit">
-                        <summary>Modifier l’identité</summary>
+                        <summary>{t('shell.editIdentity', 'Modifier l’identité')}</summary>
                         <IdentityTool selected={selected} onUpdated={loadPersons} />
                       </details>
                     ) : null}
                   </>
                 ) : (
-                  <p className="notice">Aucune personne sélectionnée.</p>
+                  <p className="notice">
+                    {t('shell.noPersonSelected', 'Aucune personne sélectionnée.')}
+                  </p>
                 )}
               </aside>
             ) : null}

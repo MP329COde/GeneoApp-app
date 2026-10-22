@@ -1,3 +1,5 @@
+import { useTranslation } from '../design-system/index.js';
+
 const RING = 170;
 const NODE = { width: 150, height: 44 };
 
@@ -9,12 +11,13 @@ const EDGE_STYLES = {
   STEP: { className: 'graph-edge graph-edge--unknown', dash: '10 3 2 3' },
   UNKNOWN: { className: 'graph-edge graph-edge--unknown', dash: '2 3' },
 };
-const LINK_LABELS = {
-  BIOLOGICAL: 'biologique',
-  ADOPTIVE: 'adoptive',
-  FOSTER: 'nourricière',
-  STEP: 'par alliance',
-  UNKNOWN: 'de nature inconnue',
+// Clés de traduction du motif du lien ; le libellé affiché est traduit.
+const LINK_LABEL_KEYS = {
+  BIOLOGICAL: 'radialGraph.link.biological',
+  ADOPTIVE: 'radialGraph.link.adoptive',
+  FOSTER: 'radialGraph.link.foster',
+  STEP: 'radialGraph.link.step',
+  UNKNOWN: 'radialGraph.link.unknown',
 };
 
 /** Positions radiales : un anneau par degré, voisins rapprochés angulairement. */
@@ -59,6 +62,7 @@ export function layoutRadial(network) {
 }
 
 export function RadialGraph({ network, lifespans, onSelect }) {
+  const { t } = useTranslation();
   const { positions, maxDistance } = layoutRadial(network);
   const extent = RING * Math.max(1, maxDistance) + NODE.width;
   const byId = new Map(network.nodes.map((node) => [node.id, node]));
@@ -76,7 +80,11 @@ export function RadialGraph({ network, lifespans, onSelect }) {
       width={extent * 2}
       height={extent * 2}
       role="group"
-      aria-label={`Graphe familial de ${name(byId.get(network.rootId))}`}
+      aria-label={t(
+        'radialGraph.ariaLabel',
+        { name: name(byId.get(network.rootId)) },
+        'Graphe familial de {name}',
+      )}
     >
       {network.edges.map((edge, index) => {
         const a = positions.get(edge.from);
@@ -85,7 +93,7 @@ export function RadialGraph({ network, lifespans, onSelect }) {
         if (edge.kind === 'SPOUSE') {
           return (
             <g key={index} className="graph-edge graph-edge--spouse">
-              <title>Union</title>
+              <title>{t('radialGraph.union', 'Union')}</title>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} strokeWidth="5" />
               <line
                 x1={a.x}
@@ -109,7 +117,10 @@ export function RadialGraph({ network, lifespans, onSelect }) {
             y2={b.y}
             strokeDasharray={style.dash}
           >
-            <title>Filiation {LINK_LABELS[edge.linkType] ?? 'de nature inconnue'}</title>
+            <title>
+              {t('radialGraph.filiation', 'Filiation')}{' '}
+              {t(LINK_LABEL_KEYS[edge.linkType] ?? LINK_LABEL_KEYS.UNKNOWN, 'de nature inconnue')}
+            </title>
           </line>
         );
       })}
@@ -124,7 +135,11 @@ export function RadialGraph({ network, lifespans, onSelect }) {
             tabIndex={0}
             className={`graph-node${root ? ' graph-node--root' : ''}`}
             transform={`translate(${position.x - NODE.width / 2} ${position.y - NODE.height / 2})`}
-            aria-label={`${name(node)}${years ? `, ${years}` : ''}, degré ${node.distance}`}
+            aria-label={t(
+              'radialGraph.nodeLabel',
+              { name: name(node), years: years ? `, ${years}` : '', degree: node.distance },
+              '{name}{years}, degré {degree}',
+            )}
             onClick={() => onSelect(node.id)}
             onKeyDown={(event) => handleKey(event, node.id)}
           >

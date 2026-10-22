@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import { PortraitPicker } from './DocumentTools.jsx';
@@ -19,6 +19,17 @@ const PERSON_TABS = [
   { id: 'history', label: 'Historique' },
 ];
 
+/** Clé de traduction de l'onglet, par identifiant d'onglet. */
+const PERSON_TAB_KEYS = {
+  identity: 'personSheet.tab.identity',
+  events: 'personSheet.tab.events',
+  sources: 'personSheet.tab.sources',
+  media: 'personSheet.tab.media',
+  notes: 'personSheet.tab.notes',
+  timeline: 'personSheet.tab.timeline',
+  history: 'personSheet.tab.history',
+};
+
 // Fiche personne complète : un en-tête d'identité puis des onglets réutilisant
 // les outils déjà branchés sur l'API locale.
 export function PersonSheet({
@@ -30,6 +41,7 @@ export function PersonSheet({
   onDeleted,
 }) {
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const visibleTabs = PERSON_TABS.filter((item) => settings.personTabs.includes(item.id));
   const [tab, setTab] = useState('identity');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -45,7 +57,10 @@ export function PersonSheet({
       onDeleted?.(selected.id);
     } catch {
       setDeleteError(
-        'La suppression a échoué. Vérifiez votre connexion locale et réessayez, ou contactez le support si le problème persiste.',
+        t(
+          'personSheet.delete.error',
+          'La suppression a échoué. Vérifiez votre connexion locale et réessayez, ou contactez le support si le problème persiste.',
+        ),
       );
     } finally {
       setDeleting(false);
@@ -71,18 +86,26 @@ export function PersonSheet({
           <p className="person-sheet__badges">
             {selected.sex ? (
               <Badge>
-                {selected.sex === 'M' ? 'Homme' : selected.sex === 'F' ? 'Femme' : 'Sexe inconnu'}
+                {selected.sex === 'M'
+                  ? t('personForm.sexMale', 'Homme')
+                  : selected.sex === 'F'
+                    ? t('personForm.sexFemale', 'Femme')
+                    : t('personSheet.sexUnknown', 'Sexe inconnu')}
               </Badge>
             ) : null}
-            <Badge>{selected.is_living === 0 ? 'Décédé(e)' : 'Vivant(e)'}</Badge>
+            <Badge>
+              {selected.is_living === 0
+                ? t('personSheet.deceased', 'Décédé(e)')
+                : t('personSheet.living', 'Vivant(e)')}
+            </Badge>
             <span className="data-id">#{selected.id}</span>
           </p>
         </div>
         <button
           type="button"
           className="icon-button person-sheet__print"
-          aria-label="Imprimer la fiche ou l’enregistrer en PDF"
-          title="Imprimer / PDF"
+          aria-label={t('personSheet.print.label', 'Imprimer la fiche ou l’enregistrer en PDF')}
+          title={t('personSheet.print.title', 'Imprimer / PDF')}
           onClick={() => window.print?.()}
         >
           <Icon name="print" />
@@ -91,9 +114,15 @@ export function PersonSheet({
           <div
             className="person-sheet__delete-confirm"
             role="alertdialog"
-            aria-label="Confirmer la suppression"
+            aria-label={t('personSheet.delete.confirmLabel', 'Confirmer la suppression')}
           >
-            <p>Supprimer {personLabel(selected)} ? La personne sera déplacée vers la corbeille.</p>
+            <p>
+              {t(
+                'personSheet.delete.confirm',
+                { name: personLabel(selected) },
+                'Supprimer {name} ? La personne sera déplacée vers la corbeille.',
+              )}
+            </p>
             {deleteError ? <ErrorNotice message={deleteError} className="form-error" /> : null}
             <Button
               type="button"
@@ -102,7 +131,7 @@ export function PersonSheet({
               onClick={handleDelete}
               disabled={deleting}
             >
-              Confirmer la suppression
+              {t('personSheet.delete.confirmAction', 'Confirmer la suppression')}
             </Button>
             <Button
               type="button"
@@ -111,7 +140,7 @@ export function PersonSheet({
               onClick={() => setConfirmingDelete(false)}
               disabled={deleting}
             >
-              Annuler
+              {t('personSheet.delete.cancel', 'Annuler')}
             </Button>
           </div>
         ) : (
@@ -119,14 +148,22 @@ export function PersonSheet({
             type="button"
             size="sm"
             variant="danger"
-            aria-label={`Supprimer ${personLabel(selected)}`}
+            aria-label={t(
+              'personSheet.delete.label',
+              { name: personLabel(selected) },
+              'Supprimer {name}',
+            )}
             onClick={() => setConfirmingDelete(true)}
           >
-            Supprimer
+            {t('personSheet.delete.action', 'Supprimer')}
           </Button>
         )}
       </header>
-      <div className="tabs" role="tablist" aria-label="Sections de la fiche">
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label={t('personSheet.sections', 'Sections de la fiche')}
+      >
         {visibleTabs.map((item) => (
           <button
             key={item.id}
@@ -139,7 +176,7 @@ export function PersonSheet({
             onClick={() => setTab(item.id)}
             onKeyDown={handleTabKeyDown}
           >
-            {item.label}
+            {t(PERSON_TAB_KEYS[item.id] ?? 'personSheet.tab.identity', item.label)}
           </button>
         ))}
       </div>
@@ -151,22 +188,22 @@ export function PersonSheet({
             </div>
             {relations ? (
               <div className="detail-section">
-                <h3>Famille proche</h3>
+                <h3>{t('personSheet.family.title', 'Famille proche')}</h3>
                 <dl>
                   <div>
-                    <dt>Parents</dt>
+                    <dt>{t('personSheet.family.parents', 'Parents')}</dt>
                     <dd>{relations.parents.map(personLabel).join(', ') || '—'}</dd>
                   </div>
                   <div>
-                    <dt>Conjoints</dt>
+                    <dt>{t('personSheet.family.spouses', 'Conjoints')}</dt>
                     <dd>{relations.spouses.map(personLabel).join(', ') || '—'}</dd>
                   </div>
                   <div>
-                    <dt>Enfants</dt>
+                    <dt>{t('personSheet.family.children', 'Enfants')}</dt>
                     <dd>{relations.children.map(personLabel).join(', ') || '—'}</dd>
                   </div>
                   <div>
-                    <dt>Fratrie</dt>
+                    <dt>{t('personSheet.family.siblings', 'Fratrie')}</dt>
                     <dd>{relations.siblings.map(personLabel).join(', ') || '—'}</dd>
                   </div>
                 </dl>

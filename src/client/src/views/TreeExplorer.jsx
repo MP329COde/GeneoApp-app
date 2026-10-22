@@ -14,7 +14,7 @@ import {
   svgToPngBlob,
   tileSvg,
 } from '../export/tree-export.js';
-import { useI18n } from '../design-system/index.js';
+import { useI18n, useTranslation } from '../design-system/index.js';
 import { RadialGraph } from './RadialGraph.jsx';
 import { PortraitAvatar } from './DocumentTools.jsx';
 
@@ -25,6 +25,12 @@ const MODES = [
   { id: 'fan', label: 'Éventail' },
   { id: 'graph', label: 'Graphe' },
 ];
+
+/** Clé de traduction du lien de parenté affiché dans le bouton de repli. */
+const RELATION_KEYS = {
+  parents: { key: 'tree.relation.parents', fallback: 'parents' },
+  children: { key: 'tree.relation.children', fallback: 'enfants' },
+};
 const EMPTY_ISSUES = new Map();
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
@@ -52,10 +58,16 @@ function outsidePeriod(lifespan, period) {
 }
 
 function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
+  const { t } = useTranslation();
   const { lifespans, period, issues, client } = useContext(TreeViewContext);
   const lifespan = lifespans.get(person.id);
   const issueCount = issues.get(person.id)?.length ?? 0;
   const dimmed = outsidePeriod(lifespan, period);
+  const issueLabel = t(
+    'shell.issueCount',
+    { count: issueCount },
+    `${issueCount} point(s) à vérifier`,
+  );
   return (
     <button
       type="button"
@@ -69,29 +81,42 @@ function TreeNode({ person, sosa, sosaAmbiguous, branch, focus, onSelect }) {
         {person.given_names} {person.family_name}
       </span>
       {lifespan ? <span className="person-card__years">{lifespan.label}</span> : null}
-      {dimmed ? <span className="gds-visually-hidden"> (hors de la période filtrée)</span> : null}
+      {dimmed ? (
+        <span className="gds-visually-hidden">
+          {t('tree.outsidePeriod', ' (hors de la période filtrée)')}
+        </span>
+      ) : null}
       {issueCount ? (
-        <span className="issue-dot" title={`${issueCount} point(s) à vérifier`}>
-          <span className="gds-visually-hidden">{issueCount} point(s) à vérifier</span>
+        <span className="issue-dot" title={issueLabel}>
+          <span className="gds-visually-hidden">{issueLabel}</span>
         </span>
       ) : null}
       <span className="tree-node__meta">
         {branch ? (
           <span
             className="tree-node__branch"
-            aria-label={branch === 'paternal' ? 'Branche paternelle' : 'Branche maternelle'}
+            aria-label={
+              branch === 'paternal'
+                ? t('tree.branch.paternal', 'Branche paternelle')
+                : t('tree.branch.maternal', 'Branche maternelle')
+            }
           >
             {branch === 'paternal' ? 'P' : 'M'}
           </span>
         ) : null}
         {sosa ? (
-          <span className="data-id">Sosa {sosa}</span>
+          <span className="data-id">
+            {t('tree.sosa.label', 'Sosa')} {sosa}
+          </span>
         ) : sosaAmbiguous ? (
           <span
             className="data-id"
-            title="Filiation père/mère non déterminée pour ce parent (rôle inconnu ou ambigu) : aucun numéro Sosa fiable ne peut être attribué."
+            title={t(
+              'tree.sosa.ambiguousTitle',
+              'Filiation père/mère non déterminée pour ce parent (rôle inconnu ou ambigu) : aucun numéro Sosa fiable ne peut être attribué.',
+            )}
           >
-            Sosa indéterminé
+            {t('tree.sosa.ambiguous', 'Sosa indéterminé')}
           </span>
         ) : null}
       </span>
@@ -113,6 +138,7 @@ function Branch({
   showSosa = true,
   relation,
 }) {
+  const { t } = useTranslation();
   const { collapsed, toggle } = useContext(TreeViewContext);
   const linked = linksOf.get(person.id) ?? [];
   const parentSlots = withSosa ? assignParentSlots(linked) : new Map();
@@ -121,6 +147,10 @@ function Branch({
     : linked;
   const isCollapsed = collapsed.has(person.id);
   const name = `${person.given_names} ${person.family_name}`;
+  const relationLabel = t(
+    (RELATION_KEYS[relation] ?? RELATION_KEYS.children).key,
+    (RELATION_KEYS[relation] ?? RELATION_KEYS.children).fallback,
+  );
   return (
     <div className="tree-branch">
       <TreeNode
@@ -136,8 +166,16 @@ function Branch({
           type="button"
           className="tree-branch__toggle"
           aria-expanded={!isCollapsed}
-          aria-label={`${isCollapsed ? 'Déplier' : 'Replier'} les ${relation} de ${name}`}
-          title={isCollapsed ? `Déplier (${ordered.length})` : 'Replier'}
+          aria-label={t(
+            isCollapsed ? 'tree.toggle.expand' : 'tree.toggle.collapse',
+            { relation: relationLabel, name },
+            isCollapsed ? 'Déplier les {relation} de {name}' : 'Replier les {relation} de {name}',
+          )}
+          title={
+            isCollapsed
+              ? t('tree.toggle.expandCount', { count: ordered.length }, 'Déplier ({count})')
+              : t('tree.toggle.collapseShort', 'Replier')
+          }
           onClick={() => toggle(person.id)}
         >
           {isCollapsed ? `+${ordered.length}` : '−'}
@@ -256,6 +294,7 @@ function arcPath(r0, r1, a0, a1) {
 // Éventail ascendant sur un demi-cercle : un anneau par génération, un
 // secteur par numéro Sosa. Chaque secteur est un lien SVG focusable.
 function FanChart({ root, items, onSelect }) {
+  const { t } = useTranslation();
   const sosa = computeSosa(root.id, items);
   const people = [root, ...items];
   const generations = Math.max(1, ...items.map((item) => item.generation));
@@ -266,7 +305,11 @@ function FanChart({ root, items, onSelect }) {
       viewBox={`0 0 ${size} ${FAN_CENTER + 20}`}
       width={size * 1.6}
       role="group"
-      aria-label={`Éventail des ancêtres de ${root.given_names} ${root.family_name}`}
+      aria-label={t(
+        'tree.fan.ariaLabel',
+        { name: `${root.given_names} ${root.family_name}` },
+        'Éventail des ancêtres de {name}',
+      )}
     >
       {people.map((person) => {
         const number = sosa.get(person.id);
@@ -287,7 +330,7 @@ function FanChart({ root, items, onSelect }) {
               role="button"
               tabIndex={0}
               className="fan-chart__sector"
-              aria-label={`${label}, Sosa 1`}
+              aria-label={t('tree.sosa.nodeLabel', { name: label, sosa: 1 }, '{name}, Sosa {sosa}')}
               onClick={() => onSelect(person.id)}
               onKeyDown={handleKey}
             >
@@ -332,7 +375,11 @@ function FanChart({ root, items, onSelect }) {
             role="button"
             tabIndex={0}
             className="fan-chart__sector"
-            aria-label={`${label}, Sosa ${number}`}
+            aria-label={t(
+              'tree.sosa.nodeLabel',
+              { name: label, sosa: number },
+              '{name}, Sosa {sosa}',
+            )}
             onClick={() => onSelect(person.id)}
             onKeyDown={handleKey}
           >
@@ -462,7 +509,13 @@ export function TreeExplorer({
 
   const currentSvg = () =>
     buildTreeSvg(stageRef.current, {
-      title: selected ? `Arbre de ${selected.given_names} ${selected.family_name}` : 'Arbre',
+      title: selected
+        ? t(
+            'tree.export.title',
+            { name: `${selected.given_names} ${selected.family_name}` },
+            'Arbre de {name}',
+          )
+        : t('tree.export.genericTitle', 'Arbre'),
     });
 
   const runExport = async (kind) => {
@@ -627,7 +680,7 @@ export function TreeExplorer({
   } else if (!itemsReady) {
     content = (
       <p role="status" className="loading-line">
-        Chargement de l’arbre…
+        {t('tree.loading', 'Chargement de l’arbre…')}
       </p>
     );
   } else if (mode === 'graph') {
@@ -641,7 +694,9 @@ export function TreeExplorer({
       <>
         {items.length === 0 ? (
           <p className="notice">
-            {mode === 'ancestors' ? 'Aucun ancêtre enregistré.' : 'Aucun descendant enregistré.'}
+            {mode === 'ancestors'
+              ? t('tree.empty.ancestors', 'Aucun ancêtre enregistré.')
+              : t('tree.empty.descendants', 'Aucun descendant enregistré.')}
           </p>
         ) : null}
         <Branch
@@ -652,7 +707,7 @@ export function TreeExplorer({
           onSelect={onSelect}
           withSosa={mode === 'ancestors'}
           showSosa={showSosa}
-          relation={mode === 'ancestors' ? 'parents' : 'enfants'}
+          relation={mode === 'ancestors' ? 'parents' : 'children'}
         />
       </>
     );
@@ -724,7 +779,7 @@ export function TreeExplorer({
   return (
     <div className="tree-explorer">
       <div className="tree-toolbar">
-        <div className="segmented" role="group" aria-label="Type d’arbre">
+        <div className="segmented" role="group" aria-label={t('tree.toolbar.mode', 'Type d’arbre')}>
           {MODES.map((item) => (
             <button
               key={item.id}
@@ -738,7 +793,7 @@ export function TreeExplorer({
         </div>
         {mode !== 'family' ? (
           <label className="tree-toolbar__depth">
-            <span>Générations</span>
+            <span>{t('tree.toolbar.generations', 'Générations')}</span>
             <input
               type="number"
               min="1"
@@ -752,19 +807,21 @@ export function TreeExplorer({
         ) : null}
         {mode === 'ancestors' || mode === 'fan' ? (
           <label className="tree-toolbar__depth">
-            <span>Branche</span>
+            <span>{t('tree.toolbar.branch', 'Branche')}</span>
             <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
-              <option value="all">Toutes</option>
-              <option value="paternal">Paternelle</option>
-              <option value="maternal">Maternelle</option>
+              <option value="all">{t('tree.toolbar.branchAll', 'Toutes')}</option>
+              <option value="paternal">{t('tree.toolbar.branchPaternal', 'Paternelle')}</option>
+              <option value="maternal">{t('tree.toolbar.branchMaternal', 'Maternelle')}</option>
             </select>
           </label>
         ) : null}
         {mode !== 'family' ? (
           <fieldset className="tree-toolbar__period">
-            <legend>Période de naissance</legend>
+            <legend>{t('tree.toolbar.birthPeriod', 'Période de naissance')}</legend>
             <label>
-              <span className="gds-visually-hidden">Née à partir de l’année</span>
+              <span className="gds-visually-hidden">
+                {t('tree.toolbar.birthFrom', 'Née à partir de l’année')}
+              </span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -775,7 +832,9 @@ export function TreeExplorer({
             </label>
             <span aria-hidden="true">→</span>
             <label>
-              <span className="gds-visually-hidden">Née jusqu’à l’année</span>
+              <span className="gds-visually-hidden">
+                {t('tree.toolbar.birthTo', 'Née jusqu’à l’année')}
+              </span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -792,13 +851,17 @@ export function TreeExplorer({
             className="tree-toolbar__plain"
             onClick={() => setCollapsed(new Set())}
           >
-            Tout déplier
+            {t('tree.toolbar.expandAll', 'Tout déplier')}
           </button>
         ) : null}
-        <div className="tree-toolbar__zoom" role="group" aria-label="Zoom">
+        <div
+          className="tree-toolbar__zoom"
+          role="group"
+          aria-label={t('tree.toolbar.zoom', 'Zoom')}
+        >
           <button
             type="button"
-            aria-label="Zoom arrière"
+            aria-label={t('tree.toolbar.zoomOut', 'Zoom arrière')}
             onClick={() => setZoom((z) => clampZoom(z - 0.1))}
           >
             −
@@ -806,18 +869,22 @@ export function TreeExplorer({
           <output aria-live="polite">{Math.round(zoom * 100)} %</output>
           <button
             type="button"
-            aria-label="Zoom avant"
+            aria-label={t('tree.toolbar.zoomIn', 'Zoom avant')}
             onClick={() => setZoom((z) => clampZoom(z + 0.1))}
           >
             +
           </button>
           <button type="button" onClick={recenter}>
-            Recentrer
+            {t('tree.toolbar.recenter', 'Recentrer')}
           </button>
         </div>
         <details className="tree-toolbar__menu">
-          <summary>Exporter</summary>
-          <div className="tree-toolbar__export" role="group" aria-label="Exporter l’arbre">
+          <summary>{t('tree.toolbar.export', 'Exporter')}</summary>
+          <div
+            className="tree-toolbar__export"
+            role="group"
+            aria-label={t('tree.toolbar.exportLabel', 'Exporter l’arbre')}
+          >
             <button type="button" onClick={() => runExport('svg')}>
               SVG
             </button>
@@ -825,7 +892,7 @@ export function TreeExplorer({
               PNG
             </button>
             <button type="button" onClick={() => window.print?.()}>
-              Imprimer / PDF
+              {t('tree.toolbar.print', 'Imprimer / PDF')}
             </button>
             <button
               type="button"
@@ -840,7 +907,7 @@ export function TreeExplorer({
                 }
               }}
             >
-              Impression géante
+              {t('tree.toolbar.giantPrint', 'Impression géante')}
             </button>
           </div>
         </details>
@@ -852,10 +919,10 @@ export function TreeExplorer({
       ) : null}
       {giant ? (
         <section className="giant-print" aria-labelledby="giant-print-title">
-          <h4 id="giant-print-title">Impression géante</h4>
+          <h4 id="giant-print-title">{t('tree.giant.title', 'Impression géante')}</h4>
           <div className="giant-print__options">
             <label>
-              <span>Format de page</span>
+              <span>{t('tree.giant.pageSize', 'Format de page')}</span>
               <select
                 value={giantOptions.pageSize}
                 onChange={(event) => {
@@ -864,12 +931,12 @@ export function TreeExplorer({
                   setGiant({ svg: giant.svg, ...tileSvg(giant.svg, options) });
                 }}
               >
-                <option value="A4">A4 paysage</option>
-                <option value="A3">A3 paysage</option>
+                <option value="A4">{t('tree.giant.a4', 'A4 paysage')}</option>
+                <option value="A3">{t('tree.giant.a3', 'A3 paysage')}</option>
               </select>
             </label>
             <label>
-              <span>Pages en largeur</span>
+              <span>{t('tree.giant.pagesWide', 'Pages en largeur')}</span>
               <input
                 type="number"
                 min="1"
@@ -884,19 +951,24 @@ export function TreeExplorer({
               />
             </label>
             <p className="data-id" aria-live="polite">
-              {giant.tiles.length} page(s) · {giant.columns} × {giant.rows}
+              {t('tree.giant.pageCount', { count: giant.tiles.length }, '{count} page(s) · ')}
+              {giant.columns} × {giant.rows}
             </p>
             <button type="button" className="primary-inline" onClick={() => setPrintTiles(giant)}>
-              Imprimer les {giant.tiles.length} pages
+              {t(
+                'tree.giant.printPages',
+                { count: giant.tiles.length },
+                'Imprimer les {count} pages',
+              )}
             </button>
             <button type="button" onClick={() => setGiant(null)}>
-              Fermer
+              {t('modal.close', 'Fermer')}
             </button>
           </div>
           <div
             className="giant-print__preview"
             style={{ gridTemplateColumns: `repeat(${giant.columns}, 1fr)` }}
-            aria-label="Aperçu du découpage"
+            aria-label={t('tree.giant.preview', 'Aperçu du découpage')}
           >
             {giant.tiles.map((tile) => (
               <figure key={`${tile.row}-${tile.column}`} className="giant-print__tile">
@@ -906,7 +978,11 @@ export function TreeExplorer({
                   dangerouslySetInnerHTML={{ __html: tile.svg }}
                 />
                 <figcaption className="data-id">
-                  Ligne {tile.row} · colonne {tile.column}
+                  {t(
+                    'tree.giant.tilePosition',
+                    { row: tile.row, column: tile.column },
+                    'Ligne {row} · colonne {column}',
+                  )}
                 </figcaption>
               </figure>
             ))}
@@ -934,7 +1010,10 @@ export function TreeExplorer({
         tabIndex={0}
         role="application"
         aria-roledescription="arbre navigable"
-        aria-label="Arbre : glisser pour déplacer, Ctrl + molette ou pincement pour zoomer, flèches pour déplacer, + et − pour zoomer, 0 pour recentrer"
+        aria-label={t(
+          'tree.canvas.hint',
+          'Arbre : glisser pour déplacer, Ctrl + molette ou pincement pour zoomer, flèches pour déplacer, + et − pour zoomer, 0 pour recentrer',
+        )}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -971,7 +1050,7 @@ export function TreeExplorer({
             aria-expanded={!minimapCollapsed}
             onClick={() => setMinimapCollapsed((value) => !value)}
           >
-            <span>Minicarte</span>
+            <span>{t('tree.minimap', 'Minicarte')}</span>
             <span aria-hidden="true">{minimapCollapsed ? '▸' : '▾'}</span>
           </button>
           {minimapCollapsed ? null : (
