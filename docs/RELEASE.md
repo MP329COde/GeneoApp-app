@@ -54,3 +54,6 @@ npm run package:mac     # à lancer sur macOS
 npm run package:win     # sous Windows
 npm run package:linux   # sous Linux (l'AppImage ne se construit pas depuis macOS)
 ```
+
+> Après un packaging local, `electron-builder` recompile `better-sqlite3` pour Electron : lancer
+> `npm rebuild better-sqlite3` avant de relancer les tests ou le serveur sous Node.

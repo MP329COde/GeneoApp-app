@@ -703,6 +703,8 @@ de sauvegarde, MIME par contenu, sauvegardes manuelle / automatique / avant impo
 
 ### Limites restantes
 
+- Non vérifié en conditions réelles : `package:win` (pas de Windows ici), l'AppImage (build Linux depuis macOS impossible), un
+  vrai lecteur d'écran, un vrai modèle Ollama / LM Studio (tests avec faux serveurs), la signature de code des paquets.
 - La base SQLite n'est pas chiffrée au repos (le chiffrement du disque du système reste la protection) ;
   seules les sauvegardes exportées le sont.
 - La purge définitive de la corbeille exige une session protégée, mais l'API ne demande pas de paramètre
