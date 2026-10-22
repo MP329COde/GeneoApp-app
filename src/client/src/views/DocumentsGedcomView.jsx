@@ -5,6 +5,7 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { OldDocumentDecoder, PortraitPicker, WhoOwnsFile } from './DocumentTools.jsx';
 import { PhotoViewer } from './PhotoViewer.jsx';
+import { decodeGedcomBuffer } from '../../../server/src/gedcom/encoding.js';
 
 const LOCALE_STORAGE_KEY = 'geneoapp.locale';
 
@@ -360,7 +361,9 @@ export function GedcomPanel({ onImported, selected }) {
       return;
     }
     setArchive(null);
-    setContent(await file.text());
+    // Lu en octets puis décodé selon l'encodage du fichier (ANSEL, ANSI, UTF-16…) :
+    // `file.text()` supposerait de l'UTF-8 et remplacerait les accents par « � ».
+    setContent(decodeGedcomBuffer(new Uint8Array(await file.arrayBuffer())).text);
     setPreview(null);
     setReport(null);
   };

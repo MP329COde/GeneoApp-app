@@ -2,6 +2,7 @@ import { recordAudit, withTransaction } from '../../../db/src/repositories/base-
 import { reindexAll } from '../../../db/src/repositories/search-reindex.js';
 import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
+import { decodeGedcomBuffer } from './encoding.js';
 import { PayloadTooLargeError, fieldError } from '../errors.js';
 import { invalidError, requiredError } from '../validation/field-errors.js';
 import { createZip, readZip } from './zip.js';
@@ -118,9 +119,11 @@ export class GedcomService {
         { field: 'contentBase64' },
       );
     }
-    const text = gedcomEntry.content.toString('utf8');
+    const { text, encoding } = decodeGedcomBuffer(gedcomEntry.content);
     const report = await this.importSafely(text, { performedBy });
-    if (!report.imported) return { ...report, media: { attached: 0, missing: [], rejected: [] } };
+    if (!report.imported) {
+      return { ...report, encoding, media: { attached: 0, missing: [], rejected: [] } };
+    }
 
     const files = new Map(entries.map((entry) => [entry.name, entry.content]));
     const links = collectMediaLinks(parseGedcom(text));
@@ -149,7 +152,7 @@ export class GedcomService {
         media.rejected.push({ file: link.file, reason: error.message });
       }
     }
-    return { ...report, media };
+    return { ...report, encoding, media };
   }
 
   preview(input) {

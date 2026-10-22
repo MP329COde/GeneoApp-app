@@ -571,3 +571,58 @@ test('export : en-tête conforme, relu et vérifié ; un retour à la ligne dans
     await server.close();
   }
 });
+
+test('import par octets bruts : ANSI, ANSEL, UTF-16 et fins de ligne CR seul, encodage rapporté', async () => {
+  const server = await startTestServer();
+  try {
+    const text = (charset, eol = '\n') =>
+      [
+        '0 HEAD',
+        '1 GEDC',
+        '2 VERS 5.5.1',
+        `1 CHAR ${charset}`,
+        '0 @I1@ INDI',
+        '1 NAME Zoé /Léger/',
+        '0 TRLR',
+      ].join(eol) + eol;
+    const files = [
+      ['WINDOWS-1252', Buffer.from(text('ANSI'), 'latin1')],
+      [
+        'UTF-16LE',
+        Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text('UNICODE'), 'utf16le')]),
+      ],
+      ['UTF-8', Buffer.from(text('UTF-8', '\r'), 'utf8')],
+      [
+        'ANSEL',
+        Buffer.concat([
+          Buffer.from('0 HEAD\n1 GEDC\n2 VERS 5.5.1\n1 CHAR ANSEL\n0 @I1@ INDI\n1 NAME Zo'),
+          Buffer.from([0xe2, 0x65]),
+          Buffer.from(' /L'),
+          Buffer.from([0xe2, 0x65]),
+          Buffer.from('ger/\n0 TRLR\n'),
+        ]),
+      ],
+    ];
+    for (const [encoding, buffer] of files) {
+      const preview = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+        method: 'POST',
+        body: { gedcomBase64: buffer.toString('base64') },
+      });
+      assert.equal(preview.status, 200, encoding);
+      assert.equal(preview.body.encoding, encoding);
+      assert.equal(preview.body.valid, true, encoding);
+
+      const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+        method: 'POST',
+        body: { gedcomBase64: buffer.toString('base64') },
+      });
+      assert.equal(imported.status, 201, encoding);
+      const person = server.database
+        .prepare('SELECT given_names, family_name FROM persons WHERE id = ?')
+        .get(imported.body.ids.persons[0]);
+      assert.deepEqual(person, { given_names: 'Zoé', family_name: 'Léger' }, encoding);
+    }
+  } finally {
+    await server.close();
+  }
+});
