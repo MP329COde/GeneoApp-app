@@ -1,3 +1,4 @@
+import { PlaceHistoryPanel } from './PlaceHistoryPanel.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -107,6 +108,7 @@ export function MapPanel() {
           <AutoLocatePanel unlocatedCount={unlocated.length} onApplied={refreshPlaces} />
         </div>
       ) : null}
+      <PlaceHistoryPanel client={client} places={places} />
     </div>
   );
 }

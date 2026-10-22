@@ -50,5 +50,13 @@
   "personTools.ai.title": "IA locale",
   "personTools.ai.description": "Analyse via un serveur IA local compatible Ollama (aucun appel réseau distant). Si l’IA locale n’est pas activée ou que le serveur n’est pas démarré sur cette machine, une erreur explicite est renvoyée — jamais de réponse générée artificiellement en repli.",
   "personTools.ai.question": "Question",
-  "personTools.ai.analyze": "Analyser"
+  "personTools.ai.analyze": "Analyser",
+  "identifiers.heading": "Identifiants externes",
+  "identifiers.scheme": "Référentiel (ex. WIKIDATA)",
+  "identifiers.value": "Identifiant",
+  "identifiers.add": "Ajouter l’identifiant",
+  "identifiers.loading": "Chargement…",
+  "identifiers.empty": "Aucun identifiant externe.",
+  "identifiers.removeLabel": "Retirer {scheme} {value}",
+  "identifiers.remove": "Retirer"
 }

@@ -50,5 +50,13 @@
   "personTools.ai.title": "Local AI",
   "personTools.ai.description": "Analysis through a local AI server compatible with Ollama (no remote network calls). If local AI is not enabled, or the server is not running on this machine, an explicit error is returned — never an artificially generated fallback answer.",
   "personTools.ai.question": "Question",
-  "personTools.ai.analyze": "Analyze"
+  "personTools.ai.analyze": "Analyze",
+  "identifiers.heading": "External identifiers",
+  "identifiers.scheme": "Scheme (e.g. WIKIDATA)",
+  "identifiers.value": "Identifier",
+  "identifiers.add": "Add identifier",
+  "identifiers.loading": "Loading…",
+  "identifiers.empty": "No external identifier.",
+  "identifiers.removeLabel": "Remove {scheme} {value}",
+  "identifiers.remove": "Remove"
 }

@@ -3,6 +3,7 @@ import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { AssertionsPanel } from './AssertionsPanel.jsx';
+import { IdentifiersPanel } from './IdentifiersPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
@@ -458,6 +459,7 @@ export function NotesPanel({ selected }) {
         entityType="PERSON"
         entityId={selected.id}
       />
+      <IdentifiersPanel key={`identifiers-${selected.id}`} client={client} personId={selected.id} />
     </>
   );
 }
