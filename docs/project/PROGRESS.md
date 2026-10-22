@@ -275,9 +275,10 @@ en parallèle par des sous-agents, chacune avec son commit et ses validations.
 | #48 | Zoom et déplacement de la carte locale hors ligne | Terminé | `fdae2dc` |
 | #46 | Traduction des écrans métier restants | Terminé | `8c8a5cf` |
 | #49 | Indexation locale des pages distantes (opt-in) | Terminé | `48793f6`, `0189106`, `266d3df` |
-| — | Pagination de `client.persons.list()` | Terminé | `984f57e` |
+| — | Pagination de `client.persons.list()` | Terminé | `984f57e`, `28bdf29`, `cdc9a9a` |
 | — | Remise au format Prettier du dépôt | Terminé | `1d2a1f5` |
-| — | Galerie de captures de la vitrine | Terminé | `56226f0` |
+| — | Galerie de captures de la vitrine | Terminé | `56226f0`, `781d240` |
+| — | Favicon de la vitrine | Terminé | `bfbd360` |
 
 ### #47 — Confirmation partagée
 
@@ -343,11 +344,34 @@ bornes sont appliquées côté serveur (page par défaut de 50, maximum 200) et
 une valeur invalide ne provoque jamais de 500. `persons.list()` renvoie une
 enveloppe normalisée `{ items, total, limit, offset }` dans les deux
 transports (HTTP et IPC) ; l'adaptateur de l'application accepte encore les
-tableaux simples, pour les tests et les clients existants. Le nombre de
-personnes affiché vient désormais du serveur.
+tableaux simples, pour les tests et les clients existants.
 
-Validations : `npm run test:api` (155 tests), `npm run test:db` (92 tests),
-`npm run test:client` (247 tests), `npm run lint`, `npm run format:check`.
+Règles du contrat, précisées après une revue de code :
+
+- la forme de la réponse ne dépend que de la présence de `limit`, `offset` ou
+  `total` : sans eux, la réponse reste le tableau historique ; avec eux, c'est
+  l'enveloppe `{ items, total, limit, offset }` ;
+- `q` filtre dans **tous** les modes, paginé ou non (il était calculé puis
+  jeté par le contrôleur : la recherche ne renvoyait que toutes les personnes) ;
+- une chaîne vide (`?limit=`, `?offset=`) compte comme « présente mais
+  invalide » et retombe sur les valeurs par défaut (50 et 0) ;
+- un `q` vide est traité comme absent, de façon identique au dépôt et au
+  client IPC ;
+- le client HTTP charge la liste complète en une seule requête (et non page par
+  page, ce qui redemandait un `COUNT(*)` à chaque page) et accepte aussi bien
+  un tableau qu'une enveloppe : face à un serveur ancien, l'application
+  n'affiche plus zéro personne en silence ;
+- le filtrage IPC suit désormais la sémantique réelle du `LIKE` SQLite (repli
+  de casse ASCII seulement, aucune correspondance si le prénom est NULL), pour
+  que le mode navigateur et le mode Electron rendent le même résultat. Limite
+  connue : les accents ne sont pas repliés, comme dans SQLite.
+
+Le nombre de personnes affiché provient désormais de l'enveloppe du serveur ;
+comme l'écran charge encore la liste entière, il est égal à la taille de la
+liste affichée.
+
+Validations : `npm run test:api` (158 tests), `npm run test:db` (92 tests),
+`npm run test:client` (255 tests), `npm run lint`, `npm run format:check`.
 
 Limite assumée : l'écran des personnes charge encore la liste entière et
 filtre côté client ; la pagination est disponible pour l'API et l'IPC, mais
@@ -370,9 +394,40 @@ traduites. Les images sont servies depuis `site/public/captures/`, sans
 requête distante. Les dimensions déclarées (1440×900) correspondent à la
 taille réelle des captures : la page ne bouge plus à l'affichage.
 
-Validations : `npm run build` (site, Vite), `npm run lint`,
+La galerie a été reprise après la revue de code : le favicon est déclaré en
+chemin relatif (le site est construit avec `base: './'` et déployé sous un
+sous-chemin par GitHub Pages — une URL absolue y renvoyait une 404), les
+images de la galerie sont déclarées décoratives (`alt=""`, la légende visible
+portant déjà l'information, ce qui évitait une double annonce aux lecteurs
+d'écran) et le `aria-label` redondant de la section a été retiré.
+
+Validations : `npm run build` (dans `site/`, Vite), `npm run lint`,
 `npm run format:check`, `node scripts/check-i18n-keys.js` (0 erreur,
-0 avertissement).
+0 avertissement), et vérification dans un navigateur (console sans erreur,
+favicon servi en 200, six images chargées).
+
+### Revue de code des commits de la session
+
+Les commits de cette session ont été relus à froid par un sous-agent
+(lecture seule, sur `b2b9553..HEAD`). La revue a trouvé deux problèmes
+majeurs et douze mineurs, tous vérifiés par un serveur de test réel :
+
+- majeur — `GET /api/persons?q=…` calculait le filtre puis le jetait : la
+  recherche renvoyait toutes les personnes (corrigé dans `28bdf29`) ;
+- majeur — le filtrage IPC et le `LIKE` du serveur n'avaient pas la même
+  sémantique (casse Unicode repliée côté JS, ASCII seul côté SQL ; prénom
+  NULL matchant ou non selon le transport) : le mode navigateur et le mode
+  Electron ne rendaient pas les mêmes résultats (corrigé dans `cdc9a9a`) ;
+- mineurs — `?limit=` vide changeait la forme de la réponse, `?offset=0`
+  seul tronquait silencieusement la liste, la boucle de chargement HTTP
+  vidait l'application face à un serveur ancien, `items` n'était pas protégé
+  dans l'application, la branche IPC n'était pas testée, le favicon et
+  l'accessibilité de la galerie, et deux formulations inexactes dans ce
+  document de suivi.
+
+Le seul point laissé ouvert est celui des légendes de la galerie : trois
+captures sur six décrivent un contenu que l'image ne montre pas (carnet
+vide, aucun doublon détecté, arbre sans années affichées).
 
 ### Tickets restant ouverts
 
@@ -405,5 +460,11 @@ Restent réellement ouverts :
   aujourd'hui via l'outil « Identité » (`PersonDetailTools`), qui bénéficie
   du Ctrl+Z et de l'historique génériques, mais pas directement dans la liste
   des personnes.
+- **Légendes de la galerie de la vitrine** : trois captures sur six
+  décrivent un contenu que l'image ne montre pas (carnet vide, aucun
+  doublon détecté, arbre sans années affichées), parce que la base de
+  démonstration du script de capture est presque vide. Il faut la peupler
+  et refaire les captures, ou réécrire les légendes pour ne décrire que ce
+  qui est visible.
 
 
