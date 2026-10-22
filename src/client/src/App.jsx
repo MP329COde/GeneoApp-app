@@ -27,6 +27,7 @@ import { SettingsPanel } from './views/SettingsPanel.jsx';
 import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
 import appIcon from './assets/geneoapp-icon.png';
 import { Icon, ErrorNotice, personLabel } from './components/shared.jsx';
+import { TreeLegend } from './components/TreeLegend.jsx';
 import { NotificationCenter } from './components/NotificationCenter.jsx';
 import { CreatePersonForm, SearchPanel, DuplicatesPanel } from './views/PersonListPanels.jsx';
 import { FamiliesPanel } from './views/FamiliesView.jsx';
@@ -413,11 +414,11 @@ function AppContent() {
 
   const refreshLifespans = useCallback(async () => {
     try {
-      setLifespans(buildLifespans((await client.events.listAll()) ?? []));
+      setLifespans(buildLifespans((await client.events.listAll()) ?? [], t));
     } catch {
       // les années de vie sont un confort d'affichage, jamais bloquantes
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refreshLifespans();
@@ -1228,19 +1229,7 @@ function AppContent() {
                             />
                           ))}
                         </div>
-                        <ul className="tree-legend" aria-label="Légende">
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--bio" /> Biologique
-                          </li>
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--adoptive" />{' '}
-                            Adoptive
-                          </li>
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--unknown" />{' '}
-                            Inconnue
-                          </li>
-                        </ul>
+                        <TreeLegend />
                       </div>
                     }
                   />

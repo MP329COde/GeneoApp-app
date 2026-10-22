@@ -69,7 +69,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
         setOptedIn(Boolean(connector?.optedIn));
       })
       .catch(() => {
-        if (!cancelled) setError(t('siteSearch.index.stateError', 'État illisible.'));
+        if (!cancelled) setError(t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'));
       })
       .finally(() => {
         if (!cancelled) setLoaded(true);
@@ -109,7 +109,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
               'siteSearch.index.networkDisabled',
               'Accès internet désactivé dans les réglages.',
             )
-          : t('siteSearch.index.stateError', 'État illisible.'),
+          : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
       setBusy(false);
@@ -140,7 +140,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
               'siteSearch.index.notOptedIn',
               'Autorisez d’abord l’indexation locale de ce site.',
             )
-          : t('siteSearch.index.stateError', 'État illisible.'),
+          : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
       setBusy(false);
@@ -170,7 +170,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
               'siteSearch.index.notOptedIn',
               'Autorisez d’abord l’indexation locale de ce site.',
             )
-          : t('siteSearch.index.stateError', 'État illisible.'),
+          : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
       setBusy(false);

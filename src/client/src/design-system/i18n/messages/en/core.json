@@ -184,6 +184,7 @@
   "shell.choosePerson": "Choose a person",
   "shell.choosePersonHint": "Select a person from the list or with the quick search (Ctrl+K) to display their tree.",
   "shell.loadingRelations": "Loading relations…",
+  "units.kilobytes": "KB",
   "shell.openRecord": "Open the record",
   "shell.openRelations": "Open the relations",
   "shell.relations": "Relations",

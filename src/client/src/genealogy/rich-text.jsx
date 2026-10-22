@@ -53,10 +53,13 @@ export function RichText({ text }) {
   return <div className="rich-text">{blocks}</div>;
 }
 
+/** Repli français : le mot utilisé quand aucune sélection n'est faite. */
+const FRENCH = (key, fallback) => fallback;
+
 /** Insère une mise en forme autour de la sélection d'une zone de texte. */
-export function applyFormat(textarea, kind) {
+export function applyFormat(textarea, kind, t = FRENCH) {
   const { selectionStart: start, selectionEnd: end, value } = textarea;
-  const selected = value.slice(start, end) || 'texte';
+  const selected = value.slice(start, end) || t('annotations.defaultSelection', 'texte');
   const formats = {
     bold: `**${selected}**`,
     italic: `*${selected}*`,

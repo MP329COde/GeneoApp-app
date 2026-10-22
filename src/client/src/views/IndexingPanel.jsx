@@ -122,10 +122,12 @@ export function IndexingPanel({ client }) {
   // Résumé d'une exécution : chaque compteur a son propre pluriel, la phrase
   // d'assemblage est traduite à part.
   const runSummary = (result) => {
+    // Dans la phrase, l'état s'accorde en minuscules (« Indexation terminée ») ;
+    // le journal des dernières exécutions garde la majuscule (étiquette isolée).
     const status =
       result.status === 'DONE'
-        ? t('indexing.run.done', 'Terminée')
-        : t('indexing.run.interrupted', 'Interrompue');
+        ? t('indexing.runSummary.status.done', 'terminée')
+        : t('indexing.runSummary.status.interrupted', 'interrompue');
     const counts = t(
       'indexing.runSummary.counts',
       {
@@ -470,7 +472,7 @@ export function IndexingPanel({ client }) {
             <span>{t('indexing.source.folderPath', 'Dossier (chemin complet)')}</span>
             <input
               value={folder}
-              placeholder="/Users/moi/Généalogie/scans"
+              placeholder={t('indexing.source.folderPlaceholder', '/Users/moi/Généalogie/scans')}
               onChange={(event) => setFolder(event.target.value)}
             />
           </label>

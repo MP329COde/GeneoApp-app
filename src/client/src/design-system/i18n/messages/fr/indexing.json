@@ -27,5 +27,7 @@
   "server.indexing.connectorNotFound": "Connecteur introuvable",
   "server.indexing.connectorNotOptedIn": "Connecteur non autorisé : activez son indexation locale avant de l’interroger",
   "server.indexing.networkDisabled": "Accès internet désactivé dans les réglages",
-  "server.indexing.connectorSource": "Cette source appartient à un connecteur : passez par l’indexation du connecteur"
+  "server.indexing.connectorSource": "Cette source appartient à un connecteur : passez par l’indexation du connecteur",
+  "indexing.runSummary.status.done": "terminée",
+  "indexing.runSummary.status.interrupted": "interrompue"
 }

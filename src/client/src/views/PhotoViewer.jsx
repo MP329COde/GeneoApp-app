@@ -167,7 +167,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
         </Button>
         <h4 id="photo-title">{photo.original_filename}</h4>
         <p className="data-id">
-          {photo.mime_type} · {Math.round(photo.size_bytes / 1024)} Ko
+          {photo.mime_type} · {Math.round(photo.size_bytes / 1024)} {t('units.kilobytes', 'Ko')}
         </p>
       </header>
 

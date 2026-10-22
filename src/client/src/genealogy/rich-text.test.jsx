@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { RichText } from './rich-text.jsx';
+import { RichText, applyFormat } from './rich-text.jsx';
+import { translate } from '../design-system/i18n/I18nProvider.jsx';
+
+const tFr = (key, variables, fallback) => translate('fr', key, variables, fallback);
+const tEn = (key, variables, fallback) => translate('en', key, variables, fallback);
 
 describe('RichText', () => {
   it('met en forme sans jamais injecter de HTML', () => {
@@ -22,5 +26,18 @@ describe('RichText', () => {
     expect(links).toHaveLength(1);
     expect(links[0].getAttribute('href')).toBe('https://archives.loire-atlantique.fr');
     expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('met en forme la sélection quand elle existe', () => {
+    const textarea = { selectionStart: 0, selectionEnd: 12, value: 'Ada Lovelace' };
+
+    expect(applyFormat(textarea, 'bold', tFr)).toBe('**Ada Lovelace**');
+  });
+
+  it('utilise le mot traduit quand aucune sélection n’est faite', () => {
+    const textarea = { selectionStart: 0, selectionEnd: 0, value: '' };
+
+    expect(applyFormat(textarea, 'bold', tFr)).toBe('**texte**');
+    expect(applyFormat(textarea, 'bold', tEn)).toBe('**text**');
   });
 });

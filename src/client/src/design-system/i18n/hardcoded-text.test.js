@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { auditFile } from '../../../../../scripts/check-i18n-hardcoded.js';
+import { auditFile, listSourceFiles, ROOT } from '../../../../../scripts/check-i18n-hardcoded.js';
 
 const VIEWS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'views');
 
@@ -54,5 +54,26 @@ describe('i18n : pas de texte en dur dans les vues migrées', () => {
   it.each(MIGRATED_VIEWS)('%s ne contient plus de texte affiché en dur', (file) => {
     const leftovers = auditFile(path.join(VIEWS_DIR, file)).map((entry) => entry.text);
     expect(leftovers, `Textes à traduire en passant par t() dans ${file}`).toEqual([]);
+  });
+});
+
+/**
+ * Garde-fou global : plus aucun texte destiné à l'utilisateur ne doit être
+ * écrit en dur dans le client — écrans, composants, réglages, utilitaires
+ * généalogiques et coquille de l'application. Les fichiers exclus sont ceux
+ * dont les chaînes ne sont pas de l'habillage d'interface (données par défaut
+ * modifiables par l'utilisateur, messages de développement).
+ */
+describe('i18n : pas de texte en dur dans le client', () => {
+  it('ne signale aucun texte à traduire', () => {
+    const violations = [];
+    for (const file of listSourceFiles()) {
+      for (const entry of auditFile(file)) {
+        violations.push(
+          `${path.relative(ROOT, file)}:${entry.line} — ${JSON.stringify(entry.text)}`,
+        );
+      }
+    }
+    expect(violations, 'Textes à traduire en passant par t()').toEqual([]);
   });
 });

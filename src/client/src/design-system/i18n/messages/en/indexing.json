@@ -27,5 +27,7 @@
   "server.indexing.connectorNotFound": "Connector not found",
   "server.indexing.connectorNotOptedIn": "Connector not allowed: enable its local indexing before querying it",
   "server.indexing.networkDisabled": "Internet access is disabled in the settings",
-  "server.indexing.connectorSource": "This source belongs to a connector: use the connector indexing instead"
+  "server.indexing.connectorSource": "This source belongs to a connector: use the connector indexing instead",
+  "indexing.runSummary.status.done": "done",
+  "indexing.runSummary.status.interrupted": "interrupted"
 }

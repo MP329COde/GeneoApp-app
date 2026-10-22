@@ -77,7 +77,7 @@ function NoteEditor({ initial, submitLabel, onSubmit, onCancel, busy }) {
             type="button"
             onClick={() => {
               if (!textareaRef.current) return;
-              setBody(applyFormat(textareaRef.current, kind));
+              setBody(applyFormat(textareaRef.current, kind, t));
               textareaRef.current.focus();
             }}
           >
