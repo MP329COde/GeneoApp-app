@@ -17,6 +17,15 @@ const FEATURES = [
   { key: 'multi', title: 'site.feature.multi.title', text: 'site.feature.multi.text' },
 ];
 
+const SCREENSHOTS = [
+  { file: '02-arbre.png', caption: 'site.gallery.tree.caption' },
+  { file: '15-carte.png', caption: 'site.gallery.map.caption' },
+  { file: '17-carnet.png', caption: 'site.gallery.notebook.caption' },
+  { file: '14-chronologie.png', caption: 'site.gallery.timeline.caption' },
+  { file: '08-doublons.png', caption: 'site.gallery.duplicates.caption' },
+  { file: '19-ia-locale.png', caption: 'site.gallery.ai.caption' },
+];
+
 export function App() {
   const { t } = useTranslation();
 
@@ -66,6 +75,32 @@ export function App() {
               <p>{t(feature.text)}</p>
             </article>
           ))}
+        </section>
+
+        <section
+          className="site__gallery"
+          aria-labelledby="site-gallery-title"
+          aria-label={t('site.gallery.label', 'Captures d’écran')}
+        >
+          <h2 id="site-gallery-title">{t('site.gallery.label', 'Captures d’écran')}</h2>
+          <p className="site__gallery-intro">
+            {t('site.gallery.intro', 'L’application, telle qu’elle fonctionne sur votre machine.')}
+          </p>
+          <ul className="site__gallery-list">
+            {SCREENSHOTS.map((shot) => (
+              <li className="site__gallery-item" key={shot.file}>
+                <img
+                  className="site__gallery-image"
+                  src={`captures/${shot.file}`}
+                  alt={t(shot.caption)}
+                  loading="lazy"
+                  width={1440}
+                  height={900}
+                />
+                <p className="site__gallery-caption">{t(shot.caption)}</p>
+              </li>
+            ))}
+          </ul>
         </section>
       </main>
 

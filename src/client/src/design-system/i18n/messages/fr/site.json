@@ -16,5 +16,13 @@
   "site.feature.genealogy.text": "Arbre, parentés, chronologie, carte, carnet de recherche, GEDCOM, doublons et incohérences détectées automatiquement.",
   "site.feature.indexation.title": "Indexation locale maîtrisée",
   "site.feature.indexation.text": "Documents et sites distants indexés sur votre machine, uniquement après votre autorisation explicite, dans le respect de robots.txt.",
-  "site.footer": "Ce site est une vitrine statique, indépendante de l'application (ADR 0009)."
+  "site.footer": "Ce site est une vitrine statique, indépendante de l'application (ADR 0009).",
+  "site.gallery.label": "Captures d’écran",
+  "site.gallery.intro": "L’application, telle qu’elle fonctionne sur votre machine.",
+  "site.gallery.tree.caption": "L’arbre, avec ses années, ses replis et sa minicarte.",
+  "site.gallery.map.caption": "La carte locale : vos lieux, sans aucune tuile téléchargée.",
+  "site.gallery.notebook.caption": "Le carnet de recherche : hypothèses, tâches et preuves.",
+  "site.gallery.timeline.caption": "La chronologie, tous événements confondus.",
+  "site.gallery.duplicates.caption": "Les doublons détectés, avec aperçu des réattributions.",
+  "site.gallery.ai.caption": "L’assistant local, activable ou non, jamais obligatoire."
 }

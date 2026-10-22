@@ -16,5 +16,13 @@
   "site.feature.genealogy.text": "Tree, relationships, timeline, map, research log, GEDCOM, duplicates and inconsistencies detected automatically.",
   "site.feature.indexation.title": "Local indexing under control",
   "site.feature.indexation.text": "Documents and remote sites indexed on your machine, only after your explicit consent, and respecting robots.txt.",
-  "site.footer": "This site is a static showcase, independent of the application (ADR 0009)."
+  "site.footer": "This site is a static showcase, independent of the application (ADR 0009).",
+  "site.gallery.label": "Screenshots",
+  "site.gallery.intro": "The application, as it runs on your machine.",
+  "site.gallery.tree.caption": "The tree, with its years, folds and minimap.",
+  "site.gallery.map.caption": "The local map: your places, without a single downloaded tile.",
+  "site.gallery.notebook.caption": "The research log: hypotheses, tasks and evidence.",
+  "site.gallery.timeline.caption": "The timeline, every event gathered.",
+  "site.gallery.duplicates.caption": "Detected duplicates, with a preview of the reattributions.",
+  "site.gallery.ai.caption": "The local assistant, usable or not, never required."
 }
