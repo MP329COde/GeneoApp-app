@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { AssertionsPanel } from './AssertionsPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
@@ -438,14 +439,26 @@ export function NotesPanel({ selected }) {
     );
   }
   return (
-    <AnnotationsPanel
-      key={selected.id}
-      client={client}
-      entityType="PERSON"
-      entityId={selected.id}
-      heading={t('personTools.notes.heading', { name: personLabel(selected) }, 'Notes sur {name}')}
-      emptyLabel={t('personTools.notes.empty', 'Aucune note pour cette personne.')}
-    />
+    <>
+      <AnnotationsPanel
+        key={selected.id}
+        client={client}
+        entityType="PERSON"
+        entityId={selected.id}
+        heading={t(
+          'personTools.notes.heading',
+          { name: personLabel(selected) },
+          'Notes sur {name}',
+        )}
+        emptyLabel={t('personTools.notes.empty', 'Aucune note pour cette personne.')}
+      />
+      <AssertionsPanel
+        key={`assertions-${selected.id}`}
+        client={client}
+        entityType="PERSON"
+        entityId={selected.id}
+      />
+    </>
   );
 }
 
