@@ -19,8 +19,9 @@ export function createPersonController(services) {
 
       // Sans paramètre de pagination : comportement historique (tableau
       // complet), utilisé par l'IPC Electron et les calculs locaux du client.
+      // Le filtre texte `q` s'applique malgré tout dans ce mode.
       if (!options.paginated) {
-        response.json(persons.list({ includeDeleted: options.includeDeleted }));
+        response.json(persons.list({ includeDeleted: options.includeDeleted, q: options.q }));
         return;
       }
 

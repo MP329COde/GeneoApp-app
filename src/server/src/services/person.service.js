@@ -8,19 +8,35 @@ import {
 /**
  * Normalise les paramètres de requête de la liste des personnes.
  *
- * Règles (jamais d'erreur 500 sur une entrée malveillante) :
- * - `limit` absent → la liste complète historique (tableau simple) ;
- * - `limit` présent → pagination, borné à [1, PERSONS_PAGE_MAX_LIMIT] ;
- *   une valeur invalide (non entière, < 1) retombe sur la valeur par défaut ;
- * - `offset` → entier >= 0 (une valeur invalide ou négative devient 0) ;
- * - `q` → recherche texte optionnelle sur nom/prénom ;
- * - `total=true` → ne renvoie que le nombre total de personnes correspondantes.
+ * Règles finales (jamais d'erreur 500 sur une entrée malveillante) :
+ * - `total=true` → réponse `{ total }` seule, filtrée par `q` si présent ;
+ * - pagination (réponse `{ items, total, limit, offset }`) SI `limit` ou `offset`
+ *   est présent, ou `total=true` ; une chaîne vide (`?limit=`) compte comme
+ *   « présente mais invalide » et déclenche donc la pagination ; l'absence de
+ *   `limit` dans un mode paginé prend la valeur par défaut
+ *   (PERSONS_PAGE_DEFAULT_LIMIT) ;
+ * - sinon (aucun paramètre de pagination) → tableau simple, comme avant, mais
+ *   filtré par `q` s'il est fourni ;
+ * - `limit` : entier dans [1, PERSONS_PAGE_MAX_LIMIT], sinon
+ *   PERSONS_PAGE_DEFAULT_LIMIT ; une chaîne vide est « présente mais invalide »
+ *   et retombe donc sur la valeur par défaut ;
+ * - `offset` : entier >= 0, sinon 0 ; une chaîne vide est « présente mais
+ *   invalide » et retombe donc sur 0 ;
+ * - `q` : recherche texte optionnelle, appliquée dans tous les modes ; un `q`
+ *   présent mais vide est traité comme absent (aucun filtre), exactement comme
+ *   le dépôt et le client IPC.
+ *
+ * La forme de la réponse ne dépend donc QUE de la présence de
+ * `limit`/`offset`/`total`, jamais de `q` seul.
  */
 export function parsePersonsListQuery(query = {}) {
   const rawLimit = query.limit;
   const rawOffset = query.offset;
-  const hasLimit = rawLimit !== undefined && rawLimit !== null && rawLimit !== '';
-  const hasOffset = rawOffset !== undefined && rawOffset !== null && rawOffset !== '';
+  // Une chaîne vide (`?limit=`, `?offset=`) compte comme « présente mais
+  // invalide » : la pagination est déclenchée, les valeurs retombent sur les
+  // valeurs par défaut (voir plus bas).
+  const hasLimit = rawLimit !== undefined && rawLimit !== null;
+  const hasOffset = rawOffset !== undefined && rawOffset !== null;
   const totalOnly = query.total === 'true' || query.total === '1';
 
   let limit = PERSONS_PAGE_DEFAULT_LIMIT;
@@ -39,7 +55,10 @@ export function parsePersonsListQuery(query = {}) {
     }
   }
 
-  const q = typeof query.q === 'string' && query.q.trim() !== '' ? query.q.trim() : undefined;
+  // `q` absent ou vide → aucun filtre (comportement du dépôt et du client
+  // IPC) ; `q` non vide → filtre appliqué dans tous les modes.
+  const trimmedQ = typeof query.q === 'string' ? query.q.trim() : '';
+  const q = trimmedQ === '' ? undefined : trimmedQ;
 
   return {
     paginated: hasLimit || hasOffset || totalOnly,

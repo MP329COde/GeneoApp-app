@@ -214,7 +214,7 @@ test('GET /api/persons sans paramètre renvoie un tableau simple (comportement h
   }
 });
 
-test('GET /api/persons?limit= pagine avec total et respecte offset/q', async () => {
+test('GET /api/persons?limit=2&offset=0 pagine avec total et respecte q', async () => {
   const server = await startTestServer();
   try {
     for (const givenNames of ['Ada', 'Byron', 'Charles', 'Diane', 'Ernest']) {
@@ -348,6 +348,95 @@ test('GET /api/persons paginé : les pages successives couvrent la liste sans do
     assert.equal(collected.length, families.length);
     assert.equal(new Set(collected.map((person) => person.id)).size, families.length);
     assert.deepEqual(collected.map((person) => person.family_name).sort(), [...families].sort());
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?q= filtre les personnes même sans pagination', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Byron', familyName: 'Lovelace' },
+    });
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Dupont' },
+    });
+
+    // Sans `limit` : forme historique (tableau simple), mais filtré.
+    const byron = await requestJson(server.baseUrl, '/api/persons?q=byron');
+    assert.equal(byron.status, 200);
+    assert.ok(Array.isArray(byron.body));
+    assert.equal(byron.body.length, 1);
+    assert.equal(byron.body[0].given_names, 'Byron');
+
+    const ada = await requestJson(server.baseUrl, '/api/persons?q=ada');
+    assert.ok(Array.isArray(ada.body));
+    assert.equal(ada.body.length, 1);
+    assert.equal(ada.body[0].given_names, 'Ada');
+
+    // Un `q` vide est traité comme absent : aucun filtre, toutes les personnes.
+    const empty = await requestJson(server.baseUrl, '/api/persons?q=');
+    assert.ok(Array.isArray(empty.body));
+    assert.equal(empty.body.length, 2);
+
+    // Une recherche sans correspondance renvoie un tableau vide.
+    const noMatch = await requestJson(server.baseUrl, '/api/persons?q=zzz');
+    assert.ok(Array.isArray(noMatch.body));
+    assert.equal(noMatch.body.length, 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?limit= ou ?offset= vide pagine avec les valeurs par défaut', async () => {
+  const server = await startTestServer();
+  try {
+    for (const [givenNames, familyName] of [
+      ['Byron', 'Lovelace'],
+      ['Ada', 'Dupont'],
+    ]) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName },
+      });
+    }
+
+    for (const query of ['limit=', 'offset=']) {
+      const { status, body } = await requestJson(server.baseUrl, `/api/persons?${query}`);
+      assert.equal(status, 200, query);
+      assert.ok(Array.isArray(body.items), query);
+      assert.equal(body.total, 2, query);
+      assert.equal(body.limit, 50, query);
+      assert.equal(body.offset, 0, query);
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?offset=0 seul pagine avec la limite par défaut', async () => {
+  const server = await startTestServer();
+  try {
+    for (const [givenNames, familyName] of [
+      ['Byron', 'Lovelace'],
+      ['Ada', 'Dupont'],
+    ]) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName },
+      });
+    }
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons?offset=0');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body.items));
+    assert.equal(body.total, 2);
+    assert.equal(body.limit, 50);
+    assert.equal(body.offset, 0);
+    assert.deepEqual(body.items.map((person) => person.family_name).sort(), ['Dupont', 'Lovelace']);
   } finally {
     await server.close();
   }
