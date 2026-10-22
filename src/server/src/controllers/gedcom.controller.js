@@ -16,6 +16,9 @@ function readInput(body) {
   return { text: body?.gedcom, encoding: 'UTF-8' };
 }
 
+// 201 importé ; 409 en attente de confirmation (doublons probables) ; 422 fichier invalide.
+const statusOf = (report) => (report.imported ? 201 : report.requiresConfirmation ? 409 : 422);
+
 export function createGedcomController(services) {
   const { gedcom } = services;
 
@@ -28,8 +31,11 @@ export function createGedcomController(services) {
     async import(request, response, next) {
       try {
         const { text, encoding } = readInput(request.body);
-        const report = await gedcom.importSafely(text, { performedBy: request.performedBy });
-        response.status(report.imported ? 201 : 422).json({ ...report, encoding });
+        const report = await gedcom.importSafely(text, {
+          performedBy: request.performedBy,
+          confirmDuplicates: request.body?.confirmDuplicates === true,
+        });
+        response.status(statusOf(report)).json({ ...report, encoding });
       } catch (error) {
         next(error);
       }
@@ -51,8 +57,9 @@ export function createGedcomController(services) {
       try {
         const report = await gedcom.importArchive(request.body?.contentBase64, {
           performedBy: request.performedBy,
+          confirmDuplicates: request.body?.confirmDuplicates === true,
         });
-        response.status(report.imported ? 201 : 422).json(report);
+        response.status(statusOf(report)).json(report);
       } catch (error) {
         next(error);
       }

@@ -116,6 +116,13 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
 
   await page.getByRole('button', { name: 'Aperçu' }).click();
   await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  // Des personnes du fichier existent déjà dans l'arbre de test : l'import exige
+  // alors une confirmation explicite (jamais d'ajout en double silencieux).
+  const confirmDuplicates = page.getByLabel('J’ai vérifié : importer quand même');
+  if (await confirmDuplicates.isVisible()) {
+    await expect(importButton).toBeDisabled();
+    await confirmDuplicates.check();
+  }
   await expect(importButton).toBeEnabled();
 
   await importButton.click();
@@ -716,6 +723,8 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   await page.getByLabel('Contenu GEDCOM').fill(largeGedcom);
   await page.getByRole('button', { name: 'Aperçu' }).click();
   await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  const confirmDuplicates = page.getByLabel('J’ai vérifié : importer quand même');
+  if (await confirmDuplicates.isVisible()) await confirmDuplicates.check();
   await page.getByRole('button', { name: 'Importer' }).click();
   await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible({
     timeout: 30_000,

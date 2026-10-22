@@ -136,7 +136,7 @@ export function decodeGedcomBuffer(input) {
   }
   const utf8 = decodeStrictUtf8(buffer);
   if (utf8 !== null) {
-    const ascii = !/[^\x00-\x7f]/.test(utf8);
+    const ascii = [...utf8].every((char) => char.charCodeAt(0) < 0x80);
     return { text: utf8, encoding: ascii && charset === 'ASCII' ? 'ASCII' : 'UTF-8' };
   }
   // Octets non UTF-8 sans encodage déclaré (ou déclaré à tort) : le cas le plus

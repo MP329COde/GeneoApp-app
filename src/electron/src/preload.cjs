@@ -295,7 +295,8 @@ const api = {
 
   gedcom: {
     preview: (gedcom) => invoke(IPC_CHANNELS.GEDCOM_PREVIEW, { gedcom }),
-    import: (gedcom, performedBy) => invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy }),
+    import: (gedcom, performedBy, confirmDuplicates) =>
+      invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy, confirmDuplicates }),
     export: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT, options),
     exportArchive: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE, options),
     importArchive: (contentBase64) => invoke(IPC_CHANNELS.GEDCOM_IMPORT_ARCHIVE, { contentBase64 }),

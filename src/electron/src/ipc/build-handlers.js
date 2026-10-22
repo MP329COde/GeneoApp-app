@@ -274,8 +274,11 @@ function buildRawHandlers(services, workspace, storage) {
     ),
 
     [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),
-    [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>
-      gedcom.importSafely(input, { performedBy: actorOf(performedBy) }),
+    [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy, confirmDuplicates }) =>
+      gedcom.importSafely(input, {
+        performedBy: actorOf(performedBy),
+        confirmDuplicates: confirmDuplicates === true,
+      }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(
       ({ format, personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>

@@ -614,7 +614,7 @@ test('import par octets bruts : ANSI, ANSEL, UTF-16 et fins de ligne CR seul, en
 
       const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
         method: 'POST',
-        body: { gedcomBase64: buffer.toString('base64') },
+        body: { gedcomBase64: buffer.toString('base64'), confirmDuplicates: true },
       });
       assert.equal(imported.status, 201, encoding);
       const person = server.database
@@ -622,6 +622,101 @@ test('import par octets bruts : ANSI, ANSEL, UTF-16 et fins de ligne CR seul, en
         .get(imported.body.ids.persons[0]);
       assert.deepEqual(person, { given_names: 'Zoé', family_name: 'Léger' }, encoding);
     }
+  } finally {
+    await server.close();
+  }
+});
+
+test('pipeline : doublons probables signalés à l’aperçu, import refusé sans confirmation, jamais de fusion', async () => {
+  const server = await startTestServer();
+  try {
+    const first = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(first.status, 201);
+    const count = () => server.database.prepare('SELECT COUNT(*) AS n FROM persons').get().n;
+    assert.equal(count(), 3);
+
+    const preview = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(preview.body.valid, true);
+    assert.equal(preview.body.duplicateCount, 3);
+    assert.ok(
+      preview.body.duplicates.some((d) => d.name === 'Ada Lovelace' && d.birthYear === 1815),
+    );
+    assert.ok(preview.body.duplicates.every((d) => d.reason === 'SAME_REFERENCE_AND_NAME'));
+
+    const refused = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(refused.status, 409);
+    assert.equal(refused.body.requiresConfirmation, true);
+    assert.equal(refused.body.imported, false);
+    assert.equal(count(), 3, 'rien n’est écrit sans confirmation');
+
+    const confirmed = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture, confirmDuplicates: true },
+    });
+    assert.equal(confirmed.status, 201);
+    assert.equal(confirmed.body.duplicatesConfirmed, 3);
+    assert.equal(count(), 6, 'l’import confirmé ajoute, il ne fusionne ni n’écrase rien');
+
+    // Un homonyme né à une autre époque n'est pas signalé.
+    const other = fixture.replace('10 DEC 1815', '10 DEC 1700');
+    const homonym = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+      method: 'POST',
+      body: { gedcom: other.replaceAll('@I', '@X').replaceAll('@F1@', '@Y1@') },
+    });
+    assert.ok(!homonym.body.duplicates.some((d) => d.name === 'Ada Lovelace'));
+  } finally {
+    await server.close();
+  }
+});
+
+test('rollback intégral : un fichier incohérent n’écrit rien et répond 400, pas 500', async () => {
+  const server = await startTestServer();
+  try {
+    const selfParent = [
+      '0 HEAD',
+      '1 GEDC',
+      '2 VERS 5.5.1',
+      '0 @I1@ INDI',
+      '1 NAME Valide /Personne/',
+      '1 BIRT',
+      '2 DATE 1900',
+      '0 @I2@ INDI',
+      '1 NAME Son /Propre-parent/',
+      '0 @F1@ FAM',
+      '1 HUSB @I2@',
+      '1 CHIL @I2@',
+      '0 TRLR',
+    ].join('\n');
+    const result = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: selfParent },
+    });
+    assert.equal(result.status, 400);
+    assert.match(result.body.error.message, /aucune donnée écrite/);
+    for (const table of [
+      'persons',
+      'events',
+      'event_participants',
+      'unions',
+      'parentages',
+      'places',
+    ]) {
+      assert.equal(
+        server.database.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n,
+        0,
+        `${table} doit rester vide`,
+      );
+    }
+    assert.equal(server.database.prepare('SELECT COUNT(*) AS n FROM search_index_map').get().n, 0);
   } finally {
     await server.close();
   }

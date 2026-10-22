@@ -3,7 +3,9 @@ import { reindexAll } from '../../../db/src/repositories/search-reindex.js';
 import { shouldBeDeceased } from '../../../db/src/genealogy/living-status.js';
 import { parseGedcom, validateGedcom } from './parser.js';
 import { decodeGedcomBuffer } from './encoding.js';
-import { PayloadTooLargeError, fieldError } from '../errors.js';
+import { normalize } from '../services/search.service.js';
+import { yearOf } from '../../../db/src/dates/genealogy-date.js';
+import { PayloadTooLargeError, ValidationError, fieldError } from '../errors.js';
 import { invalidError, requiredError } from '../validation/field-errors.js';
 import { createZip, readZip } from './zip.js';
 
@@ -99,7 +101,7 @@ export class GedcomService {
     };
   }
 
-  async importArchive(contentBase64, { performedBy = null } = {}) {
+  async importArchive(contentBase64, { performedBy = null, confirmDuplicates = false } = {}) {
     if (typeof contentBase64 !== 'string' || contentBase64 === '') {
       throw requiredError('contentBase64', 'Archive GEDZIP manquante');
     }
@@ -120,7 +122,7 @@ export class GedcomService {
       );
     }
     const { text, encoding } = decodeGedcomBuffer(gedcomEntry.content);
-    const report = await this.importSafely(text, { performedBy });
+    const report = await this.importSafely(text, { performedBy, confirmDuplicates });
     if (!report.imported) {
       return { ...report, encoding, media: { attached: 0, missing: [], rejected: [] } };
     }
@@ -158,26 +160,83 @@ export class GedcomService {
   preview(input) {
     const records = parseGedcom(input);
     const validation = validateGedcom(records);
+    const duplicates = validation.valid ? this.findImportDuplicates(records) : [];
     return {
       ...validation,
       mapping: buildMappingPreview(records),
       contents: buildContentsPreview(records),
       unmapped: buildUnmappedPreview(records),
+      duplicateCount: duplicates.length,
+      duplicates: duplicates.slice(0, 200),
     };
+  }
+
+  /**
+   * Personnes du fichier qui existent probablement déjà dans l'arbre : même
+   * référence d'origine (réimport du même fichier) ou même nom et années de
+   * naissance compatibles. Ce n'est qu'un signalement : rien n'est fusionné ni
+   * ignoré, l'utilisateur confirme explicitement avant l'import.
+   */
+  findImportDuplicates(records) {
+    const existing = this.database
+      .prepare(
+        `SELECT p.id, p.given_names, p.family_name, p.external_id,
+                (SELECT e.date_text FROM events e
+                 JOIN event_participants ep ON ep.event_id = e.id
+                 WHERE ep.person_id = p.id AND ep.role = 'PRINCIPAL' AND e.type = 'BIRTH'
+                   AND e.deleted_at IS NULL AND ep.deleted_at IS NULL
+                 ORDER BY e.id LIMIT 1) AS birth
+         FROM persons p WHERE p.deleted_at IS NULL`,
+      )
+      .all();
+    const byName = new Map();
+    const byXref = new Map();
+    for (const person of existing) {
+      const key = normalize(`${person.given_names} ${person.family_name}`);
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key).push({ ...person, year: yearOf(person.birth ?? '') });
+      if (person.external_id) byXref.set(person.external_id, person);
+    }
+    const duplicates = [];
+    for (const record of records.filter((item) => item.tag === 'INDI')) {
+      const name = parseName(value(record, 'NAME'));
+      const birth = yearOf(value(child(record, 'BIRT'), 'DATE') ?? '');
+      const label = `${name.givenNames} ${name.familyName}`;
+      const sameXref = record.xref ? byXref.get(record.xref) : null;
+      const sameName = (byName.get(normalize(label)) ?? []).find(
+        (person) => birth === null || person.year === null || Math.abs(person.year - birth) <= 2,
+      );
+      if (sameXref || sameName) {
+        duplicates.push({
+          xref: record.xref,
+          name: label,
+          birthYear: birth,
+          existingPersonId: (sameXref ?? sameName).id,
+          reason:
+            sameXref &&
+            normalize(`${sameXref.given_names} ${sameXref.family_name}`) === normalize(label)
+              ? 'SAME_REFERENCE_AND_NAME'
+              : sameName
+                ? 'SAME_NAME_AND_BIRTH'
+                : 'SAME_REFERENCE',
+        });
+      }
+    }
+    return duplicates;
   }
 
   /**
    * Import sans casser la base : sauvegarde automatique si le fichier est
    * valide, puis import transactionnel (tout ou rien).
    */
-  async importSafely(input, { performedBy = null } = {}) {
+  async importSafely(input, { performedBy = null, confirmDuplicates = false } = {}) {
     if (this.backups && this.preview(input).valid) {
       await this.backups.createAutomatic('avant-import-gedcom');
     }
-    return this.import(input, { performedBy });
+    return this.import(input, { performedBy, confirmDuplicates });
   }
 
-  import(input, { performedBy = null } = {}) {
+  import(input, { performedBy = null, confirmDuplicates = false } = {}) {
     const records = parseGedcom(input);
     const validation = validateGedcom(records);
     const report = {
@@ -189,17 +248,49 @@ export class GedcomService {
     };
     if (!validation.valid) return report;
 
-    const result = withTransaction(this.database, () => {
-      const applied = applyMapping(this.database, records, performedBy);
-      // L'import écrit en SQL direct, sans passer par les dépôts métier :
-      // l'index de recherche locale n'était donc pas alimenté, et les
-      // personnes importées restaient introuvables. On réindexe après
-      // l'import, dans la même transaction (une importation échouée ne
-      // laisse pas d'index à moitié construit).
-      reindexAll(this.database);
-      return applied;
-    });
-    return { ...report, imported: true, ids: result.ids, personXrefs: result.personXrefs };
+    // Pipeline : analyse → validation → aperçu → CONFIRMATION → import. Des
+    // doublons probables exigent une confirmation explicite : un réimport
+    // accidentel du même fichier ne double plus l'arbre en silence.
+    const duplicates = this.findImportDuplicates(records);
+    if (duplicates.length > 0 && !confirmDuplicates) {
+      return {
+        ...report,
+        requiresConfirmation: true,
+        duplicateCount: duplicates.length,
+        duplicates: duplicates.slice(0, 200),
+      };
+    }
+
+    let result;
+    try {
+      result = withTransaction(this.database, () => {
+        const applied = applyMapping(this.database, records, performedBy);
+        // L'import écrit en SQL direct, sans passer par les dépôts métier :
+        // l'index de recherche locale n'était donc pas alimenté, et les
+        // personnes importées restaient introuvables. On réindexe après
+        // l'import, dans la même transaction (une importation échouée ne
+        // laisse pas d'index à moitié construit).
+        reindexAll(this.database);
+        return applied;
+      });
+    } catch (error) {
+      // La transaction est annulée : rien n'a été écrit. Une contrainte
+      // violée par le contenu du fichier est une erreur de fichier (422),
+      // pas une panne du serveur.
+      if (/^SQLITE_(CONSTRAINT|MISMATCH)/.test(error.code ?? '')) {
+        throw new ValidationError(
+          `Import annulé, aucune donnée écrite : le fichier contient des données incohérentes (${constraintHint(error)})`,
+        );
+      }
+      throw error;
+    }
+    return {
+      ...report,
+      imported: true,
+      duplicatesConfirmed: duplicates.length,
+      ids: result.ids,
+      personXrefs: result.personXrefs,
+    };
   }
 
   /**
@@ -748,6 +839,14 @@ function buildContentsPreview(records) {
     notes: records.filter((record) => record.tag === 'NOTE').length,
     citations,
   };
+}
+
+// Résumé lisible d'une violation de contrainte SQLite, sans exposer le schéma.
+function constraintHint(error) {
+  if (/CHECK/.test(error.message)) return 'valeur interdite, ex. une personne parente d’elle-même';
+  if (/UNIQUE/.test(error.message)) return 'élément en double';
+  if (/FOREIGN KEY/.test(error.message)) return 'référence vers un élément absent';
+  return 'contrainte non respectée';
 }
 
 function buildMappingPreview(records) {

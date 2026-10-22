@@ -325,6 +325,7 @@ export function GedcomPanel({ onImported, selected }) {
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
   const [report, setReport] = useState(null);
+  const [duplicatesConfirmed, setDuplicatesConfirmed] = useState(false);
   const [gedcomError, setGedcomError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [exportFormat, setExportFormat] = useState('7');
@@ -374,6 +375,7 @@ export function GedcomPanel({ onImported, selected }) {
     try {
       setPreview(await client.gedcom.preview(content));
       setReport(null);
+      setDuplicatesConfirmed(false);
     } catch (previewError) {
       setGedcomError(previewError.message);
     } finally {
@@ -385,7 +387,9 @@ export function GedcomPanel({ onImported, selected }) {
     setGedcomError(null);
     setBusy(true);
     try {
-      const result = await client.gedcom.import(content);
+      const result = await client.gedcom.import(content, {
+        confirmDuplicates: duplicatesConfirmed,
+      });
       setReport(result);
       if (result.imported) await onImported();
     } catch (importError) {
@@ -544,7 +548,12 @@ export function GedcomPanel({ onImported, selected }) {
         >
           {t('gedcom.import.preview', 'Aperçu')}
         </Button>
-        <Button type="button" size="sm" onClick={handleImport} disabled={busy || !preview?.valid}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleImport}
+          disabled={busy || !preview?.valid || (preview.duplicateCount > 0 && !duplicatesConfirmed)}
+        >
           {t('gedcom.import.run', 'Importer')}
         </Button>
       </div>
@@ -582,6 +591,44 @@ export function GedcomPanel({ onImported, selected }) {
                 },
                 'GEDCOM invalide : {errors}',
               )}
+        </p>
+      ) : null}
+      {preview?.valid && preview.duplicateCount > 0 ? (
+        <div className="notice" role="alert">
+          <p>
+            {t(
+              'gedcom.import.duplicates',
+              { count: preview.duplicateCount },
+              '{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.',
+            )}
+          </p>
+          <ul>
+            {preview.duplicates.slice(0, 5).map((duplicate) => (
+              <li key={`${duplicate.xref}-${duplicate.existingPersonId}`}>
+                {duplicate.name}
+                {duplicate.birthYear ? ` (${duplicate.birthYear})` : ''}
+              </li>
+            ))}
+          </ul>
+          <label>
+            <input
+              type="checkbox"
+              checked={duplicatesConfirmed}
+              onChange={(event) => setDuplicatesConfirmed(event.target.checked)}
+            />{' '}
+            <span>
+              {t('gedcom.import.confirmDuplicates', 'J’ai vérifié : importer quand même')}
+            </span>
+          </label>
+        </div>
+      ) : null}
+      {preview?.valid && preview.unmapped?.length > 0 ? (
+        <p className="notice" role="status">
+          {t(
+            'gedcom.import.unmapped',
+            { tags: preview.unmapped.map((item) => `${item.tag} ×${item.count}`).join(', ') },
+            'Balises conservées sans être affichées : {tags}.',
+          )}
         </p>
       ) : null}
       {report ? (

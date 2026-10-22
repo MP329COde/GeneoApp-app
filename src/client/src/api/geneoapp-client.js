@@ -54,7 +54,9 @@ function buildError(payload, fallback, status) {
   return error;
 }
 
-async function fetchJson(path, { method = 'GET', body, token } = {}) {
+// `acceptStatuses` : codes d'erreur dont le corps est un résultat métier à afficher
+// (rapport d'import invalide, doublons à confirmer) et non une panne.
+async function fetchJson(path, { method = 'GET', body, token, acceptStatuses = [] } = {}) {
   const response = await fetch(path, {
     method,
     headers: {
@@ -65,7 +67,7 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
+  if (!response.ok && !acceptStatuses.includes(response.status)) {
     throw buildError(
       data?.error,
       data?.error?.message ??
@@ -273,7 +275,12 @@ function createHttpClient() {
     },
     gedcom: {
       preview: (gedcom) => fetchJson('/api/gedcom/preview', { method: 'POST', body: { gedcom } }),
-      import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
+      import: (gedcom, options = {}) =>
+        fetchJson('/api/gedcom/import', {
+          method: 'POST',
+          body: { gedcom, confirmDuplicates: options.confirmDuplicates === true },
+          acceptStatuses: [409, 422],
+        }),
       export: (options) => fetchJson('/api/gedcom/export', { method: 'POST', body: options }),
       exportArchive: (options) =>
         fetchJson('/api/gedcom/export-archive', { method: 'POST', body: options }),
@@ -603,7 +610,8 @@ export function createIpcClient(rawBridge) {
     },
     gedcom: {
       preview: (gedcom) => bridge.gedcom.preview(gedcom),
-      import: (gedcom) => bridge.gedcom.import(gedcom),
+      import: (gedcom, options = {}) =>
+        bridge.gedcom.import(gedcom, undefined, options.confirmDuplicates === true),
       export: (options) => bridge.gedcom.export(options),
       exportArchive: (options) => bridge.gedcom.exportArchive(options),
       importArchive: (contentBase64) => bridge.gedcom.importArchive(contentBase64),
