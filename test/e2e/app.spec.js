@@ -391,9 +391,11 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
     await page.getByText('Modifier l’identité').click();
   }
 
-  await page.getByLabel('Surnom / alias').fill('Le petit Byron');
+  await page.getByLabel('Surnom', { exact: true }).fill('Le petit Byron');
+  await page.getByLabel('Alias (autre nom connu)').fill('Lord Byron');
   await page.getByLabel('Titre honorifique').fill('Lord');
   await page.getByLabel('Personne vivante').uncheck();
+  await page.getByLabel('Informations privées (à ne pas divulguer)').check();
   await page.getByRole('button', { name: 'Enregistrer' }).click();
 
   // Rechargement de la fiche : les valeurs persistées doivent revenir telles
@@ -404,9 +406,11 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
     await page.getByText('Modifier l’identité').click();
   }
-  await expect(page.getByLabel('Surnom / alias')).toHaveValue('Le petit Byron');
+  await expect(page.getByLabel('Surnom', { exact: true })).toHaveValue('Le petit Byron');
+  await expect(page.getByLabel('Alias (autre nom connu)')).toHaveValue('Lord Byron');
   await expect(page.getByLabel('Titre honorifique')).toHaveValue('Lord');
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
+  await expect(page.getByLabel('Informations privées (à ne pas divulguer)')).toBeChecked();
 });
 
 test('corrige une faute dans le prénom/nom depuis l’identité, annule (Ctrl+Z) et rétablit (Ctrl+Maj+Z)', async ({
