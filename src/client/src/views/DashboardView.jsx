@@ -30,7 +30,7 @@ export function DashboardView({ onNavigate }) {
         settled(client.graph.consistency()),
         settled(client.search.duplicates(1)),
         settled(client.assertions.conflicts()),
-        settled(client.notebook.list()),
+        settled(client.research.list()),
       ]);
       if (cancelled) return;
       if (totals.error) {

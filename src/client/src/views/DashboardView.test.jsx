@@ -20,7 +20,7 @@ vi.mock('../api/app-client.js', () => ({
     graph: { consistency: (...a) => mocks.consistency(...a) },
     search: { duplicates: (...a) => mocks.duplicates(...a) },
     assertions: { conflicts: (...a) => mocks.conflicts(...a) },
-    notebook: { list: (...a) => mocks.notebook(...a) },
+    research: { list: (...a) => mocks.notebook(...a) },
   },
 }));
 

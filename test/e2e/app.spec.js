@@ -828,3 +828,11 @@ test.describe('navigation mobile (390×844)', () => {
     expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(tabbarBox.y);
   });
 });
+
+test('le tableau de bord se charge avec les données réelles (aucune erreur)', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+  await expect(page.getByText('Chargement…')).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

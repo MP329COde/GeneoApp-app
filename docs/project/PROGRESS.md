@@ -536,6 +536,18 @@ a son commit, validé par `npm run lint`, `npm run format:check` et `npm test` (
 Un défaut trouvé au passage : l'historique d'une recherche était rangé sous un espace de noms que l'interface
 n'utilise pas ; corrigé et couvert par un test.
 
+### Phase J (accessibilité, i18n, design system)
+
+| Exigence | État |
+|---|---|
+| axe sur toutes les vues | Test qui parcourt chaque entrée de la navigation (`App.a11y.test.jsx`) : aucune violation |
+| Storybook | 7 → 36 stories (composants, états, panneaux métier avec clients factices) ; chaque story passe aussi par axe dans `npm run test:client` |
+| Raccourcis | Documentés dans `docs/ACCESSIBILITY.md` et testés (Ctrl/⌘ + 1-4, K) |
+| Français / anglais | Parité des clés vérifiée, aucun texte en dur (tests existants) |
+
+Défaut trouvé par ce parcours : le tableau de bord appelait `client.notebook` alors que le client expose
+`research` ; il restait bloqué sur « Chargement ». Corrigé, couvert par un test unitaire et un test e2e.
+
 ### Limites restantes
  (assumées, hors phase B)
 
