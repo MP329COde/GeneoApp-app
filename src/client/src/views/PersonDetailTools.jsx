@@ -3,6 +3,7 @@ import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { AssertionsPanel } from './AssertionsPanel.jsx';
+import { MediaUrlForm } from './MediaLinksPanel.jsx';
 import { IdentifiersPanel } from './IdentifiersPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
@@ -60,6 +61,7 @@ export function SourceMediaTool({ sourceId }) {
         <span>{t('personTools.media.addDocument', 'Ajouter un document à cette source')}</span>
         <input type="file" onChange={handleUpload} disabled={busy} />
       </label>
+      <MediaUrlForm client={client} sourceId={sourceId} onAdded={loadMedia} />
       {items === null ? (
         <p role="status">{t('personTools.media.loading', 'Chargement…')}</p>
       ) : items.length === 0 ? (
@@ -70,15 +72,23 @@ export function SourceMediaTool({ sourceId }) {
         <ul className="search-results">
           {items.map((item) => (
             <li key={item.id}>
-              {item.original_filename}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => handleDownload(item.id)}
-              >
-                {t('personTools.media.download', 'Télécharger')}
-              </Button>
+              {item.external_url ? (
+                <a href={item.external_url} target="_blank" rel="noopener noreferrer">
+                  {item.original_filename}
+                </a>
+              ) : (
+                item.original_filename
+              )}
+              {item.external_url ? null : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleDownload(item.id)}
+                >
+                  {t('personTools.media.download', 'Télécharger')}
+                </Button>
+              )}
             </li>
           ))}
         </ul>

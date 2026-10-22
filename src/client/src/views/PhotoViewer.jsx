@@ -1,3 +1,4 @@
+import { MediaLinksPanel } from './MediaLinksPanel.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, useTranslation } from '../design-system/index.js';
 
@@ -373,6 +374,8 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               )}
             </section>
           ) : null}
+
+          <MediaLinksPanel client={client} mediaId={mediaId} persons={persons} />
 
           <form
             className="research-section photo-viewer__meta"
