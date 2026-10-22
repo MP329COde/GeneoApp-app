@@ -20,21 +20,35 @@ const EVENT_TYPES = [
   'RESIDENCE',
   'EMIGRATION',
   'IMMIGRATION',
+  'MIGRATION',
   'CENSUS',
   'MILITARY',
   'GRADUATION',
   'WILL',
   'PROBATE',
+  'SUCCESSION',
   'RELIGIOUS_EVENT',
+  'RELIGIOUS_COMMITMENT',
   'NATURALIZATION',
   'OTHER',
 ];
-const DATE_PRECISIONS = ['EXACT', 'ABOUT', 'BEFORE', 'AFTER', 'BETWEEN', 'UNKNOWN'];
+const DATE_PRECISIONS = [
+  'EXACT',
+  'ABOUT',
+  'ESTIMATED',
+  'CALCULATED',
+  'BEFORE',
+  'AFTER',
+  'BETWEEN',
+  'UNKNOWN',
+];
 
 /** Clé de traduction de la précision de date, par code enregistré en base. */
 const DATE_PRECISION_KEYS = {
   EXACT: 'eventsTimeline.precision.exact',
   ABOUT: 'eventsTimeline.precision.about',
+  ESTIMATED: 'eventsTimeline.precision.estimated',
+  CALCULATED: 'eventsTimeline.precision.calculated',
   BEFORE: 'eventsTimeline.precision.before',
   AFTER: 'eventsTimeline.precision.after',
   BETWEEN: 'eventsTimeline.precision.between',

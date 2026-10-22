@@ -289,6 +289,19 @@ export function formatGenealogyDate(input, style = 'fr') {
 export function precisionOf(input) {
   const parsed = typeof input === 'string' ? parseGenealogyDate(input) : input;
   if (!parsed?.valid) return 'UNKNOWN';
-  if (parsed.kind === 'ESTIMATED' || parsed.kind === 'CALCULATED') return 'ABOUT';
   return parsed.kind;
+}
+
+/**
+ * Finesse de la date saisie : `DAY`, `MONTH` ou `YEAR`, ou null si elle n'est
+ * pas comprise. Une date partielle (« mars 1812 », « 1812 ») est une donnée
+ * valide, mais ne doit pas être affichée comme un jour précis ; pour un
+ * intervalle, la finesse retenue est celle de la borne la moins précise.
+ */
+export function granularityOf(input) {
+  const parsed = typeof input === 'string' ? parseGenealogyDate(input) : input;
+  if (!parsed?.valid) return null;
+  const rank = (p) => (p.day ? 2 : p.month ? 1 : 0);
+  const lowest = parsed.end ? Math.min(rank(parsed.start), rank(parsed.end)) : rank(parsed.start);
+  return ['YEAR', 'MONTH', 'DAY'][lowest];
 }

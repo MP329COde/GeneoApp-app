@@ -33,7 +33,12 @@ const EXPORT_EVENT_TAGS = Object.fromEntries(
 // Types métier sans tag GEDCOM dédié : représentés via le tag générique EVEN
 // avec une sous-structure TYPE, comme le prévoit la norme 5.5.1 pour tout
 // événement hors catalogue standard (§ EVENT_DETAIL / event_descriptor).
-const GENERIC_EVENT_LABELS = { MILITARY: 'Military' };
+const GENERIC_EVENT_LABELS = {
+  MILITARY: 'Military',
+  MIGRATION: 'Migration',
+  SUCCESSION: 'Succession',
+  RELIGIOUS_COMMITMENT: 'Religious commitment',
+};
 const GENERIC_EVENT_TYPES = Object.fromEntries(
   Object.entries(GENERIC_EVENT_LABELS).map(([type, label]) => [label.toLowerCase(), type]),
 );
@@ -671,6 +676,8 @@ function sex(value) {
 function datePrecision(value) {
   if (!value) return 'UNKNOWN';
   if (/^ABT\b/i.test(value)) return 'ABOUT';
+  if (/^EST\b/i.test(value)) return 'ESTIMATED';
+  if (/^CAL\b/i.test(value)) return 'CALCULATED';
   if (/^BEF\b/i.test(value)) return 'BEFORE';
   if (/^AFT\b/i.test(value)) return 'AFTER';
   if (/^BET\b/i.test(value)) return 'BETWEEN';

@@ -219,6 +219,51 @@ test('GEDCOM importe et réexporte un événement militaire via le tag génériq
   }
 });
 
+test('GEDCOM conserve les dates estimées/calculées et les types migration, succession, engagement religieux', async () => {
+  const server = await startTestServer();
+  try {
+    const gedcom = fixture.replace(
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London',
+      [
+        '1 BIRT\n2 DATE EST 1815\n2 PLAC London',
+        '1 EVEN\n2 TYPE Migration\n2 DATE CAL 1830',
+        '1 EVEN\n2 TYPE Succession\n2 DATE 1852',
+        '1 EVEN\n2 TYPE Religious commitment\n2 DATE 1840',
+      ].join('\n'),
+    );
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom },
+    });
+    assert.equal(imported.status, 201);
+
+    const rows = server.database
+      .prepare(
+        `SELECT e.type, e.date_precision AS precision FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id
+         WHERE ep.person_id = ? ORDER BY e.id`,
+      )
+      .all(imported.body.ids.persons[0]);
+    assert.deepEqual(rows, [
+      { type: 'BIRTH', precision: 'ESTIMATED' },
+      { type: 'MIGRATION', precision: 'CALCULATED' },
+      { type: 'SUCCESSION', precision: 'EXACT' },
+      { type: 'RELIGIOUS_COMMITMENT', precision: 'EXACT' },
+    ]);
+
+    const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.match(exported.body.gedcom, /2 DATE EST 1815/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Migration\n2 DATE CAL 1830/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Succession/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Religious commitment/);
+  } finally {
+    await server.close();
+  }
+});
+
 async function createFamilyTree(baseUrl) {
   const person = async (givenNames, familyName, sex = 'U') =>
     (

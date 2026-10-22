@@ -5,6 +5,7 @@ import {
   compareGenealogyDates,
   formatGenealogyDate,
   parseGenealogyDate,
+  granularityOf,
   precisionOf,
   yearOf,
   yearsBetween,
@@ -73,7 +74,20 @@ test('distingue ordre certain et chevauchement dû à l’approximation', () => 
 
 test('précision stockée cohérente avec le texte', () => {
   assert.equal(precisionOf('vers 1812'), 'ABOUT');
-  assert.equal(precisionOf('EST 1812'), 'ABOUT');
+  assert.equal(precisionOf('EST 1812'), 'ESTIMATED');
+  assert.equal(precisionOf('estimé 1812'), 'ESTIMATED');
+  assert.equal(precisionOf('CAL 1812'), 'CALCULATED');
+  assert.equal(precisionOf('avant 1812'), 'BEFORE');
+  assert.equal(precisionOf('après 1812'), 'AFTER');
   assert.equal(precisionOf('entre 1820 et 1825'), 'BETWEEN');
   assert.equal(precisionOf('12 mars 1812'), 'EXACT');
+});
+
+test('granularité : une date partielle n’est pas présentée comme un jour précis', () => {
+  assert.equal(granularityOf('12 mars 1812'), 'DAY');
+  assert.equal(granularityOf('mars 1812'), 'MONTH');
+  assert.equal(granularityOf('1812'), 'YEAR');
+  assert.equal(granularityOf('vers 1812'), 'YEAR');
+  assert.equal(granularityOf('entre 1820 et 1825'), 'YEAR');
+  assert.equal(granularityOf('hier'), null);
 });

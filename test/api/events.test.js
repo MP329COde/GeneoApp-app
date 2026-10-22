@@ -245,3 +245,45 @@ test('un décès enregistré (saisie ou GEDCOM) rend la personne décédée, et 
     await server.close();
   }
 });
+
+test('POST /api/events accepte les types, précisions et rôles étendus du modèle', async () => {
+  const server = await startTestServer();
+  try {
+    const heir = await createPerson(server.baseUrl, 'Louise', 'Heritiere');
+    const godparent = await createPerson(server.baseUrl, 'Marc', 'Parrain');
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: {
+        type: 'SUCCESSION',
+        dateText: 'EST 1852',
+        datePrecision: 'ESTIMATED',
+        participants: [
+          { personId: heir, role: 'HEIR' },
+          { personId: godparent, role: 'GODPARENT' },
+        ],
+      },
+    });
+
+    assert.equal(status, 201);
+    assert.equal(body.type, 'SUCCESSION');
+    assert.equal(body.date_precision, 'ESTIMATED');
+    assert.deepEqual(body.participants.map((p) => p.role).sort(), ['GODPARENT', 'HEIR']);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/events rejette un rôle de participant inconnu', async () => {
+  const server = await startTestServer();
+  try {
+    const personId = await createPerson(server.baseUrl, 'Ada', 'Lovelace');
+    const { status } = await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: { type: 'BIRTH', participants: [{ personId, role: 'KING' }] },
+    });
+    assert.equal(status, 400);
+  } finally {
+    await server.close();
+  }
+});

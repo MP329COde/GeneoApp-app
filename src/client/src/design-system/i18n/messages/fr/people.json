@@ -274,6 +274,8 @@
   "eventsTimeline.date.examples": "Ex. : 25 avril 1998, avril 1998, vers 1998, avant 1998, entre 1995 et 1998, 1998 ?",
   "eventsTimeline.precision.exact": "Exacte",
   "eventsTimeline.precision.about": "Vers",
+  "eventsTimeline.precision.estimated": "Estimée",
+  "eventsTimeline.precision.calculated": "Calculée",
   "eventsTimeline.precision.before": "Avant",
   "eventsTimeline.precision.after": "Après",
   "eventsTimeline.precision.between": "Entre",
