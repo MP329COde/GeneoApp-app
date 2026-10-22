@@ -427,7 +427,8 @@ majeurs et douze mineurs, tous vérifiés par un serveur de test réel :
 
 Le seul point laissé ouvert est celui des légendes de la galerie : trois
 captures sur six décrivent un contenu que l'image ne montre pas (carnet
-vide, aucun doublon détecté, arbre sans années affichées).
+vide, aucun doublon détecté, arbre sans années affichées). Ce point est
+désormais traité (voir « Base de démonstration des captures » ci-dessous).
 
 ### Tickets restant ouverts
 
@@ -465,6 +466,28 @@ Restent réellement ouverts :
   doublon détecté, arbre sans années affichées), parce que la base de
   démonstration du script de capture est presque vide. Il faut la peupler
   et refaire les captures, ou réécrire les légendes pour ne décrire que ce
-  qui est visible.
+  qui est visible. → **livré** (voir « Base de démonstration des captures »).
+
+### Base de démonstration des captures
+
+Pour que les captures montrent ce qu'elles annoncent, `scripts/capture-screenshots.js`
+sème désormais une base de démonstration réaliste via l'API HTTP du serveur
+qu'il lance : huit lieux géolocalisés, neuf personnes sur trois générations
+(dates de naissance et de décès, notes), trois unions mariées, sept
+filiations, une piste de recherche complète (hypothèse, preuve, tâche) et
+une paire de homonymes (« Julien Dupont » / « Jules Dupont ») repérée par le
+détecteur de doublons.
+
+Le semis a lieu après la capture « état vide » (qui reste l'état vide) et
+toute création refusée interrompt le script : une capture vide due à une
+erreur silencieuse serait pire qu'avant. L'attente de l'absence de doublon a
+été remplacée par l'attente de la détection réelle, et les sélecteurs
+ambigus (boutons homonymes, sélecteur de type d'événement) ont été rendus
+exacts.
+
+Validations : `npx prettier --check scripts/capture-screenshots.js`,
+`npx eslint scripts/capture-screenshots.js`, exécution complète du script
+(19 captures produites), lecture visuelle des six captures de la galerie,
+`npm run build` dans `site/` (six images présentes dans `dist/captures`).
 
 
