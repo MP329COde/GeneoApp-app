@@ -396,9 +396,11 @@ function AppContent() {
 
   const loadPersons = useCallback(async () => {
     try {
-      const { items, total } = await client.persons.list();
+      const result = await client.persons.list();
+      const items = result?.items ?? [];
+      const total = result?.total ?? items.length;
       setPersons(items);
-      setPersonsTotal(total ?? items.length);
+      setPersonsTotal(total);
       setSelectedId((current) => current ?? items[0]?.id ?? null);
     } catch (loadError) {
       setError(loadError.message);
@@ -459,7 +461,8 @@ function AppContent() {
         );
         // Les panneaux rechargent leurs données après un retour en arrière.
         setDataVersion((version) => version + 1);
-        const { items } = await client.persons.list();
+        const personsResult = await client.persons.list();
+        const items = personsResult?.items ?? [];
         setPersons(items);
         setPersonsTotal(items.length);
         setSelectedId((current) =>
@@ -503,7 +506,8 @@ function AppContent() {
     setSelectedId(null);
     setRelations(null);
     setSession(null);
-    const { items } = await client.persons.list();
+    const result = await client.persons.list();
+    const items = result?.items ?? [];
     setPersons(items);
     setPersonsTotal(items.length);
     refreshHistory();

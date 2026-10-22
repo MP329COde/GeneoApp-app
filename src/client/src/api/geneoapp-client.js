@@ -81,10 +81,10 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
 // Le contrat de `persons.list()` est une enveloppe normalisée :
 // `{ items, total, limit, offset }`.
 //
-// - `persons.list()` sans option : la liste complète. En HTTP, elle est
-//   chargée page par page auprès du serveur (pas de réponse gigantesque) ;
-//   en IPC, elle vient en un seul appel (le canal Electron ne sait pas
-//   encore transmettre `limit`/`offset`).
+// - `persons.list()` sans option : la liste complète. Elle est chargée en
+//   une seule requête (`GET /api/persons`, sans paramètre) dans les deux
+//   transports : le serveur renvoie alors l'intégralité des personnes et le
+//   total, sans coût de `COUNT(*)` répété page par page.
 // - `persons.list({ limit, offset, q })` : une seule page, avec `total` =
 //   nombre total de personnes correspondant au filtre — indispensable pour
 //   virtualiser la liste.
@@ -115,11 +115,40 @@ function normalizePersonsPageOptions(options) {
   return { limit, offset, q: hasQuery ? options.q.trim() : undefined, totalOnly };
 }
 
+// Repli de casse ASCII uniquement (A-Z -> a-z), comme le `LIKE` de SQLite,
+// qui ne replie que l'ASCII : les accents ne sont PAS normalisés.
+function asciiLowerCase(value) {
+  return String(value).replace(/[A-Z]/g, (character) => character.toLowerCase());
+}
+
 // Même sémantique que le `LIKE` du serveur sur `given_names || ' ' ||
-// family_name` : insensible à la casse, sensible aux accents.
+// family_name` :
+// - repli de casse ASCII uniquement (les accents ne sont pas repliés, c'est
+//   une limite de SQLite, pas un oubli) ;
+// - si `given_names` est NULL, l'expression `given_names || ' ' ||
+//   family_name` vaut NULL : aucune correspondance.
 function personMatchesQuery(person, query) {
-  const haystack = `${person?.given_names ?? ''} ${person?.family_name ?? ''}`.toLowerCase();
-  return haystack.includes(query.toLowerCase());
+  if (person?.given_names === null || person?.given_names === undefined) return false;
+  const haystack = asciiLowerCase(`${person.given_names} ${person.family_name ?? ''}`);
+  return haystack.includes(asciiLowerCase(query));
+}
+
+// Normalise la réponse d'une liste de personnes en enveloppe
+// `{ items, total, limit, offset }`, quelle que soit sa forme : un tableau
+// simple (serveur ancien ou implémentation non conforme) est converti, une
+// enveloppe est complétée si `limit`/`offset` manquent.
+function normalizePersonsListResponse(response) {
+  if (Array.isArray(response)) {
+    return { items: response, total: response.length, limit: response.length, offset: 0 };
+  }
+  const items = response?.items ?? [];
+  return {
+    ...response,
+    items,
+    total: response?.total ?? items.length,
+    limit: response?.limit ?? items.length,
+    offset: response?.offset ?? 0,
+  };
 }
 
 function base64ToBlob(base64, mimeType) {
@@ -154,22 +183,10 @@ function createHttpClient() {
           if (page.q) params.set('q', page.q);
           return fetchJson(`/api/persons?${params.toString()}`);
         }
-        // Liste complète : on avance page par page auprès du serveur, ce qui
-        // évite de charger une réponse gigantesque d'un seul coup.
-        const items = [];
-        let total = 0;
-        let offset = 0;
-        for (;;) {
-          const response = await fetchJson(
-            `/api/persons?limit=${PERSONS_PAGE_MAX_LIMIT}&offset=${offset}`,
-          );
-          const pageItems = response?.items ?? [];
-          items.push(...pageItems);
-          total = response?.total ?? items.length;
-          offset += pageItems.length;
-          if (pageItems.length === 0 || offset >= total) break;
-        }
-        return { items, total, limit: PERSONS_PAGE_MAX_LIMIT, offset: 0 };
+        // Liste complète : une seule requête, sans pagination. Le serveur
+        // renvoie toute la liste ; on normalise la réponse au cas où elle
+        // ne serait pas conforme au contrat d'enveloppe.
+        return normalizePersonsListResponse(await fetchJson('/api/persons'));
       },
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
@@ -488,7 +505,7 @@ function withTranslatedErrors(bridge) {
   return wrap(bridge);
 }
 
-function createIpcClient(rawBridge) {
+export function createIpcClient(rawBridge) {
   const bridge = withTranslatedErrors(rawBridge);
   return {
     persons: {
@@ -497,7 +514,8 @@ function createIpcClient(rawBridge) {
       // exactement la même enveloppe que le transport HTTP.
       list: async (options) => {
         const page = normalizePersonsPageOptions(options);
-        const all = await bridge.persons.list();
+        const raw = await bridge.persons.list();
+        const all = Array.isArray(raw) ? raw : (raw?.items ?? []);
         const filtered = page?.q ? all.filter((person) => personMatchesQuery(person, page.q)) : all;
         if (page?.totalOnly) return { total: filtered.length };
         if (!page) {
