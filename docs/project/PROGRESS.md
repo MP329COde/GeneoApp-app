@@ -267,7 +267,7 @@ en parallèle par des sous-agents, chacune avec son commit et ses validations.
 | #47 | Confirmation partagée au lieu de `window.confirm` (unions, filiations, personnes) | Terminé | `c591b8a`, `6f7f81d`, `8f2fac2` |
 | #48 | Zoom et déplacement de la carte locale hors ligne | Terminé | `fdae2dc` |
 | #46 | Traduction des écrans métier restants | En cours | — |
-| #49 | Indexation locale des pages distantes (opt-in) | En cours | — |
+| #49 | Indexation locale des pages distantes (opt-in) | Terminé | `48793f6` |
 | — | Pagination de `client.persons.list()` | En cours | — |
 
 ### #47 — Confirmation partagée
@@ -290,4 +290,26 @@ le point visé), glissement souris/doigt, pincement à deux doigts, flèches du
 clavier, recentrage. Aucun appel réseau, aucun tuile distante. La logique de
 transformation est isolée dans `map-viewport.js` (fonctions pures, testables
 sans navigateur) et les libellés sont regroupés dans un domaine i18n `map.json`.
+
+### #49 — Indexation locale des pages distantes (opt-in)
+
+Les connecteurs de recherche multi-sites peuvent indexer localement les
+pages qu'ils ont le droit de parcourir, mais **uniquement après une
+autorisation explicite de l'utilisateur** : l'opt-in est persisté côté
+serveur (table `index_connectors`), il n'est donc pas contournable depuis le
+client. Deux verrous indépendants précèdent toute requête : autorisation
+accordée **et** accès réseau autorisé dans les réglages (403 sinon).
+
+Garanties : le client n'envoie qu'un identifiant de connecteur et quatre
+valeurs de recherche (`nom`, `prenom`, `annee`, `lieu`) ; l'adresse et le
+modèle de recherche restent dans le catalogue serveur ; `robots.txt` est
+consulté avant chaque adresse et une page interdite n'est jamais demandée ;
+aucun cookie ni identifiant transmis, redirections restreintes à l'hôte du
+connecteur, temps de réponse, taille et nombre de pages bornés, `Crawl-delay`
+respecté ; le contenu est extrait en texte (aucun code distant exécuté) puis
+stocké dans l'index local.
+
+Limite : la source d'indexation du connecteur est créée désactivée et exclue
+de l'indexation générale, qui n'explore jamais ces sites.
+
 
