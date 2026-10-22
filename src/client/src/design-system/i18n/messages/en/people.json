@@ -352,5 +352,13 @@
   "tree.giant.preview": "Preview of the tiling",
   "tree.giant.tilePosition": "Row {row} · column {column}",
   "tree.canvas.hint": "Tree: drag to move, Ctrl + wheel or pinch to zoom, arrow keys to move, + and − to zoom, 0 to recenter",
-  "tree.minimap": "Minimap"
+  "tree.minimap": "Minimap",
+  "relations.bond": "Type of bond",
+  "relations.bond.BLOOD": "Blood",
+  "relations.bond.ADOPTIVE": "Adoption or foster",
+  "relations.bond.STEP": "Step or guardianship",
+  "relations.bond.AFFINITY": "Marriage alliance",
+  "relations.bond.UNCERTAIN": "Uncertain",
+  "relations.consanguinity": "Blood relationship",
+  "relations.multiple": "Multiple relationships"
 }

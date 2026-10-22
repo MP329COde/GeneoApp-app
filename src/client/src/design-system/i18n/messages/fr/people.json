@@ -352,5 +352,13 @@
   "tree.giant.preview": "Aperçu du découpage",
   "tree.giant.tilePosition": "Ligne {row} · colonne {column}",
   "tree.canvas.hint": "Arbre : glisser pour déplacer, Ctrl + molette ou pincement pour zoomer, flèches pour déplacer, + et − pour zoomer, 0 pour recentrer",
-  "tree.minimap": "Minicarte"
+  "tree.minimap": "Minicarte",
+  "relations.bond": "Nature du lien",
+  "relations.bond.BLOOD": "Sang",
+  "relations.bond.ADOPTIVE": "Adoption ou accueil",
+  "relations.bond.STEP": "Recomposée ou tutelle",
+  "relations.bond.AFFINITY": "Alliance (mariage)",
+  "relations.bond.UNCERTAIN": "Incertaine",
+  "relations.consanguinity": "Lien de sang",
+  "relations.multiple": "Relations multiples"
 }

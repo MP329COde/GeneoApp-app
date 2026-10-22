@@ -3,6 +3,7 @@ import { Badge, Button, ConfirmDialog, useTranslation } from '../design-system/i
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { UNION_TYPES, UNION_TYPE_KEYS } from './PersonListPanels.jsx';
+import { FamilySheet } from './FamilySheet.jsx';
 import { ParentageSection } from './PersonRelationsView.jsx';
 
 export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
@@ -13,6 +14,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   const [familiesError, setFamiliesError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [unionToRemove, setUnionToRemove] = useState(null);
+  const [sheetUnionId, setSheetUnionId] = useState(null);
 
   const otherPersons = useMemo(
     () => persons.filter((person) => person.id !== selected?.id),
@@ -147,12 +149,26 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
               <Button
                 type="button"
                 size="sm"
+                variant="secondary"
+                aria-expanded={sheetUnionId === union.id}
+                onClick={() => setSheetUnionId(sheetUnionId === union.id ? null : union.id)}
+              >
+                {sheetUnionId === union.id
+                  ? t('family.sheet.hide', 'Masquer la fiche')
+                  : t('family.sheet.show', 'Fiche famille')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
                 variant="danger"
                 onClick={() => setUnionToRemove(union.id)}
                 disabled={busy}
               >
                 {t('family.remove', 'Dissoudre / supprimer')}
               </Button>
+              {sheetUnionId === union.id ? (
+                <FamilySheet client={client} unionId={union.id} onNavigate={onNavigate} />
+              ) : null}
             </li>
           ))}
         </ul>

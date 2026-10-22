@@ -24,5 +24,19 @@
   "family.create": "Créer l’union",
   "family.loading": "Chargement…",
   "family.empty": "Aucune union enregistrée pour cette personne.",
-  "family.remove": "Dissoudre / supprimer"
+  "family.remove": "Dissoudre / supprimer",
+  "family.sheet.title": "Fiche famille",
+  "family.sheet.partners": "Partenaires",
+  "family.sheet.start": "Début",
+  "family.sheet.end": "Fin",
+  "family.sheet.children": "Enfants",
+  "family.sheet.noChildren": "Aucun enfant rattaché à cette union.",
+  "family.sheet.show": "Fiche famille",
+  "family.sheet.hide": "Masquer la fiche",
+  "family.sheet.link.BIOLOGICAL": "Biologique",
+  "family.sheet.link.ADOPTIVE": "Adoptif",
+  "family.sheet.link.FOSTER": "Accueil",
+  "family.sheet.link.STEP": "Beau-parent",
+  "family.sheet.link.GUARDIAN": "Tuteur",
+  "family.sheet.link.UNKNOWN": "Inconnu"
 }

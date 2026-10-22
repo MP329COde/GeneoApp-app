@@ -68,3 +68,32 @@ describe('FamillesPanel : confirmation de suppression', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });
+
+describe('FamillesPanel : fiche famille', () => {
+  it('affiche partenaires, enfants et nature du lien', async () => {
+    const family = vi.fn().mockResolvedValue({
+      union: { id: 10 },
+      partners: [{ id: 1, given_names: 'Ada', family_name: 'Dupont' }],
+      children: [
+        {
+          id: 3,
+          given_names: 'Eve',
+          family_name: 'Dupont',
+          links: [{ parentId: 1, parentRole: 'MOTHER', linkType: 'ADOPTIVE' }],
+        },
+      ],
+      startEvent: null,
+      endEvent: null,
+    });
+    const { client } = await import('../api/app-client.js');
+    client.unions.family = family;
+    listForPerson.mockResolvedValue([{ id: 10, type: 'MARRIAGE', partnerIds: [1, 2] }]);
+    listParentsOf.mockResolvedValue([]);
+    listChildrenOf.mockResolvedValue([]);
+    const user = userEvent.setup();
+    renderWithProviders(<FamiliesPanel persons={persons} selected={persons[0]} />);
+    await user.click(await screen.findByRole('button', { name: /fiche famille/i }));
+    expect(await screen.findByText(/Adoptif/)).toBeInTheDocument();
+    expect(family).toHaveBeenCalledWith(10);
+  });
+});
