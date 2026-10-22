@@ -89,6 +89,11 @@ export function createExtendedApi(request) {
         ),
       consistency: () => get('/api/graph/consistency'),
     },
+    aiExtras: {
+      status: () => get('/api/ai/status'),
+      updateConfig: (data) => request('PUT', '/api/ai/config', data),
+      suggest: (data) => post('/api/ai/suggest', data),
+    },
     notebookExtras: {
       history: (id) => get(`/api/notebook/${id}/history`),
     },
@@ -108,6 +113,7 @@ export function mergeExtendedApi(client, extension) {
   };
   for (const [name, methods] of Object.entries(extension)) {
     if (name === 'graphExtras') into('graph', methods);
+    else if (name === 'aiExtras') into('ai', methods);
     else if (name === 'notebookExtras') into('research', methods);
     else if (name === 'mediaLinks') {
       into('media', {

@@ -548,6 +548,18 @@ n'utilise pas ; corrigé et couvert par un test.
 Défaut trouvé par ce parcours : le tableau de bord appelait `client.notebook` alors que le client expose
 `research` ; il restait bloqué sur « Chargement ». Corrigé, couvert par un test unitaire et un test e2e.
 
+### Phase K (IA locale)
+
+| Exigence | État |
+|---|---|
+| Fournisseur configurable | Ollama et LM Studio (compatible OpenAI), réglages locaux (migration 0033), écran dans « IA locale » |
+| Aucun appel réseau obligatoire | Désactivée par défaut ; adresse limitée à la machine / au réseau local (contrôlé par le code) |
+| État propre sans modèle | `GET /api/ai/status` : désactivée, injoignable (avec raison), aucun modèle, prête |
+| Prompts versionnés | 4 tâches `nom@version`, version rappelée dans chaque suggestion |
+| Analyse de notes, sources, contradictions, recherches | `POST /api/ai/suggest` |
+| Pas de décision automatique | Suggestions à valider ; faits non fondés signalés ; aucune écriture côté serveur |
+| Tests sans modèle | Faux serveurs injectés : 15 tests serveur / API, 6 tests d'écran |
+
 ### Limites restantes
  (assumées, hors phase B)
 

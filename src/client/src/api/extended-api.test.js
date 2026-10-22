@@ -23,6 +23,9 @@ describe('routes étendues du client', () => {
     await api.mediaLinks.addUrl({ url: 'https://a.org', title: 't' });
     await api.graphExtras.paths(1, 2, { depth: 3, limit: 5 });
     await api.notebookExtras.history(6);
+    await api.aiExtras.status();
+    await api.aiExtras.updateConfig({ enabled: true });
+    await api.aiExtras.suggest({ task: 'analyze-note', id: 3 });
 
     expect(request.mock.calls).toEqual([
       ['GET', '/api/assertions?entityType=PERSON&entityId=4'],
@@ -41,6 +44,9 @@ describe('routes étendues du client', () => {
       ['POST', '/api/media/url', { url: 'https://a.org', title: 't' }],
       ['GET', '/api/graph/path?personA=1&personB=2&depth=3&limit=5'],
       ['GET', '/api/notebook/6/history'],
+      ['GET', '/api/ai/status'],
+      ['PUT', '/api/ai/config', { enabled: true }],
+      ['POST', '/api/ai/suggest', { task: 'analyze-note', id: 3 }],
     ]);
   });
 

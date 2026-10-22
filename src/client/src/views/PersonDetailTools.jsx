@@ -3,6 +3,7 @@ import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { AssertionsPanel } from './AssertionsPanel.jsx';
+import { AiAssistantPanel } from './AiAssistantPanel.jsx';
 import { CitationEditForm } from './CitationEditForm.jsx';
 import { MediaUrlForm } from './MediaLinksPanel.jsx';
 import { IdentifiersPanel } from './IdentifiersPanel.jsx';
@@ -618,6 +619,7 @@ export function AiPanel() {
           {result.response}
         </p>
       ) : null}
+      <AiAssistantPanel client={client} />
     </div>
   );
 }
