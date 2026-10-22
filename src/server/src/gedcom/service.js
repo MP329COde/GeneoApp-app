@@ -155,7 +155,11 @@ export class GedcomService {
   preview(input) {
     const records = parseGedcom(input);
     const validation = validateGedcom(records);
-    return { ...validation, mapping: buildMappingPreview(records) };
+    return {
+      ...validation,
+      mapping: buildMappingPreview(records),
+      contents: buildContentsPreview(records),
+    };
   }
 
   /**
@@ -172,7 +176,12 @@ export class GedcomService {
   import(input, { performedBy = null } = {}) {
     const records = parseGedcom(input);
     const validation = validateGedcom(records);
-    const report = { ...validation, mapping: buildMappingPreview(records), imported: false };
+    const report = {
+      ...validation,
+      mapping: buildMappingPreview(records),
+      contents: buildContentsPreview(records),
+      imported: false,
+    };
     if (!validation.valid) return report;
 
     const result = withTransaction(this.database, () => {
@@ -348,7 +357,13 @@ function buildExportFamilies(database, selectedIds) {
         children.set(link.child_id, { id: link.child_id, linkType: link.link_type });
       }
     }
-    families.push({ xref: `@F${union.id}@`, partners, children: [...children.values()] });
+    families.push({
+      xref: `@F${union.id}@`,
+      unionId: union.id,
+      union,
+      partners,
+      children: [...children.values()],
+    });
   }
   const byChild = new Map();
   for (const link of parentages.filter((item) => item.union_id === null)) {
@@ -389,6 +404,49 @@ function generateGedcom(database, persons, families, format, media = []) {
           '0 @SUBM1@ SUBM',
           '1 NAME GeneoApp',
         ];
+  const usedSources = new Set();
+  const citationsFor = database.prepare(
+    `SELECT c.* FROM citations c
+     JOIN sources s ON s.id = c.source_id AND s.deleted_at IS NULL
+     WHERE c.entity_type = ? AND c.entity_id = ? AND c.deleted_at IS NULL ORDER BY c.id`,
+  );
+  const quayOf = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+  const emitNote = (level, text) => {
+    if (text) lines.push(`${level} NOTE ${text}`);
+  };
+  const emitCitations = (level, entityType, entityId) => {
+    for (const citation of citationsFor.all(entityType, entityId)) {
+      usedSources.add(citation.source_id);
+      lines.push(`${level} SOUR @S${citation.source_id}@`);
+      if (citation.page) lines.push(`${level + 1} PAGE ${citation.page}`);
+      lines.push(`${level + 1} QUAY ${quayOf[citation.confidence] ?? 2}`);
+      if (citation.quotation) {
+        lines.push(`${level + 1} DATA`, `${level + 2} TEXT ${citation.quotation}`);
+      }
+      emitNote(level + 1, citation.notes);
+    }
+  };
+  const emitPlace = (level, placeId) => {
+    if (!placeId) return;
+    const place = database.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
+    if (!place) return;
+    lines.push(`${level} PLAC ${place.name}`);
+    if (place.latitude !== null && place.longitude !== null) {
+      const latitude = `${place.latitude < 0 ? 'S' : 'N'}${Math.abs(place.latitude)}`;
+      const longitude = `${place.longitude < 0 ? 'W' : 'E'}${Math.abs(place.longitude)}`;
+      lines.push(
+        `${level + 1} MAP`,
+        `${level + 2} LATI ${latitude}`,
+        `${level + 2} LONG ${longitude}`,
+      );
+    }
+  };
+  const emitEventBody = (level, event) => {
+    if (event.date_text) lines.push(`${level} DATE ${event.date_text}`);
+    emitPlace(level, event.place_id);
+    emitNote(level, event.notes);
+    emitCitations(level, 'EVENT', event.id);
+  };
   for (const person of persons) {
     const xref = `@I${person.id}@`;
     lines.push(`0 ${xref} INDI`);
@@ -430,12 +488,10 @@ function generateGedcom(database, persons, families, format, media = []) {
       if (!tag && !genericLabel) continue;
       lines.push(`1 ${tag ?? 'EVEN'}${event.value ? ` ${event.value}` : ''}`);
       if (genericLabel) lines.push(`2 TYPE ${genericLabel}`);
-      if (event.date_text) lines.push(`2 DATE ${event.date_text}`);
-      if (event.place_id) {
-        const place = database.prepare('SELECT name FROM places WHERE id = ?').get(event.place_id);
-        if (place) lines.push(`2 PLAC ${place.name}`);
-      }
+      emitEventBody(2, event);
     }
+    emitNote(1, person.notes);
+    emitCitations(1, 'PERSON', person.id);
     for (const item of media.filter((candidate) => candidate.entity_id === person.id)) {
       lines.push(`1 OBJE @O${item.id}@`);
     }
@@ -467,6 +523,35 @@ function generateGedcom(database, persons, families, format, media = []) {
     }
     // Filiation sans union dans GeneoApp : ne pas inventer d'union à l'import.
     if (family.noUnion) lines.push('1 _NOUNION Y');
+    if (family.union) {
+      const { union } = family;
+      const fetchEvent = (id) =>
+        id
+          ? database.prepare('SELECT * FROM events WHERE id = ? AND deleted_at IS NULL').get(id)
+          : null;
+      const start = fetchEvent(union.start_event_id);
+      const end = fetchEvent(union.end_event_id);
+      const unionKind = { CIVIL_PARTNERSHIP: 'civil partnership', COHABITATION: 'cohabitation' }[
+        union.type
+      ];
+      if (start || union.type === 'MARRIAGE' || unionKind) {
+        lines.push('1 MARR');
+        if (unionKind) lines.push(`2 TYPE ${unionKind}`);
+        if (start) emitEventBody(2, start);
+      }
+      if (end) {
+        lines.push('1 DIV');
+        emitEventBody(2, end);
+      }
+      emitNote(1, union.notes);
+      emitCitations(1, 'UNION', union.id);
+    }
+  }
+  for (const sourceId of [...usedSources].sort((a, b) => a - b)) {
+    const source = database.prepare('SELECT * FROM sources WHERE id = ?').get(sourceId);
+    lines.push(`0 @S${sourceId}@ SOUR`, `1 TITL ${source.title}`);
+    if (source.author) lines.push(`1 AUTH ${source.author}`);
+    if (source.publication_info) lines.push(`1 PUBL ${source.publication_info}`);
   }
   for (const item of media) {
     lines.push(`0 @O${item.id}@ OBJE`);
@@ -555,6 +640,23 @@ function verifyExport(gedcom, expected) {
   }
 }
 
+/** Contenus annexes du fichier : sources, notes partagées et citations. */
+function buildContentsPreview(records) {
+  let citations = 0;
+  const visit = (record) => {
+    for (const node of record.children) {
+      if (node.tag === 'SOUR') citations += 1;
+      visit(node);
+    }
+  };
+  records.filter((record) => ['INDI', 'FAM'].includes(record.tag)).forEach(visit);
+  return {
+    sources: records.filter((record) => record.tag === 'SOUR').length,
+    notes: records.filter((record) => record.tag === 'NOTE').length,
+    citations,
+  };
+}
+
 function buildMappingPreview(records) {
   const individuals = records.filter((record) => record.tag === 'INDI');
   const families = records.filter((record) => record.tag === 'FAM');
@@ -586,7 +688,7 @@ function buildMappingPreview(records) {
 function applyMapping(database, records, performedBy) {
   const personIds = new Map();
   const eventIds = new Map();
-  const ids = { persons: [], events: [], unions: [], parentages: [] };
+  const ids = { persons: [], events: [], unions: [], parentages: [], sources: [], citations: [] };
   const insertPerson = database.prepare(
     `INSERT INTO persons (
        given_names, family_name, birth_family_name, sex, notes, nickname, external_id, is_living,
@@ -614,6 +716,7 @@ function applyMapping(database, records, performedBy) {
     `INSERT INTO parentages (child_id, parent_id, parent_role, link_type, union_id, notes) VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const placeIds = new Map();
+  const ctx = createImportContext(database, records, ids, performedBy);
   // Une même filiation ne peut être insérée deux fois (index unique).
   const insertedPairs = new Set();
 
@@ -638,7 +741,7 @@ function applyMapping(database, records, performedBy) {
       name.familyName,
       otherNames.birthFamilyName,
       sex(value(person, 'SEX')),
-      notes(person),
+      ctx.notes(person),
       value(person, 'NICK') ?? null,
       person.xref ?? null,
       // Décès/inhumation connus, ou naissance/baptême de plus de 110 ans :
@@ -658,6 +761,7 @@ function applyMapping(database, records, performedBy) {
     }
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);
+    ctx.citationsOf(person, 'PERSON', result.lastInsertRowid);
     audit(database, 'persons', result.lastInsertRowid, { xref: person.xref }, performedBy);
   }
 
@@ -665,6 +769,7 @@ function applyMapping(database, records, performedBy) {
     for (const event of person.children.filter((child) => resolveEventType(child))) {
       const eventId = insertEventRecord(
         database,
+        ctx,
         insertEvent,
         insertPlace,
         placeIds,
@@ -691,6 +796,7 @@ function applyMapping(database, records, performedBy) {
     const startEventId = marriage
       ? insertEventRecord(
           database,
+          ctx,
           insertEvent,
           insertPlace,
           placeIds,
@@ -702,6 +808,7 @@ function applyMapping(database, records, performedBy) {
     const endEventId = divorce
       ? insertEventRecord(
           database,
+          ctx,
           insertEvent,
           insertPlace,
           placeIds,
@@ -714,9 +821,10 @@ function applyMapping(database, records, performedBy) {
     const withoutUnion = value(family, '_NOUNION') === 'Y';
     const union = withoutUnion
       ? null
-      : insertUnion.run('OTHER', startEventId, endEventId, notes(family));
+      : insertUnion.run(unionTypeOf(marriage), startEventId, endEventId, ctx.notes(family));
     if (union) {
       ids.unions.push(union.lastInsertRowid);
+      ctx.citationsOf(family, 'UNION', union.lastInsertRowid);
       audit(database, 'unions', union.lastInsertRowid, { xref: family.xref }, performedBy);
     }
 
@@ -773,6 +881,7 @@ function applyMapping(database, records, performedBy) {
 
 function insertEventRecord(
   database,
+  ctx,
   insertEvent,
   insertPlace,
   placeIds,
@@ -790,7 +899,15 @@ function insertEventRecord(
         .prepare('SELECT id FROM places WHERE normalized_name = ? AND deleted_at IS NULL')
         .get(normalized);
       placeId = existing?.id;
-      if (!placeId) placeId = insertPlace.run(placeName.trim(), normalized).lastInsertRowid;
+      if (!placeId) {
+        placeId = insertPlace.run(placeName.trim(), normalized).lastInsertRowid;
+        const coordinates = readCoordinates(child(record, 'PLAC'));
+        if (coordinates) {
+          database
+            .prepare('UPDATE places SET latitude = ?, longitude = ? WHERE id = ?')
+            .run(coordinates.latitude, coordinates.longitude, placeId);
+        }
+      }
       placeIds.set(normalized, placeId);
     }
   }
@@ -799,10 +916,11 @@ function insertEventRecord(
     value(record, 'DATE'),
     datePrecision(value(record, 'DATE')),
     placeId,
-    notes(record),
+    ctx.notes(record),
     record.value?.trim() || null,
   );
   audit(database, 'events', result.lastInsertRowid, { type }, performedBy);
+  ctx.citationsOf(record, 'EVENT', result.lastInsertRowid);
   return result.lastInsertRowid;
 }
 
@@ -847,12 +965,107 @@ function datePrecision(value) {
   return 'EXACT';
 }
 
-function notes(record) {
-  return (
-    children(record, 'NOTE')
-      .map((note) => note.value)
-      .join('\n') || null
+// Type d'union d'après le sous-élément TYPE de MARR (« civil partnership »,
+// « cohabitation »…) ; un MARR sans précision est un mariage.
+function unionTypeOf(marriage) {
+  if (!marriage) return 'OTHER';
+  const kind = (value(marriage, 'TYPE') ?? '').toLowerCase();
+  if (/civil|pacs|partnership|pacte/.test(kind)) return 'CIVIL_PARTNERSHIP';
+  if (/cohab|libre|concubin/.test(kind)) return 'COHABITATION';
+  return 'MARRIAGE';
+}
+
+// « N48.8566 » / « W2.35 » → nombre signé ; null si le format est inconnu.
+function parseCoordinate(raw, positive, negative) {
+  const match = new RegExp(`^([${positive}${negative}])\\s*(-?\\d+(?:\\.\\d+)?)$`, 'i').exec(
+    (raw ?? '').trim(),
   );
+  if (!match) return null;
+  const magnitude = Math.abs(Number(match[2]));
+  return match[1].toUpperCase() === negative ? -magnitude : magnitude;
+}
+
+function readCoordinates(placeRecord) {
+  const map = child(placeRecord, 'MAP');
+  const latitude = parseCoordinate(value(map, 'LATI'), 'N', 'S');
+  const longitude = parseCoordinate(value(map, 'LONG'), 'E', 'W');
+  if (latitude === null || longitude === null) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  return { latitude, longitude };
+}
+
+const QUAY_TO_CONFIDENCE = { 0: 'LOW', 1: 'LOW', 2: 'MEDIUM', 3: 'HIGH' };
+
+/**
+ * Contexte d'un import : résolution des notes partagées (NOTE @N1@), sources
+ * (enregistrements SOUR, ou source en ligne) et citations. Les sources sont
+ * créées avant les personnes et événements qui les citent.
+ */
+function createImportContext(database, records, ids, performedBy) {
+  const noteRecords = new Map(
+    records.filter((record) => record.tag === 'NOTE' && record.xref).map((r) => [r.xref, r]),
+  );
+  const notes = (record) =>
+    children(record, 'NOTE')
+      .map((note) => {
+        const shared = noteRecords.get((note.value ?? '').trim());
+        return shared ? shared.value : note.value;
+      })
+      .join('\n') || null;
+
+  const insertSource = database.prepare(
+    'INSERT INTO sources (title, author, publication_info) VALUES (?, ?, ?)',
+  );
+  const insertCitation = database.prepare(
+    `INSERT INTO citations (source_id, entity_type, entity_id, page, confidence, notes, quotation)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const sourceIds = new Map();
+  const createSource = (title, author, publication) => {
+    const info = insertSource.run(title.slice(0, 300), author, publication);
+    ids.sources.push(info.lastInsertRowid);
+    audit(database, 'sources', info.lastInsertRowid, { title }, performedBy);
+    return info.lastInsertRowid;
+  };
+  for (const record of records.filter((r) => r.tag === 'SOUR' && r.xref)) {
+    const title = value(record, 'TITL') ?? value(record, 'ABBR') ?? 'Source sans titre';
+    sourceIds.set(record.xref, createSource(title, value(record, 'AUTH'), value(record, 'PUBL')));
+  }
+  const inlineSources = new Map();
+
+  return {
+    notes,
+    citationsOf(record, entityType, entityId) {
+      for (const citation of children(record, 'SOUR')) {
+        const reference = (citation.value ?? '').trim();
+        let sourceId = sourceIds.get(reference);
+        if (!sourceId) {
+          // Source en ligne (texte libre) : une source par texte distinct.
+          const title = reference || 'Source sans titre';
+          if (!inlineSources.has(title)) inlineSources.set(title, createSource(title, null, null));
+          sourceId = inlineSources.get(title);
+        }
+        const quay = value(citation, 'QUAY');
+        const info = insertCitation.run(
+          sourceId,
+          entityType,
+          entityId,
+          value(citation, 'PAGE'),
+          QUAY_TO_CONFIDENCE[quay] ?? 'MEDIUM',
+          notes(citation),
+          value(child(citation, 'DATA'), 'TEXT'),
+        );
+        ids.citations.push(info.lastInsertRowid);
+        audit(
+          database,
+          'citations',
+          info.lastInsertRowid,
+          { sourceId, entityType, entityId },
+          performedBy,
+        );
+      }
+    },
+  };
 }
 
 function value(record, tag) {
