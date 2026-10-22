@@ -470,7 +470,7 @@ test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune erreur ce
   await expect(page.getByText('Aucun cycle détecté.')).toBeVisible();
   // Aucune erreur certaine ; seuls des signalements « à vérifier » sont admis
   // (ex. personne née en 1815 encore marquée vivante).
-  await expect(page.getByText('Incohérences de chronologie')).toBeVisible();
+  await expect(page.getByText('Situations inhabituelles à vérifier')).toBeVisible();
   await expect(page.getByText('Erreur certaine')).toHaveCount(0);
 });
 
