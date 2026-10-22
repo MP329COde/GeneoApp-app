@@ -491,3 +491,38 @@ Validations : `npx prettier --check scripts/capture-screenshots.js`,
 `npm run build` dans `site/` (six images présentes dans `dist/captures`).
 
 
+
+## Phase B du prompt maître — modèle métier complet (2026-10-22, branche `fix/audit-2026-09`)
+
+Audit du modèle contre la phase B du prompt maître, puis comblement des écarts réels. Chaque lot
+a son commit, validé par `npm run lint`, `npm run format:check` et `npm test` (Node 24).
+
+| Lot | Écart constaté | Livré | Commit |
+|---|---|---|---|
+| B1 Événements | Pas de type migration / succession / engagement religieux ; « estimée » et « calculée » écrasées sur « vers » ; cinq rôles de participants seulement | Migration `0026` : 3 types, précisions `ESTIMATED`/`CALCULATED`, 8 rôles (parrain, informateur, tuteur, héritier, père, mère, enfant, autre) ; GEDCOM (EST, CAL, EVEN/TYPE) ; `granularityOf` (jour/mois/année) | `5f97fe1` |
+| B2 Identité | Pas d'alias distinct du surnom, pas de drapeau « privé », un seul identifiant externe, pas de tutelle ; **titre, suffixe, nom marital et nom de naissance n'étaient ni importés ni exportés en GEDCOM** | Migration `0027` : `alias`, `is_private`, table `person_identifiers` (+ routes, recherche inverse = doublon probable), filiation `GUARDIAN` ; GEDCOM : `NAME`/`TYPE` (birth, married, aka), `NPFX`, `NSFX`, `RESN`, `REFN`, `_GUARDIAN` ; index de recherche : nom marital et alias | `7596208` |
+| B3 Lieux | Un lieu n'avait qu'un nom, sans nature ni hiérarchie ni historique | Migration `0028` : `place_type`, `place_names` (noms datés), `place_parents` (rattachements sur période) ; résolution du nom et de la hiérarchie à une année (`/api/places/:id/resolve?year=`) ; cycles et chevauchements refusés ; `PATCH /api/places/:id` | `f5e0b0a` |
+| B4 Preuves | Une seule valeur par champ ; confiance LOW/MEDIUM/HIGH seule ; contradictions = note libre | Migration `0029` : `assertions` (proposée / retenue / écartée, niveau de preuve), citations qualifiées (directe / indirecte / négative, information primaire / secondaire, extrait), nature de la source ; contradictions détectées à la lecture, niveau de preuve suggéré (jamais appliqué seul) ; fusion de doublons qui conserve affirmations et identifiants | `9feb97c` |
+| B5 Migrations | Idempotence testée globalement, mais pas la préservation des données migration par migration | Test qui applique chacune des migrations seule sur une base peuplée (instantané avant/après, `foreign_key_check`, `integrity_check`, idempotence) | voir ci-dessous |
+
+### Défauts découverts en chemin et corrigés
+
+- La sauvegarde logique (`EXPORTABLE_TABLES`) ne couvrait pas les tables ajoutées par les lots B2 à B4 :
+  elles auraient été perdues à la restauration. Un test échoue désormais si une table du schéma n'est
+  ni sauvegardée ni explicitement exclue (avec sa raison).
+- La purge définitive de la corbeille échouait sur les nouvelles dépendances (identifiants, noms et
+  rattachements de lieux, affirmations et leurs citations) : cascade complétée, y compris pour les
+  références polymorphes qui ont elles-mêmes des dépendances.
+- `reindexAll` (étape JS de la migration 0021) lisait des colonnes absentes d'un schéma ancien :
+  `SELECT *` pour qu'une base ancienne puisse encore se migrer.
+
+### Limites restantes (assumées, hors phase B)
+
+- Les identifiants externes, l'historique des lieux, les affirmations et les preuves n'ont **pas
+  d'écran** : API et modèle seulement (phase I). Seuls l'alias et le drapeau « privé » sont dans
+  l'outil « Identité ».
+- Aucune route de modification pour événements, unions, parentés, sources ni citations (phase D).
+- GEDCOM : sources, citations, notes et affirmations ne sont pas encore exportées ; `is_private` n'est
+  pas encore un filtre d'export (phase E).
+- Un seul nom de chaque type par personne (pas de table de noms multiples datés).
+- Arbres multiples : isolation par espace de travail, inchangée par ce lot.

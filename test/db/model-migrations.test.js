@@ -299,3 +299,134 @@ test('0029 : sources et citations existantes conservées, affirmations et preuve
     },
   );
 });
+
+// Chaque migration est appliquée seule, une par une, sur une base déjà peuplée :
+// aucune ne doit perdre, altérer ni rendre orpheline une donnée existante. C'est
+// le scénario réel d'une mise à jour de l'application chez un utilisateur ayant
+// déjà saisi son arbre, et celui qu'un test sur base vide ne voit jamais.
+test('chaque migration, appliquée seule sur une base peuplée, préserve les données existantes', () => {
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql'))
+    .sort();
+  const seedAfter = files.findIndex((name) => name.startsWith('0005'));
+  assert.ok(seedAfter > 0, 'migration 0005 introuvable');
+
+  const dir = mkdtempSync(path.join(tmpdir(), 'geneoapp-migrations-chain-'));
+  const database = openDatabase(':memory:');
+  try {
+    for (const name of files.slice(0, seedAfter + 1)) {
+      copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(dir, name));
+    }
+    runMigrations(database, { migrationsDir: dir });
+
+    // Jeu de données couvrant toutes les tables métier du socle initial.
+    const run = (sql, ...params) => database.prepare(sql).run(...params).lastInsertRowid;
+    const place = run("INSERT INTO places (name, normalized_name) VALUES ('Londres', 'londres')");
+    const father = run(
+      "INSERT INTO persons (given_names, family_name, sex) VALUES ('Jean', 'Dupont', 'M')",
+    );
+    const mother = run(
+      "INSERT INTO persons (given_names, family_name, sex) VALUES ('Anne', 'Martin', 'F')",
+    );
+    const child = run(
+      "INSERT INTO persons (given_names, family_name, sex) VALUES ('Paul', 'Dupont', 'M')",
+    );
+    const marriage = run(
+      "INSERT INTO events (type, date_text, date_precision, place_id) VALUES ('MARRIAGE', '1 mai 1900', 'EXACT', ?)",
+      place,
+    );
+    const birth = run(
+      "INSERT INTO events (type, date_text, date_precision, place_id) VALUES ('BIRTH', 'vers 1905', 'ABOUT', ?)",
+      place,
+    );
+    run(
+      "INSERT INTO event_participants (event_id, person_id, role) VALUES (?, ?, 'PARTNER1')",
+      marriage,
+      father,
+    );
+    run(
+      "INSERT INTO event_participants (event_id, person_id, role) VALUES (?, ?, 'PARTNER2')",
+      marriage,
+      mother,
+    );
+    run(
+      "INSERT INTO event_participants (event_id, person_id, role) VALUES (?, ?, 'PRINCIPAL')",
+      birth,
+      child,
+    );
+    const union = run("INSERT INTO unions (type, start_event_id) VALUES ('MARRIAGE', ?)", marriage);
+    run('INSERT INTO union_partners (union_id, person_id) VALUES (?, ?)', union, father);
+    run('INSERT INTO union_partners (union_id, person_id) VALUES (?, ?)', union, mother);
+    run(
+      "INSERT INTO parentages (child_id, parent_id, parent_role, link_type, union_id) VALUES (?, ?, 'FATHER', 'ADOPTIVE', ?)",
+      child,
+      father,
+      union,
+    );
+    run(
+      "INSERT INTO parentages (child_id, parent_id, parent_role, link_type, union_id) VALUES (?, ?, 'MOTHER', 'BIOLOGICAL', ?)",
+      child,
+      mother,
+      union,
+    );
+    const source = run("INSERT INTO sources (title) VALUES ('Registre')");
+    run(
+      "INSERT INTO citations (source_id, entity_type, entity_id, confidence) VALUES (?, 'EVENT', ?, 'HIGH')",
+      source,
+      birth,
+    );
+
+    const snapshot = () => ({
+      persons: database
+        .prepare('SELECT given_names, family_name, sex FROM persons ORDER BY id')
+        .all(),
+      places: database.prepare('SELECT name FROM places ORDER BY id').all(),
+      events: database.prepare('SELECT type, date_text, place_id FROM events ORDER BY id').all(),
+      participants: database
+        .prepare('SELECT event_id, person_id, role FROM event_participants ORDER BY id')
+        .all(),
+      unions: database.prepare('SELECT type, start_event_id FROM unions ORDER BY id').all(),
+      partners: database
+        .prepare('SELECT union_id, person_id FROM union_partners ORDER BY id')
+        .all(),
+      parentages: database
+        .prepare(
+          'SELECT child_id, parent_id, parent_role, link_type, union_id FROM parentages ORDER BY id',
+        )
+        .all(),
+      sources: database.prepare('SELECT title FROM sources ORDER BY id').all(),
+      citations: database
+        .prepare('SELECT source_id, entity_type, entity_id, confidence FROM citations ORDER BY id')
+        .all(),
+    });
+    const before = snapshot();
+
+    for (const name of files.slice(seedAfter + 1)) {
+      copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(dir, name));
+      const applied = runMigrations(database, { migrationsDir: dir });
+      assert.deepEqual(applied, [name], `${name} doit être la seule migration appliquée`);
+
+      assert.deepEqual(snapshot(), before, `${name} a modifié des données existantes`);
+      assert.deepEqual(
+        database.pragma('foreign_key_check'),
+        [],
+        `${name} : intégrité référentielle`,
+      );
+      assert.equal(
+        database.pragma('integrity_check')[0].integrity_check,
+        'ok',
+        `${name} : intégrité`,
+      );
+      assert.equal(database.pragma('foreign_keys')[0].foreign_keys, 1, `${name} : clés étrangères`);
+      // Rejouer le même dossier n'applique rien : idempotence migration par migration.
+      assert.deepEqual(
+        runMigrations(database, { migrationsDir: dir }),
+        [],
+        `${name} : idempotence`,
+      );
+    }
+  } finally {
+    database.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
