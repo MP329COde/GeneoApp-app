@@ -1,3 +1,5 @@
+import { parsePersonsListQuery } from '../services/person.service.js';
+
 export function createPersonController(services) {
   const { persons } = services;
 
@@ -13,23 +15,34 @@ export function createPersonController(services) {
     },
 
     list(request, response) {
-      const includeDeleted = request.query.includeDeleted === 'true';
-      const { limit, offset, q } = request.query;
-      if (limit === undefined) {
-        response.json(persons.list({ includeDeleted }));
+      const options = parsePersonsListQuery(request.query);
+
+      // Sans paramètre de pagination : comportement historique (tableau
+      // complet), utilisé par l'IPC Electron et les calculs locaux du client.
+      if (!options.paginated) {
+        response.json(persons.list({ includeDeleted: options.includeDeleted }));
         return;
       }
+
+      // `total=true` : uniquement le nombre de personnes correspondantes.
+      if (options.totalOnly) {
+        response.json({
+          total: persons.count({ includeDeleted: options.includeDeleted, q: options.q }),
+        });
+        return;
+      }
+
       const { items, total } = persons.list({
-        includeDeleted,
-        limit: Number(limit),
-        offset: offset !== undefined ? Number(offset) : 0,
-        q,
+        includeDeleted: options.includeDeleted,
+        limit: options.limit,
+        offset: options.offset,
+        q: options.q,
       });
       response.json({
         items,
         total,
-        limit: Number(limit),
-        offset: offset !== undefined ? Number(offset) : 0,
+        limit: options.limit,
+        offset: options.offset,
       });
     },
 

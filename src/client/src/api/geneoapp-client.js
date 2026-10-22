@@ -76,6 +76,52 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   return data;
 }
 
+// Pagination de la liste des personnes.
+//
+// Le contrat de `persons.list()` est une enveloppe normalisée :
+// `{ items, total, limit, offset }`.
+//
+// - `persons.list()` sans option : la liste complète. En HTTP, elle est
+//   chargée page par page auprès du serveur (pas de réponse gigantesque) ;
+//   en IPC, elle vient en un seul appel (le canal Electron ne sait pas
+//   encore transmettre `limit`/`offset`).
+// - `persons.list({ limit, offset, q })` : une seule page, avec `total` =
+//   nombre total de personnes correspondant au filtre — indispensable pour
+//   virtualiser la liste.
+// - `persons.list({ total: true, q })` : uniquement le nombre de personnes
+//   correspondantes (`{ total }`).
+//
+// Bornes appliquées côté client (le serveur les applique aussi) : page
+// par défaut de 50, page maximale de 200, `offset` >= 0.
+const PERSONS_PAGE_DEFAULT_LIMIT = 50;
+const PERSONS_PAGE_MAX_LIMIT = 200;
+
+function normalizePersonsPageOptions(options) {
+  if (!options || typeof options !== 'object') return null;
+  const hasLimit = options.limit !== undefined && options.limit !== null;
+  const hasOffset = options.offset !== undefined && options.offset !== null;
+  const hasQuery = typeof options.q === 'string' && options.q.trim() !== '';
+  const totalOnly = options.total === true || options.total === 'true';
+  if (!hasLimit && !hasOffset && !hasQuery && !totalOnly) return null;
+
+  const parsedLimit = Math.trunc(Number(options.limit));
+  const limit =
+    Number.isFinite(parsedLimit) && parsedLimit >= 1
+      ? Math.min(parsedLimit, PERSONS_PAGE_MAX_LIMIT)
+      : PERSONS_PAGE_DEFAULT_LIMIT;
+  const parsedOffset = Math.trunc(Number(options.offset));
+  const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
+
+  return { limit, offset, q: hasQuery ? options.q.trim() : undefined, totalOnly };
+}
+
+// Même sémantique que le `LIKE` du serveur sur `given_names || ' ' ||
+// family_name` : insensible à la casse, sensible aux accents.
+function personMatchesQuery(person, query) {
+  const haystack = `${person?.given_names ?? ''} ${person?.family_name ?? ''}`.toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
 function base64ToBlob(base64, mimeType) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -93,7 +139,38 @@ function parseContentDispositionFilename(header) {
 function createHttpClient() {
   return {
     persons: {
-      list: () => fetchJson('/api/persons'),
+      list: async (options) => {
+        const page = normalizePersonsPageOptions(options);
+        if (page?.totalOnly) {
+          const params = new URLSearchParams({ total: 'true' });
+          if (page.q) params.set('q', page.q);
+          return fetchJson(`/api/persons?${params.toString()}`);
+        }
+        if (page) {
+          const params = new URLSearchParams({
+            limit: String(page.limit),
+            offset: String(page.offset),
+          });
+          if (page.q) params.set('q', page.q);
+          return fetchJson(`/api/persons?${params.toString()}`);
+        }
+        // Liste complète : on avance page par page auprès du serveur, ce qui
+        // évite de charger une réponse gigantesque d'un seul coup.
+        const items = [];
+        let total = 0;
+        let offset = 0;
+        for (;;) {
+          const response = await fetchJson(
+            `/api/persons?limit=${PERSONS_PAGE_MAX_LIMIT}&offset=${offset}`,
+          );
+          const pageItems = response?.items ?? [];
+          items.push(...pageItems);
+          total = response?.total ?? items.length;
+          offset += pageItems.length;
+          if (pageItems.length === 0 || offset >= total) break;
+        }
+        return { items, total, limit: PERSONS_PAGE_MAX_LIMIT, offset: 0 };
+      },
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
       update: (id, data) => fetchJson(`/api/persons/${id}`, { method: 'PATCH', body: data }),
@@ -415,7 +492,29 @@ function createIpcClient(rawBridge) {
   const bridge = withTranslatedErrors(rawBridge);
   return {
     persons: {
-      list: () => bridge.persons.list(),
+      // Le canal IPC Electron ne connaît pas encore la pagination : on
+      // récupère la liste complète puis on découpe côté client, en renvoyant
+      // exactement la même enveloppe que le transport HTTP.
+      list: async (options) => {
+        const page = normalizePersonsPageOptions(options);
+        const all = await bridge.persons.list();
+        const filtered = page?.q ? all.filter((person) => personMatchesQuery(person, page.q)) : all;
+        if (page?.totalOnly) return { total: filtered.length };
+        if (!page) {
+          return {
+            items: filtered,
+            total: filtered.length,
+            limit: filtered.length,
+            offset: 0,
+          };
+        }
+        return {
+          items: filtered.slice(page.offset, page.offset + page.limit),
+          total: filtered.length,
+          limit: page.limit,
+          offset: page.offset,
+        };
+      },
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),
       update: (id, data) => bridge.persons.update(id, data),

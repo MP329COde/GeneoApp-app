@@ -311,6 +311,9 @@ function AppContent() {
   const { settings, update: updateSettings } = useSettings();
   const { t } = useI18n();
   const [persons, setPersons] = useState(null);
+  // Nombre total de personnes connu du serveur : c'est lui qui alimente la
+  // virtualisation de la liste, pas la taille du tableau filtré.
+  const [personsTotal, setPersonsTotal] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
   const { settings: initialSettings } = useSettings();
@@ -393,9 +396,10 @@ function AppContent() {
 
   const loadPersons = useCallback(async () => {
     try {
-      const list = await client.persons.list();
-      setPersons(list);
-      setSelectedId((current) => current ?? list[0]?.id ?? null);
+      const { items, total } = await client.persons.list();
+      setPersons(items);
+      setPersonsTotal(total ?? items.length);
+      setSelectedId((current) => current ?? items[0]?.id ?? null);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -455,10 +459,11 @@ function AppContent() {
         );
         // Les panneaux rechargent leurs données après un retour en arrière.
         setDataVersion((version) => version + 1);
-        const list = await client.persons.list();
-        setPersons(list);
+        const { items } = await client.persons.list();
+        setPersons(items);
+        setPersonsTotal(items.length);
         setSelectedId((current) =>
-          list.some((person) => person.id === current) ? current : (list[0]?.id ?? null),
+          items.some((person) => person.id === current) ? current : (items[0]?.id ?? null),
         );
       } catch (historyError) {
         setError(historyError.message);
@@ -498,7 +503,9 @@ function AppContent() {
     setSelectedId(null);
     setRelations(null);
     setSession(null);
-    setPersons(await client.persons.list());
+    const { items } = await client.persons.list();
+    setPersons(items);
+    setPersonsTotal(items.length);
     refreshHistory();
   };
 
@@ -673,7 +680,7 @@ function AppContent() {
             <div className="sidenav__people sidenav__persons">
               <h2 className="sidenav__label">
                 {t('shell.persons')} ·{' '}
-                <span>{t('shell.personCount', { count: persons.length })}</span>
+                <span>{t('shell.personCount', { count: personsTotal ?? persons.length })}</span>
               </h2>
               <div className="new-person-button">
                 <Button size="sm" onClick={() => setCreatingOpen(true)}>

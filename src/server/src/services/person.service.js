@@ -1,5 +1,55 @@
 import { NotFoundError, ValidationError } from '../errors.js';
 import { assertId, validatePersonCreate, validatePersonUpdate } from '../validation/schemas.js';
+import {
+  PERSONS_PAGE_DEFAULT_LIMIT,
+  PERSONS_PAGE_MAX_LIMIT,
+} from '../../../db/src/repositories/person-repository.js';
+
+/**
+ * Normalise les paramètres de requête de la liste des personnes.
+ *
+ * Règles (jamais d'erreur 500 sur une entrée malveillante) :
+ * - `limit` absent → la liste complète historique (tableau simple) ;
+ * - `limit` présent → pagination, borné à [1, PERSONS_PAGE_MAX_LIMIT] ;
+ *   une valeur invalide (non entière, < 1) retombe sur la valeur par défaut ;
+ * - `offset` → entier >= 0 (une valeur invalide ou négative devient 0) ;
+ * - `q` → recherche texte optionnelle sur nom/prénom ;
+ * - `total=true` → ne renvoie que le nombre total de personnes correspondantes.
+ */
+export function parsePersonsListQuery(query = {}) {
+  const rawLimit = query.limit;
+  const rawOffset = query.offset;
+  const hasLimit = rawLimit !== undefined && rawLimit !== null && rawLimit !== '';
+  const hasOffset = rawOffset !== undefined && rawOffset !== null && rawOffset !== '';
+  const totalOnly = query.total === 'true' || query.total === '1';
+
+  let limit = PERSONS_PAGE_DEFAULT_LIMIT;
+  if (hasLimit) {
+    const parsed = Math.trunc(Number(rawLimit));
+    if (Number.isFinite(parsed) && parsed >= 1) {
+      limit = Math.min(parsed, PERSONS_PAGE_MAX_LIMIT);
+    }
+  }
+
+  let offset = 0;
+  if (hasOffset) {
+    const parsed = Math.trunc(Number(rawOffset));
+    if (Number.isFinite(parsed) && parsed > 0) {
+      offset = parsed;
+    }
+  }
+
+  const q = typeof query.q === 'string' && query.q.trim() !== '' ? query.q.trim() : undefined;
+
+  return {
+    paginated: hasLimit || hasOffset || totalOnly,
+    totalOnly,
+    limit,
+    offset,
+    q,
+    includeDeleted: query.includeDeleted === 'true',
+  };
+}
 
 export class PersonService {
   constructor(repository) {
@@ -20,6 +70,10 @@ export class PersonService {
 
   list(options) {
     return this.repository.list(options);
+  }
+
+  count(options) {
+    return this.repository.count(options);
   }
 
   update(id, payload, options) {

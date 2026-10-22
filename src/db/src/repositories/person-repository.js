@@ -29,6 +29,11 @@ const FIELD_TO_COLUMN = {
   externalId: 'external_id',
 };
 
+// Bornes de pagination de la liste des personnes : une page par défaut et une
+// page maximale (au-delà, on force un COUNT sur toute la base).
+export const PERSONS_PAGE_DEFAULT_LIMIT = 50;
+export const PERSONS_PAGE_MAX_LIMIT = 200;
+
 export class PersonRepository {
   constructor(database) {
     this.database = database;
@@ -122,37 +127,66 @@ export class PersonRepository {
   // Sans `limit`, renvoie la liste complète (comportement historique, utilisé
   // partout côté client pour les calculs locaux — tri, filtrage, doublons…).
   // Avec `limit`, active la pagination côté API : `{ items, total }`, avec un
-  // filtre texte optionnel `q` (nom/prénom, insensible à la casse et aux
-  // accents) — pour les grandes bases où charger toute la liste d'un coup
-  // n'est plus raisonnable (listes de plusieurs milliers de personnes).
+  // filtre texte optionnel `q` (nom/prénom) — pour les grandes bases où
+  // charger toute la liste d'un coup n'est plus raisonnable (listes de
+  // plusieurs milliers de personnes).
+  // `limit` et `offset` sont bornés ici aussi (défense en profondeur) : une
+  // valeur absurde ne peut pas faire échouer la requête SQL.
   list({ includeDeleted = false, limit, offset = 0, q } = {}) {
-    const deletedClause = includeDeleted ? '' : 'deleted_at IS NULL';
-    const conditions = [deletedClause].filter(Boolean);
-    const params = {};
-    if (q && q.trim()) {
-      conditions.push(`(given_names || ' ' || family_name) LIKE @q ESCAPE '\\'`);
-      const escaped = q.trim().replace(/[\\%_]/g, (match) => `\\${match}`);
-      params.q = `%${escaped}%`;
-    }
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = this.buildWhereClause({ includeDeleted, q });
+    const params = this.buildFilterParams(q);
 
     if (limit === undefined) {
       return this.database
-        .prepare(`SELECT * FROM persons ${whereClause} ORDER BY family_name, given_names`)
+        .prepare(`SELECT * FROM persons ${whereClause} ORDER BY family_name, given_names, id`)
         .all(params);
     }
 
+    const requestedLimit = Math.trunc(Number(limit));
+    const safeLimit = Math.min(
+      Number.isFinite(requestedLimit) && requestedLimit >= 1
+        ? requestedLimit
+        : PERSONS_PAGE_DEFAULT_LIMIT,
+      PERSONS_PAGE_MAX_LIMIT,
+    );
+    const requestedOffset = Math.trunc(Number(offset));
+    const safeOffset =
+      Number.isFinite(requestedOffset) && requestedOffset > 0 ? requestedOffset : 0;
     const items = this.database
       .prepare(
         `SELECT * FROM persons ${whereClause}
-         ORDER BY family_name, given_names
+         ORDER BY family_name, given_names, id
          LIMIT @limit OFFSET @offset`,
       )
-      .all({ ...params, limit, offset });
+      .all({ ...params, limit: safeLimit, offset: safeOffset });
     const { total } = this.database
       .prepare(`SELECT COUNT(*) AS total FROM persons ${whereClause}`)
       .get(params);
     return { items, total };
+  }
+
+  // Compte les personnes correspondant au même filtre que `list`, sans charger
+  // les lignes : sert aux réponses « total uniquement » de la pagination.
+  count({ includeDeleted = false, q } = {}) {
+    const whereClause = this.buildWhereClause({ includeDeleted, q });
+    const { total } = this.database
+      .prepare(`SELECT COUNT(*) AS total FROM persons ${whereClause}`)
+      .get(this.buildFilterParams(q));
+    return total;
+  }
+
+  buildWhereClause({ includeDeleted = false, q } = {}) {
+    const conditions = [includeDeleted ? '' : 'deleted_at IS NULL'].filter(Boolean);
+    if (q && q.trim()) {
+      conditions.push(`(given_names || ' ' || family_name) LIKE @q ESCAPE '\\'`);
+    }
+    return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  }
+
+  buildFilterParams(q) {
+    if (!q || !q.trim()) return {};
+    const escaped = q.trim().replace(/[\\%_]/g, (match) => `\\${match}`);
+    return { q: `%${escaped}%` };
   }
 
   update(id, patch, { performedBy = null } = {}) {
