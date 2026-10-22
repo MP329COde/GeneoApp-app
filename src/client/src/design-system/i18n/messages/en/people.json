@@ -360,5 +360,12 @@
   "relations.bond.AFFINITY": "Marriage alliance",
   "relations.bond.UNCERTAIN": "Uncertain",
   "relations.consanguinity": "Blood relationship",
-  "relations.multiple": "Multiple relationships"
+  "relations.multiple": "Multiple relationships",
+  "eventsTimeline.edit": "Edit",
+  "eventsTimeline.save": "Save",
+  "eventsTimeline.cancel": "Cancel",
+  "eventsTimeline.editValue": "Value or description",
+  "eventsTimeline.editDate": "Date",
+  "eventsTimeline.editPrecision": "Date precision",
+  "eventsTimeline.editPlace": "Place"
 }

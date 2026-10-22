@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
+import { EventEditForm } from './EventEditForm.jsx';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import {
   formatGenealogyDate,
@@ -69,6 +70,7 @@ export function EventsPanel({ selected }) {
   const [newPlaceLongitude, setNewPlaceLongitude] = useState('');
   const [eventsError, setEventsError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const loadEvents = useCallback(async () => {
     if (!selected) return;
@@ -138,6 +140,20 @@ export function EventsPanel({ selected }) {
       await loadEvents();
     } catch (createError) {
       setEventsError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSave = async (id, data) => {
+    setBusy(true);
+    setEventsError(null);
+    try {
+      await client.events.update(id, data);
+      setEditingId(null);
+      await loadEvents();
+    } catch (saveError) {
+      setEventsError(saveError.message);
     } finally {
       setBusy(false);
     }
@@ -273,12 +289,33 @@ export function EventsPanel({ selected }) {
               <Button
                 type="button"
                 size="sm"
+                variant="secondary"
+                onClick={() => setEditingId(editingId === item.id ? null : item.id)}
+                aria-expanded={editingId === item.id}
+                disabled={busy}
+              >
+                {t('eventsTimeline.edit', 'Modifier')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
                 variant="danger"
                 onClick={() => handleRemove(item.id)}
                 disabled={busy}
               >
                 {t('eventsTimeline.remove', 'Supprimer')}
               </Button>
+              {editingId === item.id ? (
+                <EventEditForm
+                  event={item}
+                  places={places}
+                  precisions={DATE_PRECISIONS}
+                  precisionKeys={DATE_PRECISION_KEYS}
+                  busy={busy}
+                  onSave={(data) => handleSave(item.id, data)}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
