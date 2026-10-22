@@ -83,8 +83,20 @@ export function buildVerificationIssues({ duplicates = [], cycles = [], timeline
   for (const pair of duplicates) {
     const [left, right] = pair.persons;
     const key = `duplicate:${Math.min(left.id, right.id)}:${Math.max(left.id, right.id)}`;
-    addIssue(byPerson, left.id, { key, kind: 'duplicate', score: pair.score, other: right });
-    addIssue(byPerson, right.id, { key, kind: 'duplicate', score: pair.score, other: left });
+    addIssue(byPerson, left.id, {
+      key,
+      kind: 'duplicate',
+      score: pair.score,
+      reasons: pair.reasons ?? [],
+      other: right,
+    });
+    addIssue(byPerson, right.id, {
+      key,
+      kind: 'duplicate',
+      score: pair.score,
+      reasons: pair.reasons ?? [],
+      other: left,
+    });
   }
   for (const cycle of cycles) {
     const key = `cycle:${[...cycle].sort((a, b) => a - b).join('-')}`;

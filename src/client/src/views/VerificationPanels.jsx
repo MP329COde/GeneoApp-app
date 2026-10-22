@@ -89,6 +89,19 @@ export function VerificationSection({
                       {personLabel(issue.other)}
                     </button>
                   </p>
+                  {issue.reasons?.length ? (
+                    <ul className="verification__reasons">
+                      {issue.reasons.map((reason) => (
+                        <li key={reason.code}>
+                          {t(
+                            `verification.reason.${reason.code}`,
+                            { points: `${reason.weight > 0 ? '+' : ''}${reason.weight}` },
+                            `${reason.code} ({points})`,
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <div className="verification__actions">
                     <Button
                       type="button"

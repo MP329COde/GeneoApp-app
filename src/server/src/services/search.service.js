@@ -71,10 +71,10 @@ export class SearchService {
   potentialDuplicates({ limit = 100 } = {}) {
     const persons = this.database
       .prepare(
-        'SELECT id, given_names, family_name, birth_family_name FROM persons WHERE deleted_at IS NULL ORDER BY id',
+        'SELECT id, given_names, family_name, birth_family_name, sex FROM persons WHERE deleted_at IS NULL ORDER BY id',
       )
       .all();
-    if (persons.length < 2) return [];
+    if (persons.length < 2) return { items: [], total: 0 };
 
     const birthYearByPerson = new Map();
     const deathYearByPerson = new Map();
@@ -148,11 +148,14 @@ export class SearchService {
           ) {
             continue;
           }
-          const score = duplicateScore(left, right);
+          const { score, reasons } = duplicateScore(left, right);
           if (score < 0.6) continue;
           results.push({
             persons: [left.person, right.person],
             score: Math.round(score * 100),
+            // Chaque raison porte son poids (en points sur 100) : le score est
+            // la somme de ces contributions, plafonnée à 100. Rien n'est caché.
+            reasons,
             requiresValidation: true,
           });
         }
@@ -168,34 +171,52 @@ export class SearchService {
   }
 }
 
-// Score combinant : nom (et nom de naissance), dates de naissance/décès
+// Score explicable : nom (et nom de naissance), dates de naissance et de décès
 // (un écart de plus de MAX_BIRTH_YEAR_GAP ans exclut la paire), lieu de
-// naissance commun, et parents communs — plutôt que le seul nom.
+// naissance commun, parents communs, et sexes incompatibles (pénalité).
+// Renvoie le score (0 à 1) et la liste des contributions qui le composent.
 function duplicateScore(left, right) {
-  const nameScore = similarity(left.fullName, right.fullName);
-  const birthNameScore =
-    left.birthName && right.birthName ? similarity(left.birthName, right.birthName) : 0;
-  let score = nameScore * 0.75 + birthNameScore * 0.1;
+  const reasons = [];
+  const add = (code, weight, detail = null) => {
+    if (weight !== 0) reasons.push({ code, weight: Math.round(weight * 100), detail });
+  };
 
+  add('NAME_SIMILAR', similarity(left.fullName, right.fullName) * 0.75, {
+    left: left.person.given_names + ' ' + left.person.family_name,
+    right: right.person.given_names + ' ' + right.person.family_name,
+  });
+  if (left.birthName && right.birthName) {
+    add('BIRTH_NAME_SIMILAR', similarity(left.birthName, right.birthName) * 0.1);
+  }
   if (left.birthYear !== null && right.birthYear !== null) {
     const gap = Math.abs(left.birthYear - right.birthYear);
-    if (gap > SearchService.MAX_BIRTH_YEAR_GAP) return 0;
-    score += (1 - gap / SearchService.MAX_BIRTH_YEAR_GAP) * 0.1;
+    if (gap > SearchService.MAX_BIRTH_YEAR_GAP) return { score: 0, reasons: [] };
+    add('BIRTH_YEAR_CLOSE', (1 - gap / SearchService.MAX_BIRTH_YEAR_GAP) * 0.1, {
+      left: left.birthYear,
+      right: right.birthYear,
+    });
   }
   if (left.deathYear !== null && right.deathYear !== null) {
     const gap = Math.abs(left.deathYear - right.deathYear);
     if (gap <= SearchService.MAX_BIRTH_YEAR_GAP) {
-      score += (1 - gap / SearchService.MAX_BIRTH_YEAR_GAP) * 0.05;
+      add('DEATH_YEAR_CLOSE', (1 - gap / SearchService.MAX_BIRTH_YEAR_GAP) * 0.05, {
+        left: left.deathYear,
+        right: right.deathYear,
+      });
     }
   }
   if (left.birthPlace && right.birthPlace && left.birthPlace === right.birthPlace) {
-    score += 0.05;
+    add('SAME_BIRTH_PLACE', 0.05, { place: left.birthPlace });
   }
   if (left.parents?.size && right.parents?.size) {
-    const sharesParent = [...left.parents].some((id) => right.parents.has(id));
-    if (sharesParent) score += 0.05;
+    if ([...left.parents].some((id) => right.parents.has(id))) add('SHARED_PARENT', 0.05);
   }
-  return Math.min(1, score);
+  const sexes = [left.person.sex, right.person.sex];
+  if (sexes.every((sex) => sex === 'M' || sex === 'F') && sexes[0] !== sexes[1]) {
+    add('SEX_DIFFERS', -0.25, { left: sexes[0], right: sexes[1] });
+  }
+  const total = reasons.reduce((sum, reason) => sum + reason.weight, 0) / 100;
+  return { score: Math.max(0, Math.min(1, total)), reasons };
 }
 
 export function normalize(value) {
