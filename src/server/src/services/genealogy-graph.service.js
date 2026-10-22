@@ -58,9 +58,24 @@ export class GenealogyGraphService {
       .all(personId);
   }
 
+  // Fratrie déduite des filiations communes. Chaque frère ou sœur porte :
+  //  - `shared_parents` : nombre de parents communs connus ;
+  //  - `sibling_type` : FULL (deux parents communs), HALF_PATERNAL /
+  //    HALF_MATERNAL / HALF (un parent commun, l'autre différent ou connu d'un
+  //    seul côté), STEP (lien uniquement par alliance ou tutelle) ou
+  //    UNDETERMINED (un seul parent connu de part et d'autre : rien ne permet
+  //    de distinguer frère plein et demi-frère, on ne le devine pas).
   getSiblings(personId) {
     this.getPerson(personId);
-    return this.database
+    const parentsOf = (id) =>
+      this.database
+        .prepare(
+          `SELECT parent_id, parent_role, link_type FROM parentages
+           WHERE child_id = ? AND deleted_at IS NULL`,
+        )
+        .all(id);
+    const mine = parentsOf(personId);
+    const candidates = this.database
       .prepare(
         `SELECT DISTINCT sibling.*
          FROM parentages mine
@@ -73,30 +88,107 @@ export class GenealogyGraphService {
          ORDER BY sibling.family_name, sibling.given_names`,
       )
       .all(personId, personId);
+    const lineage = new Set(['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'UNKNOWN']);
+    return candidates.map((sibling) => {
+      const theirs = parentsOf(sibling.id);
+      const sharedLinks = mine
+        .map((link) => ({ link, other: theirs.find((t) => t.parent_id === link.parent_id) }))
+        .filter((pair) => pair.other);
+      const shared = sharedLinks.filter(
+        ({ link, other }) => lineage.has(link.link_type) && lineage.has(other.link_type),
+      );
+      let siblingType;
+      if (shared.length === 0) siblingType = 'STEP';
+      else if (shared.length >= 2) siblingType = 'FULL';
+      else {
+        const sharedId = shared[0].link.parent_id;
+        // Demi-fratrie établie seulement si chacun a un autre parent connu :
+        // si l'un des deux n'en a aucun, l'autre parent de celui-ci pourrait
+        // être le même (frère plein), on ne tranche pas.
+        const hasOtherParent = (links) =>
+          links.some((link) => link.parent_id !== sharedId && lineage.has(link.link_type));
+        if (!hasOtherParent(mine) || !hasOtherParent(theirs)) siblingType = 'UNDETERMINED';
+        else if (shared[0].link.parent_role === 'FATHER') siblingType = 'HALF_PATERNAL';
+        else if (shared[0].link.parent_role === 'MOTHER') siblingType = 'HALF_MATERNAL';
+        else siblingType = 'HALF';
+      }
+      return { ...sibling, shared_parents: shared.length, sibling_type: siblingType };
+    });
   }
 
-  traverse(personId, direction, { maxDepth } = {}) {
+  // Parcours par générations (ancêtres ou descendants), un niveau à la fois.
+  // Chaque personne atteinte porte :
+  //  - `generation` : distance minimale au point de départ (BFS) ;
+  //  - `generations` : toutes les générations où elle apparaît (plus d'une en
+  //    cas d'implexe : ancêtre atteint par plusieurs lignées) ;
+  //  - `branch` / `branches` : ligne paternelle ou maternelle, d'après le rôle
+  //    du premier parent (ou enfant) traversé ; `UNKNOWN` si le rôle est inconnu ;
+  //  - `linkType` : nature du premier lien traversé.
+  // `maxDepth` borne la profondeur ; `linkTypes` restreint les natures de
+  // filiation suivies (ex. ['BIOLOGICAL'] pour une ascendance de sang). Le
+  // parcours par niveaux reste linéaire même avec des implexes, et s'arrête
+  // toujours : un chemin plus long que le nombre de personnes atteintes prouve
+  // un cycle dans les données, qui est alors coupé sans boucler.
+  traverse(personId, direction, { maxDepth, linkTypes } = {}) {
     this.getPerson(personId);
     if (maxDepth !== undefined && (!Number.isInteger(maxDepth) || maxDepth < 0)) {
       throw new ValidationError('La profondeur doit être un entier positif ou nul');
     }
-    const result = [];
-    const seen = new Set([personId]);
-    const queue = [{ id: personId, generation: 0 }];
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (maxDepth !== undefined && current.generation >= maxDepth) continue;
-      const relatives =
-        direction === 'up' ? this.getParents(current.id) : this.getChildren(current.id);
-      for (const relative of relatives) {
-        if (seen.has(relative.id)) continue;
-        seen.add(relative.id);
-        // viaId : personne depuis laquelle on a atteint ce parent/enfant, pour
-        // permettre au client de dessiner l'arbre génération par génération.
-        const item = { ...relative, generation: current.generation + 1, viaId: current.id };
-        result.push(item);
-        queue.push(item);
+    const allowed = Array.isArray(linkTypes) && linkTypes.length > 0 ? new Set(linkTypes) : null;
+    const relativesOf = new Map();
+    const edges = (id) => {
+      if (!relativesOf.has(id)) {
+        const rows = direction === 'up' ? this.getParents(id) : this.getChildren(id);
+        relativesOf.set(id, allowed ? rows.filter((row) => allowed.has(row.link_type)) : rows);
       }
+      return relativesOf.get(id);
+    };
+
+    const result = [];
+    const byId = new Map();
+    let frontier = new Map([[personId, new Set()]]);
+    let cyclic = false;
+    for (let generation = 1; frontier.size > 0; generation += 1) {
+      if (maxDepth !== undefined && generation > maxDepth) break;
+      if (generation > byId.size + 1) {
+        cyclic = true;
+        break;
+      }
+      const next = new Map();
+      for (const [id, inherited] of frontier) {
+        for (const relative of edges(id)) {
+          if (relative.id === personId) continue;
+          const branches =
+            generation === 1 ? new Set([this.branchOf(relative.parent_role)]) : inherited;
+          let entry = byId.get(relative.id);
+          if (!entry) {
+            // viaId : personne depuis laquelle on a atteint ce parent/enfant, pour
+            // permettre au client de dessiner l'arbre génération par génération.
+            entry = {
+              ...relative,
+              generation,
+              viaId: id,
+              linkType: relative.link_type,
+              branch: null,
+              branches: [],
+              generations: [],
+            };
+            byId.set(relative.id, entry);
+            result.push(entry);
+          }
+          if (!entry.generations.includes(generation)) entry.generations.push(generation);
+          for (const branch of branches)
+            if (!entry.branches.includes(branch)) entry.branches.push(branch);
+          const pending = next.get(relative.id) ?? new Set();
+          for (const branch of branches) pending.add(branch);
+          next.set(relative.id, pending);
+        }
+      }
+      frontier = next;
+    }
+    for (const entry of result) {
+      entry.branch = entry.branches.length === 1 ? entry.branches[0] : (entry.branches[0] ?? null);
+      if (cyclic) entry.generations = [entry.generation];
     }
     return result;
   }

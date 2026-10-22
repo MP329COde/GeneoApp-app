@@ -4,16 +4,34 @@ function parseDepth(rawDepth) {
   return depth;
 }
 
+function parseLinkTypes(raw) {
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined;
+  return raw
+    .split(',')
+    .map((type) => type.trim().toUpperCase())
+    .filter(Boolean);
+}
+
 export function createGraphController(services) {
   const { graph } = services;
   return {
     ancestors(request, response) {
       const maxDepth = parseDepth(request.query.depth);
-      response.json(graph.getAncestors(Number(request.params.id), { maxDepth }));
+      response.json(
+        graph.getAncestors(Number(request.params.id), {
+          maxDepth,
+          linkTypes: parseLinkTypes(request.query.linkTypes),
+        }),
+      );
     },
     descendants(request, response) {
       const maxDepth = parseDepth(request.query.depth);
-      response.json(graph.getDescendants(Number(request.params.id), { maxDepth }));
+      response.json(
+        graph.getDescendants(Number(request.params.id), {
+          maxDepth,
+          linkTypes: parseLinkTypes(request.query.linkTypes),
+        }),
+      );
     },
     relations(request, response) {
       response.json(graph.getRelations(Number(request.params.id)));
