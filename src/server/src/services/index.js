@@ -21,7 +21,9 @@ import {
   TrashRepository,
   NoteRepository,
   ResearchRepository,
+  AssertionRepository,
 } from '../../../db/src/index.js';
+import { AssertionService } from './assertion.service.js';
 import { PersonService } from './person.service.js';
 import { PlaceService } from './place.service.js';
 import { EventService } from './event.service.js';
@@ -76,10 +78,12 @@ export function createServices(
   const localAi = new LocalAiService();
 
   const research = new ResearchService(new ResearchRepository(database));
+  const assertions = new AssertionService(new AssertionRepository(database));
 
   return {
     ...entityServices,
     sources,
+    assertions,
     search: new SearchService(new SearchRepository(database), database),
     audit: new AuditService(new AuditRepository(database)),
     notifications: new NotificationService(new NotificationRepository(database)),
@@ -87,7 +91,11 @@ export function createServices(
     accounts,
     // Le carnet de recherche est lui aussi restaurable depuis la corbeille :
     // son service est donc passé à la corbeille aux côtés des autres tables.
-    trash: new TrashService(new TrashRepository(database), { ...entityServices, research }),
+    trash: new TrashService(new TrashRepository(database), {
+      ...entityServices,
+      research,
+      assertions,
+    }),
     backups,
     graph: new GenealogyGraphService(database),
     notes: new NoteService(new NoteRepository(database)),

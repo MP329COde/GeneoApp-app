@@ -235,3 +235,67 @@ test('0028 : lieux existants conservés, nature administrative, noms et rattache
     },
   );
 });
+
+test('0029 : sources et citations existantes conservées, affirmations et preuves qualifiées', () => {
+  upgradeFrom(
+    '0029',
+    (database) => {
+      const person = database
+        .prepare("INSERT INTO persons (given_names, family_name) VALUES ('Ada', 'Lovelace')")
+        .run().lastInsertRowid;
+      const source = database
+        .prepare("INSERT INTO sources (title, author) VALUES ('Registre', 'Curé')")
+        .run().lastInsertRowid;
+      const citation = database
+        .prepare(
+          `INSERT INTO citations (source_id, entity_type, entity_id, page, confidence, notes)
+           VALUES (?, 'PERSON', ?, 'f. 3', 'HIGH', 'lisible')`,
+        )
+        .run(source, person).lastInsertRowid;
+      return { person, source, citation };
+    },
+    (database, { person, source, citation }) => {
+      const kept = database.prepare('SELECT * FROM citations WHERE id = ?').get(citation);
+      assert.equal(kept.page, 'f. 3');
+      assert.equal(kept.confidence, 'HIGH');
+      assert.equal(kept.notes, 'lisible');
+      assert.equal(kept.evidence_type, 'UNKNOWN');
+      assert.equal(kept.information_quality, 'UNKNOWN');
+      assert.equal(kept.quotation, null);
+      assert.equal(
+        database.prepare('SELECT source_kind FROM sources WHERE id = ?').get(source).source_kind,
+        'UNKNOWN',
+      );
+
+      // Une citation peut désormais viser un lieu ou une affirmation.
+      const assertion = database
+        .prepare(
+          "INSERT INTO assertions (entity_type, entity_id, field, value) VALUES ('PERSON', ?, 'birth_date', '1815')",
+        )
+        .run(person).lastInsertRowid;
+      const cite = database.prepare(
+        `INSERT INTO citations (source_id, entity_type, entity_id, evidence_type, information_quality)
+         VALUES (?, ?, ?, ?, ?)`,
+      );
+      cite.run(source, 'ASSERTION', assertion, 'DIRECT', 'PRIMARY');
+      cite.run(source, 'PLACE', 1, 'NEGATIVE', 'SECONDARY');
+      assert.throws(() => cite.run(source, 'MEDIA', 1, 'DIRECT', 'PRIMARY'), /CHECK constraint/);
+      assert.throws(() => cite.run(source, 'PERSON', 1, 'PROVEN', 'PRIMARY'), /CHECK constraint/);
+      assert.throws(() => cite.run(source, 'PERSON', 1, 'DIRECT', 'GOOD'), /CHECK constraint/);
+
+      // Une seule affirmation retenue par champ, mais plusieurs proposées.
+      const add = database.prepare(
+        "INSERT INTO assertions (entity_type, entity_id, field, value, status) VALUES ('PERSON', ?, 'birth_date', ?, ?)",
+      );
+      add.run(person, '1816', 'PROPOSED');
+      add.run(person, '1817', 'ACCEPTED');
+      assert.throws(() => add.run(person, '1818', 'ACCEPTED'), /UNIQUE constraint failed/);
+      assert.throws(() => add.run(person, '   ', 'PROPOSED'), /CHECK constraint failed/);
+      assert.throws(() => add.run(person, '1819', 'DONE'), /CHECK constraint failed/);
+      assert.throws(
+        () => database.prepare("UPDATE sources SET source_kind = 'COPY' WHERE id = ?").run(source),
+        /CHECK constraint failed/,
+      );
+    },
+  );
+});

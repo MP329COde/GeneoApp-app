@@ -5,7 +5,8 @@ import { assertId } from '../validation/schemas.js';
 // Fusionne deux fiches personne identifiées comme doublons potentiels
 // (`SearchService#potentialDuplicates`). La personne "survivor" conserve son
 // identité ; toute donnée réelle portée par "duplicate" (filiations, unions,
-// participations à un événement, citations, notes, médias) est réattribuée
+// participations à un événement, identifiants externes, affirmations,
+// citations, notes, médias) est réattribuée
 // avant que la fiche du doublon ne soit supprimée en douceur (jamais une
 // suppression définitive) — l'historique reste intact via la corbeille et le
 // journal d'audit, comme toute autre suppression de l'application.
@@ -37,6 +38,8 @@ export class MergeService {
         unionPartnerships: this.#count('union_partners', 'person_id', duplicateId),
         eventParticipations: this.#count('event_participants', 'person_id', duplicateId),
         citations: this.#countEntity('citations', duplicateId),
+        assertions: this.#countEntity('assertions', duplicateId),
+        identifiers: this.#count('person_identifiers', 'person_id', duplicateId),
         notes: this.#countEntity('notes', duplicateId),
         media: this.#countEntity('media', duplicateId),
       },
@@ -82,6 +85,15 @@ export class MergeService {
         duplicateId,
       });
 
+      this.#reassignJunction({
+        table: 'person_identifiers',
+        ownColumn: 'person_id',
+        matchColumns: ['scheme', 'value'],
+        survivorId,
+        duplicateId,
+      });
+
+      this.#reassignAssertions(survivorId, duplicateId);
       this.#reassignPolymorphic('citations', survivorId, duplicateId);
       this.#reassignPolymorphic('notes', survivorId, duplicateId);
       this.#reassignPolymorphic('media', survivorId, duplicateId);
@@ -175,6 +187,27 @@ export class MergeService {
           .run(survivorId, row.id);
       }
     }
+  }
+
+  // Les affirmations du doublon sont conservées telles quelles : deux valeurs
+  // différentes pour un même champ deviennent une contradiction visible, jamais
+  // un écrasement. Une seule affirmation peut être retenue par champ : si le
+  // survivant en a déjà une, celle du doublon redevient « proposée ».
+  #reassignAssertions(survivorId, duplicateId) {
+    this.database
+      .prepare(
+        `UPDATE assertions SET status = 'PROPOSED',
+                               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE entity_type = 'PERSON' AND entity_id = ? AND status = 'ACCEPTED'
+           AND deleted_at IS NULL
+           AND field IN (
+             SELECT field FROM assertions
+             WHERE entity_type = 'PERSON' AND entity_id = ? AND status = 'ACCEPTED'
+               AND deleted_at IS NULL
+           )`,
+      )
+      .run(duplicateId, survivorId);
+    this.#reassignPolymorphic('assertions', survivorId, duplicateId);
   }
 
   #reassignPolymorphic(table, survivorId, duplicateId) {

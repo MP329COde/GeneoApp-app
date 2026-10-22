@@ -65,7 +65,13 @@ const PARTICIPANT_ROLES = [
 const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
 const PARENT_ROLES = ['FATHER', 'MOTHER', 'PARENT'];
 const LINK_TYPES = ['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'STEP', 'GUARDIAN', 'UNKNOWN'];
-const ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE'];
+const ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'PLACE', 'ASSERTION'];
+const SOURCE_KINDS = ['ORIGINAL', 'DERIVATIVE', 'AUTHORED', 'UNKNOWN'];
+const EVIDENCE_TYPES = ['DIRECT', 'INDIRECT', 'NEGATIVE', 'UNKNOWN'];
+const INFORMATION_QUALITIES = ['PRIMARY', 'SECONDARY', 'UNKNOWN'];
+const ASSERTION_ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'PLACE'];
+const ASSERTION_STATUSES = ['PROPOSED', 'ACCEPTED', 'REJECTED'];
+const PROOF_LEVELS = ['UNSUPPORTED', 'POSSIBLE', 'PROBABLE', 'PROVEN'];
 const CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 const MEDIA_ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE'];
 const PLACE_TYPES = [
@@ -258,6 +264,74 @@ export function validatePersonIdentifier(payload) {
     throw fieldError('value', 'REQUIRED', 'server.validation.required', 'value est obligatoire');
   }
   return { scheme: normalizedScheme, value: value.trim() };
+}
+
+export function validateAssertionCreate(payload) {
+  assertPayload(payload);
+  const { entityType, entityId, field, value, proofLevel, reasoning } = payload;
+  assertValid({
+    entityType: [
+      required(entityType, 'entityType'),
+      oneOf(entityType, ASSERTION_ENTITY_TYPES, 'entityType'),
+    ],
+    entityId: [required(entityId, 'entityId'), isInteger(entityId, 'entityId')],
+    field: [required(field, 'field'), isString(field, 'field'), maxLength(field, 60, 'field')],
+    value: [required(value, 'value'), isString(value, 'value'), maxLength(value, 2000, 'value')],
+    proofLevel: [oneOf(proofLevel, PROOF_LEVELS, 'proofLevel')],
+    reasoning: [isString(reasoning, 'reasoning'), maxLength(reasoning, 5000, 'reasoning')],
+  });
+  assertId(entityId, 'entityId');
+  const normalizedField = field.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_.]*$/.test(normalizedField)) {
+    throw fieldError(
+      'field',
+      'INVALID',
+      'server.validation.invalid',
+      'field doit être un identifiant en minuscules (ex. birth_date, birth_place)',
+    );
+  }
+  if (value.trim() === '') {
+    throw fieldError('value', 'REQUIRED', 'server.validation.required', 'value est obligatoire');
+  }
+  return {
+    entityType,
+    entityId,
+    field: normalizedField,
+    value: value.trim(),
+    proofLevel: proofLevel ?? 'UNSUPPORTED',
+    reasoning: reasoning ?? null,
+  };
+}
+
+export function validateAssertionUpdate(payload) {
+  assertPayload(payload);
+  const { value, proofLevel, reasoning } = payload;
+  assertValid({
+    value: [isString(value, 'value'), maxLength(value, 2000, 'value')],
+    proofLevel: [oneOf(proofLevel, PROOF_LEVELS, 'proofLevel')],
+    reasoning: [isString(reasoning, 'reasoning'), maxLength(reasoning, 5000, 'reasoning')],
+  });
+  if (value !== undefined && (value === null || value.trim() === '')) {
+    throw fieldError('value', 'REQUIRED', 'server.validation.required', 'value est obligatoire');
+  }
+  const patch = {};
+  for (const key of ['value', 'proofLevel', 'reasoning']) {
+    if (key in payload) patch[key] = key === 'value' ? payload[key].trim() : payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
+}
+
+export function validateAssertionStatus(status) {
+  assertValid({
+    status: [required(status, 'status'), oneOf(status, ASSERTION_STATUSES, 'status')],
+  });
+  return status;
 }
 
 export function validatePlaceCreate(payload) {
@@ -470,9 +544,10 @@ export function validateParentageCreate(payload) {
 
 export function validateSourceCreate(payload) {
   assertPayload(payload);
-  const { title, author, publicationInfo } = payload;
+  const { title, author, publicationInfo, sourceKind } = payload;
 
   assertValid({
+    sourceKind: [oneOf(sourceKind, SOURCE_KINDS, 'sourceKind')],
     title: [required(title, 'title'), isString(title, 'title'), maxLength(title, 300, 'title')],
     author: [isString(author, 'author'), maxLength(author, 300, 'author')],
     publicationInfo: [
@@ -481,12 +556,27 @@ export function validateSourceCreate(payload) {
     ],
   });
 
-  return { title, author: author ?? null, publicationInfo: publicationInfo ?? null };
+  return {
+    title,
+    author: author ?? null,
+    publicationInfo: publicationInfo ?? null,
+    sourceKind: sourceKind ?? 'UNKNOWN',
+  };
 }
 
 export function validateCitationCreate(payload) {
   assertPayload(payload);
-  const { sourceId, entityType, entityId, page, confidence, notes } = payload;
+  const {
+    sourceId,
+    entityType,
+    entityId,
+    page,
+    confidence,
+    notes,
+    evidenceType,
+    informationQuality,
+    quotation,
+  } = payload;
 
   assertValid({
     sourceId: [required(sourceId, 'sourceId'), isInteger(sourceId, 'sourceId')],
@@ -495,6 +585,9 @@ export function validateCitationCreate(payload) {
     page: [isString(page, 'page'), maxLength(page, 100, 'page')],
     confidence: [oneOf(confidence, CONFIDENCE_LEVELS, 'confidence')],
     notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+    evidenceType: [oneOf(evidenceType, EVIDENCE_TYPES, 'evidenceType')],
+    informationQuality: [oneOf(informationQuality, INFORMATION_QUALITIES, 'informationQuality')],
+    quotation: [isString(quotation, 'quotation'), maxLength(quotation, 5000, 'quotation')],
   });
 
   return {
@@ -504,6 +597,9 @@ export function validateCitationCreate(payload) {
     page: page ?? null,
     confidence: confidence ?? 'MEDIUM',
     notes: notes ?? null,
+    evidenceType: evidenceType ?? 'UNKNOWN',
+    informationQuality: informationQuality ?? 'UNKNOWN',
+    quotation: quotation ?? null,
   };
 }
 

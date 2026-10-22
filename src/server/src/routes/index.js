@@ -5,6 +5,7 @@ import { eventRoutes } from './event.routes.js';
 import { unionRoutes } from './union.routes.js';
 import { parentageRoutes } from './parentage.routes.js';
 import { sourceRoutes } from './source.routes.js';
+import { assertionRoutes } from './assertion.routes.js';
 import { mediaRoutes } from './media.routes.js';
 import { searchRoutes } from './search.routes.js';
 import { auditRoutes } from './audit.routes.js';
@@ -37,6 +38,7 @@ export function apiRoutes(services) {
   router.use('/unions', unionRoutes(services));
   router.use('/parentages', parentageRoutes(services));
   router.use('/sources', sourceRoutes(services));
+  router.use('/assertions', assertionRoutes(services));
   router.use('/media', mediaRoutes(services));
   router.use('/search', searchRoutes(services));
   router.use('/audit', auditRoutes(services));

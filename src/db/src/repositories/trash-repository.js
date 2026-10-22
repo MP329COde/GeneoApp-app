@@ -6,6 +6,7 @@ import { withTransaction, recordAudit } from './base-repository.js';
 const TRASH_TABLES = {
   persons: (row) => `${row.given_names} ${row.family_name}`.trim(),
   places: (row) => row.name,
+  assertions: (row) => `${row.field} : ${row.value}`,
   events: (row) => row.type,
   unions: (row) => row.type,
   parentages: (row) => `parent #${row.parent_id} -> enfant #${row.child_id}`,
@@ -47,6 +48,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'person_identifiers', column: 'person_id', mode: 'row' },
     { table: 'research_notebook', column: 'person_id', mode: 'row' },
     { table: 'citations', entityType: 'PERSON', mode: 'link' },
+    { table: 'assertions', entityType: 'PERSON', mode: 'link' },
     { table: 'notes', entityType: 'PERSON', mode: 'link' },
   ],
   places: [
@@ -55,22 +57,27 @@ const CASCADE_DEPENDENCIES = {
     { table: 'place_names', column: 'place_id', mode: 'row' },
     { table: 'place_parents', column: 'place_id', mode: 'row' },
     { table: 'place_parents', column: 'parent_place_id', mode: 'row' },
+    { table: 'citations', entityType: 'PLACE', mode: 'link' },
+    { table: 'assertions', entityType: 'PLACE', mode: 'link' },
   ],
   events: [
     { table: 'event_participants', column: 'event_id', mode: 'row' },
     { table: 'unions', column: 'start_event_id', mode: 'row' },
     { table: 'unions', column: 'end_event_id', mode: 'row' },
     { table: 'citations', entityType: 'EVENT', mode: 'link' },
+    { table: 'assertions', entityType: 'EVENT', mode: 'link' },
     { table: 'notes', entityType: 'EVENT', mode: 'link' },
   ],
   unions: [
     { table: 'union_partners', column: 'union_id', mode: 'row' },
     { table: 'parentages', column: 'union_id', mode: 'row' },
     { table: 'citations', entityType: 'UNION', mode: 'link' },
+    { table: 'assertions', entityType: 'UNION', mode: 'link' },
     { table: 'notes', entityType: 'UNION', mode: 'link' },
   ],
   parentages: [
     { table: 'citations', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'assertions', entityType: 'PARENTAGE', mode: 'link' },
     { table: 'notes', entityType: 'PARENTAGE', mode: 'link' },
   ],
   media: [
@@ -85,6 +92,8 @@ const CASCADE_DEPENDENCIES = {
     { table: 'research_tasks', column: 'research_id', mode: 'row' },
   ],
   research_hypotheses: [{ table: 'research_evidence', column: 'hypothesis_id', mode: 'row' }],
+  // Les citations d'une affirmation disparaissent avec elle.
+  assertions: [{ table: 'citations', entityType: 'ASSERTION', mode: 'link' }],
 };
 
 export class TrashRepository {
@@ -165,6 +174,18 @@ export class TrashRepository {
       if (dependency.mode === 'link') {
         // Référence polymorphe (`entity_type` + `entity_id` non nullable) :
         // la ligne de lien disparaît avec l'élément purgé.
+        // La ligne de lien peut avoir ses propres dépendances (les citations
+        // d'une affirmation) : elles sont purgées avant elle.
+        const linkIds = this.database
+          .prepare(`SELECT id FROM ${dependency.table} WHERE entity_type = ? AND entity_id = ?`)
+          .all(dependency.entityType, id)
+          .map((row) => row.id);
+        for (const linkId of linkIds) {
+          const key = `${dependency.table}#${linkId}`;
+          if (visited.has(key)) continue;
+          visited.add(key);
+          this.#purgeDependencies(dependency.table, linkId, visited);
+        }
         this.database
           .prepare(`DELETE FROM ${dependency.table} WHERE entity_type = ? AND entity_id = ?`)
           .run(dependency.entityType, id);

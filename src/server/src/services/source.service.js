@@ -22,6 +22,9 @@ export class SourceService {
     const data = validateCitationCreate(payload);
     const source = this.repository.findById(data.sourceId);
     if (!source) throw new NotFoundError(`Source introuvable : ${data.sourceId}`);
+    if (!this.repository.citationTargetExists(data.entityType, data.entityId)) {
+      throw new NotFoundError(`Entité introuvable : ${data.entityType}#${data.entityId}`);
+    }
     return this.repository.addCitation(data, options);
   }
 

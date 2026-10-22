@@ -34,3 +34,4 @@ export {
   deleteBackup,
   importBackupFile,
 } from './backup/backup-file.js';
+export { AssertionRepository } from './repositories/assertion-repository.js';

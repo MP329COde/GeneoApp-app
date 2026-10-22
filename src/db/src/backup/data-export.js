@@ -4,9 +4,13 @@ import { withTransaction, recordAudit } from '../repositories/base-repository.js
 // et inversé pour la purge avant import.
 export const EXPORTABLE_TABLES = [
   'places',
+  'place_names',
+  'place_parents',
   'persons',
+  'person_identifiers',
   'sources',
   'citations',
+  'assertions',
   'events',
   'event_participants',
   'unions',
