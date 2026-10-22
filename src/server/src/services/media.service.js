@@ -1,7 +1,14 @@
-import { NotFoundError, PayloadTooLargeError } from '../errors.js';
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  ConflictError,
+  NotFoundError,
+  PayloadTooLargeError,
+  ValidationError,
+  fieldError,
+} from '../errors.js';
 import { officeText } from '../indexing/content-extract.js';
 import { decodeGedcomBuffer } from '../gedcom/encoding.js';
-import { validateMediaUpload, assertId } from '../validation/schemas.js';
+import { validateMediaMetadata, validateMediaUpload, assertId } from '../validation/schemas.js';
 
 export class MediaService {
   constructor(repository, storage, ocrService, { sourceRepository } = {}) {
@@ -112,6 +119,108 @@ export class MediaService {
     if (!exists) throw new NotFoundError(`Cible introuvable : ${entityType}#${entityId}`);
   }
 
+  /**
+   * Document qui n'est qu'un lien web (page d'archives en ligne, article). Seul
+   * http et https sont acceptés ; l'application ne suit jamais le lien elle-même,
+   * elle le conserve, le décrit et le relie à l'arbre.
+   */
+  addUrl(payload, options = {}) {
+    const data = validateMediaMetadata({ ...payload, filename: payload?.title });
+    let url;
+    try {
+      url = new URL(String(payload?.url ?? ''));
+    } catch {
+      throw fieldError('url', 'INVALID', 'server.validation.invalid', 'url est invalide');
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.href.length > 2000) {
+      throw fieldError(
+        'url',
+        'INVALID',
+        'server.validation.invalid',
+        'url doit être une adresse http ou https de moins de 2000 caractères',
+      );
+    }
+    this.#checkTargets(data);
+    return this.repository.create(
+      {
+        ...data,
+        originalFilename: data.filename,
+        storedFilename: `url-${randomUUID()}`,
+        mimeType: 'text/uri-list',
+        sizeBytes: 0,
+        checksumSha256: createHash('sha256').update(url.href).digest('hex'),
+        externalUrl: url.href,
+      },
+      options,
+    );
+  }
+
+  #linkTarget(entityType, entityId) {
+    const table = {
+      PERSON: 'persons',
+      EVENT: 'events',
+      UNION: 'unions',
+      PARENTAGE: 'parentages',
+      SOURCE: 'sources',
+      PLACE: 'places',
+      ASSERTION: 'assertions',
+      RESEARCH: 'research_notebook',
+    }[entityType];
+    if (!table) {
+      throw fieldError(
+        'entityType',
+        'NOT_ALLOWED',
+        'server.validation.notAllowed',
+        'entityType invalide',
+        {
+          field: 'entityType',
+          allowed: 'PERSON, EVENT, UNION, PARENTAGE, SOURCE, PLACE, ASSERTION, RESEARCH',
+        },
+      );
+    }
+    const exists = this.repository.database
+      .prepare(`SELECT 1 FROM ${table} WHERE id = ? AND deleted_at IS NULL`)
+      .get(entityId);
+    if (!exists) throw new NotFoundError(`Cible introuvable : ${entityType}#${entityId}`);
+  }
+
+  listLinks(mediaId) {
+    this.get(mediaId);
+    return this.repository.listLinks(mediaId);
+  }
+
+  addLink(mediaId, payload, options = {}) {
+    this.get(mediaId);
+    if (payload === null || typeof payload !== 'object') {
+      throw new ValidationError('Le corps de la requête doit être un objet JSON');
+    }
+    const { entityType, entityId, role } = payload;
+    assertId(entityId, 'entityId');
+    if (
+      role !== undefined &&
+      !['SUBJECT', 'PRESENT', 'AUTHOR', 'LOCATION', 'OTHER'].includes(role)
+    ) {
+      throw fieldError('role', 'NOT_ALLOWED', 'server.validation.notAllowed', 'role invalide', {
+        field: 'role',
+        allowed: 'SUBJECT, PRESENT, AUTHOR, LOCATION, OTHER',
+      });
+    }
+    this.#linkTarget(entityType, entityId);
+    return this.repository.addLink(
+      mediaId,
+      { entityType, entityId, role: role ?? 'SUBJECT' },
+      options,
+    );
+  }
+
+  removeLink(mediaId, linkId, options = {}) {
+    this.get(mediaId);
+    assertId(linkId, 'linkId');
+    if (!this.repository.removeLink(mediaId, linkId, options)) {
+      throw new NotFoundError(`Lien introuvable : ${linkId}`);
+    }
+  }
+
   get(id) {
     assertId(id);
     const media = this.repository.findById(id);
@@ -131,6 +240,11 @@ export class MediaService {
 
   async download(id) {
     const media = this.get(id);
+    if (media.external_url) {
+      throw new ConflictError(
+        'Ce document est un lien web : il n’y a pas de fichier à télécharger',
+      );
+    }
     const content = await this.storage.read(media.stored_filename);
     return { media, content };
   }

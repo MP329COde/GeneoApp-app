@@ -94,7 +94,12 @@ export class ResearchService {
   get(id) {
     const research = this.repository.findDetailed(positiveId(id, 'Identifiant de recherche'));
     if (!research) throw new NotFoundError('Recherche introuvable');
-    return research;
+    return { ...research, documents: this.repository.documents(research.id) };
+  }
+
+  history(id) {
+    const research = this.get(id);
+    return this.repository.history(research.id);
   }
 
   update(id, payload, options) {

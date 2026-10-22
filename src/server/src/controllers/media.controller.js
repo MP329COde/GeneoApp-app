@@ -29,6 +29,29 @@ export function createMediaController(services) {
       response.status(201).json(record);
     },
 
+    async addUrl(request, response) {
+      const record = media.addUrl(request.body, { performedBy: request.performedBy });
+      response.status(201).json(record);
+    },
+
+    listLinks(request, response) {
+      response.json(media.listLinks(Number(request.params.id)));
+    },
+
+    addLink(request, response) {
+      const link = media.addLink(Number(request.params.id), request.body, {
+        performedBy: request.performedBy,
+      });
+      response.status(201).json(link);
+    },
+
+    removeLink(request, response) {
+      media.removeLink(Number(request.params.id), Number(request.params.linkId), {
+        performedBy: request.performedBy,
+      });
+      response.status(204).end();
+    },
+
     get(request, response) {
       response.json(media.get(Number(request.params.id)));
     },

@@ -16,6 +16,7 @@ export function mediaRoutes(services) {
     }),
     controller.uploadRaw,
   );
+  router.post('/url', controller.addUrl);
   router.post('/identify', async (request, response) =>
     response.json(await services.documents.identify(request.body)),
   );
@@ -26,6 +27,9 @@ export function mediaRoutes(services) {
   router.patch('/:id/photo', controller.updatePhoto);
   router.post('/:id/regions', controller.addRegion);
   router.get('/:id/content', controller.download);
+  router.get('/:id/links', controller.listLinks);
+  router.post('/:id/links', controller.addLink);
+  router.delete('/:id/links/:linkId', controller.removeLink);
   router.post('/:id/decode', async (request, response) =>
     response.json(await services.documents.decode(request.params.id, request.body ?? {})),
   );

@@ -18,6 +18,7 @@ export const EXPORTABLE_TABLES = [
   'parentages',
   'media',
   'media_regions',
+  'media_links',
   'notes',
   'gedcom_extensions',
   'research_notebook',

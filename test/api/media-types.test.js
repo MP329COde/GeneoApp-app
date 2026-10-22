@@ -223,3 +223,40 @@ test('envoi en octets bruts : audio et vidéo, rattachement vérifié, erreurs c
     await server.close();
   }
 });
+
+test('OCR local : statut explicite et texte reconnu retrouvable par la recherche', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const server = await startTestServer();
+  try {
+    const scan = await readFile(new URL('../fixtures/registre-scan.png', import.meta.url));
+    const image = await upload(server, {
+      filename: 'registre.png',
+      contentBase64: scan.toString('base64'),
+    });
+    assert.equal(image.status, 201);
+    assert.equal(image.body.ocr_status, 'DONE');
+    assert.match(image.body.ocr_text, /Rouen 1788/);
+
+    // Le texte reconnu est indexé : la recherche locale retrouve le scan.
+    const hits = (
+      await requestJson(
+        server.baseUrl,
+        `/api/search?${new URLSearchParams({ q: 'paroissial Rouen', entityTypes: 'MEDIA' })}`,
+      )
+    ).body;
+    assert.deepEqual(
+      hits.map((hit) => hit.entity_id),
+      [image.body.id],
+    );
+
+    // Un fichier sans texte à reconnaître reste dans un état explicite, jamais ambigu.
+    const audio = await requestJson(server.baseUrl, '/api/media', {
+      method: 'POST',
+      body: { filename: 'voix.mp3', contentBase64: pad('ID3\x03\x00\x00', 256).toString('base64') },
+    });
+    assert.equal(audio.body.ocr_status, 'UNAVAILABLE');
+    assert.equal(audio.body.ocr_text, null);
+  } finally {
+    await server.close();
+  }
+});

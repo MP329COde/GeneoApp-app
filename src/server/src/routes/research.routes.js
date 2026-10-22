@@ -12,6 +12,7 @@ export function researchRoutes(services) {
   router.delete('/evidence/:id', controller.removeEvidence);
   router.patch('/tasks/:id', controller.updateTask);
   router.delete('/tasks/:id', controller.removeTask);
+  router.get('/:id/history', controller.history);
   router.get('/:id', controller.get);
   router.patch('/:id', controller.update);
   router.delete('/:id', controller.remove);

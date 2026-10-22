@@ -136,6 +136,7 @@ export class MergeService {
       });
 
       this.#reassignPolymorphic('gedcom_extensions', survivorId, duplicateId);
+      this.#reassignMediaLinks(survivorId, duplicateId);
       this.#reassignAssertions(survivorId, duplicateId);
       this.#reassignPolymorphic('citations', survivorId, duplicateId);
       this.#reassignPolymorphic('notes', survivorId, duplicateId);
@@ -384,6 +385,23 @@ export class MergeService {
       )
       .run(duplicateId, survivorId);
     this.#reassignPolymorphic('assertions', survivorId, duplicateId);
+  }
+
+  // Liens de média : un média déjà lié au survivant avec le même rôle garde un
+  // seul lien (le lien du doublon est retiré en douceur).
+  #reassignMediaLinks(survivorId, duplicateId) {
+    this.database
+      .prepare(
+        `UPDATE media_links SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE entity_type = 'PERSON' AND entity_id = ? AND deleted_at IS NULL
+           AND EXISTS (
+             SELECT 1 FROM media_links kept
+             WHERE kept.media_id = media_links.media_id AND kept.role = media_links.role
+               AND kept.entity_type = 'PERSON' AND kept.entity_id = ? AND kept.deleted_at IS NULL
+           )`,
+      )
+      .run(duplicateId, survivorId);
+    this.#reassignPolymorphic('media_links', survivorId, duplicateId);
   }
 
   #reassignPolymorphic(table, survivorId, duplicateId) {

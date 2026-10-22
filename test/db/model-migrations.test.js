@@ -430,3 +430,30 @@ test('chaque migration, appliquée seule sur une base peuplée, préserve les do
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('0031 : médias existants conservés, liens multiples et liens web', () => {
+  upgradeFrom(
+    '0031',
+    (database) => ({
+      media: database
+        .prepare(
+          `INSERT INTO media (original_filename, stored_filename, mime_type, size_bytes, checksum_sha256)
+           VALUES ('a.png', 'uuid.png', 'image/png', 10, 'abc')`,
+        )
+        .run().lastInsertRowid,
+    }),
+    (database, { media }) => {
+      const kept = database.prepare('SELECT * FROM media WHERE id = ?').get(media);
+      assert.equal(kept.original_filename, 'a.png');
+      assert.equal(kept.external_url, null);
+      const link = database.prepare(
+        'INSERT INTO media_links (media_id, entity_type, entity_id, role) VALUES (?, ?, ?, ?)',
+      );
+      link.run(media, 'PERSON', 1, 'PRESENT');
+      link.run(media, 'RESEARCH', 1, 'SUBJECT');
+      assert.throws(() => link.run(media, 'PERSON', 1, 'PRESENT'), /UNIQUE constraint failed/);
+      assert.throws(() => link.run(media, 'MEDIA', 1, 'SUBJECT'), /CHECK constraint failed/);
+      assert.throws(() => link.run(media, 'PERSON', 2, 'BOSS'), /CHECK constraint failed/);
+    },
+  );
+});

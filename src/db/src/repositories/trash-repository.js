@@ -47,6 +47,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'parentages', column: 'child_id', mode: 'row' },
     { table: 'parentages', column: 'parent_id', mode: 'row' },
     { table: 'media_regions', column: 'person_id', mode: 'row' },
+    { table: 'media_links', entityType: 'PERSON', mode: 'link' },
     { table: 'person_identifiers', column: 'person_id', mode: 'row' },
     { table: 'research_notebook', column: 'person_id', mode: 'row' },
     { table: 'citations', entityType: 'PERSON', mode: 'link' },
@@ -62,6 +63,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'place_parents', column: 'parent_place_id', mode: 'row' },
     { table: 'citations', entityType: 'PLACE', mode: 'link' },
     { table: 'assertions', entityType: 'PLACE', mode: 'link' },
+    { table: 'media_links', entityType: 'PLACE', mode: 'link' },
   ],
   events: [
     { table: 'event_participants', column: 'event_id', mode: 'row' },
@@ -69,6 +71,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'unions', column: 'end_event_id', mode: 'row' },
     { table: 'citations', entityType: 'EVENT', mode: 'link' },
     { table: 'assertions', entityType: 'EVENT', mode: 'link' },
+    { table: 'media_links', entityType: 'EVENT', mode: 'link' },
     { table: 'gedcom_extensions', entityType: 'EVENT', mode: 'link' },
     { table: 'notes', entityType: 'EVENT', mode: 'link' },
   ],
@@ -77,16 +80,19 @@ const CASCADE_DEPENDENCIES = {
     { table: 'parentages', column: 'union_id', mode: 'row' },
     { table: 'citations', entityType: 'UNION', mode: 'link' },
     { table: 'assertions', entityType: 'UNION', mode: 'link' },
+    { table: 'media_links', entityType: 'UNION', mode: 'link' },
     { table: 'gedcom_extensions', entityType: 'UNION', mode: 'link' },
     { table: 'notes', entityType: 'UNION', mode: 'link' },
   ],
   parentages: [
     { table: 'citations', entityType: 'PARENTAGE', mode: 'link' },
     { table: 'assertions', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'media_links', entityType: 'PARENTAGE', mode: 'link' },
     { table: 'notes', entityType: 'PARENTAGE', mode: 'link' },
   ],
   media: [
     { table: 'media_regions', column: 'media_id', mode: 'row' },
+    { table: 'media_links', column: 'media_id', mode: 'row' },
     { table: 'indexed_documents', column: 'media_id', mode: 'row' },
     { table: 'persons', column: 'portrait_media_id', mode: 'detach' },
   ],
@@ -95,15 +101,20 @@ const CASCADE_DEPENDENCIES = {
   research_notebook: [
     { table: 'research_hypotheses', column: 'research_id', mode: 'row' },
     { table: 'research_tasks', column: 'research_id', mode: 'row' },
+    { table: 'media_links', entityType: 'RESEARCH', mode: 'link' },
   ],
   research_hypotheses: [{ table: 'research_evidence', column: 'hypothesis_id', mode: 'row' }],
   sources: [
     { table: 'citations', column: 'source_id', mode: 'row' },
+    { table: 'media_links', entityType: 'SOURCE', mode: 'link' },
     { table: 'media', column: 'source_id', mode: 'detach' },
     { table: 'research_evidence', column: 'source_id', mode: 'detach' },
   ],
   // Les citations d'une affirmation disparaissent avec elle.
-  assertions: [{ table: 'citations', entityType: 'ASSERTION', mode: 'link' }],
+  assertions: [
+    { table: 'citations', entityType: 'ASSERTION', mode: 'link' },
+    { table: 'media_links', entityType: 'ASSERTION', mode: 'link' },
+  ],
 };
 
 export class TrashRepository {
