@@ -1,0 +1,10 @@
+{
+  "confirmDialog.title": "Confirmation",
+  "confirmDialog.cancel": "Annuler",
+  "confirmDialog.confirm": "Confirmer",
+  "confirmDialog.unionTitle": "Dissoudre / supprimer l’union",
+  "confirmDialog.unionAction": "Dissoudre / supprimer",
+  "confirmDialog.kinTitle": "Retirer le lien de parenté",
+  "confirmDialog.kinAction": "Retirer le lien",
+  "confirmDialog.deleteTitle": "Supprimer la personne"
+}

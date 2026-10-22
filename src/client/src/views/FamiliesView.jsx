@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import { Badge, Button, ConfirmDialog, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { UNION_TYPES, UNION_TYPE_KEYS } from './PersonListPanels.jsx';
@@ -12,6 +12,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   const [partnerId, setPartnerId] = useState('');
   const [familiesError, setFamiliesError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [unionToRemove, setUnionToRemove] = useState(null);
 
   const otherPersons = useMemo(
     () => persons.filter((person) => person.id !== selected?.id),
@@ -61,16 +62,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (unionId) => {
-    if (
-      !window.confirm(
-        t(
-          'family.removeConfirm',
-          'Dissoudre / supprimer cette union ? Cette action est irréversible.',
-        ),
-      )
-    ) {
-      return;
-    }
+    if (!unionId) return;
     setBusy(true);
     setFamiliesError(null);
     try {
@@ -87,6 +79,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
       );
     } finally {
       setBusy(false);
+      setUnionToRemove(null);
     }
   };
 
@@ -155,7 +148,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
                 type="button"
                 size="sm"
                 variant="danger"
-                onClick={() => handleRemove(union.id)}
+                onClick={() => setUnionToRemove(union.id)}
                 disabled={busy}
               >
                 {t('family.remove', 'Dissoudre / supprimer')}
@@ -170,6 +163,19 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
         selected={selected}
         onNavigate={onNavigate}
         onChange={onChange}
+      />
+
+      <ConfirmDialog
+        isOpen={unionToRemove !== null}
+        title={t('confirmDialog.unionTitle', 'Dissoudre / supprimer l’union')}
+        message={t(
+          'family.removeConfirm',
+          'Dissoudre / supprimer cette union ? Cette action est irréversible.',
+        )}
+        confirmLabel={t('confirmDialog.unionAction', 'Dissoudre / supprimer')}
+        isBusy={busy}
+        onConfirm={() => handleRemove(unionToRemove)}
+        onCancel={() => setUnionToRemove(null)}
       />
     </div>
   );
