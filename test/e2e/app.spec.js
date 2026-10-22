@@ -573,7 +573,8 @@ test('mène une recherche complète : hypothèse étayée, tâche faite, persist
 
   await page.reload();
   await page.getByRole('button', { name: 'Carnet', exact: true }).click();
-  await expect(page.getByText('1 hypothèse(s) · 1/1 tâche(s)')).toBeVisible();
+  // Le texte suit les règles de pluriel de la langue (1 hypothèse, 1/1 tâche).
+  await expect(page.getByText('1 hypothèse · 1/1 tâche')).toBeVisible();
   await page.getByRole('button', { name: 'Naissance de Jean Dupont' }).click();
   await expect(page.getByText('Recensement 1836')).toBeVisible();
   await expect(page.getByLabel('Statut de l’hypothèse Né à Nantes')).toHaveValue('SUPPORTED');

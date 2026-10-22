@@ -672,8 +672,10 @@ export function NotebookPanel({ client, persons, onNavigate }) {
                 <p className="research-card__content">{entry.content}</p>
                 <p className="data-id">
                   {t('notebook.hypothesisCount', { count: entry.hypothesis_count ?? 0 })} ·{' '}
-                  {entry.done_task_count ?? 0}/{entry.task_count ?? 0}{' '}
-                  {t('notebook.taskCount', { count: entry.task_count ?? 0 })}
+                  {t('notebook.taskProgress', {
+                    count: entry.task_count ?? 0,
+                    done: entry.done_task_count ?? 0,
+                  })}
                   {entry.due_date
                     ? ` · ${t('notebook.dueDateShort', 'échéance')} ${formatDate(entry.due_date)}`
                     : ''}
