@@ -13,6 +13,7 @@ import { client, writeListeners } from './api/app-client.js';
 import { VerificationContext, useVerification } from './hooks/useVerification.js';
 export { buildVerificationIssues, verificationNotifications } from './hooks/useVerification.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
+import { DashboardView } from './views/DashboardView.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { buildLifespans } from './genealogy/lifespans.js';
 import { ComparePanel } from './views/ComparePanel.jsx';
@@ -53,6 +54,7 @@ import './styles/workspace.css';
 import './styles/typography.css';
 import './styles/persons.css';
 import './styles/tree.css';
+import './styles/dashboard.css';
 import './styles/timeline.css';
 import './styles/inspector.css';
 import './styles/messages.css';
@@ -107,6 +109,7 @@ const NAV_GROUPS = [
     key: 'people',
     labelKey: 'nav.group.people',
     items: [
+      { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'stats' },
       { id: 'tree', labelKey: 'nav.tree', icon: 'tree', shortcut: '⌘1' },
       { id: 'person', labelKey: 'nav.person', icon: 'person', shortcut: '⌘2' },
       { id: 'families', labelKey: 'nav.families', icon: 'family', shortcut: '⌘3' },
@@ -1072,6 +1075,8 @@ function AppContent() {
                       setView('tree');
                     }}
                   />
+                ) : view === 'dashboard' ? (
+                  <DashboardView onNavigate={setView} />
                 ) : view === 'statistics' ? (
                   <StatisticsPanel />
                 ) : view === 'ai' ? (
