@@ -312,15 +312,67 @@ export class GenealogyGraphService {
     return this.findPaths(personA, personB, { ...options, limit: 1 })[0] ?? [];
   }
 
-  findCommonAncestors(personA, personB) {
-    const ancestorsA = new Map(this.getAncestors(personA).map((person) => [person.id, person]));
-    return this.getAncestors(personB)
-      .filter((person) => ancestorsA.has(person.id))
-      .map((person) => ({
-        person: { ...person },
-        generationFromA: ancestorsA.get(person.id).generation,
-        generationFromB: person.generation,
-      }));
+  // Ancêtres communs de deux personnes, y compris l'une d'elles si elle est
+  // l'ancêtre de l'autre (génération 0 de son côté). Chaque entrée indique les
+  // générations et branches depuis A et depuis B, et `lowest` marque les
+  // ancêtres communs les plus récents (ceux qui ne descendent d'aucun autre
+  // ancêtre commun) : ce sont eux qui définissent la parenté. Triés du plus
+  // récent au plus ancien.
+  findCommonAncestors(personA, personB, options = {}) {
+    const self = (id) => {
+      const person = this.getPerson(id);
+      return {
+        ...person,
+        generation: 0,
+        generations: [0],
+        branch: null,
+        branches: [],
+        linkType: null,
+        viaId: null,
+      };
+    };
+    const lineOf = (id) =>
+      new Map([[id, self(id)], ...this.getAncestors(id, options).map((p) => [p.id, p])]);
+    const fromA = lineOf(personA);
+    const fromB = lineOf(personB);
+    const common = [...fromA.keys()].filter((id) => fromB.has(id));
+    const commonSet = new Set(common);
+    // Un ancêtre commun est « le plus récent » si aucun autre ancêtre commun
+    // n'est son descendant, c'est-à-dire s'il n'est ancêtre d'aucun autre.
+    const hasCommonDescendant = new Set();
+    for (const id of common) {
+      for (const ancestor of this.getAncestors(id, options)) {
+        if (commonSet.has(ancestor.id)) hasCommonDescendant.add(ancestor.id);
+      }
+    }
+    return common
+      .map((id) => {
+        const a = fromA.get(id);
+        const b = fromB.get(id);
+        const { generation, generations, branch, branches, viaId, linkType, ...person } = a;
+        void generation;
+        void generations;
+        void branch;
+        void branches;
+        void viaId;
+        void linkType;
+        return {
+          person: { ...person },
+          generationFromA: a.generation,
+          generationFromB: b.generation,
+          generationsFromA: a.generations,
+          generationsFromB: b.generations,
+          branchFromA: a.branch,
+          branchFromB: b.branch,
+          lowest: !hasCommonDescendant.has(id),
+        };
+      })
+      .sort(
+        (x, y) =>
+          Number(y.lowest) - Number(x.lowest) ||
+          x.generationFromA + x.generationFromB - (y.generationFromA + y.generationFromB) ||
+          x.person.id - y.person.id,
+      );
   }
 
   getParentRole(childId, parentId) {

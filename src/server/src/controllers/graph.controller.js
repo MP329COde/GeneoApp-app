@@ -46,7 +46,12 @@ export function createGraphController(services) {
       const personA = Number(request.query.personA);
       const personB = Number(request.query.personB);
       graph.assertPair(personA, personB);
-      response.json(graph.findCommonAncestors(personA, personB));
+      response.json(
+        graph.findCommonAncestors(personA, personB, {
+          maxDepth: parseDepth(request.query.depth),
+          linkTypes: parseLinkTypes(request.query.linkTypes),
+        }),
+      );
     },
     path(request, response) {
       const personA = Number(request.query.personA);

@@ -283,3 +283,61 @@ test('chemin : absence de relation, conjoint, personne inconnue, paramètres inv
     await server.close();
   }
 });
+
+test('ancêtres communs : plus récents, anciens, soi-même, absence et profondeur', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const arriere = await person('Arrière-grand-père', 'M');
+    const grandPere = await person('Grand-père', 'M');
+    const grandMere = await person('Grand-mère', 'F');
+    const pereA = await person('Père A', 'M');
+    const pereB = await person('Père B', 'M');
+    const a = await person('A');
+    const b = await person('B');
+    const etranger = await person('Étranger');
+    await link(grandPere, arriere, 'FATHER');
+    for (const parent of [pereA, pereB]) {
+      await link(parent, grandPere, 'FATHER');
+      await link(parent, grandMere, 'MOTHER');
+    }
+    await link(a, pereA, 'FATHER');
+    await link(b, pereB, 'FATHER');
+
+    const common = await get(`/api/graph/common-ancestors?personA=${a}&personB=${b}`);
+    // Cousins germains : grand-père et grand-mère (plus récents), arrière-grand-père (ancien).
+    assert.deepEqual(
+      common.map((c) => [c.person.id, c.lowest]),
+      [
+        [grandPere, true],
+        [grandMere, true],
+        [arriere, false],
+      ],
+    );
+    assert.equal(common[0].generationFromA, 2);
+    assert.equal(common[0].generationFromB, 2);
+    assert.equal(common[0].branchFromA, 'PATERNAL');
+    assert.equal(common[2].generationFromA, 3);
+
+    // Une personne est l'ancêtre commun d'elle-même et de son descendant.
+    const parentEtEnfant = await get(`/api/graph/common-ancestors?personA=${pereA}&personB=${a}`);
+    const self = parentEtEnfant.find((c) => c.person.id === pereA);
+    assert.equal(self.generationFromA, 0);
+    assert.equal(self.generationFromB, 1);
+    assert.equal(self.lowest, true);
+
+    assert.deepEqual(await get(`/api/graph/common-ancestors?personA=${a}&personB=${etranger}`), []);
+    const shallow = await get(`/api/graph/common-ancestors?personA=${a}&personB=${b}&depth=2`);
+    assert.deepEqual(
+      shallow.map((c) => c.person.id).sort((x, y) => x - y),
+      [grandPere, grandMere].sort((x, y) => x - y),
+    );
+    const bad = await requestJson(
+      server.baseUrl,
+      `/api/graph/common-ancestors?personA=${a}&personB=${b}&depth=-3`,
+    );
+    assert.equal(bad.status, 400);
+  } finally {
+    await server.close();
+  }
+});
