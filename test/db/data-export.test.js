@@ -103,6 +103,7 @@ test('import rejette une violation d’intégrité référentielle (atomicité, 
 // échouer ce test.
 const NOT_BACKED_UP = {
   schema_migrations: 'état du schéma, recréé par les migrations',
+  audit_state: 'drapeau transitoire de purge du journal, toujours à 0 hors transaction',
   // Historique annulable : technique, borné, non portable d'une base à l'autre.
   undo_entries: 'historique annulable',
   undo_groups: 'historique annulable',

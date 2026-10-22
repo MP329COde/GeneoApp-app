@@ -1,3 +1,5 @@
+import { withAuditPurgeAllowed } from './base-repository.js';
+
 export class AuditRepository {
   constructor(database) {
     this.database = database;
@@ -24,10 +26,12 @@ export class AuditRepository {
    * Renvoie le nombre d'entrées supprimées.
    */
   purgeBefore(cutoffIsoDate) {
-    const result = this.database
-      .prepare('DELETE FROM audit_log WHERE performed_at < ?')
-      .run(cutoffIsoDate);
-    return result.changes;
+    return withAuditPurgeAllowed(
+      this.database,
+      () =>
+        this.database.prepare('DELETE FROM audit_log WHERE performed_at < ?').run(cutoffIsoDate)
+          .changes,
+    );
   }
 
   count() {

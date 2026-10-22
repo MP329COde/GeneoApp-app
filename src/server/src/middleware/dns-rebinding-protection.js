@@ -38,6 +38,17 @@ export function dnsRebindingProtection({ lanMode = isLanModeEnabled() } = {}) {
         .json({ error: 'Hôte non autorisé (protection anti DNS-rebinding)' });
     }
 
+    // Une page sandboxée (iframe, data:) envoie `Origin: null` : elle peut émettre
+    // des requêtes d'écriture « simples » sans prévol. Aucun client légitime de
+    // l'API (navigateur sur l'adresse locale, CLI, tests) n'envoie ce cas.
+    const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+    if (unsafeMethod && request.headers.origin === 'null') {
+      return response.status(403).json({ error: 'Origine opaque refusée pour une écriture' });
+    }
+    if (unsafeMethod && request.headers['sec-fetch-site'] === 'cross-site') {
+      return response.status(403).json({ error: 'Requête inter-sites refusée' });
+    }
+
     const origin = request.headers.origin;
     if (origin && origin !== 'null') {
       let originHostname;

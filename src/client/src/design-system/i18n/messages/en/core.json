@@ -149,6 +149,7 @@
   "server.validation.noGedcomFile": "No .ged file in the archive",
   "server.validation.notAnImage": "The file is not an image",
   "server.error.constraintForeignkey": "Deletion impossible: data is still attached to this item",
+  "server.error.tooManyAttempts": "Too many attempts: try again in {seconds} second(s)",
   "server.error.constraintUnique": "This item already exists: an identical value is already in use",
   "server.error.constraintData": "Data constraint conflict",
   "server.route.notFound": "Route not found",

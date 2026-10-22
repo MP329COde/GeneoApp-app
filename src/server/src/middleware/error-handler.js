@@ -10,6 +10,9 @@ export function errorHandler(error, request, response, next) {
   }
 
   const internal = status >= 500 && status !== 503;
+  if (httpError.retryAfterSeconds) {
+    response.set('Retry-After', String(httpError.retryAfterSeconds));
+  }
   response.status(status).json({
     error: {
       message: internal ? 'Erreur interne du serveur' : httpError.message,

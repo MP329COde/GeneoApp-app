@@ -7,7 +7,11 @@ export function historyRoutes(services) {
     const limit = Math.min(Math.max(Number(request.query.limit) || 50, 1), 200);
     response.json({ ...services.history.status(), actions: services.history.list(limit) });
   });
-  router.post('/undo', (_request, response) => response.json(services.history.undo()));
-  router.post('/redo', (_request, response) => response.json(services.history.redo()));
+  router.post('/undo', (request, response) =>
+    response.json(services.history.undo({ performedBy: request.performedBy })),
+  );
+  router.post('/redo', (request, response) =>
+    response.json(services.history.redo({ performedBy: request.performedBy })),
+  );
   return router;
 }

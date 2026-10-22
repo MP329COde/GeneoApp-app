@@ -1,4 +1,4 @@
-import { withTransaction, recordAudit } from '../repositories/base-repository.js';
+import { withAuditPurgeAllowed, recordAudit } from '../repositories/base-repository.js';
 
 // Ordre de dépendance (FK) croissant : utilisé tel quel pour la ré-insertion
 // et inversé pour la purge avant import.
@@ -79,7 +79,9 @@ export function importDatabaseFromJson(database, dump, { performedBy = null } = 
   // échec, pour ne jamais laisser la connexion dans un état dégradé.
   database.pragma('foreign_keys = OFF');
   try {
-    withTransaction(database, () => {
+    // La restauration remplace tout, journal compris : seule occasion (avec la
+    // purge demandée) où l'audit accepte des suppressions.
+    withAuditPurgeAllowed(database, () => {
       for (const table of [...EXPORTABLE_TABLES].reverse()) {
         database.prepare(`DELETE FROM ${table}`).run();
       }

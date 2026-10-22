@@ -1,6 +1,11 @@
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from '../errors.js';
 import { assertId, validateAccountCreate, validateAccountLogin } from '../validation/schemas.js';
 import { hashPin, verifyPin } from './password.js';
+import { LoginThrottle } from './login-throttle.js';
+
+// Mesure à vide pour un profil inconnu : le temps de réponse ne révèle pas si un
+// nom de profil existe.
+const DUMMY_PIN_HASH = hashPin('profil-inconnu');
 
 function toPublicAccount(account) {
   return {
@@ -13,9 +18,10 @@ function toPublicAccount(account) {
 }
 
 export class AccountService {
-  constructor(repository, sessionStore) {
+  constructor(repository, sessionStore, { throttle = new LoginThrottle() } = {}) {
     this.repository = repository;
     this.sessionStore = sessionStore;
+    this.throttle = throttle;
   }
 
   create(payload, options = {}) {
@@ -53,9 +59,12 @@ export class AccountService {
 
     // Règle (c) : supprimer un profil protégé exige son propre PIN.
     if (existing.pin_hash !== null) {
+      this.throttle.check(existing.name);
       if (!options.pin || !verifyPin(options.pin, existing.pin_hash)) {
+        this.throttle.failure(existing.name);
         throw new UnauthorizedError('Code PIN requis pour supprimer ce profil');
       }
+      this.throttle.success(existing.name);
     }
 
     return this.repository.remove(id, options);
@@ -63,15 +72,20 @@ export class AccountService {
 
   login(payload) {
     const { name, pin } = validateAccountLogin(payload);
+    this.throttle.check(name);
     const account = this.repository.findByName(name);
     if (!account) {
+      verifyPin(String(pin ?? ''), DUMMY_PIN_HASH);
+      this.throttle.failure(name);
       throw new UnauthorizedError('Nom de profil ou code inconnu');
     }
     if (account.pin_hash !== null) {
       if (!pin || !verifyPin(pin, account.pin_hash)) {
+        this.throttle.failure(name);
         throw new UnauthorizedError('Nom de profil ou code inconnu');
       }
     }
+    this.throttle.success(name);
     this.repository.touchLogin(account.id);
     const token = this.sessionStore.create(account);
     return { token, account: toPublicAccount(account) };

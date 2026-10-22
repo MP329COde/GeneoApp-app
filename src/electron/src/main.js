@@ -1,7 +1,12 @@
-import { app, BrowserWindow, ipcMain, protocol, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron';
 import { isSafeExternalUrl } from './external-links.js';
 import { createLocalHttpGuard } from './security/local-http-guard.js';
 import { buildContentSecurityPolicy } from './security/content-security-policy.js';
+import {
+  blockWebviews,
+  hardenSession,
+  hardenedWebPreferences,
+} from './security/session-hardening.js';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -146,16 +151,14 @@ async function createWindow() {
   server = createServer(guarded).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
 
+  hardenSession(session.defaultSession);
   const window = new BrowserWindow({
-    webPreferences: {
+    webPreferences: hardenedWebPreferences({
       preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
       // Seul canal de transmission du jeton local au renderer : jamais par
       // le réseau ni par une variable globale accessible à une page distante.
       additionalArguments: [`--geneoapp-http-token=${httpToken}`],
-    },
+    }),
   });
   mainWindow = window;
 
@@ -177,6 +180,7 @@ async function createWindow() {
   await window.loadURL('geneoapp://app/index.html');
 }
 
+blockWebviews(app);
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {

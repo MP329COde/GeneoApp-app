@@ -616,3 +616,40 @@ notes riches sur toutes les entités, assertions / citations / niveaux de preuve
 - `GET /api/graph/consistency` n'a pas encore de client dédié : l'écran « Cohérence » lit la liste
   `timeline`, qui contient désormais aussi les incohérences relationnelles.
 - Les seuils d'« inhabituel » (ex. union entre proches) ne sont pas configurables.
+
+## Phases G et H du prompt maître — médias, recherche généalogique, sécurité (2026-10-22)
+
+### Phase G
+
+| Exigence | Avant | Maintenant | Commit |
+|---|---|---|---|
+| TXT, DOCX, audio, vidéo, URL | Images et PDF uniquement | Types reconnus par le contenu (jamais le nom) : TXT, DOCX (structure vérifiée, pas une archive quelconque), MP3 / WAV / OGG / FLAC / M4A, MP4 / MOV / WebM / AVI ; liens web `http(s)` conservés sans jamais être suivis | `aab3e7e`, `d4cc71e` |
+| Limites de taille | 25 Mo pour tout | Par catégorie réelle : documents 25 Mo, audio ×4, vidéo ×8 ; envoi en octets bruts `POST /api/media/raw` | `aab3e7e` |
+| Texte recherchable | OCR des images et PDF | + texte direct des TXT et DOCX, OCR embarqué testé de bout en bout (statut explicite `DONE` / `UNAVAILABLE`) | `aab3e7e` |
+| Associations multiples | Une cible par média | `media_links` (événement, union, lieu, personnes présentes, recherche, source…) avec rôle | `d4cc71e` |
+| Carnet de recherche | Hypothèses, tâches, preuves | + documents associés et historique complet (y compris éléments supprimés) | `d4cc71e` |
+
+Déjà présents et vérifiés : métadonnées (description, date, lieu, étiquettes), identification manuelle
+sur photo, stockage local sécurisé (nom serveur, anti-traversée), aucune reconnaissance faciale distante.
+
+### Phase H
+
+| Exigence | Avant | Maintenant |
+|---|---|---|
+| Journal append-only | Promis mais non imposé ; annuler / rétablir non journalisés | Déclencheurs SQLite : aucune modification, suppression seulement pendant une purge ou une restauration autorisées (fenêtre transactionnelle qui ne reste jamais ouverte) ; `UNDO` / `REDO` journalisés |
+| Secrets (PIN) | Hachés (scrypt) mais devinables par essais illimités | Suspension croissante après 5 échecs (429 + `Retry-After`), y compris pour un profil inconnu (pas d'énumération par le temps de réponse) |
+| Écritures inter-sites | Origine `null` acceptée | Écritures refusées depuis une origine opaque ou `Sec-Fetch-Site: cross-site` |
+| Permissions Electron | Aucune restriction explicite | Toute permission refusée sauf plein écran ; périphériques et webviews interdits ; préférences de fenêtre centralisées et testées |
+| Erreurs internes | Code SQLite exposé | Plus aucun code interne |
+
+Déjà conformes et vérifiés : `contextIsolation`, `nodeIntegration: false`, sandbox, allowlist IPC (test de
+synchronisation), CSP, SQL paramétré, chiffrement AES-256-GCM des sauvegardes (scrypt), validation de nom
+de sauvegarde, MIME par contenu, sauvegardes manuelle / automatique / avant import / avant migration.
+
+### Limites restantes
+
+- La base SQLite n'est pas chiffrée au repos (le chiffrement du disque du système reste la protection) ;
+  seules les sauvegardes exportées le sont.
+- La purge définitive de la corbeille exige une session protégée, mais l'API ne demande pas de paramètre
+  de confirmation explicite : la confirmation est faite par l'interface.
+- Le client n'a pas encore d'écran pour les liens web, les liens multiples ni les documents d'une recherche.

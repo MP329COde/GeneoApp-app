@@ -149,6 +149,7 @@
   "server.validation.noGedcomFile": "Aucun fichier .ged dans l’archive",
   "server.validation.notAnImage": "Le fichier n’est pas une image",
   "server.error.constraintForeignkey": "Suppression impossible : des données sont encore rattachées à cet élément",
+  "server.error.tooManyAttempts": "Trop d’essais : réessayez dans {seconds} seconde(s)",
   "server.error.constraintUnique": "Cet élément existe déjà : une valeur identique est déjà utilisée",
   "server.error.constraintData": "Conflit de contrainte de données",
   "server.route.notFound": "Route introuvable",
