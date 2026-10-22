@@ -66,6 +66,9 @@ export function createGraphController(services) {
     cycles(_request, response) {
       response.json(graph.detectCycles());
     },
+    consistency(_request, response) {
+      response.json(graph.validateConsistency());
+    },
     timeline(_request, response) {
       response.json(graph.validateTimeline());
     },

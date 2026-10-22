@@ -103,12 +103,52 @@
   "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Child's birth recorded after the parent's death",
   "timelineIssue.LIVING_WITH_DEATH": "Marked living despite a recorded death",
   "timelineIssue.LIVING_TOO_OLD": "Marked living but very old",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS": "Several biological fathers",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS": "Several biological mothers",
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS": "More than two biological parents",
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH": "Parent role does not match sex",
+  "timelineIssue.PARENT_NOT_IN_UNION": "Parent missing from the linked union",
+  "timelineIssue.DUPLICATE_UNION": "Union recorded twice",
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT": "Union between an ancestor and a descendant",
+  "timelineIssue.UNION_BETWEEN_SIBLINGS": "Union between people sharing a parent",
   "timelineIssue.severity.certain": "Certain error",
   "timelineIssue.severity.possible": "Unusual, to verify",
   "timelineIssue.generic": "Chronology inconsistency",
   "timelineIssue.genericPlural": {
     "one": "{count} chronology inconsistency",
     "other": "{count} chronology inconsistencies"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS.plural": {
+    "one": "{count} child with several biological fathers",
+    "other": "{count} children with several biological fathers"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS.plural": {
+    "one": "{count} child with several biological mothers",
+    "other": "{count} children with several biological mothers"
+  },
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS.plural": {
+    "one": "{count} child with more than two biological parents",
+    "other": "{count} children with more than two biological parents"
+  },
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH.plural": {
+    "one": "{count} parent role does not match sex",
+    "other": "{count} parent roles do not match sex"
+  },
+  "timelineIssue.PARENT_NOT_IN_UNION.plural": {
+    "one": "{count} parent missing from their union",
+    "other": "{count} parents missing from their union"
+  },
+  "timelineIssue.DUPLICATE_UNION.plural": {
+    "one": "{count} duplicate union",
+    "other": "{count} duplicate unions"
+  },
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT.plural": {
+    "one": "{count} union between an ancestor and a descendant",
+    "other": "{count} unions between an ancestor and a descendant"
+  },
+  "timelineIssue.UNION_BETWEEN_SIBLINGS.plural": {
+    "one": "{count} union between people sharing a parent",
+    "other": "{count} unions between people sharing a parent"
   },
   "timelineIssue.duplicatesTitle": "Possible duplicates",
   "timelineIssue.duplicatesPlural": {

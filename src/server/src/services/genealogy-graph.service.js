@@ -1,4 +1,5 @@
 import { validateTimeline } from './timeline-validation.js';
+import { validateRelations } from './relation-validation.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
 export class GenealogyGraphService {
@@ -843,8 +844,27 @@ export class GenealogyGraphService {
     };
   }
 
+  // Incohérences chronologiques ET relationnelles (filiations, unions), chacune
+  // avec sa gravité : CERTAIN (contradiction logique) ou POSSIBLE (inhabituel).
   validateTimeline() {
-    return validateTimeline(this.database);
+    return [...validateTimeline(this.database), ...validateRelations(this.database)];
+  }
+
+  // Même contrôle, présenté en deux listes séparées : les erreurs certaines
+  // (à corriger) et les situations inhabituelles (à vérifier, souvent légitimes),
+  // plus les cycles de filiation, qui sont toujours des erreurs certaines.
+  validateConsistency() {
+    const issues = this.validateTimeline();
+    const cycles = this.detectCycles().map((cycle) => ({
+      code: 'ANCESTRY_CYCLE',
+      severity: 'CERTAIN',
+      personId: cycle[0],
+      cycle,
+      message: `Cycle de filiation : ${cycle.join(' → ')}`,
+    }));
+    const certain = [...cycles, ...issues.filter((issue) => issue.severity === 'CERTAIN')];
+    const unusual = issues.filter((issue) => issue.severity !== 'CERTAIN');
+    return { certain, unusual, counts: { certain: certain.length, unusual: unusual.length } };
   }
 
   assertPair(personA, personB) {

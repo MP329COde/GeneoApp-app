@@ -9,6 +9,7 @@ export function graphRoutes(services) {
   router.get('/path', controller.path);
   router.get('/common-ancestors', controller.commonAncestors);
   router.get('/cycles', controller.cycles);
+  router.get('/consistency', controller.consistency);
   router.get('/timeline', controller.timeline);
 
   return router;

@@ -103,12 +103,52 @@
   "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Naissance de l'enfant enregistrée après le décès du parent",
   "timelineIssue.LIVING_WITH_DEATH": "Marquée vivante malgré un décès enregistré",
   "timelineIssue.LIVING_TOO_OLD": "Marquée vivante mais très âgée",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS": "Plusieurs pères biologiques",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS": "Plusieurs mères biologiques",
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS": "Plus de deux parents biologiques",
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH": "Rôle de parent incompatible avec le sexe",
+  "timelineIssue.PARENT_NOT_IN_UNION": "Parent absent de l’union de rattachement",
+  "timelineIssue.DUPLICATE_UNION": "Union enregistrée en double",
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT": "Union entre un ancêtre et son descendant",
+  "timelineIssue.UNION_BETWEEN_SIBLINGS": "Union entre personnes ayant un parent commun",
   "timelineIssue.severity.certain": "Erreur certaine",
   "timelineIssue.severity.possible": "Inhabituel, à vérifier",
   "timelineIssue.generic": "Incohérence de chronologie",
   "timelineIssue.genericPlural": {
     "one": "{count} incohérence de chronologie",
     "other": "{count} incohérences de chronologie"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS.plural": {
+    "one": "{count} enfant avec plusieurs pères biologiques",
+    "other": "{count} enfants avec plusieurs pères biologiques"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS.plural": {
+    "one": "{count} enfant avec plusieurs mères biologiques",
+    "other": "{count} enfants avec plusieurs mères biologiques"
+  },
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS.plural": {
+    "one": "{count} enfant avec plus de deux parents biologiques",
+    "other": "{count} enfants avec plus de deux parents biologiques"
+  },
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH.plural": {
+    "one": "{count} rôle de parent incompatible avec le sexe",
+    "other": "{count} rôles de parent incompatibles avec le sexe"
+  },
+  "timelineIssue.PARENT_NOT_IN_UNION.plural": {
+    "one": "{count} parent absent de son union",
+    "other": "{count} parents absents de leur union"
+  },
+  "timelineIssue.DUPLICATE_UNION.plural": {
+    "one": "{count} union en double",
+    "other": "{count} unions en double"
+  },
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT.plural": {
+    "one": "{count} union entre un ancêtre et son descendant",
+    "other": "{count} unions entre un ancêtre et son descendant"
+  },
+  "timelineIssue.UNION_BETWEEN_SIBLINGS.plural": {
+    "one": "{count} union entre personnes ayant un parent commun",
+    "other": "{count} unions entre personnes ayant un parent commun"
   },
   "timelineIssue.duplicatesTitle": "Doublons possibles",
   "timelineIssue.duplicatesPlural": {

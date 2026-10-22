@@ -598,3 +598,21 @@ Pipeline : analyse → validation → aperçu (avec doublons) → confirmation �
 - Les affirmations (`assertions`) n'ont pas d'équivalent GEDCOM : elles ne sont pas exportées.
 - L'import ne fusionne jamais : un réimport confirmé ajoute les personnes en double (signalées avant).
 - IBM PC (CP437) n'est pas décodé spécifiquement (lu comme Windows-1252).
+
+## Phase F du prompt maître — recherche, qualité et preuves (2026-10-22)
+
+| Exigence | Avant | Maintenant | Commit |
+|---|---|---|---|
+| Recherche par profession, événement, note, identifiant, période et géographie | Huit types d'événement, lieu par nom exact, identifiant limité à la référence d'import | Tous les types d'événement ; profession ; texte d'une note (fiche, notes liées, événements) ; identifiants externes ; alias ; lieu avec hiérarchie et noms de l'époque de l'événement ; rectangle ou rayon géographique | `cd6acb7` |
+| Doublons avec score explicable | Un pourcentage seul | Raisons chiffrées dont la somme est exactement le score ; pénalité de sexes incompatibles ; affichées dans « À vérifier » | `ce3b39e` |
+| Assistant de fusion : conservation des contradictions | Les différences d'identité étaient ignorées | Aperçu des conflits et des champs complétés ; valeurs différentes conservées comme affirmations, dates et lieux d'événements en désaccord consignés ; fiche fusionnée dans la corbeille | `284932d` |
+| Erreurs certaines séparées des situations inhabituelles ; incohérences relationnelles | Chronologie seulement | `relation-validation` (plusieurs pères / mères biologiques, parent absent de son union, rôle incompatible avec le sexe, union en double, union entre proches) ; `GET /api/graph/consistency` renvoie `certain` et `unusual` ; cycles = erreurs certaines | ci-dessous |
+
+Déjà présents et vérifiés : index FTS5 local, recherche floue et phonétique, aucune fusion automatique,
+notes riches sur toutes les entités, assertions / citations / niveaux de preuve (phase B).
+
+### Limites restantes
+
+- `GET /api/graph/consistency` n'a pas encore de client dédié : l'écran « Cohérence » lit la liste
+  `timeline`, qui contient désormais aussi les incohérences relationnelles.
+- Les seuils d'« inhabituel » (ex. union entre proches) ne sont pas configurables.
