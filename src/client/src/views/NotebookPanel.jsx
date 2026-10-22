@@ -69,6 +69,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
   const [hypothesis, setHypothesis] = useState({ title: '', content: '' });
   const [task, setTask] = useState({ title: '', priority: 'MEDIUM', dueDate: '' });
   const [evidence, setEvidence] = useState({});
+  const [history, setHistory] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -209,6 +210,60 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
         </label>
         <Button type="submit">{t('notebook.save', 'Enregistrer la recherche')}</Button>
       </form>
+
+      <section aria-labelledby="research-documents-title" className="research-section">
+        <h4 id="research-documents-title">{t('notebook.documents', 'Documents liés')}</h4>
+        {(research.documents ?? []).length === 0 ? (
+          <p className="notice">{t('notebook.noDocuments', 'Aucun document lié.')}</p>
+        ) : (
+          <ul className="search-results">
+            {research.documents.map((doc) => (
+              <li key={doc.id}>
+                {doc.external_url ? (
+                  <a href={doc.external_url} target="_blank" rel="noopener noreferrer">
+                    {doc.description || doc.external_url}
+                  </a>
+                ) : (
+                  (doc.original_filename ?? `#${doc.id}`)
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="research-history-title" className="research-section">
+        <h4 id="research-history-title">{t('notebook.history', 'Historique des modifications')}</h4>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={async () => {
+            try {
+              setHistory(await client.research.history(research.id));
+            } catch (historyError) {
+              setError(historyError.message);
+            }
+          }}
+        >
+          {history
+            ? t('notebook.refreshHistory', 'Actualiser')
+            : t('notebook.showHistory', 'Afficher l’historique')}
+        </Button>
+        {history && history.length === 0 ? (
+          <p className="notice">{t('notebook.noHistory', 'Aucune modification enregistrée.')}</p>
+        ) : null}
+        {history && history.length > 0 ? (
+          <ol className="search-results">
+            {history.map((entry) => (
+              <li key={entry.id}>
+                <Badge tone="neutral">{entry.operation}</Badge> {entry.table} #{entry.rowId} ·{' '}
+                {entry.at}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </section>
 
       <section aria-labelledby="hypotheses-title" className="research-section">
         <h4 id="hypotheses-title">

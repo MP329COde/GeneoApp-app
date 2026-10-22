@@ -367,5 +367,11 @@
   "eventsTimeline.editValue": "Valeur ou description",
   "eventsTimeline.editDate": "Date",
   "eventsTimeline.editPrecision": "Précision de la date",
-  "eventsTimeline.editPlace": "Lieu"
+  "eventsTimeline.editPlace": "Lieu",
+  "notebook.documents": "Documents liés",
+  "notebook.noDocuments": "Aucun document lié.",
+  "notebook.history": "Historique des modifications",
+  "notebook.refreshHistory": "Actualiser",
+  "notebook.showHistory": "Afficher l’historique",
+  "notebook.noHistory": "Aucune modification enregistrée."
 }

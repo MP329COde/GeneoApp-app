@@ -49,7 +49,7 @@ describe('routes étendues du client', () => {
       persons: { list: 'liste', create: 'création' },
       media: { upload: 'envoi' },
       graph: { ancestors: 'ancêtres' },
-      notebook: { list: 'carnet' },
+      research: { list: 'carnet' },
       dashboard: { x: 1 },
     };
     const merged = mergeExtendedApi(base, createExtendedApi(vi.fn()));
@@ -61,7 +61,7 @@ describe('routes étendues du client', () => {
     expect(merged.graph.ancestors).toBe('ancêtres');
     expect(typeof merged.graph.consistency).toBe('function');
     expect(typeof merged.graph.paths).toBe('function');
-    expect(typeof merged.notebook.history).toBe('function');
+    expect(typeof merged.research.history).toBe('function');
     expect(typeof merged.assertions.conflicts).toBe('function');
     expect(base.persons.addIdentifier).toBeUndefined();
     expect(merged.dashboard).toEqual({ x: 1 });

@@ -98,7 +98,7 @@ export function createExtendedApi(request) {
 /**
  * Fusionne les routes étendues dans le client existant : un espace de noms
  * existant (persons, places…) garde ses méthodes, les nouvelles s'y ajoutent ;
- * `graphExtras`, `notebookExtras` et `mediaLinks` rejoignent graph, notebook et
+ * `graphExtras`, `notebookExtras` et `mediaLinks` rejoignent graph, research et
  * media sous les noms indiqués.
  */
 export function mergeExtendedApi(client, extension) {
@@ -108,7 +108,7 @@ export function mergeExtendedApi(client, extension) {
   };
   for (const [name, methods] of Object.entries(extension)) {
     if (name === 'graphExtras') into('graph', methods);
-    else if (name === 'notebookExtras') into('notebook', methods);
+    else if (name === 'notebookExtras') into('research', methods);
     else if (name === 'mediaLinks') {
       into('media', {
         listLinks: methods.list,
