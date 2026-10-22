@@ -516,7 +516,28 @@ a son commit, validé par `npm run lint`, `npm run format:check` et `npm test` (
 - `reindexAll` (étape JS de la migration 0021) lisait des colonnes absentes d'un schéma ancien :
   `SELECT *` pour qu'une base ancienne puisse encore se migrer.
 
-### Limites restantes (assumées, hors phase B)
+### Phase I (interface)
+
+| Écran | Contenu |
+|---|---|
+| Tableau de bord | État de l'arbre et points à surveiller (données réelles) |
+| Affirmations et preuves | Valeurs concurrentes, niveau de preuve, citations, décisions explicites (jamais automatiques) |
+| Cohérence | Erreurs certaines séparées des situations inhabituelles |
+| Fiche famille | Partenaires, enfants avec nature du lien, événements de début et de fin |
+| Parenté | Nature du lien, lien de sang, relations multiples, chemin |
+| Identifiants externes | Ajout / retrait par référentiel |
+| Histoire d'un lieu | Noms datés, rattachements datés, lieu résolu à une année |
+| Événements | Modification en place (valeur, date, précision, lieu) |
+| Sources | Modification de la source et de la citation (nature, page, extrait, preuve, qualité), retrait d'une citation |
+| Médias | Liens vers les fiches (rôle), médias par adresse web |
+| Carnet de recherche | Documents liés, historique à la demande |
+| Arbre | Filtre par lieu (noms anciens et lieux parents compris) |
+
+Un défaut trouvé au passage : l'historique d'une recherche était rangé sous un espace de noms que l'interface
+n'utilise pas ; corrigé et couvert par un test.
+
+### Limites restantes
+ (assumées, hors phase B)
 
 - Les identifiants externes, l'historique des lieux, les affirmations et les preuves n'ont **pas
   d'écran** : API et modèle seulement (phase I). Seuls l'alias et le drapeau « privé » sont dans
@@ -652,4 +673,3 @@ de sauvegarde, MIME par contenu, sauvegardes manuelle / automatique / avant impo
   seules les sauvegardes exportées le sont.
 - La purge définitive de la corbeille exige une session protégée, mais l'API ne demande pas de paramètre
   de confirmation explicite : la confirmation est faite par l'interface.
-- Le client n'a pas encore d'écran pour les liens web, les liens multiples ni les documents d'une recherche.

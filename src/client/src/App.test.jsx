@@ -1461,6 +1461,35 @@ describe('App', () => {
     expect(screen.getByText('100 %')).toBeInTheDocument();
   });
 
+  it('filtre l’arbre ascendant par lieu (recherche avancée), en gardant la racine', async () => {
+    persons.list.mockResolvedValue([{ id: 1, given_names: 'Jean', family_name: 'Dupont' }]);
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+    graph.ancestors.mockResolvedValue([
+      { id: 2, given_names: 'Pierre', family_name: 'Dupont', sex: 'M', generation: 1, viaId: 1 },
+      { id: 3, given_names: 'Anne', family_name: 'Morel', sex: 'F', generation: 1, viaId: 1 },
+    ]);
+    advancedSearch.mockResolvedValue({
+      results: [{ person: { id: 3 }, score: 1, matchedEvents: [] }],
+      total: 1,
+    });
+
+    renderWithProviders(<App />);
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Ascendant' }));
+    await waitFor(() => expect(screen.getByText('Sosa 2')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Lieu'), { target: { value: 'Lyon' } });
+    await waitFor(() => expect(advancedSearch).toHaveBeenCalledWith({ place: 'Lyon' }));
+    await waitFor(() => expect(screen.queryByText('Sosa 2')).not.toBeInTheDocument());
+    expect(screen.getByText('Sosa 3')).toBeInTheDocument();
+  });
+
   it('calcule la parenté entre deux personnes via le moteur', async () => {
     persons.list.mockResolvedValue([
       { id: 1, given_names: 'Jean', family_name: 'Dupont' },

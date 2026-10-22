@@ -373,5 +373,8 @@
   "notebook.history": "Historique des modifications",
   "notebook.refreshHistory": "Actualiser",
   "notebook.showHistory": "Afficher l’historique",
-  "notebook.noHistory": "Aucune modification enregistrée."
+  "notebook.noHistory": "Aucune modification enregistrée.",
+  "tree.toolbar.place": "Lieu",
+  "tree.toolbar.placePlaceholder": "Ville, région…",
+  "tree.toolbar.placeTruncated": "Résultats limités aux 200 premières personnes"
 }

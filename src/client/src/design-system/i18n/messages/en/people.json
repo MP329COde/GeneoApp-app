@@ -373,5 +373,8 @@
   "notebook.history": "Change history",
   "notebook.refreshHistory": "Refresh",
   "notebook.showHistory": "Show history",
-  "notebook.noHistory": "No change recorded."
+  "notebook.noHistory": "No change recorded.",
+  "tree.toolbar.place": "Place",
+  "tree.toolbar.placePlaceholder": "Town, region…",
+  "tree.toolbar.placeTruncated": "Results limited to the first 200 people"
 }
