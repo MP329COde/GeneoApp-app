@@ -266,9 +266,11 @@ en parallèle par des sous-agents, chacune avec son commit et ses validations.
 |---|---|---|---|
 | #47 | Confirmation partagée au lieu de `window.confirm` (unions, filiations, personnes) | Terminé | `c591b8a`, `6f7f81d`, `8f2fac2` |
 | #48 | Zoom et déplacement de la carte locale hors ligne | Terminé | `fdae2dc` |
-| #46 | Traduction des écrans métier restants | En cours | — |
-| #49 | Indexation locale des pages distantes (opt-in) | Terminé | `48793f6` |
-| — | Pagination de `client.persons.list()` | En cours | — |
+| #46 | Traduction des écrans métier restants | Terminé | `8c8a5cf` |
+| #49 | Indexation locale des pages distantes (opt-in) | Terminé | `48793f6`, `0189106`, `266d3df` |
+| — | Pagination de `client.persons.list()` | Terminé | `984f57e` |
+| — | Remise au format Prettier du dépôt | Terminé | `1d2a1f5` |
+| — | Galerie de captures de la vitrine | Terminé | `56226f0` |
 
 ### #47 — Confirmation partagée
 
@@ -311,5 +313,71 @@ stocké dans l'index local.
 
 Limite : la source d'indexation du connecteur est créée désactivée et exclue
 de l'indexation générale, qui n'explore jamais ces sites.
+
+### #46 — Traduction des écrans métier restants
+
+Les derniers textes en dur sortent de l'interface : légende de l'arbre
+(composant `TreeLegend`), années de vie (`dates.around`, `dates.before`,
+`dates.after`), mot de sélection par défaut des annotations, résumé
+d'indexation, dossier à indexer, taille des pièces jointes. Le garde-fou
+`scripts/check-i18n-hardcoded.js` est étendu aux vues restantes et les
+repli français des messages d'erreur de l'indexation locale sont alignés sur
+la valeur canonique (fin des 4 avertissements du contrôle des clés).
+
+Validations : `npm run test:client` (247 tests), `node
+scripts/check-i18n-hardcoded.js` (0 texte en dur), `node
+scripts/check-i18n-keys.js` (1176 clés, 0 erreur, 0 avertissement), `npm run
+lint`, `npm run format:check`.
+
+### Pagination de `client.persons.list()`
+
+`GET /api/persons` accepte `limit`, `offset`, `q` et `total=true` : les
+bornes sont appliquées côté serveur (page par défaut de 50, maximum 200) et
+une valeur invalide ne provoque jamais de 500. `persons.list()` renvoie une
+enveloppe normalisée `{ items, total, limit, offset }` dans les deux
+transports (HTTP et IPC) ; l'adaptateur de l'application accepte encore les
+tableaux simples, pour les tests et les clients existants. Le nombre de
+personnes affiché vient désormais du serveur.
+
+Validations : `npm run test:api` (155 tests), `npm run test:db` (92 tests),
+`npm run test:client` (247 tests), `npm run lint`, `npm run format:check`.
+
+Limite assumée : l'écran des personnes charge encore la liste entière et
+filtre côté client ; la pagination est disponible pour l'API et l'IPC, mais
+la barre latérale n'en profite pas encore.
+
+### Remise au format Prettier du dépôt
+
+Les commits d'indexation des pages distantes et de carte interactive avaient
+laissé dix fichiers en écart avec le style du dépôt : `npm run format:check`
+échouait. Aucun comportement n'est modifié, seule la mise en forme change.
+
+Validations : `npm run format:check` (dépôt entier conforme), `npm run lint`,
+`npm run test:server` (69 tests), `npm run test:client` (247 tests).
+
+### Galerie de captures de la vitrine
+
+La vitrine de présentation montre six captures de l'application (arbre,
+carte, carnet, chronologie, doublons, assistant local) avec des légendes
+traduites. Les images sont servies depuis `site/public/captures/`, sans
+requête distante. Les dimensions déclarées (1440×900) correspondent à la
+taille réelle des captures : la page ne bouge plus à l'affichage.
+
+Validations : `npm run build` (site, Vite), `npm run lint`,
+`npm run format:check`, `node scripts/check-i18n-keys.js` (0 erreur,
+0 avertissement).
+
+### Tickets restant ouverts
+
+- **Point 6 du contre-audit** (barre d'onglets mobile 390×844) : non traité,
+  refonte de layout trop large pour un ticket court.
+- **Point 7** (référentiel de communes françaises pour la carte) : non traité,
+  travail de fond (licence du jeu de données, rapprochement, aperçu).
+- **Point 8** (vérification réelle de la CSP Electron packagée) : non traité,
+  exige l'application empaquetée.
+- **Décomposition de `App.jsx`/`App.css`** : reportée, budget de vérification
+  insuffisant pour garantir zéro régression.
+- **Édition inline prénom/nom/sexe avec Ctrl+Z et audit log** : le Ctrl+Z et
+  l'historique génériques existent, l'édition inline n'a pas été faite.
 
 
