@@ -138,6 +138,12 @@ un commit par point, test qui reproduit le bug avant chaque correctif :
 
 ### Ce qui n'a pas été fait dans le contre-audit (liste honnête)
 
+> **Périmé sur certains points** : les points 6 (mobile 390×844) et 7
+> (référentiel de communes) ainsi que la décomposition de `App.jsx`/`App.css`
+> ont été repris et livrés depuis ; voir « Tickets restant ouverts » à la fin
+> de ce document. Les points 8 (CSP Electron packagée) et l'édition en place
+> restent ouverts.
+
 - **Point 6 (mobile 390×844, barre d'onglets en bas)** : non traité. Nécessite une refonte du layout mobile
   (barre de navigation fixe à 4 onglets + bouton « Plus », minicarte repliée par défaut) qui touche à la fois
   `App.jsx` et une bonne partie d'`App.css` ; reporté faute de budget suffisant pour le vérifier proprement
@@ -245,7 +251,8 @@ passé à `t(...)`), la version anglaise devient complète.
 - `src/client/src/design-system/i18n/I18nProvider.jsx` : le message « useI18n
   doit être utilisé à l'intérieur d'un I18nProvider » signale une **erreur de
   programmation** à un développeur, pas à un utilisateur final.
-- La pagination de `client.persons.list()` reste à faire (voir plus bas).
+- La pagination de `client.persons.list()` a été faite depuis (voir « Tickets
+  atomiques » plus bas).
 
 ### Vérification finale (campagne i18n)
 
@@ -369,15 +376,34 @@ Validations : `npm run build` (site, Vite), `npm run lint`,
 
 ### Tickets restant ouverts
 
-- **Point 6 du contre-audit** (barre d'onglets mobile 390×844) : non traité,
-  refonte de layout trop large pour un ticket court.
-- **Point 7** (référentiel de communes françaises pour la carte) : non traité,
-  travail de fond (licence du jeu de données, rapprochement, aperçu).
-- **Point 8** (vérification réelle de la CSP Electron packagée) : non traité,
-  exige l'application empaquetée.
-- **Décomposition de `App.jsx`/`App.css`** : reportée, budget de vérification
-  insuffisant pour garantir zéro régression.
-- **Édition inline prénom/nom/sexe avec Ctrl+Z et audit log** : le Ctrl+Z et
-  l'historique génériques existent, l'édition inline n'a pas été faite.
+Trois des points signalés « non traités » par le contre-audit du 2026-09-26
+ont été repris et livrés depuis ; la liste de ce contre-audit est donc
+périmée sur ces points :
+
+- **Point 6 (mobile 390×844)** : livré. La barre d'onglets mobile
+  (`mobile-tabbar` : 4 destinations directes, « Plus » et sa feuille de menu)
+  est en place dans `src/client/src/App.jsx`, avec le test E2E « barre
+  d'onglets mobile : navigation, aucun défilement horizontal, nœud sélectionné
+  visible » (viewport 390×844).
+- **Point 7 (référentiel de communes françaises)** : livré.
+  `src/server/src/geo/communes-fr.js` embarque le référentiel (code INSEE,
+  nom, département, centre) compressé, sans appel réseau ; la source (API
+  Geo / DINUM) et la licence Ouverte 2.0 sont documentées dans
+  `src/server/src/geo/README.md`. Le placement automatique des lieux et le
+  rapprochement des homonymes par département sont en place.
+- **Décomposition de `App.jsx`/`App.css`** : livrée. `App.jsx` fait 1360
+  lignes (≈4600 avant) et la feuille de style est répartie en 30 fichiers
+  sous `src/client/src/styles/`.
+
+Restent réellement ouverts :
+
+- **Point 8 (vérification réelle de la CSP Electron)** : seul le test
+  unitaire `test/electron/content-security-policy.test.js` existe ; la
+  vérification dans l'application packagée (rendu réel, cas des tuiles de
+  carte en ligne) n'a pas été faite.
+- **Édition en place prénom/nom/sexe** : les quatre champs se modifient
+  aujourd'hui via l'outil « Identité » (`PersonDetailTools`), qui bénéficie
+  du Ctrl+Z et de l'historique génériques, mais pas directement dans la liste
+  des personnes.
 
 
