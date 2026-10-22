@@ -93,6 +93,7 @@ export class MergeService {
         duplicateId,
       });
 
+      this.#reassignPolymorphic('gedcom_extensions', survivorId, duplicateId);
       this.#reassignAssertions(survivorId, duplicateId);
       this.#reassignPolymorphic('citations', survivorId, duplicateId);
       this.#reassignPolymorphic('notes', survivorId, duplicateId);

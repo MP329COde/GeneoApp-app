@@ -51,6 +51,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'research_notebook', column: 'person_id', mode: 'row' },
     { table: 'citations', entityType: 'PERSON', mode: 'link' },
     { table: 'assertions', entityType: 'PERSON', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'PERSON', mode: 'link' },
     { table: 'notes', entityType: 'PERSON', mode: 'link' },
   ],
   places: [
@@ -68,6 +69,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'unions', column: 'end_event_id', mode: 'row' },
     { table: 'citations', entityType: 'EVENT', mode: 'link' },
     { table: 'assertions', entityType: 'EVENT', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'EVENT', mode: 'link' },
     { table: 'notes', entityType: 'EVENT', mode: 'link' },
   ],
   unions: [
@@ -75,6 +77,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'parentages', column: 'union_id', mode: 'row' },
     { table: 'citations', entityType: 'UNION', mode: 'link' },
     { table: 'assertions', entityType: 'UNION', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'UNION', mode: 'link' },
     { table: 'notes', entityType: 'UNION', mode: 'link' },
   ],
   parentages: [

@@ -159,6 +159,7 @@ export class GedcomService {
       ...validation,
       mapping: buildMappingPreview(records),
       contents: buildContentsPreview(records),
+      unmapped: buildUnmappedPreview(records),
     };
   }
 
@@ -180,6 +181,7 @@ export class GedcomService {
       ...validation,
       mapping: buildMappingPreview(records),
       contents: buildContentsPreview(records),
+      unmapped: buildUnmappedPreview(records),
       imported: false,
     };
     if (!validation.valid) return report;
@@ -441,11 +443,25 @@ function generateGedcom(database, persons, families, format, media = []) {
       );
     }
   };
+  const extensionsFor = database.prepare(
+    `SELECT payload FROM gedcom_extensions
+     WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY position, id`,
+  );
+  const emitNode = (level, node) => {
+    lines.push(`${level} ${node.tag}${node.value ? ` ${node.value}` : ''}`);
+    node.children.forEach((childNode) => emitNode(level + 1, childNode));
+  };
+  const emitExtensions = (level, entityType, entityId) => {
+    for (const row of extensionsFor.all(entityType, entityId)) {
+      emitNode(level, JSON.parse(row.payload));
+    }
+  };
   const emitEventBody = (level, event) => {
     if (event.date_text) lines.push(`${level} DATE ${event.date_text}`);
     emitPlace(level, event.place_id);
     emitNote(level, event.notes);
     emitCitations(level, 'EVENT', event.id);
+    emitExtensions(level, 'EVENT', event.id);
   };
   for (const person of persons) {
     const xref = `@I${person.id}@`;
@@ -492,6 +508,7 @@ function generateGedcom(database, persons, families, format, media = []) {
     }
     emitNote(1, person.notes);
     emitCitations(1, 'PERSON', person.id);
+    emitExtensions(1, 'PERSON', person.id);
     for (const item of media.filter((candidate) => candidate.entity_id === person.id)) {
       lines.push(`1 OBJE @O${item.id}@`);
     }
@@ -545,6 +562,7 @@ function generateGedcom(database, persons, families, format, media = []) {
       }
       emitNote(1, union.notes);
       emitCitations(1, 'UNION', union.id);
+      emitExtensions(1, 'UNION', union.id);
     }
   }
   for (const sourceId of [...usedSources].sort((a, b) => a - b)) {
@@ -640,6 +658,78 @@ function verifyExport(gedcom, expected) {
   }
 }
 
+// Balises que l'import sait représenter, par type d'enregistrement : tout le
+// reste est conservé tel quel (gedcom_extensions) et signalé dans le rapport.
+const KNOWN_TAGS = {
+  INDI: new Set([
+    'NAME',
+    'SEX',
+    'NICK',
+    'NOTE',
+    'SOUR',
+    'RESN',
+    'REFN',
+    'FAMS',
+    'FAMC',
+    'OBJE',
+    'TITL',
+    ...Object.keys(EVENT_TAGS),
+  ]),
+  FAM: new Set(['HUSB', 'WIFE', 'CHIL', 'MARR', 'DIV', 'NOTE', 'SOUR', '_NOUNION']),
+  EVENT: new Set(['DATE', 'PLAC', 'NOTE', 'SOUR', 'TYPE']),
+};
+
+/** Sous-éléments d'un enregistrement que le modèle ne représente pas. */
+function unknownNodes(record, kind) {
+  return record.children.filter((node) => {
+    if (kind === 'INDI' && node.tag === 'EVEN') return !resolveEventType(node);
+    return !KNOWN_TAGS[kind].has(node.tag);
+  });
+}
+
+// Un pointeur (@I2@) vers une personne importée est réécrit avec son nouvel
+// identifiant ; tout autre pointeur ne désigne plus rien dans la base et est
+// vidé, pour que l'export ne produise jamais de référence orpheline.
+function serializeNode(node, personIds) {
+  const raw = node.value ?? '';
+  const isPointer = /^@[^@]+@$/.test(raw.trim());
+  const value = isPointer
+    ? personIds.has(raw.trim())
+      ? `@I${personIds.get(raw.trim())}@`
+      : ''
+    : raw;
+  return {
+    tag: node.tag,
+    value,
+    children: node.children.map((child) => serializeNode(child, personIds)),
+  };
+}
+
+/** Balises non représentées, comptées par enregistrement d'origine (INDI, FAM, événement). */
+function buildUnmappedPreview(records) {
+  const counts = new Map();
+  const add = (where, node) => {
+    const key = `${where}:${node.tag}`;
+    counts.set(key, { where, tag: node.tag, count: (counts.get(key)?.count ?? 0) + 1 });
+  };
+  for (const record of records) {
+    if (record.tag === 'INDI') {
+      unknownNodes(record, 'INDI').forEach((node) => add('INDI', node));
+      record.children
+        .filter((node) => node.tag !== 'EVEN' && resolveEventType(node))
+        .forEach((event) => unknownNodes(event, 'EVENT').forEach((node) => add('EVENT', node)));
+    } else if (record.tag === 'FAM') {
+      unknownNodes(record, 'FAM').forEach((node) => add('FAM', node));
+      for (const tag of ['MARR', 'DIV']) {
+        children(record, tag).forEach((event) =>
+          unknownNodes(event, 'EVENT').forEach((node) => add('EVENT', node)),
+        );
+      }
+    }
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+}
+
 /** Contenus annexes du fichier : sources, notes partagées et citations. */
 function buildContentsPreview(records) {
   let citations = 0;
@@ -688,7 +778,15 @@ function buildMappingPreview(records) {
 function applyMapping(database, records, performedBy) {
   const personIds = new Map();
   const eventIds = new Map();
-  const ids = { persons: [], events: [], unions: [], parentages: [], sources: [], citations: [] };
+  const ids = {
+    persons: [],
+    events: [],
+    unions: [],
+    parentages: [],
+    sources: [],
+    citations: [],
+    extensions: [],
+  };
   const insertPerson = database.prepare(
     `INSERT INTO persons (
        given_names, family_name, birth_family_name, sex, notes, nickname, external_id, is_living,
@@ -716,7 +814,7 @@ function applyMapping(database, records, performedBy) {
     `INSERT INTO parentages (child_id, parent_id, parent_role, link_type, union_id, notes) VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const placeIds = new Map();
-  const ctx = createImportContext(database, records, ids, performedBy);
+  const ctx = createImportContext(database, records, ids, performedBy, personIds);
   // Une même filiation ne peut être insérée deux fois (index unique).
   const insertedPairs = new Set();
 
@@ -766,6 +864,9 @@ function applyMapping(database, records, performedBy) {
   }
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
+    // Après l'insertion de toutes les personnes : les pointeurs peuvent viser une
+    // personne définie plus loin dans le fichier.
+    ctx.keepExtensions(person, 'INDI', 'PERSON', personIds.get(person.xref));
     for (const event of person.children.filter((child) => resolveEventType(child))) {
       const eventId = insertEventRecord(
         database,
@@ -825,6 +926,7 @@ function applyMapping(database, records, performedBy) {
     if (union) {
       ids.unions.push(union.lastInsertRowid);
       ctx.citationsOf(family, 'UNION', union.lastInsertRowid);
+      ctx.keepExtensions(family, 'FAM', 'UNION', union.lastInsertRowid);
       audit(database, 'unions', union.lastInsertRowid, { xref: family.xref }, performedBy);
     }
 
@@ -921,6 +1023,7 @@ function insertEventRecord(
   );
   audit(database, 'events', result.lastInsertRowid, { type }, performedBy);
   ctx.citationsOf(record, 'EVENT', result.lastInsertRowid);
+  ctx.keepExtensions(record, 'EVENT', 'EVENT', result.lastInsertRowid);
   return result.lastInsertRowid;
 }
 
@@ -1001,7 +1104,7 @@ const QUAY_TO_CONFIDENCE = { 0: 'LOW', 1: 'LOW', 2: 'MEDIUM', 3: 'HIGH' };
  * (enregistrements SOUR, ou source en ligne) et citations. Les sources sont
  * créées avant les personnes et événements qui les citent.
  */
-function createImportContext(database, records, ids, performedBy) {
+function createImportContext(database, records, ids, performedBy, personIds) {
   const noteRecords = new Map(
     records.filter((record) => record.tag === 'NOTE' && record.xref).map((r) => [r.xref, r]),
   );
@@ -1032,9 +1135,25 @@ function createImportContext(database, records, ids, performedBy) {
     sourceIds.set(record.xref, createSource(title, value(record, 'AUTH'), value(record, 'PUBL')));
   }
   const inlineSources = new Map();
+  const insertExtension = database.prepare(
+    `INSERT INTO gedcom_extensions (entity_type, entity_id, tag, payload, position)
+     VALUES (?, ?, ?, ?, ?)`,
+  );
 
   return {
     notes,
+    keepExtensions(record, kind, entityType, entityId) {
+      unknownNodes(record, kind).forEach((node, position) => {
+        insertExtension.run(
+          entityType,
+          entityId,
+          node.tag.slice(0, 40),
+          JSON.stringify(serializeNode(node, personIds)),
+          position,
+        );
+        ids.extensions.push(1);
+      });
+    },
     citationsOf(record, entityType, entityId) {
       for (const citation of children(record, 'SOUR')) {
         const reference = (citation.value ?? '').trim();

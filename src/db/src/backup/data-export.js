@@ -19,6 +19,7 @@ export const EXPORTABLE_TABLES = [
   'media',
   'media_regions',
   'notes',
+  'gedcom_extensions',
   'research_notebook',
   'research_hypotheses',
   'research_tasks',

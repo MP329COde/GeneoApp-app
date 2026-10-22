@@ -150,3 +150,88 @@ test('export : sources, citations, notes, coordonnées, mariage et divorce font 
     await target.close();
   }
 });
+
+const WITH_UNKNOWN = [
+  '0 HEAD',
+  '1 GEDC',
+  '2 VERS 5.5.1',
+  '0 @I1@ INDI',
+  '1 NAME Ada /Lovelace/',
+  '1 _MILT Y',
+  '2 _RANK Capitaine',
+  '1 ASSO @I2@',
+  '2 RELA Parrain',
+  '1 ASSO @I77@',
+  '1 CHAN',
+  '2 DATE 1 JAN 2020',
+  '1 EVEN Poète',
+  '2 TYPE Honneur',
+  '2 DATE 1840',
+  '1 BIRT',
+  '2 DATE 1815',
+  '2 AGE 0y',
+  '2 CAUS prématurée',
+  '0 @I2@ INDI',
+  '1 NAME William /King/',
+  '0 @F1@ FAM',
+  '1 HUSB @I2@',
+  '1 WIFE @I1@',
+  '1 ENGA',
+  '2 DATE 1834',
+  '1 MARR',
+  '2 DATE 1835',
+  '2 AGNC Mairie',
+  '0 TRLR',
+].join('\n');
+
+test('balises inconnues : signalées à l’aperçu, conservées, rendues à l’export au même rang', async () => {
+  const origin = await startTestServer();
+  const target = await startTestServer();
+  try {
+    const preview = await post(origin, '/api/gedcom/preview', { gedcom: WITH_UNKNOWN });
+    const unmapped = Object.fromEntries(
+      preview.body.unmapped.map((item) => [`${item.where}:${item.tag}`, item.count]),
+    );
+    assert.deepEqual(unmapped, {
+      'INDI:_MILT': 1,
+      'INDI:ASSO': 2,
+      'INDI:CHAN': 1,
+      'INDI:EVEN': 1,
+      'EVENT:AGE': 1,
+      'EVENT:CAUS': 1,
+      'FAM:ENGA': 1,
+      'EVENT:AGNC': 1,
+    });
+
+    const imported = await post(origin, '/api/gedcom/import', { gedcom: WITH_UNKNOWN });
+    assert.equal(imported.status, 201);
+    assert.equal(imported.body.ids.extensions.length, 9);
+    assert.equal(origin.database.prepare('SELECT COUNT(*) AS n FROM gedcom_extensions').get().n, 9);
+
+    for (const format of ['5.5.1', '7']) {
+      const text = (await post(origin, '/api/gedcom/export', { format })).body.gedcom;
+      assert.match(text, /1 _MILT Y\n2 _RANK Capitaine/);
+      assert.match(text, /1 EVEN Poète\n2 TYPE Honneur\n2 DATE 1840/);
+      assert.match(text, /1 CHAN\n2 DATE 1 JAN 2020/);
+      assert.match(text, /2 AGE 0y\n/);
+      assert.match(text, /1 ENGA\n2 DATE 1834/);
+      assert.match(text, /2 AGNC Mairie/);
+      // Le pointeur vers une personne importée suit son nouvel identifiant ;
+      // celui qui ne désigne rien est vidé (jamais de référence orpheline).
+      const william = origin.database
+        .prepare("SELECT id FROM persons WHERE given_names = 'William'")
+        .get();
+      assert.match(text, new RegExp(`1 ASSO @I${william.id}@\\n2 RELA Parrain`));
+      assert.doesNotMatch(text, /@I77@/);
+      assert.equal(validateGedcom(parseGedcom(text)).valid, true);
+    }
+
+    // Les extensions survivent à un second import de l'export.
+    const exported = (await post(origin, '/api/gedcom/export', { format: '5.5.1' })).body.gedcom;
+    await post(target, '/api/gedcom/import', { gedcom: exported });
+    assert.equal(target.database.prepare('SELECT COUNT(*) AS n FROM gedcom_extensions').get().n, 9);
+  } finally {
+    await origin.close();
+    await target.close();
+  }
+});
