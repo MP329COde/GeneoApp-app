@@ -148,3 +148,61 @@ test('filiations : modification, liste, doublon, cycle et références inexistan
     await server.close();
   }
 });
+
+test('fiche famille : partenaires, enfants avec nature des liens, événements et familles d’une personne', async () => {
+  const server = await startTestServer();
+  try {
+    const [pere, mere, beauPere, enfant, enfant2] = await people(server, [
+      'Père',
+      'Mère',
+      'Beau-père',
+      'E1',
+      'E2',
+    ]);
+    const marriage = (
+      await call(server, 'POST', '/api/events', { type: 'MARRIAGE', dateText: '1900' })
+    ).body;
+    const union = (
+      await call(server, 'POST', '/api/unions', {
+        partnerIds: [pere, mere],
+        type: 'MARRIAGE',
+        startEventId: marriage.id,
+      })
+    ).body;
+    const second = (await call(server, 'POST', '/api/unions', { partnerIds: [mere, beauPere] }))
+      .body;
+    const link = (childId, parentId, extra) =>
+      call(server, 'POST', '/api/parentages', { childId, parentId, ...extra });
+    await link(enfant, pere, { parentRole: 'FATHER', unionId: union.id });
+    await link(enfant, mere, { parentRole: 'MOTHER', unionId: union.id });
+    await link(enfant2, mere, { parentRole: 'MOTHER', unionId: second.id });
+    await link(enfant2, beauPere, { parentRole: 'FATHER', unionId: second.id, linkType: 'STEP' });
+
+    const family = (await call(server, 'GET', `/api/unions/${union.id}/family`)).body;
+    assert.deepEqual(family.partners.map((p) => p.id).sort(), [pere, mere].sort());
+    assert.deepEqual(
+      family.children.map((c) => c.id),
+      [enfant],
+    );
+    assert.equal(family.children[0].links.length, 2);
+    assert.equal(family.startEvent.id, marriage.id);
+    assert.equal(family.endEvent, null);
+
+    const recomposed = (await call(server, 'GET', `/api/unions/${second.id}/family`)).body;
+    assert.deepEqual(
+      recomposed.children.map((c) => c.id),
+      [enfant2],
+    );
+    assert.ok(recomposed.children[0].links.some((l) => l.linkType === 'STEP'));
+
+    const mereFamilies = (await call(server, 'GET', `/api/unions/families-of/${mere}`)).body;
+    assert.deepEqual(mereFamilies.asPartner.sort(), [union.id, second.id].sort());
+    assert.deepEqual(
+      (await call(server, 'GET', `/api/unions/families-of/${enfant}`)).body.asChild,
+      [union.id],
+    );
+    assert.equal((await call(server, 'GET', '/api/unions/9999/family')).status, 404);
+  } finally {
+    await server.close();
+  }
+});

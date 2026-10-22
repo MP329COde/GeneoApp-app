@@ -30,6 +30,59 @@ export class UnionService {
     return this.repository.list();
   }
 
+  /**
+   * Fiche famille : l'union, ses partenaires, ses enfants (filiations rattachées
+   * à cette union, une entrée par enfant avec la nature de chaque lien) et les
+   * événements de début et de fin. Les enfants rattachés à d'autres parents
+   * restent dans leur propre famille (familles recomposées).
+   */
+  family(id) {
+    const union = this.get(id);
+    const database = this.repository.database;
+    const person = database.prepare('SELECT * FROM persons WHERE id = ? AND deleted_at IS NULL');
+    const event = database.prepare('SELECT * FROM events WHERE id = ? AND deleted_at IS NULL');
+    const children = new Map();
+    for (const row of database
+      .prepare(
+        `SELECT child_id, parent_id, parent_role, link_type FROM parentages
+         WHERE union_id = ? AND deleted_at IS NULL ORDER BY id`,
+      )
+      .all(id)) {
+      const child = person.get(row.child_id);
+      if (!child) continue;
+      if (!children.has(row.child_id)) children.set(row.child_id, { ...child, links: [] });
+      children.get(row.child_id).links.push({
+        parentId: row.parent_id,
+        parentRole: row.parent_role,
+        linkType: row.link_type,
+      });
+    }
+    return {
+      union,
+      partners: union.partnerIds.map((personId) => person.get(personId)).filter(Boolean),
+      children: [...children.values()],
+      startEvent: union.start_event_id ? (event.get(union.start_event_id) ?? null) : null,
+      endEvent: union.end_event_id ? (event.get(union.end_event_id) ?? null) : null,
+    };
+  }
+
+  /** Familles d'une personne : comme partenaire, et comme enfant (unions de ses parents). */
+  familiesOfPerson(personId) {
+    assertId(personId, 'personId');
+    const database = this.repository.database;
+    const asChild = database
+      .prepare(
+        `SELECT DISTINCT union_id FROM parentages
+         WHERE child_id = ? AND union_id IS NOT NULL AND deleted_at IS NULL`,
+      )
+      .all(personId)
+      .map((row) => row.union_id);
+    return {
+      asPartner: this.repository.findForPerson(personId).map((union) => union.id),
+      asChild,
+    };
+  }
+
   #assertEvent(eventId) {
     if (eventId === undefined || eventId === null) return;
     const exists = this.repository.database

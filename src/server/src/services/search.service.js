@@ -6,7 +6,10 @@ import { yearOf } from '../../../db/src/dates/genealogy-date.js';
 // neutralise toute syntaxe FTS5 (colonnes, opérateurs booléens...) que
 // l'utilisateur pourrait saisir involontairement.
 function toFtsQuery(raw) {
+  // Les caractères de contrôle (dont NUL) tronquent la requête côté SQLite et
+  // la rendent syntaxiquement invalide : ils ne font pas partie d'un nom.
   return raw
+    .replace(/\p{Cc}/gu, ' ')
     .split(/\s+/)
     .filter(Boolean)
     .map((term) => `"${term.replace(/"/g, '""')}"*`)
@@ -21,7 +24,7 @@ export class SearchService {
 
   search(payload) {
     const { q, entityTypes, limit } = validateSearchQuery(payload);
-    if (!q) return [];
+    if (!q || !toFtsQuery(q)) return [];
     const results = this.repository.search(toFtsQuery(q), { entityTypes, limit });
     if (entityTypes && !entityTypes.includes('PERSON')) return results;
 
