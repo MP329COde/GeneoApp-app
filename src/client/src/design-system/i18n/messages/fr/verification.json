@@ -66,10 +66,29 @@
     "one": "1 note",
     "other": "{count} notes"
   },
+  "merge.reassignment.assertions": {
+    "one": "1 affirmation",
+    "other": "{count} affirmations"
+  },
+  "merge.reassignment.identifiers": {
+    "one": "1 identifiant externe",
+    "other": "{count} identifiants externes"
+  },
   "merge.reassignment.media": {
     "one": "1 média",
     "other": "{count} médias"
   },
+  "merge.identity.field.given_names": "Prénoms",
+  "merge.identity.field.family_name": "Nom",
+  "merge.identity.field.birth_family_name": "Nom de naissance",
+  "merge.identity.field.married_name": "Nom marital",
+  "merge.identity.field.alias": "Alias",
+  "merge.identity.field.nickname": "Surnom",
+  "merge.identity.field.title": "Titre",
+  "merge.identity.field.suffix": "Suffixe",
+  "merge.identity.field.sex": "Sexe",
+  "merge.identity.conflicts": "Valeurs différentes, toutes conservées comme affirmations à trancher :",
+  "merge.identity.fills": "Champs vides complétés par la fiche fusionnée :",
   "timelineIssue.BIRTH_AFTER_DEATH": "Naissance enregistrée après le décès",
   "timelineIssue.MARRIAGE_AFTER_DEATH": "Mariage enregistré après le décès",
   "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Mariage enregistré avant la naissance",

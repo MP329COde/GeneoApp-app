@@ -1,6 +1,20 @@
 import { withTransaction, recordAudit } from '../../../db/src/repositories/base-repository.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 import { assertId } from '../validation/schemas.js';
+import { normalize } from './search.service.js';
+
+// Champs d'identité comparés lors d'une fusion : colonne, nom du champ d'affirmation.
+const IDENTITY_FIELDS = [
+  ['given_names', 'given_names'],
+  ['family_name', 'family_name'],
+  ['birth_family_name', 'birth_family_name'],
+  ['married_name', 'married_name'],
+  ['alias', 'alias'],
+  ['nickname', 'nickname'],
+  ['title', 'title'],
+  ['suffix', 'suffix'],
+  ['sex', 'sex'],
+];
 
 // Fusionne deux fiches personne identifiées comme doublons potentiels
 // (`SearchService#potentialDuplicates`). La personne "survivor" conserve son
@@ -32,6 +46,7 @@ export class MergeService {
     return {
       survivor,
       duplicate,
+      identity: this.#identityDifferences(survivor, duplicate),
       reassignments: {
         parentagesAsParent: this.#count('parentages', 'parent_id', duplicateId),
         parentagesAsChild: this.#count('parentages', 'child_id', duplicateId),
@@ -52,10 +67,37 @@ export class MergeService {
     if (survivorId === duplicateId) {
       throw new ValidationError('survivorId et duplicateId doivent être différents');
     }
-    this.#findPerson(survivorId);
-    this.#findPerson(duplicateId);
+    const survivorBefore = this.#findPerson(survivorId);
+    const duplicateBefore = this.#findPerson(duplicateId);
 
     return withTransaction(this.database, () => {
+      const { conflicts, fills } = this.#identityDifferences(survivorBefore, duplicateBefore);
+      const identityAssertions = this.#recordIdentityConflicts(
+        survivorId,
+        duplicateBefore,
+        conflicts,
+        performedBy,
+      );
+      if (fills.length > 0) {
+        const columnOf = Object.fromEntries(
+          IDENTITY_FIELDS.map(([column, field]) => [field, column]),
+        );
+        const assignments = fills.map(({ field }) => `${columnOf[field]} = @${field}`).join(', ');
+        this.database
+          .prepare(
+            `UPDATE persons SET ${assignments}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = @id`,
+          )
+          .run({ id: survivorId, ...Object.fromEntries(fills.map((f) => [f.field, f.value])) });
+        recordAudit(this.database, {
+          tableName: 'persons',
+          rowId: survivorId,
+          operation: 'UPDATE',
+          changes: Object.fromEntries(fills.map((f) => [f.field, f.value])),
+          performedBy,
+        });
+      }
+
       this.#reassignJunction({
         table: 'parentages',
         ownColumn: 'parent_id',
@@ -122,8 +164,141 @@ export class MergeService {
         performedBy,
       });
 
-      return this.#findPerson(survivorId);
+      const eventAssertions = this.#recordEventConflicts(survivorId, performedBy);
+      return {
+        ...this.#findPerson(survivorId),
+        mergeReport: {
+          identityConflicts: conflicts.map(({ field }) => field),
+          filledFields: fills.map(({ field }) => field),
+          identityAssertions: identityAssertions.length,
+          eventAssertions: eventAssertions.length,
+        },
+      };
     });
+  }
+
+  // Compare l'identité des deux fiches. Une valeur différente des deux côtés est
+  // une contradiction : elle est conservée (jamais écrasée). Un champ vide du
+  // côté conservé mais renseigné sur le doublon peut être complété.
+  #identityDifferences(survivor, duplicate) {
+    const conflicts = [];
+    const fills = [];
+    for (const [column, field] of IDENTITY_FIELDS) {
+      const kept = survivor[column] ?? '';
+      const other = duplicate[column] ?? '';
+      const isEmpty = (value) => String(value).trim() === '' || (column === 'sex' && value === 'U');
+      if (isEmpty(other)) continue;
+      if (isEmpty(kept)) fills.push({ field, value: other });
+      else if (normalize(String(kept)) !== normalize(String(other))) {
+        conflicts.push({ field, kept, other });
+      }
+    }
+    return { conflicts, fills };
+  }
+
+  // Les contradictions d'identité deviennent des affirmations : la valeur de la
+  // fiche conservée est « retenue », celle du doublon reste « proposée ». Aucune
+  // des deux n'est perdue, et le conflit est visible dans /api/assertions/conflicts.
+  #recordIdentityConflicts(survivorId, duplicate, conflicts, performedBy) {
+    const insert = this.database.prepare(
+      `INSERT INTO assertions (entity_type, entity_id, field, value, status, reasoning)
+       VALUES ('PERSON', ?, ?, ?, ?, ?)`,
+    );
+    const existing = this.database.prepare(
+      `SELECT value, status FROM assertions
+       WHERE entity_type = 'PERSON' AND entity_id = ? AND field = ? AND deleted_at IS NULL`,
+    );
+    const label = `${duplicate.given_names} ${duplicate.family_name}`.trim();
+    const created = [];
+    for (const { field, kept, other } of conflicts) {
+      const known = existing.all(survivorId, field);
+      const has = (value) => known.some((row) => normalize(row.value) === normalize(String(value)));
+      const hasAccepted = known.some((row) => row.status === 'ACCEPTED');
+      if (!has(kept)) {
+        insert.run(
+          survivorId,
+          field,
+          String(kept),
+          hasAccepted ? 'PROPOSED' : 'ACCEPTED',
+          'Valeur de la fiche conservée lors de la fusion',
+        );
+      }
+      if (!has(other)) {
+        const info = insert.run(
+          survivorId,
+          field,
+          String(other),
+          'PROPOSED',
+          `Valeur de la fiche fusionnée #${duplicate.id} (${label})`,
+        );
+        created.push(info.lastInsertRowid);
+        recordAudit(this.database, {
+          tableName: 'assertions',
+          rowId: info.lastInsertRowid,
+          operation: 'INSERT',
+          changes: { entityType: 'PERSON', entityId: survivorId, field, value: other },
+          performedBy,
+        });
+      }
+    }
+    return created;
+  }
+
+  // Dates et lieux de naissance / décès : si, après réattribution, la personne
+  // porte plusieurs événements de même type aux valeurs différentes, chaque
+  // valeur devient une affirmation proposée (les événements eux-mêmes sont
+  // tous conservés).
+  #recordEventConflicts(survivorId, performedBy) {
+    const rows = this.database
+      .prepare(
+        `SELECT e.id, e.type, e.date_text, pl.name AS place
+         FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id AND ep.deleted_at IS NULL
+         LEFT JOIN places pl ON pl.id = e.place_id
+         WHERE ep.person_id = ? AND ep.role = 'PRINCIPAL' AND e.deleted_at IS NULL
+           AND e.type IN ('BIRTH', 'DEATH') ORDER BY e.id`,
+      )
+      .all(survivorId);
+    const insert = this.database.prepare(
+      `INSERT INTO assertions (entity_type, entity_id, field, value, status, reasoning)
+       VALUES ('PERSON', ?, ?, ?, 'PROPOSED', ?)`,
+    );
+    const hasAssertion = this.database.prepare(
+      `SELECT 1 FROM assertions
+       WHERE entity_type = 'PERSON' AND entity_id = ? AND field = ? AND value = ?
+         AND deleted_at IS NULL`,
+    );
+    const recorded = [];
+    for (const type of ['BIRTH', 'DEATH']) {
+      const events = rows.filter((row) => row.type === type);
+      for (const [column, suffix] of [
+        ['date_text', 'date'],
+        ['place', 'place'],
+      ]) {
+        const values = events.filter((event) => event[column]);
+        const distinct = new Set(values.map((event) => normalize(event[column])));
+        if (distinct.size < 2) continue;
+        const field = `${type.toLowerCase()}_${suffix}`;
+        for (const event of values) {
+          if (hasAssertion.get(survivorId, field, event[column])) continue;
+          const info = insert.run(
+            survivorId,
+            field,
+            event[column],
+            `Événement #${event.id} conservé lors de la fusion`,
+          );
+          recorded.push({ id: info.lastInsertRowid, field, value: event[column] });
+          recordAudit(this.database, {
+            tableName: 'assertions',
+            rowId: info.lastInsertRowid,
+            operation: 'INSERT',
+            changes: { entityType: 'PERSON', entityId: survivorId, field },
+            performedBy,
+          });
+        }
+      }
+    }
+    return recorded;
   }
 
   #findPerson(id) {

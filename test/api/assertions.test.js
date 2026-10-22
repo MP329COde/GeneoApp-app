@@ -353,13 +353,11 @@ test('fusion de doublons : affirmations et identifiants conservés, contradictio
     const conflicts = (
       await get(server, `/api/assertions/conflicts?entityType=PERSON&entityId=${survivor.id}`)
     ).body;
-    assert.equal(conflicts.length, 1, 'les deux dates de naissance restent en contradiction');
-    assert.deepEqual(conflicts[0].assertions.map((a) => a.value).sort(), ['1850', '1851']);
-    assert.equal(
-      conflicts[0].accepted.value,
-      '1850',
-      'la valeur retenue du survivant est conservée',
-    );
+    // Dupont / Dupond : le nom de famille est lui aussi une contradiction conservée.
+    assert.deepEqual(conflicts.map((c) => c.field).sort(), ['birth_date', 'family_name']);
+    const birth = conflicts.find((c) => c.field === 'birth_date');
+    assert.deepEqual(birth.assertions.map((a) => a.value).sort(), ['1850', '1851']);
+    assert.equal(birth.accepted.value, '1850', 'la valeur retenue du survivant est conservée');
   } finally {
     await server.close();
   }

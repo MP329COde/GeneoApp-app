@@ -66,10 +66,29 @@
     "one": "1 note",
     "other": "{count} notes"
   },
+  "merge.reassignment.assertions": {
+    "one": "1 assertion",
+    "other": "{count} assertions"
+  },
+  "merge.reassignment.identifiers": {
+    "one": "1 external identifier",
+    "other": "{count} external identifiers"
+  },
   "merge.reassignment.media": {
     "one": "1 media",
     "other": "{count} media"
   },
+  "merge.identity.field.given_names": "Given names",
+  "merge.identity.field.family_name": "Family name",
+  "merge.identity.field.birth_family_name": "Birth name",
+  "merge.identity.field.married_name": "Married name",
+  "merge.identity.field.alias": "Alias",
+  "merge.identity.field.nickname": "Nickname",
+  "merge.identity.field.title": "Title",
+  "merge.identity.field.suffix": "Suffix",
+  "merge.identity.field.sex": "Sex",
+  "merge.identity.conflicts": "Different values, all kept as assertions to decide:",
+  "merge.identity.fills": "Empty fields filled from the merged record:",
   "timelineIssue.BIRTH_AFTER_DEATH": "Birth recorded after death",
   "timelineIssue.MARRIAGE_AFTER_DEATH": "Marriage recorded after death",
   "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Marriage recorded before birth",

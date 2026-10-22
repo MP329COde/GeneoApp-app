@@ -4,6 +4,7 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { useVerificationLabels } from '../hooks/useVerification.js';
 import { MERGE_REASSIGNMENT_KEYS } from './PersonListPanels.jsx';
+import { MergeIdentityNotes } from '../components/MergeIdentityNotes.jsx';
 
 export function VerificationSection({
   selected,
@@ -153,6 +154,7 @@ export function VerificationSection({
               survivor: personLabel(pendingMerge.preview.survivor),
             })}
           </p>
+          <MergeIdentityNotes identity={pendingMerge.preview.identity} />
           <ul>
             {Object.entries(pendingMerge.preview.reassignments)
               .filter(([, count]) => count > 0)

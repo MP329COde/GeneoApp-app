@@ -10,6 +10,7 @@ import {
   SEARCH_ENTITY_KEYS,
   UNION_TYPE_KEYS as UNION_TYPE_KEYS_EXPORT,
 } from './entity-labels.js';
+import { MergeIdentityNotes } from '../components/MergeIdentityNotes.jsx';
 
 export function CreatePersonForm({ onCreate, creating }) {
   const { t } = useTranslation();
@@ -204,6 +205,7 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
               survivor: personLabel(pendingMerge.preview.survivor),
             })}
           </p>
+          <MergeIdentityNotes identity={pendingMerge.preview.identity} />
           <ul>
             {Object.entries(pendingMerge.preview.reassignments)
               .filter(([, count]) => count > 0)
