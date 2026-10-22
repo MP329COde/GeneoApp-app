@@ -28,9 +28,11 @@ describe('opt-in d’indexation locale', () => {
     expect(checkbox).not.toBeChecked();
 
     await userEvent.click(checkbox);
-    await waitFor(() => expect(client.indexing.setConnectorOptIn).toHaveBeenCalledWith('geneanet', {
-      optedIn: true,
-    }));
+    await waitFor(() =>
+      expect(client.indexing.setConnectorOptIn).toHaveBeenCalledWith('geneanet', {
+        optedIn: true,
+      }),
+    );
   });
 
   it('n’affiche rien pour un site non indexable', () => {

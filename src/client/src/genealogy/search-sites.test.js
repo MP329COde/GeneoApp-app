@@ -62,7 +62,13 @@ describe('indexation locale des connecteurs', () => {
   });
 
   it('refuse d’estimer un site non indexable, sans appel réseau', async () => {
-    const client = { indexing: { estimateConnector: () => { throw new Error('appel'); } } };
+    const client = {
+      indexing: {
+        estimateConnector: () => {
+          throw new Error('appel');
+        },
+      },
+    };
     const result = await estimateConnectorPages(client, { id: 'web' }, {});
     expect(result.reason).toBe(CONNECTOR_REASONS.INVALID_ADDRESS);
     expect(result.pages).toBe(0);
@@ -101,7 +107,13 @@ describe('indexation locale des connecteurs', () => {
   });
 
   it('refuse d’indexer un site non indexable', async () => {
-    const client = { indexing: { indexConnector: () => { throw new Error('appel'); } } };
+    const client = {
+      indexing: {
+        indexConnector: () => {
+          throw new Error('appel');
+        },
+      },
+    };
     await expect(indexConnectorPages(client, { id: 'web' }, {})).rejects.toBeTruthy();
   });
 

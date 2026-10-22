@@ -1,5 +1,12 @@
 import { createHash } from 'node:crypto';
-import { CancelledError, fetchResource, normalizeUrl, pause, readLimited, throwIfCancelled } from './fetcher.js';
+import {
+  CancelledError,
+  fetchResource,
+  normalizeUrl,
+  pause,
+  readLimited,
+  throwIfCancelled,
+} from './fetcher.js';
 import { parseRobots } from './robots.js';
 import { extractText } from './text-extract.js';
 

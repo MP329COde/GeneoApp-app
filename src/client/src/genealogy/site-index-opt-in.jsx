@@ -69,7 +69,10 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
         setOptedIn(Boolean(connector?.optedIn));
       })
       .catch(() => {
-        if (!cancelled) setError(t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'));
+        if (!cancelled)
+          setError(
+            t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
+          );
       })
       .finally(() => {
         if (!cancelled) setLoaded(true);
@@ -96,19 +99,13 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
       setEstimate(null);
       setMessage(
         next
-          ? t(
-              'siteSearch.index.enabled',
-              'Indexation locale autorisée pour ce site.',
-            )
+          ? t('siteSearch.index.enabled', 'Indexation locale autorisée pour ce site.')
           : t('siteSearch.index.disabled', 'Indexation locale désactivée pour ce site.'),
       );
     } catch (failure) {
       setError(
         failure?.status === 403
-          ? t(
-              'siteSearch.index.networkDisabled',
-              'Accès internet désactivé dans les réglages.',
-            )
+          ? t('siteSearch.index.networkDisabled', 'Accès internet désactivé dans les réglages.')
           : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
@@ -136,10 +133,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
     } catch (failure) {
       setError(
         failure?.status === 403
-          ? t(
-              'siteSearch.index.notOptedIn',
-              'Autorisez d’abord l’indexation locale de ce site.',
-            )
+          ? t('siteSearch.index.notOptedIn', 'Autorisez d’abord l’indexation locale de ce site.')
           : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
@@ -166,10 +160,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
     } catch (failure) {
       setError(
         failure?.status === 403
-          ? t(
-              'siteSearch.index.notOptedIn',
-              'Autorisez d’abord l’indexation locale de ce site.',
-            )
+          ? t('siteSearch.index.notOptedIn', 'Autorisez d’abord l’indexation locale de ce site.')
           : t('siteSearch.index.stateError', 'L’état de l’indexation locale n’a pas pu être lu.'),
       );
     } finally {
@@ -184,10 +175,7 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
         checked={optedIn}
         disabled={!loaded || busy}
         onChange={(event) => toggle(event.target.checked)}
-        label={t(
-          'siteSearch.index.optIn',
-          'Autoriser l’indexation locale des pages de ce site',
-        )}
+        label={t('siteSearch.index.optIn', 'Autoriser l’indexation locale des pages de ce site')}
       />
       <p className="settings-hint">
         {t(

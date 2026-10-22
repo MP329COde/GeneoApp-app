@@ -136,11 +136,18 @@ export class IndexService {
   setConnectorOptIn(connectorId, payload = {}) {
     const connector = this.requireConnector(connectorId);
     const existing = this.repository.findConnector(connector.id);
-    const optedIn = payload.optedIn === undefined ? Boolean(existing?.opted_in) : Boolean(payload.optedIn);
+    const optedIn =
+      payload.optedIn === undefined ? Boolean(existing?.opted_in) : Boolean(payload.optedIn);
     const maxPages =
       payload.maxPages === undefined
         ? (existing?.max_pages ?? CONNECTOR_LIMITS.maxPages)
-        : boundedInteger(payload.maxPages, 'maxPages', 1, CONNECTOR_LIMITS.maxPages, CONNECTOR_LIMITS.maxPages);
+        : boundedInteger(
+            payload.maxPages,
+            'maxPages',
+            1,
+            CONNECTOR_LIMITS.maxPages,
+            CONNECTOR_LIMITS.maxPages,
+          );
     const saved = this.repository.saveConnector({
       connectorId: connector.id,
       label: connector.label,

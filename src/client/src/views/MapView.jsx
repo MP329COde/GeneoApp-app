@@ -403,12 +403,7 @@ export function LocalMap({ places }) {
         // Le contenu situé sous le milieu précédent des doigts reste sous
         // ce milieu : on zoome d'abord sur ce point, puis on suit le
         // déplacement du geste.
-        const anchor = clientToViewBox(
-          rect,
-          previousCenter.x,
-          previousCenter.y,
-          VIEWBOX_SIZE,
-        );
+        const anchor = clientToViewBox(rect, previousCenter.x, previousCenter.y, VIEWBOX_SIZE);
         const factor = currentDistance / previousDistance;
         const unitX = rect.width / VIEWBOX_SIZE || 1;
         const unitY = rect.height / VIEWBOX_SIZE || 1;

@@ -119,7 +119,10 @@ test('l’opt-in est explicite, révocable, et borne le nombre de pages', async 
       () => ctx.indexing.setConnectorOptIn('geneanet', { maxPages: 5000 }),
       /maxPages|borne|entre/i,
     );
-    assert.throws(() => ctx.indexing.setConnectorOptIn('inconnu', { optedIn: true }), /introuvable/i);
+    assert.throws(
+      () => ctx.indexing.setConnectorOptIn('inconnu', { optedIn: true }),
+      /introuvable/i,
+    );
   } finally {
     await ctx.cleanup();
   }

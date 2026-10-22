@@ -48,6 +48,8 @@ describe('SiteSearch : indexation locale des pages distantes', () => {
     renderWithProviders(<SiteSearch person={{ family_name: 'Dupont', given_names: 'Ada' }} />);
 
     // L'écran de recherche reste rendu, sans planter.
-    expect(screen.getByRole('heading', { name: /Rechercher sur plusieurs sites/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Rechercher sur plusieurs sites/ }),
+    ).toBeInTheDocument();
   });
 });

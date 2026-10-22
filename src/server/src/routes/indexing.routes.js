@@ -38,9 +38,7 @@ export function indexingRoutes(services) {
   );
   router.patch(
     '/connectors/:id',
-    handle((request) =>
-      indexing().setConnectorOptIn(request.params.id, request.body ?? {}),
-    ),
+    handle((request) => indexing().setConnectorOptIn(request.params.id, request.body ?? {})),
   );
   router.post(
     '/connectors/:id/estimate',
