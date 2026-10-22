@@ -23,6 +23,7 @@ import {
   readStorageConfig,
 } from '../../server/src/storage/storage-config.js';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
+import { createApiProxy } from './ipc/api-proxy.js';
 
 const host = '127.0.0.1';
 const port = 0;
@@ -135,7 +136,13 @@ async function createWindow() {
   const storage = new StorageService({ configDir: userData, workspace });
   // Indexation nocturne planifiée tant que l'application est ouverte (ADR 0011).
   startIndexScheduler(() => workspace.services.indexing);
-  unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace, storage);
+  const apiProxy = createApiProxy({ token: httpToken });
+  unregisterIpcHandlers = registerIpcHandlers(
+    createLiveServices(workspace),
+    workspace,
+    storage,
+    apiProxy,
+  );
   // Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
   workspace.services.backups.createAutomatic('lancement').catch((error) => {
     console.error('Sauvegarde de lancement impossible :', error.message);
@@ -150,6 +157,7 @@ async function createWindow() {
   guarded.use(createApp({ workspace, storage }));
   server = createServer(guarded).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
+  apiProxy.setBaseUrl(`http://${host}:${server.address().port}`);
 
   hardenSession(session.defaultSession);
   const window = new BrowserWindow({

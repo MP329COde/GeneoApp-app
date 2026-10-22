@@ -175,6 +175,8 @@ const IPC_CHANNELS = Object.freeze({
   TREES_ACTIVATE: 'geneoapp:trees:activate',
   TREES_REMOVE: 'geneoapp:trees:remove',
   TREES_RESTORE: 'geneoapp:trees:restore',
+
+  API_REQUEST: 'geneoapp:api:request',
 });
 
 // Jeton du serveur HTTP local embarqué (voir main.js/local-http-guard.js),
@@ -438,6 +440,13 @@ const api = {
   // Jeton du serveur HTTP local embarqué : requis pour l'appeler directement
   // (hors IPC) sans être bloqué par local-http-guard.js.
   httpToken,
+
+  // Passerelle générique vers l'API locale (liste blanche de préfixes côté
+  // process principal) : sert les routes sans canal IPC dédié.
+  api: {
+    request: ({ method, path, body, sessionToken } = {}) =>
+      invoke(IPC_CHANNELS.API_REQUEST, { method, path, body, sessionToken }),
+  },
 
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),

@@ -122,8 +122,8 @@ function withNotification(services, channel, handler) {
   };
 }
 
-export function buildIpcHandlers(services, workspace = null, storage = null) {
-  const handlers = buildRawHandlers(services, workspace, storage);
+export function buildIpcHandlers(services, workspace = null, storage = null, apiProxy = null) {
+  const handlers = buildRawHandlers(services, workspace, storage, apiProxy);
   return Object.fromEntries(
     Object.entries(handlers).map(([channel, handler]) => [
       channel,
@@ -132,7 +132,7 @@ export function buildIpcHandlers(services, workspace = null, storage = null) {
   );
 }
 
-function buildRawHandlers(services, workspace, storage) {
+function buildRawHandlers(services, workspace, storage, apiProxy) {
   const {
     persons,
     places,
@@ -527,6 +527,12 @@ function buildRawHandlers(services, workspace, storage) {
       ...services.history.status(),
       actions: services.history.list(Math.min(Math.max(Number(limit) || 50, 1), 200)),
     })),
+    // Passerelle vers l'API locale pour les routes sans canal dédié : la requête
+    // est validée par la liste blanche de api-proxy.js puis par l'API elle-même.
+    [IPC_CHANNELS.API_REQUEST]: wrap(({ method, path, body, sessionToken }) => {
+      if (!apiProxy) throw new ValidationError('API locale indisponible');
+      return apiProxy.request({ method, path, body, sessionToken, actor: 'local-user' });
+    }),
     [IPC_CHANNELS.HISTORY_UNDO]: wrap(() => services.history.undo()),
     [IPC_CHANNELS.HISTORY_REDO]: wrap(() => services.history.redo()),
 

@@ -161,4 +161,6 @@ export const IPC_CHANNELS = Object.freeze({
   TREES_ACTIVATE: 'geneoapp:trees:activate',
   TREES_REMOVE: 'geneoapp:trees:remove',
   TREES_RESTORE: 'geneoapp:trees:restore',
+
+  API_REQUEST: 'geneoapp:api:request',
 });

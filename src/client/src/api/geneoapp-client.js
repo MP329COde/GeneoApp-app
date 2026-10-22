@@ -30,6 +30,7 @@
 
 import { translate } from '../design-system/i18n/I18nProvider.jsx';
 import { currentLocale } from '../design-system/i18n/locale.js';
+import { createExtendedApi, mergeExtendedApi } from './extended-api.js';
 
 /**
  * Traduit le message d'une erreur serveur.
@@ -734,9 +735,37 @@ export function createIpcClient(rawBridge) {
   };
 }
 
+// Transport HTTP (navigateur, développement) des routes étendues.
+function httpRequest(method, path, body) {
+  return fetchJson(path, { method, body });
+}
+
+// Transport IPC (Electron) : la passerelle `api.request` relaie vers l'API locale
+// et renvoie { status, body } ; un code d'erreur HTTP devient une erreur typée
+// comme avec fetch.
+function ipcRequest(bridge) {
+  return async (method, path, body) => {
+    const { status, body: data } = await bridge.api.request({ method, path, body });
+    if (status >= 400) {
+      throw buildError(
+        data?.error,
+        data?.error?.message ??
+          translate(currentLocale(), 'error.unknownApi', {}, 'Erreur API inconnue'),
+        status,
+      );
+    }
+    return data;
+  };
+}
+
 export function createGeneoAppClient() {
   if (typeof window !== 'undefined' && window.geneoapp) {
-    return createIpcClient(window.geneoapp);
+    const bridge = window.geneoapp;
+    const base = createIpcClient(bridge);
+    // Un pont sans passerelle (anciens tests) garde le client de base.
+    return bridge.api?.request
+      ? mergeExtendedApi(base, createExtendedApi(ipcRequest(bridge)))
+      : base;
   }
-  return createHttpClient();
+  return mergeExtendedApi(createHttpClient(), createExtendedApi(httpRequest));
 }
