@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from './locale.js';
 
 // Les messages sont rangés par langue puis par domaine : messages/<langue>/
 // <domaine>.json. Un nouveau domaine s'ajoute en déposant un fichier, sans
@@ -13,11 +14,10 @@ for (const [file, module] of Object.entries(localeModules)) {
   messagesByLocale[locale] = { ...messagesByLocale[locale], ...messages };
 }
 
-export const DEFAULT_LOCALE = 'fr';
 export const SUPPORTED_LOCALES = Object.keys(messagesByLocale).sort((a, b) =>
   a === DEFAULT_LOCALE ? -1 : b === DEFAULT_LOCALE ? 1 : a.localeCompare(b),
 );
-const STORAGE_KEY = 'geneoapp.locale';
+const STORAGE_KEY = LOCALE_STORAGE_KEY;
 
 export function languageName(code) {
   return messagesByLocale[code]?.['language.name'] ?? code;
@@ -123,3 +123,4 @@ export function useTranslation() {
 }
 
 export { messagesByLocale };
+export { DEFAULT_LOCALE };

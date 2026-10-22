@@ -5,7 +5,7 @@
   "quality.title": "Qualité des données",
   "quality.sourcedFacts": "Faits sourcés",
   "quality.unsourced": {
-    "one": "1 fait sans source :",
+    "one": "{count} fait sans source :",
     "other": "{count} faits sans source :"
   },
   "quality.identity": "identité",
@@ -16,11 +16,11 @@
   "quality.confidence.medium": "moyenne",
   "quality.confidence.low": "faible",
   "quality.issues": {
-    "one": "1 incohérence",
+    "one": "{count} incohérence",
     "other": "{count} incohérences"
   },
   "quality.certainIssues": {
-    "one": "(1 certaine)",
+    "one": "({count} certaine)",
     "other": "({count} certaines)"
   },
   "quality.examine": "examiner",
@@ -168,5 +168,16 @@
   "verification.parentOf": "parent : {name}",
   "verification.viewRecord": "Voir la fiche",
   "verification.cycleDetail": "Une personne figure parmi ses propres ancêtres.",
-  "verification.cycleTitleShort": "Cycle de filiation"
+  "verification.cycleTitleShort": "Cycle de filiation",
+  "verification.sectionTitle": "À vérifier",
+  "verification.allClear": "RAS",
+  "verification.noIssue": "Aucun doublon ni incohérence détecté pour cette personne.",
+  "verification.duplicatePossible": "Doublon possible ({score} %)",
+  "verification.duplicateWith": "avec",
+  "verification.compare": "Comparer",
+  "verification.mergeHere": "Fusionner ici",
+  "verification.confirmMerge": "Confirmer la fusion",
+  "verification.confirmMergeAria": "Confirmer la fusion",
+  "verification.mergeQuestion": "Fusionner {duplicate} dans {survivor} ?",
+  "verification.cancel": "Annuler"
 }

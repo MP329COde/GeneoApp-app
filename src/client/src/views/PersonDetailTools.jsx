@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
 export function SourceMediaTool({ sourceId }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState(null);
   const [mediaError, setMediaError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -54,13 +55,15 @@ export function SourceMediaTool({ sourceId }) {
     <div className="source-media-tool">
       {mediaError ? <ErrorNotice message={mediaError} /> : null}
       <label className="gedcom-panel__file">
-        <span>Ajouter un document à cette source</span>
+        <span>{t('personTools.media.addDocument', 'Ajouter un document à cette source')}</span>
         <input type="file" onChange={handleUpload} disabled={busy} />
       </label>
       {items === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('personTools.media.loading', 'Chargement…')}</p>
       ) : items.length === 0 ? (
-        <p className="notice">Aucun document attaché à cette source.</p>
+        <p className="notice">
+          {t('personTools.media.empty', 'Aucun document attaché à cette source.')}
+        </p>
       ) : (
         <ul className="search-results">
           {items.map((item) => (
@@ -72,7 +75,7 @@ export function SourceMediaTool({ sourceId }) {
                 variant="secondary"
                 onClick={() => handleDownload(item.id)}
               >
-                Télécharger
+                {t('personTools.media.download', 'Télécharger')}
               </Button>
             </li>
           ))}
@@ -86,6 +89,7 @@ export function SourceMediaTool({ sourceId }) {
 // suffixe et statut « vivant » existent côté modèle (Phase B du cahier des
 // charges) mais n'avaient jusque-là aucun formulaire pour les saisir.
 export function IdentityTool({ selected, onUpdated }) {
+  const { t } = useTranslation();
   const [givenNames, setGivenNames] = useState(selected.given_names ?? '');
   const [familyName, setFamilyName] = useState(selected.family_name ?? '');
   const [birthFamilyName, setBirthFamilyName] = useState(selected.birth_family_name ?? '');
@@ -113,7 +117,9 @@ export function IdentityTool({ selected, onUpdated }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!givenNames.trim() && !familyName.trim()) {
-      setIdentityError('Un prénom ou un nom est requis.');
+      setIdentityError(
+        t('personTools.identity.error.nameRequired', 'Un prénom ou un nom est requis.'),
+      );
       return;
     }
     setBusy(true);
@@ -144,45 +150,45 @@ export function IdentityTool({ selected, onUpdated }) {
 
   return (
     <form className="detail-section create-person-form" onSubmit={handleSubmit}>
-      <h3>Identité</h3>
+      <h3>{t('personTools.identity.title', 'Identité')}</h3>
       {identityError ? <ErrorNotice message={identityError} /> : null}
       <label>
-        <span>Prénom(s)</span>
+        <span>{t('personTools.identity.givenNames', 'Prénom(s)')}</span>
         <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
       </label>
       <label>
-        <span>Nom</span>
+        <span>{t('personTools.identity.familyName', 'Nom')}</span>
         <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
       </label>
       <label>
-        <span>Nom de naissance</span>
+        <span>{t('personTools.identity.birthFamilyName', 'Nom de naissance')}</span>
         <input
           value={birthFamilyName}
           onChange={(event) => setBirthFamilyName(event.target.value)}
         />
       </label>
       <label>
-        <span>Sexe</span>
+        <span>{t('personTools.identity.sex', 'Sexe')}</span>
         <select value={sex} onChange={(event) => setSex(event.target.value)}>
-          <option value="U">Inconnu</option>
-          <option value="M">Masculin</option>
-          <option value="F">Féminin</option>
+          <option value="U">{t('personTools.identity.sexUnknown', 'Inconnu')}</option>
+          <option value="M">{t('personTools.identity.sexMale', 'Masculin')}</option>
+          <option value="F">{t('personTools.identity.sexFemale', 'Féminin')}</option>
         </select>
       </label>
       <label>
-        <span>Surnom / alias</span>
+        <span>{t('personTools.identity.nickname', 'Surnom / alias')}</span>
         <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
       </label>
       <label>
-        <span>Nom marital</span>
+        <span>{t('personTools.identity.marriedName', 'Nom marital')}</span>
         <input value={marriedName} onChange={(event) => setMarriedName(event.target.value)} />
       </label>
       <label>
-        <span>Titre honorifique</span>
+        <span>{t('personTools.identity.honorificTitle', 'Titre honorifique')}</span>
         <input value={title} onChange={(event) => setTitle(event.target.value)} />
       </label>
       <label>
-        <span>Suffixe</span>
+        <span>{t('personTools.identity.suffix', 'Suffixe')}</span>
         <input value={suffix} onChange={(event) => setSuffix(event.target.value)} />
       </label>
       <label>
@@ -191,16 +197,17 @@ export function IdentityTool({ selected, onUpdated }) {
           checked={isLiving}
           onChange={(event) => setIsLiving(event.target.checked)}
         />
-        <span>Personne vivante</span>
+        <span>{t('personTools.identity.living', 'Personne vivante')}</span>
       </label>
       <Button type="submit" size="sm" disabled={busy}>
-        Enregistrer
+        {t('personTools.identity.save', 'Enregistrer')}
       </Button>
     </form>
   );
 }
 
 export function SourcesPanel({ selected }) {
+  const { t } = useTranslation();
   const [citations, setCitations] = useState(null);
   const [sourcesById, setSourcesById] = useState({});
   const [title, setTitle] = useState('');
@@ -231,7 +238,14 @@ export function SourcesPanel({ selected }) {
   }, [loadCitations]);
 
   if (!selected) {
-    return <p className="notice">Sélectionnez une personne pour voir et citer des sources.</p>;
+    return (
+      <p className="notice">
+        {t(
+          'personTools.sources.emptySelection',
+          'Sélectionnez une personne pour voir et citer des sources.',
+        )}
+      </p>
+    );
   }
 
   const handleSubmit = async (event) => {
@@ -264,24 +278,30 @@ export function SourcesPanel({ selected }) {
 
   return (
     <div className="search-panel">
-      <h3>Sources citées pour {personLabel(selected)}</h3>
+      <h3>
+        {t(
+          'personTools.sources.heading',
+          { name: personLabel(selected) },
+          'Sources citées pour {name}',
+        )}
+      </h3>
       {sourcesError ? <ErrorNotice message={sourcesError} /> : null}
 
       <form className="create-person-form" onSubmit={handleSubmit}>
         <label>
-          <span>Titre de la source</span>
+          <span>{t('personTools.sources.sourceTitle', 'Titre de la source')}</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label>
-          <span>Auteur (optionnel)</span>
+          <span>{t('personTools.sources.author', 'Auteur (optionnel)')}</span>
           <input value={author} onChange={(event) => setAuthor(event.target.value)} />
         </label>
         <label>
-          <span>Page / référence (optionnel)</span>
+          <span>{t('personTools.sources.page', 'Page / référence (optionnel)')}</span>
           <input value={page} onChange={(event) => setPage(event.target.value)} />
         </label>
         <label>
-          <span>Niveau de confiance</span>
+          <span>{t('personTools.sources.confidence', 'Niveau de confiance')}</span>
           <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
             {['LOW', 'MEDIUM', 'HIGH'].map((level) => (
               <option key={level} value={level}>
@@ -291,21 +311,28 @@ export function SourcesPanel({ selected }) {
           </select>
         </label>
         <Button type="submit" size="sm" disabled={busy}>
-          Ajouter et citer la source
+          {t('personTools.sources.add', 'Ajouter et citer la source')}
         </Button>
       </form>
 
       {citations === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('personTools.sources.loading', 'Chargement…')}</p>
       ) : citations.length === 0 ? (
-        <p className="notice">Aucune source citée pour cette personne.</p>
+        <p className="notice">
+          {t('personTools.sources.empty', 'Aucune source citée pour cette personne.')}
+        </p>
       ) : (
         <ul className="search-results">
           {citations.map((citation) => (
             <li key={citation.id}>
               <Badge tone="neutral">{citation.confidence}</Badge>{' '}
               <strong>
-                {sourcesById[citation.source_id]?.title ?? `Source #${citation.source_id}`}
+                {sourcesById[citation.source_id]?.title ??
+                  t(
+                    'personTools.sources.fallbackTitle',
+                    { id: String(citation.source_id) },
+                    'Source #{id}',
+                  )}
               </strong>
               {citation.page ? ` — ${citation.page}` : ''}
               <SourceMediaTool sourceId={citation.source_id} />
@@ -318,6 +345,7 @@ export function SourcesPanel({ selected }) {
 }
 
 export function AuditPanel({ selected }) {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState(null);
   const [auditError, setAuditError] = useState(null);
 
@@ -336,18 +364,33 @@ export function AuditPanel({ selected }) {
   }, [loadAudit]);
 
   if (!selected) {
-    return <p className="notice">Sélectionnez une personne pour voir son journal d’audit.</p>;
+    return (
+      <p className="notice">
+        {t(
+          'personTools.audit.emptySelection',
+          'Sélectionnez une personne pour voir son journal d’audit.',
+        )}
+      </p>
+    );
   }
 
   return (
     <div className="search-panel">
-      <h3>Journal d’audit de {personLabel(selected)}</h3>
+      <h3>
+        {t(
+          'personTools.audit.heading',
+          { name: personLabel(selected) },
+          'Journal d’audit de {name}',
+        )}
+      </h3>
       {auditError ? <ErrorNotice message={auditError} /> : null}
 
       {entries === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('personTools.audit.loading', 'Chargement…')}</p>
       ) : entries.length === 0 ? (
-        <p className="notice">Aucune entrée d’audit pour cette fiche.</p>
+        <p className="notice">
+          {t('personTools.audit.empty', 'Aucune entrée d’audit pour cette fiche.')}
+        </p>
       ) : (
         <ul className="search-results">
           {entries.map((entry) => (
@@ -363,8 +406,16 @@ export function AuditPanel({ selected }) {
 }
 
 export function NotesPanel({ selected }) {
+  const { t } = useTranslation();
   if (!selected) {
-    return <p className="notice">Sélectionnez une personne pour voir et ajouter des notes.</p>;
+    return (
+      <p className="notice">
+        {t(
+          'personTools.notes.emptySelection',
+          'Sélectionnez une personne pour voir et ajouter des notes.',
+        )}
+      </p>
+    );
   }
   return (
     <AnnotationsPanel
@@ -372,49 +423,52 @@ export function NotesPanel({ selected }) {
       client={client}
       entityType="PERSON"
       entityId={selected.id}
-      heading={`Notes sur ${personLabel(selected)}`}
-      emptyLabel="Aucune note pour cette personne."
+      heading={t('personTools.notes.heading', { name: personLabel(selected) }, 'Notes sur {name}')}
+      emptyLabel={t('personTools.notes.empty', 'Aucune note pour cette personne.')}
     />
   );
 }
 
-const STATISTICS_LABELS = {
-  persons: 'Personnes',
-  places: 'Lieux',
-  events: 'Événements',
-  unions: 'Unions',
-  parentages: 'Liens de parenté',
-  sources: 'Sources',
-  media: 'Médias',
-};
-
 export function StatisticsPanel() {
+  const { t } = useTranslation();
   const [totals, setTotals] = useState(null);
-  const [statsError, setStatsError] = useState(null);
+  const [statsFailed, setStatsFailed] = useState(false);
+
+  // Libellés des statistiques, indexés par nom technique : traduits via l'i18n.
+  const statisticsLabels = {
+    persons: t('personTools.stats.persons', 'Personnes'),
+    places: t('personTools.stats.places', 'Lieux'),
+    events: t('personTools.stats.events', 'Événements'),
+    unions: t('personTools.stats.unions', 'Unions'),
+    parentages: t('personTools.stats.parentages', 'Liens de parenté'),
+    sources: t('personTools.stats.sources', 'Sources'),
+    media: t('personTools.stats.media', 'Médias'),
+  };
 
   useEffect(() => {
     client.statistics
       .totals()
       .then(setTotals)
-      .catch(() =>
-        setStatsError(
-          'Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.',
-        ),
-      );
+      .catch(() => setStatsFailed(true));
   }, []);
 
   return (
     <div className="search-panel">
-      <h3>Statistiques locales</h3>
-      {statsError ? (
-        <ErrorNotice message={statsError} />
+      <h3>{t('personTools.stats.title', 'Statistiques locales')}</h3>
+      {statsFailed ? (
+        <ErrorNotice
+          message={t(
+            'personTools.stats.error',
+            'Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.',
+          )}
+        />
       ) : totals === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('personTools.stats.loading', 'Chargement…')}</p>
       ) : (
         <dl>
           {Object.entries(totals.totals).map(([key, value]) => (
             <div key={key}>
-              <dt>{STATISTICS_LABELS[key] ?? key}</dt>
+              <dt>{statisticsLabels[key] ?? key}</dt>
               <dd>{value}</dd>
             </div>
           ))}
@@ -425,6 +479,7 @@ export function StatisticsPanel() {
 }
 
 export function AiPanel() {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState(null);
   const [aiError, setAiError] = useState(null);
@@ -447,19 +502,20 @@ export function AiPanel() {
 
   return (
     <div className="search-panel">
-      <h3>IA locale</h3>
+      <h3>{t('personTools.ai.title', 'IA locale')}</h3>
       <p className="notice">
-        Analyse via un serveur IA local compatible Ollama (aucun appel réseau distant). Si l’IA
-        locale n’est pas activée ou que le serveur n’est pas démarré sur cette machine, une erreur
-        explicite est renvoyée — jamais de réponse générée artificiellement en repli.
+        {t(
+          'personTools.ai.description',
+          'Analyse via un serveur IA local compatible Ollama (aucun appel réseau distant). Si l’IA locale n’est pas activée ou que le serveur n’est pas démarré sur cette machine, une erreur explicite est renvoyée — jamais de réponse générée artificiellement en repli.',
+        )}
       </p>
       <form className="create-person-form" onSubmit={handleSubmit}>
         <label>
-          <span>Question</span>
+          <span>{t('personTools.ai.question', 'Question')}</span>
           <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
         </label>
         <Button type="submit" size="sm" disabled={busy}>
-          Analyser
+          {t('personTools.ai.analyze', 'Analyser')}
         </Button>
       </form>
       {aiError ? <ErrorNotice message={aiError} /> : null}

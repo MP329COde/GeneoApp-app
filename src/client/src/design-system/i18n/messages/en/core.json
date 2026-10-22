@@ -16,6 +16,10 @@
   "nav.group.toggleExpand": "Expand the {section} section",
   "nav.group.toggleCollapse": "Collapse the {section} section",
   "error.hint.network": "Check your network connection, then try again.",
+  "error.unknownApi": "Unknown API error",
+  "error.mediaDownload": "Unable to download the media",
+  "treeExport.noTree": "No tree to export",
+  "treeExport.pngFailed": "PNG export failed",
   "error.hint.timeout": "The local server is taking too long to respond: try again shortly.",
   "error.hint.corruptResponse": "The response received could not be read: reload the page and try again; report it if this keeps happening.",
   "nav.tree": "Tree",
@@ -188,5 +192,10 @@
   "shell.children": "Children",
   "shell.siblings": "Siblings",
   "shell.editIdentity": "Edit the identity",
-  "shell.noPersonSelected": "No person selected."
+  "shell.noPersonSelected": "No person selected.",
+  "shell.history": "History",
+  "shell.undoShortcut": "Undo: {label} (Ctrl+Z)",
+  "shell.redoShortcut": "Redo: {label} (Ctrl+Shift+Z)",
+  "shell.undone": "Undone: {label}",
+  "shell.redone": "Redone: {label}"
 }

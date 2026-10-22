@@ -5,7 +5,7 @@
   "quality.title": "Data quality",
   "quality.sourcedFacts": "Sourced facts",
   "quality.unsourced": {
-    "one": "1 unsourced fact:",
+    "one": "{count} unsourced fact:",
     "other": "{count} unsourced facts:"
   },
   "quality.identity": "identity",
@@ -16,11 +16,11 @@
   "quality.confidence.medium": "medium",
   "quality.confidence.low": "low",
   "quality.issues": {
-    "one": "1 inconsistency",
+    "one": "{count} inconsistency",
     "other": "{count} inconsistencies"
   },
   "quality.certainIssues": {
-    "one": "(1 certain)",
+    "one": "({count} certain)",
     "other": "({count} certain)"
   },
   "quality.examine": "examine",
@@ -168,5 +168,16 @@
   "verification.parentOf": "parent: {name}",
   "verification.viewRecord": "View record",
   "verification.cycleDetail": "A person appears among their own ancestors.",
-  "verification.cycleTitleShort": "Descent cycle"
+  "verification.cycleTitleShort": "Descent cycle",
+  "verification.sectionTitle": "To check",
+  "verification.allClear": "All clear",
+  "verification.noIssue": "No duplicate nor inconsistency detected for this person.",
+  "verification.duplicatePossible": "Possible duplicate ({score} %)",
+  "verification.duplicateWith": "with",
+  "verification.compare": "Compare",
+  "verification.mergeHere": "Merge here",
+  "verification.confirmMerge": "Confirm the merge",
+  "verification.confirmMergeAria": "Confirm the merge",
+  "verification.mergeQuestion": "Merge {duplicate} into {survivor}?",
+  "verification.cancel": "Cancel"
 }

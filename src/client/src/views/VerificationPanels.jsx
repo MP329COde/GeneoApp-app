@@ -58,16 +58,16 @@ export function VerificationSection({
       className={`detail-section verification${issues.length ? ' verification--alert' : ''}`}
     >
       <h3>
-        À vérifier{' '}
+        {t('verification.sectionTitle', 'À vérifier')}{' '}
         {issues.length ? (
           <Badge tone="danger">{issues.length}</Badge>
         ) : (
-          <Badge tone="success">RAS</Badge>
+          <Badge tone="success">{t('verification.allClear', 'RAS')}</Badge>
         )}
       </h3>
       {issues.length === 0 ? (
         <p className="verification__empty">
-          Aucun doublon ni incohérence détecté pour cette personne.
+          {t('verification.noIssue', 'Aucun doublon ni incohérence détecté pour cette personne.')}
         </p>
       ) : (
         <ul className="verification__list">
@@ -79,7 +79,8 @@ export function VerificationSection({
               {issue.kind === 'duplicate' ? (
                 <>
                   <p>
-                    <strong>Doublon possible ({issue.score} %)</strong> avec{' '}
+                    <strong>{t('verification.duplicatePossible', { score: issue.score })}</strong>{' '}
+                    {t('verification.duplicateWith', 'avec')}{' '}
                     <button
                       type="button"
                       className="link-button link-button--small"
@@ -95,7 +96,7 @@ export function VerificationSection({
                       variant="secondary"
                       onClick={() => onCompare(issue.other.id)}
                     >
-                      Comparer
+                      {t('verification.compare', 'Comparer')}
                     </Button>
                     <Button
                       type="button"
@@ -104,7 +105,7 @@ export function VerificationSection({
                       disabled={busy}
                       onClick={() => preview(selected.id, issue.other.id)}
                     >
-                      Fusionner ici
+                      {t('verification.mergeHere', 'Fusionner ici')}
                     </Button>
                   </div>
                 </>
@@ -128,10 +129,16 @@ export function VerificationSection({
       )}
       {mergeError ? <ErrorNotice message={mergeError} /> : null}
       {pendingMerge ? (
-        <div className="verification__confirm" role="alertdialog" aria-label="Confirmer la fusion">
+        <div
+          className="verification__confirm"
+          role="alertdialog"
+          aria-label={t('verification.confirmMergeAria', 'Confirmer la fusion')}
+        >
           <p>
-            Fusionner {personLabel(pendingMerge.preview.duplicate)} dans{' '}
-            {personLabel(pendingMerge.preview.survivor)} ?
+            {t('verification.mergeQuestion', {
+              duplicate: personLabel(pendingMerge.preview.duplicate),
+              survivor: personLabel(pendingMerge.preview.survivor),
+            })}
           </p>
           <ul>
             {Object.entries(pendingMerge.preview.reassignments)
@@ -142,7 +149,7 @@ export function VerificationSection({
           </ul>
           <div className="verification__actions">
             <Button type="button" size="sm" onClick={confirm} disabled={busy}>
-              Confirmer la fusion
+              {t('verification.confirmMerge', 'Confirmer la fusion')}
             </Button>
             <Button
               type="button"
@@ -151,7 +158,7 @@ export function VerificationSection({
               onClick={() => setPendingMerge(null)}
               disabled={busy}
             >
-              Annuler
+              {t('verification.cancel', 'Annuler')}
             </Button>
           </div>
         </div>

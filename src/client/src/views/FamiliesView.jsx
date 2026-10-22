@@ -33,7 +33,11 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   }, [loadUnions]);
 
   if (!selected) {
-    return <p className="notice">Sélectionnez une personne pour voir et gérer ses familles.</p>;
+    return (
+      <p className="notice">
+        {t('family.selectPerson', 'Sélectionnez une personne pour voir et gérer ses familles.')}
+      </p>
+    );
   }
 
   const handleCreate = async (event) => {
@@ -57,7 +61,14 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (unionId) => {
-    if (!window.confirm('Dissoudre / supprimer cette union ? Cette action est irréversible.')) {
+    if (
+      !window.confirm(
+        t(
+          'family.removeConfirm',
+          'Dissoudre / supprimer cette union ? Cette action est irréversible.',
+        ),
+      )
+    ) {
       return;
     }
     setBusy(true);
@@ -67,9 +78,12 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
       await loadUnions();
       await onChange?.();
     } catch (removeError) {
-      console.error("Échec de la suppression de l'union", removeError);
+      console.error(t('family.removeError', "Échec de la suppression de l'union"), removeError);
       setFamiliesError(
-        "La suppression de l'union a échoué. Vérifiez votre connexion locale et réessayez.",
+        t(
+          'family.removeErrorDetail',
+          "La suppression de l'union a échoué. Vérifiez votre connexion locale et réessayez.",
+        ),
       );
     } finally {
       setBusy(false);
@@ -83,12 +97,12 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
 
   return (
     <div className="search-panel">
-      <h3>Familles de {personLabel(selected)}</h3>
+      <h3>{t('family.title', { name: personLabel(selected) }, 'Familles de {name}')}</h3>
       {familiesError ? <ErrorNotice message={familiesError} /> : null}
 
       <form className="create-person-form" onSubmit={handleCreate}>
         <label>
-          <span>Type d’union</span>
+          <span>{t('family.unionType', 'Type d’union')}</span>
           <select value={type} onChange={(event) => setType(event.target.value)}>
             {UNION_TYPES.map((unionType) => (
               <option key={unionType} value={unionType}>
@@ -98,9 +112,9 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
           </select>
         </label>
         <label>
-          <span>Partenaire</span>
+          <span>{t('family.partner', 'Partenaire')}</span>
           <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-            <option value="">— Choisir une personne —</option>
+            <option value="">{t('family.choosePartner', '— Choisir une personne —')}</option>
             {otherPersons.map((person) => (
               <option key={person.id} value={person.id}>
                 {personLabel(person)}
@@ -109,14 +123,16 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
           </select>
         </label>
         <Button type="submit" size="sm" disabled={busy || !partnerId}>
-          Créer l’union
+          {t('family.create', 'Créer l’union')}
         </Button>
       </form>
 
       {unions === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('family.loading', 'Chargement…')}</p>
       ) : unions.length === 0 ? (
-        <p className="notice">Aucune union enregistrée pour cette personne.</p>
+        <p className="notice">
+          {t('family.empty', 'Aucune union enregistrée pour cette personne.')}
+        </p>
       ) : (
         <ul className="search-results">
           {unions.map((union) => (
@@ -142,7 +158,7 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
                 onClick={() => handleRemove(union.id)}
                 disabled={busy}
               >
-                Dissoudre / supprimer
+                {t('family.remove', 'Dissoudre / supprimer')}
               </Button>
             </li>
           ))}

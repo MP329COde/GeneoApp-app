@@ -211,3 +211,48 @@ qui reproduit le bug avant chaque correctif :
   mode hors ligne → CSP servie sans domaine OpenStreetMap ; appel `window.geneoapp.settings.setMapMode('online')`
   → `webContents.reload()` déclenché → nouvelle réponse `index.html` avec
   `img-src 'self' data: blob: https://*.tile.openstreetmap.org` confirmée par `Network.responseReceived`.
+
+## Campagne d'internationalisation (2026-10, branche `fix/audit-2026-09`)
+
+Objectif : plus aucun texte d'interface écrit en dur dans le client. Le rendu
+français est strictement inchangé (chaque valeur française est aussi le repli
+passé à `t(...)`), la version anglaise devient complète.
+
+### Lots
+
+| Lot | Commit |
+|---|---|
+| Erreurs du serveur rendues traduisibles (code + clé + variables) | `06e29ed` |
+| Messages rangés par domaine (`messages/<langue>/<domaine>.json`) | `e194e7e` |
+| Incohérences de chronologie et leur gravité | `904717f` |
+| Libellés de personne regroupés dans un seul domaine | `e29a342` |
+| Coque, arbre, chronologie, fiche, graphe radial, gestion des arbres | `34583e3` |
+| Outils de personne, GEDCOM, parenté, familles, réglages, vérification | (ce commit) |
+
+### Outillage
+
+| Outil | Rôle |
+|---|---|
+| `scripts/check-i18n-hardcoded.js` | Audit AST de tout le client : signale les textes affichés en dur (hors replis de `t`/`translate`, tracés SVG, sélecteurs CSS, piles de polices, clés techniques). Sort en code 1 s'il en reste. |
+| `scripts/check-i18n-keys.js` | Vérifie que toute clé passée à `t(...)` existe en français **et** en anglais, que le repli correspond à la valeur française (le rendu n'a pas bougé) et que chaque forme plurielle porte `{count}`. |
+| `src/client/src/design-system/i18n/hardcoded-text.test.js` | Garde-fou : 25 vues sous surveillance, analyse mutualisée avec l'outil d'audit (une seule implémentation des règles). |
+
+### Reste hors périmètre, assumé
+
+- `src/client/src/genealogy/search-sites.js` : les noms des sites de recherche
+  sont des **données** modifiables par l'utilisateur, pas de l'habillage ;
+  l'audit les exclut explicitement.
+- `src/client/src/design-system/i18n/I18nProvider.jsx` : le message « useI18n
+  doit être utilisé à l'intérieur d'un I18nProvider » signale une **erreur de
+  programmation** à un développeur, pas à un utilisateur final.
+- La pagination de `client.persons.list()` reste à faire (voir plus bas).
+
+### Vérification finale (campagne i18n)
+
+- `npm run lint` : succès (305 fichiers vérifiés, aucun import cassé)
+- `npm run format:check` : succès (Prettier conforme sur tout le dépôt)
+- `npm test` : succès, toutes les suites (db 92, server 61, api 147, electron 36,
+  packaging 4, cli 5, client 185 — 0 échec)
+- `node scripts/check-i18n-hardcoded.js` : 52 fichiers audités, 0 texte en dur
+- `node scripts/check-i18n-keys.js` : 1105 clés en français, 1105 en anglais,
+  0 erreur, 0 avertissement (aucune clé manquante, aucun repli divergent)

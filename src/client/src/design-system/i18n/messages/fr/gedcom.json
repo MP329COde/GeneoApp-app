@@ -1,0 +1,73 @@
+{
+  "gedcom.error.readFailed": "Lecture du fichier impossible",
+  "gedcom.loading": "Chargement…",
+  "gedcom.media.emptySelection": "Sélectionnez une personne pour voir et ajouter des médias.",
+  "gedcom.media.title": "Médias de {name}",
+  "gedcom.media.addFile": "Ajouter un fichier",
+  "gedcom.media.none": "Aucun média pour cette personne.",
+  "gedcom.media.open": "Ouvrir {name}",
+  "gedcom.media.openLabel": "Ouvrir",
+  "gedcom.media.decode": "Déchiffrer {name}",
+  "gedcom.media.decodeLabel": "Déchiffrer",
+  "gedcom.media.setPortrait": "Photo de profil",
+  "gedcom.media.download": "Télécharger",
+  "gedcom.media.remove": "Supprimer",
+  "gedcom.media.appearsIn": "Apparaît aussi sur",
+  "gedcom.scope.all": "Arbre complet",
+  "gedcom.scope.ancestors": "Ancêtres de la personne de contexte",
+  "gedcom.scope.descendants": "Descendants de la personne de contexte",
+  "gedcom.scope.paternal": "Branche paternelle",
+  "gedcom.scope.maternal": "Branche maternelle",
+  "gedcom.scope.person": "Personne de contexte seule",
+  "gedcom.import.fileLabel": "Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)",
+  "gedcom.import.contentLabel": "Contenu GEDCOM",
+  "gedcom.import.preview": "Aperçu",
+  "gedcom.import.run": "Importer",
+  "gedcom.import.previewValid": "Aperçu valide : {persons}, {unions}, {events}.",
+  "gedcom.import.previewInvalid": "GEDCOM invalide : {errors}",
+  "gedcom.import.seeReport": "voir le rapport",
+  "gedcom.import.success": "Import réussi et transactionnel.",
+  "gedcom.import.rejected": "Import refusé : aucune donnée écrite (rollback).",
+  "gedcom.archive.readyLabel": "Archive prête :",
+  "gedcom.archive.readyDetails": ". Les personnes, familles et événements sont importés en une transaction, puis les fichiers médias rattachés.",
+  "gedcom.archive.import": "Importer l’archive GEDZIP",
+  "gedcom.archive.imported": "Archive importée : {parts}.",
+  "gedcom.archive.fromArchive": "de l’archive",
+  "gedcom.archive.count.attached": {
+    "one": "{count} média rattaché",
+    "other": "{count} médias rattachés"
+  },
+  "gedcom.archive.count.missing": {
+    "one": "{count} fichier absent",
+    "other": "{count} fichiers absents"
+  },
+  "gedcom.archive.count.rejected": {
+    "one": "{count} fichier refusé",
+    "other": "{count} fichiers refusés"
+  },
+  "gedcom.export.format": "Format d’export",
+  "gedcom.export.format7": "GEDCOM 7",
+  "gedcom.export.format551": "GEDCOM 5.5.1",
+  "gedcom.export.scope": "Périmètre",
+  "gedcom.export.all": "Exporter l’arbre complet",
+  "gedcom.export.scopeAction": "Exporter le périmètre",
+  "gedcom.export.archive": "Exporter en GEDZIP (avec médias)",
+  "gedcom.export.contextPerson": "Personne de contexte : {name}",
+  "gedcom.export.summary": "Exporté : {persons}, {families}",
+  "gedcom.count.persons": {
+    "one": "{count} personne",
+    "other": "{count} personnes"
+  },
+  "gedcom.count.unions": {
+    "one": "{count} union",
+    "other": "{count} unions"
+  },
+  "gedcom.count.events": {
+    "one": "{count} événement",
+    "other": "{count} événements"
+  },
+  "gedcom.count.families": {
+    "one": "{count} famille",
+    "other": "{count} familles"
+  }
+}

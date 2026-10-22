@@ -440,24 +440,31 @@ function AppContent() {
     return () => writeListeners.delete(refreshHistory);
   }, [refreshHistory]);
 
-  const applyHistory = useCallback(async (direction) => {
-    try {
-      const result = await client.history[direction]();
-      const label = direction === 'undo' ? result.undone : result.redone;
-      setHistory(result);
-      if (!label) return;
-      setHistoryMessage(`${direction === 'undo' ? 'Annulé' : 'Rétabli'} : ${label}`);
-      // Les panneaux rechargent leurs données après un retour en arrière.
-      setDataVersion((version) => version + 1);
-      const list = await client.persons.list();
-      setPersons(list);
-      setSelectedId((current) =>
-        list.some((person) => person.id === current) ? current : (list[0]?.id ?? null),
-      );
-    } catch (historyError) {
-      setError(historyError.message);
-    }
-  }, []);
+  const applyHistory = useCallback(
+    async (direction) => {
+      try {
+        const result = await client.history[direction]();
+        const label = direction === 'undo' ? result.undone : result.redone;
+        setHistory(result);
+        if (!label) return;
+        setHistoryMessage(
+          direction === 'undo'
+            ? t('shell.undone', { label }, `Annulé : ${label}`)
+            : t('shell.redone', { label }, `Rétabli : ${label}`),
+        );
+        // Les panneaux rechargent leurs données après un retour en arrière.
+        setDataVersion((version) => version + 1);
+        const list = await client.persons.list();
+        setPersons(list);
+        setSelectedId((current) =>
+          list.some((person) => person.id === current) ? current : (list[0]?.id ?? null),
+        );
+      } catch (historyError) {
+        setError(historyError.message);
+      }
+    },
+    [t],
+  );
 
   // Ctrl/⌘+Z annule, Ctrl/⌘+Maj+Z ou Ctrl+Y rétablit ; dans un champ de
   // saisie, le raccourci garde son comportement natif (annuler la frappe).
@@ -888,7 +895,11 @@ function AppContent() {
               onPick={setSelectedId}
             />
             <div className="topbar__actions">
-              <div className="history-controls" role="group" aria-label="Historique">
+              <div
+                className="history-controls"
+                role="group"
+                aria-label={t('shell.history', 'Historique')}
+              >
                 <button
                   type="button"
                   className="icon-button"
@@ -899,7 +910,9 @@ function AppContent() {
                       : t('shell.nothingToUndo')
                   }
                   title={
-                    history.canUndo ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Rien à annuler'
+                    history.canUndo
+                      ? t('shell.undoShortcut', { label: history.undoLabel })
+                      : t('shell.nothingToUndo')
                   }
                   onClick={() => applyHistory('undo')}
                 >
@@ -916,8 +929,8 @@ function AppContent() {
                   }
                   title={
                     history.canRedo
-                      ? `Rétablir : ${history.redoLabel} (Ctrl+Maj+Z)`
-                      : 'Rien à rétablir'
+                      ? t('shell.redoShortcut', { label: history.redoLabel })
+                      : t('shell.nothingToRedo')
                   }
                   onClick={() => applyHistory('redo')}
                 >

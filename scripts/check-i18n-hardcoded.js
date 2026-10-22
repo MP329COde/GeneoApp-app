@@ -37,6 +37,22 @@ const TEXT_ATTRIBUTES = new Set([
 const TECHNICAL_ATTRIBUTES = new Set(['className', 'style', 'id', 'key', 'type', 'href', 'src']);
 
 /**
+ * Noms de produits affichés tels quels : ils ne sont pas traduisibles et ne
+ * doivent pas être signalés comme des textes en dur.
+ */
+const BRAND_NAMES = new Set(['GeneoApp']);
+
+/**
+ * Modules dont les chaînes ne sont pas de l'habillage d'interface : données
+ * par défaut (noms de sites modifiables par l'utilisateur) ou messages
+ * destinés aux développeurs (invariantes de programmation).
+ */
+const NON_UI_FILES = new Set([
+  path.join('src', 'client', 'src', 'genealogy', 'search-sites.js'),
+  path.join('src', 'client', 'src', 'design-system', 'i18n', 'I18nProvider.jsx'),
+]);
+
+/**
  * Un littéral est-il du texte destiné à l'utilisateur ?
  *
  * On écarte les valeurs techniques : noms de classes, URLs, chemins,
@@ -46,10 +62,18 @@ function isUserText(value) {
   const text = value.trim();
   if (!text) return false;
   if (text.length < 2) return false;
+  if (BRAND_NAMES.has(text)) return false;
   // Un chemin, une URL, un sélecteur, un nom de classe.
   if (/^(https?:\/\/|data:|[./#_])/.test(text)) return false;
-  // Une valeur CSS : variable, couleur, fonction.
+  // Un sélecteur CSS (« button, [role="button"] ») ou un pseudo-élément.
+  if (/^\s*[a-z-]+(\s*,\s*[a-z-]+)*\s*[>+~]\s/.test(text)) return false;
+  if (/^:[a-z-]+/.test(text)) return false;
+  if (text.includes('[') && text.includes(']')) return false;
+  // Une pile de polices (« Newsreader, Georgia, serif »).
+  if (/(^|,\s*)(serif|sans-serif|monospace|cursive|fantasy)\s*$/.test(text)) return false;
+  // Une valeur CSS : variable, couleur, fonction, at-rule.
   if (/^(var\(|calc\(|rgb|hsl|#[0-9a-fA-F]{3,8}\b)/.test(text)) return false;
+  if (/^\(?@?[a-z-]+(\s+[a-z-]+)*\s*:/.test(text)) return false;
   // Un Entitlement d'OpenStreetMap ou une mention technique.
   if (/^&[a-z]+;/.test(text)) return false;
   // Une unité de mesure ou un suffixe de fichier.
@@ -66,8 +90,8 @@ function isUserText(value) {
   if (/^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/.test(text) && /[MmLlCcSsQqTtAaZz]/.test(text)) {
     return false;
   }
-  // Un littéral technique de mise en forme (%, px, nombres, couleurs).
-  if (/^[-#0-9.,%()\s]+$/.test(text)) return false;
+  // Un littéral technique de mise en forme (%, px, nombres, couleurs, séparateurs).
+  if (/^[-#0-9.,%()·\s]+$/.test(text)) return false;
   return true;
 }
 
@@ -92,7 +116,11 @@ export function collectHardCodedText(ast) {
     if (!node.type) return;
 
     if (node.type === 'StringLiteral' && parent?.type !== 'JSXAttribute') {
-      const isTranslationCall = parent?.type === 'CallExpression' && parent.callee?.name === 't';
+      // Les replis passés à `t(...)` ou `translate(...)` sont des traductions,
+      // pas des textes en dur.
+      const isTranslationCall =
+        parent?.type === 'CallExpression' &&
+        (parent.callee?.name === 't' || parent.callee?.name === 'translate');
       if (!isTranslationCall && isUserText(node.value) && isSentence(node.value)) {
         found.push({ line: node.loc?.start.line ?? 0, text: node.value.trim() });
       }
@@ -137,7 +165,7 @@ function walk(dir, out = []) {
     if (entry === 'node_modules' || entry.startsWith('.')) continue;
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (/\.jsx?$/.test(entry)) out.push(full);
+    else if (/\.jsx?$/.test(entry) && !NON_UI_FILES.has(path.relative(ROOT, full))) out.push(full);
   }
   return out;
 }

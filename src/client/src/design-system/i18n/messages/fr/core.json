@@ -16,6 +16,10 @@
   "nav.group.toggleExpand": "Déplier la section {section}",
   "nav.group.toggleCollapse": "Replier la section {section}",
   "error.hint.network": "Vérifiez votre connexion réseau puis réessayez.",
+  "error.unknownApi": "Erreur API inconnue",
+  "error.mediaDownload": "Impossible de télécharger le média",
+  "treeExport.noTree": "Aucun arbre à exporter",
+  "treeExport.pngFailed": "Export PNG impossible",
   "error.hint.timeout": "Le serveur local met trop de temps à répondre : réessayez dans un instant.",
   "error.hint.corruptResponse": "La réponse reçue est illisible : rechargez la page et réessayez ; si cela persiste, signalez-le.",
   "nav.tree": "Arbre",
@@ -188,5 +192,10 @@
   "shell.children": "Enfants",
   "shell.siblings": "Fratrie",
   "shell.editIdentity": "Modifier l’identité",
-  "shell.noPersonSelected": "Aucune personne sélectionnée."
+  "shell.noPersonSelected": "Aucune personne sélectionnée.",
+  "shell.history": "Historique",
+  "shell.undoShortcut": "Annuler : {label} (Ctrl+Z)",
+  "shell.redoShortcut": "Rétablir : {label} (Ctrl+Maj+Z)",
+  "shell.undone": "Annulé : {label}",
+  "shell.redone": "Rétabli : {label}"
 }

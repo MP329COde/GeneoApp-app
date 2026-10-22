@@ -6,27 +6,29 @@ import {
   useSettings,
 } from '../settings/SettingsContext.jsx';
 
+// Les libellés portent une clé i18n : le texte affiché est résolu au rendu,
+// dans la langue de l'utilisateur.
 const ACCENT_CHOICES = [
-  ['blue', 'Bleu archives', '#1a5b9e'],
-  ['teal', 'Sarcelle', '#1a6668'],
-  ['green', 'Vert', '#1e6b47'],
-  ['slate', 'Ardoise', '#3d5a73'],
-  ['ink', 'Encre', '#2c3a42'],
+  ['blue', 'settings.accent.blue', '#1a5b9e'],
+  ['teal', 'settings.accent.teal', '#1a6668'],
+  ['green', 'settings.accent.green', '#1e6b47'],
+  ['slate', 'settings.accent.slate', '#3d5a73'],
+  ['ink', 'settings.accent.ink', '#2c3a42'],
 ];
 const SECTION_LABELS = {
-  actions: 'Actions',
-  relations: 'Liens',
-  quality: 'Qualité',
-  identity: 'Identité',
+  actions: 'settings.section.actions',
+  relations: 'settings.section.relations',
+  quality: 'settings.section.quality',
+  identity: 'settings.section.identity',
 };
 const TAB_LABELS = {
-  identity: 'Identité',
-  events: 'Événements',
-  sources: 'Sources',
-  media: 'Médias',
-  notes: 'Notes',
-  timeline: 'Chronologie',
-  history: 'Historique',
+  identity: 'settings.tab.identity',
+  events: 'settings.tab.events',
+  sources: 'settings.tab.sources',
+  media: 'settings.tab.media',
+  notes: 'settings.tab.notes',
+  timeline: 'settings.tab.timeline',
+  history: 'settings.tab.history',
 };
 
 function toggleIn(list, id, on) {
@@ -57,7 +59,7 @@ function MenuCustomizer({ navGroups, settings, update, t }) {
   return (
     <>
       <label className="settings-field">
-        <span>Vue d’accueil</span>
+        <span>{t('settings.homeView', 'Vue d’accueil')}</span>
         <select
           value={settings.homeView}
           onChange={(event) => update({ homeView: event.target.value })}
@@ -67,7 +69,7 @@ function MenuCustomizer({ navGroups, settings, update, t }) {
               .filter((item) => !settings.hiddenViews.includes(item.id))
               .map((item) => (
                 <option key={item.id} value={item.id}>
-                  {t(`nav.${item.id}`, item.label)}
+                  {t(item.labelKey ?? `nav.${item.id}`)}
                 </option>
               )),
           )}
@@ -75,10 +77,10 @@ function MenuCustomizer({ navGroups, settings, update, t }) {
       </label>
       {navGroups.map((group) => (
         <fieldset key={group.key} className="menu-customizer">
-          <legend>{t(`nav.group.${group.key}`, group.label)}</legend>
+          <legend>{t(group.labelKey ?? `nav.group.${group.key}`)}</legend>
           <ul>
             {ordered(group).map((item, index, list) => {
-              const label = t(`nav.${item.id}`, item.label);
+              const label = t(item.labelKey ?? `nav.${item.id}`);
               const locked = ALWAYS_VISIBLE_VIEWS.includes(item.id);
               return (
                 <li key={item.id}>
@@ -99,13 +101,17 @@ function MenuCustomizer({ navGroups, settings, update, t }) {
                     />
                     <span>
                       {label}
-                      {locked ? <small className="settings-hint"> (toujours affiché)</small> : null}
+                      {locked ? (
+                        <small className="settings-hint">
+                          {t('settings.menu.alwaysVisible', ' (toujours affiché)')}
+                        </small>
+                      ) : null}
                     </span>
                   </label>
                   <span className="menu-customizer__move">
                     <button
                       type="button"
-                      aria-label={`Monter ${label}`}
+                      aria-label={t('settings.menu.moveUp', { label }, `Monter ${label}`)}
                       disabled={index === 0}
                       onClick={() => move(group, item.id, -1)}
                     >
@@ -113,7 +119,7 @@ function MenuCustomizer({ navGroups, settings, update, t }) {
                     </button>
                     <button
                       type="button"
-                      aria-label={`Descendre ${label}`}
+                      aria-label={t('settings.menu.moveDown', { label }, `Descendre ${label}`)}
                       disabled={index === list.length - 1}
                       onClick={() => move(group, item.id, 1)}
                     >
@@ -178,7 +184,10 @@ export function SettingsPanel({ navGroups = [] }) {
     <div className="search-panel settings-panel">
       <h3>{t('settings.title')}</h3>
       <p className="settings-hint">
-        Configurez rapidement l’apparence et le comportement de votre espace de travail.
+        {t(
+          'settings.intro',
+          'Configurez rapidement l’apparence et le comportement de votre espace de travail.',
+        )}
       </p>
 
       <section aria-labelledby="settings-appearance">
@@ -196,12 +205,12 @@ export function SettingsPanel({ navGroups = [] }) {
         />
         <div className="theme-previews" aria-hidden="true">
           <span className="theme-preview theme-preview--light">
-            <span className="theme-preview__name">Marie Duchamp</span>
-            <span className="theme-preview__date">03 MAR 1788</span>
+            <span className="theme-preview__name">{t('settings.preview.name')}</span>
+            <span className="theme-preview__date">{t('settings.preview.date')}</span>
           </span>
           <span className="theme-preview theme-preview--dark">
-            <span className="theme-preview__name">Marie Duchamp</span>
-            <span className="theme-preview__date">03 MAR 1788</span>
+            <span className="theme-preview__name">{t('settings.preview.name')}</span>
+            <span className="theme-preview__date">{t('settings.preview.date')}</span>
           </span>
         </div>
         <Choice
@@ -221,11 +230,11 @@ export function SettingsPanel({ navGroups = [] }) {
       </section>
 
       <section aria-labelledby="settings-accent">
-        <h4 id="settings-accent">Couleur d’accent</h4>
+        <h4 id="settings-accent">{t('settings.accent.title', 'Couleur d’accent')}</h4>
         <fieldset className="settings-choice">
-          <legend>Couleur des actions et de la sélection</legend>
+          <legend>{t('settings.accent.legend', 'Couleur des actions et de la sélection')}</legend>
           <div className="settings-choice__options">
-            {ACCENT_CHOICES.map(([value, label, swatch]) => (
+            {ACCENT_CHOICES.map(([value, labelKey, swatch]) => (
               <label key={value} className="settings-option">
                 <input
                   type="radio"
@@ -235,7 +244,7 @@ export function SettingsPanel({ navGroups = [] }) {
                   onChange={() => update({ accent: value })}
                 />
                 <span className="accent-swatch" style={{ background: swatch }} aria-hidden="true" />
-                <span>{label}</span>
+                <span>{t(labelKey)}</span>
               </label>
             ))}
           </div>
@@ -243,17 +252,25 @@ export function SettingsPanel({ navGroups = [] }) {
       </section>
 
       <section aria-labelledby="settings-panels">
-        <h4 id="settings-panels">Panneaux</h4>
+        <h4 id="settings-panels">{t('settings.panels', 'Panneaux')}</h4>
         <label className="settings-toggle">
           <input
             type="checkbox"
             checked={settings.showInspector}
             onChange={(event) => update({ showInspector: event.target.checked })}
           />
-          <span>Afficher le panneau de la personne (à droite)</span>
+          <span>
+            {t('settings.panels.showInspector', 'Afficher le panneau de la personne (à droite)')}
+          </span>
         </label>
         <label className="settings-field">
-          <span>Largeur du panneau de la personne : {settings.inspectorWidth} px</span>
+          <span>
+            {t(
+              'settings.panels.inspectorWidth',
+              { width: settings.inspectorWidth },
+              `Largeur du panneau de la personne : ${settings.inspectorWidth} px`,
+            )}
+          </span>
           <input
             type="range"
             min="280"
@@ -264,7 +281,13 @@ export function SettingsPanel({ navGroups = [] }) {
           />
         </label>
         <label className="settings-field">
-          <span>Largeur du menu : {settings.sidebarWidth} px</span>
+          <span>
+            {t(
+              'settings.panels.menuWidth',
+              { width: settings.sidebarWidth },
+              `Largeur du menu : ${settings.sidebarWidth} px`,
+            )}
+          </span>
           <input
             type="range"
             min="200"
@@ -277,14 +300,16 @@ export function SettingsPanel({ navGroups = [] }) {
       </section>
 
       <section aria-labelledby="settings-menu">
-        <h4 id="settings-menu">Menu</h4>
+        <h4 id="settings-menu">{t('settings.menu.title', 'Menu')}</h4>
         <MenuCustomizer navGroups={navGroups} settings={settings} update={update} t={t} />
       </section>
 
       <section aria-labelledby="settings-sheet">
-        <h4 id="settings-sheet">Fiche personne</h4>
+        <h4 id="settings-sheet">{t('settings.personSheet', 'Fiche personne')}</h4>
         <fieldset className="settings-choice">
-          <legend>Sections du panneau de la personne</legend>
+          <legend>
+            {t('settings.personSheet.sections', 'Sections du panneau de la personne')}
+          </legend>
           <div className="settings-choice__options">
             {INSPECTOR_SECTIONS.map((id) => (
               <label key={id} className="settings-toggle">
@@ -301,13 +326,13 @@ export function SettingsPanel({ navGroups = [] }) {
                     })
                   }
                 />
-                <span>{SECTION_LABELS[id]}</span>
+                <span>{t(SECTION_LABELS[id])}</span>
               </label>
             ))}
           </div>
         </fieldset>
         <fieldset className="settings-choice">
-          <legend>Onglets de la fiche</legend>
+          <legend>{t('settings.personSheet.tabs', 'Onglets de la fiche')}</legend>
           <div className="settings-choice__options">
             {PERSON_TAB_IDS.map((id) => (
               <label key={id} className="settings-toggle">
@@ -319,7 +344,7 @@ export function SettingsPanel({ navGroups = [] }) {
                     update({ personTabs: toggleIn(settings.personTabs, id, event.target.checked) })
                   }
                 />
-                <span>{TAB_LABELS[id]}</span>
+                <span>{t(TAB_LABELS[id])}</span>
               </label>
             ))}
           </div>

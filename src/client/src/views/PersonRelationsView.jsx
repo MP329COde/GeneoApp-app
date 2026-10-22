@@ -88,7 +88,10 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
   const handleRemove = async (id) => {
     if (
       !window.confirm(
-        'Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.',
+        t(
+          'kin.removeConfirm',
+          'Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.',
+        ),
       )
     ) {
       return;
@@ -100,9 +103,12 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
       await loadParentage();
       await onChange?.();
     } catch (removeError) {
-      console.error('Échec du retrait du lien de parenté', removeError);
+      console.error(t('kin.removeError', 'Échec du retrait du lien de parenté'), removeError);
       setParentageError(
-        'Le retrait du lien de parenté a échoué. Vérifiez votre connexion locale et réessayez.',
+        t(
+          'kin.removeErrorDetail',
+          'Le retrait du lien de parenté a échoué. Vérifiez votre connexion locale et réessayez.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -111,14 +117,14 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
 
   return (
     <section>
-      <h3>Parenté de {personLabel(selected)}</h3>
+      <h3>{t('kin.title', { name: personLabel(selected) }, 'Parenté de {name}')}</h3>
       {parentageError ? <ErrorNotice message={parentageError} /> : null}
 
       <form className="create-person-form" onSubmit={handleAddParent}>
         <label>
-          <span>Ajouter un parent</span>
+          <span>{t('kin.addParent', 'Ajouter un parent')}</span>
           <select value={parentId} onChange={(event) => setParentId(event.target.value)}>
-            <option value="">— Choisir une personne —</option>
+            <option value="">{t('kin.chooseParent', '— Choisir une personne —')}</option>
             {otherPersons.map((person) => (
               <option key={person.id} value={person.id}>
                 {personLabel(person)}
@@ -127,7 +133,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           </select>
         </label>
         <label>
-          <span>Rôle</span>
+          <span>{t('kin.role', 'Rôle')}</span>
           <select value={parentRole} onChange={(event) => setParentRole(event.target.value)}>
             {PARENT_ROLES.map((role) => (
               <option key={role} value={role}>
@@ -137,12 +143,12 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           </select>
         </label>
         <Button type="submit" size="sm" disabled={busy || !parentId}>
-          Ajouter le parent
+          {t('kin.addParentSubmit', 'Ajouter le parent')}
         </Button>
       </form>
 
       {parents === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('kin.loading', 'Chargement…')}</p>
       ) : (
         <ul className="search-results">
           {parents.map((parentage) => (
@@ -165,7 +171,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
                 onClick={() => handleRemove(parentage.id)}
                 disabled={busy}
               >
-                Retirer
+                {t('kin.removeParent', 'Retirer')}
               </Button>
             </li>
           ))}
@@ -174,9 +180,9 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
 
       <form className="create-person-form" onSubmit={handleAddChild}>
         <label>
-          <span>Ajouter un enfant</span>
+          <span>{t('kin.addChild', 'Ajouter un enfant')}</span>
           <select value={childId} onChange={(event) => setChildId(event.target.value)}>
-            <option value="">— Choisir une personne —</option>
+            <option value="">{t('kin.chooseChild', '— Choisir une personne —')}</option>
             {otherPersons.map((person) => (
               <option key={person.id} value={person.id}>
                 {personLabel(person)}
@@ -185,12 +191,12 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           </select>
         </label>
         <Button type="submit" size="sm" disabled={busy || !childId}>
-          Ajouter l’enfant
+          {t('kin.addChildSubmit', 'Ajouter l’enfant')}
         </Button>
       </form>
 
       {children === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('kin.loading', 'Chargement…')}</p>
       ) : (
         <ul className="search-results">
           {children.map((parentage) => (
@@ -210,7 +216,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
                 onClick={() => handleRemove(parentage.id)}
                 disabled={busy}
               >
-                Retirer
+                {t('kin.removeChild', 'Retirer')}
               </Button>
             </li>
           ))}

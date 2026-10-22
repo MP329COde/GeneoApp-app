@@ -2,8 +2,15 @@
 // les tokens du thème courant), PNG rasterisé et découpage en pages pour
 // l'impression géante. Tout est calculé localement, sans aucun service.
 
+import { translate } from '../design-system/i18n/I18nProvider.jsx';
+import { currentLocale } from '../design-system/i18n/locale.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const PADDING = 24;
+
+// Les messages d'erreur de l'export sont traduits à la volée : le module n'est
+// pas un composant React, la locale est donc lue dans le stockage, comme le
+// fait le client API.
 
 function escapeXml(value) {
   return String(value)
@@ -59,7 +66,8 @@ function nodeLines(element) {
  * connecteurs coudés) et la vue familiale (cartes).
  */
 export function buildTreeSvg(stage, { title } = {}) {
-  if (!stage) throw new Error('Aucun arbre à exporter');
+  if (!stage)
+    throw new Error(translate(currentLocale(), 'treeExport.noTree', {}, 'Aucun arbre à exporter'));
   const colors = palette();
 
   const fan = stage.querySelector('svg.fan-chart');
@@ -97,7 +105,8 @@ export function buildTreeSvg(stage, { title } = {}) {
   const origin = stage.getBoundingClientRect();
   const scale = stage.offsetWidth ? origin.width / stage.offsetWidth || 1 : 1;
   const nodes = [...stage.querySelectorAll('.tree-node, .person-card')];
-  if (nodes.length === 0) throw new Error('Aucun arbre à exporter');
+  if (nodes.length === 0)
+    throw new Error(translate(currentLocale(), 'treeExport.noTree', {}, 'Aucun arbre à exporter'));
 
   const boxes = new Map(nodes.map((node) => [node, relativeRect(node, origin, scale)]));
   const width = Math.max(...[...boxes.values()].map((box) => box.x + box.width)) + PADDING;
@@ -196,11 +205,21 @@ export function svgToPngBlob(svg, { scale = 2 } = {}) {
       context.scale(scale, scale);
       context.drawImage(image, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Export PNG impossible'))));
+      canvas.toBlob((blob) =>
+        blob
+          ? resolve(blob)
+          : reject(
+              new Error(
+                translate(currentLocale(), 'treeExport.pngFailed', {}, 'Export PNG impossible'),
+              ),
+            ),
+      );
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Export PNG impossible'));
+      reject(
+        new Error(translate(currentLocale(), 'treeExport.pngFailed', {}, 'Export PNG impossible')),
+      );
     };
     image.src = url;
   });

@@ -29,21 +29,7 @@
 //   `/api` (voir vite.config.js) vers le serveur Express local.
 
 import { translate } from '../design-system/i18n/I18nProvider.jsx';
-
-const LOCALE_STORAGE_KEY = 'geneoapp.locale';
-
-/**
- * Locale courante, lue dans le même stockage que le sélecteur de langue.
- * Le module n'est pas un composant React : on lit donc directement, avec un
- * repli sur le français si le stockage est indisponible.
- */
-function currentLocale() {
-  try {
-    return localStorage.getItem(LOCALE_STORAGE_KEY) ?? 'fr';
-  } catch {
-    return 'fr';
-  }
-}
+import { currentLocale } from '../design-system/i18n/locale.js';
 
 /**
  * Traduit le message d'une erreur serveur.
@@ -80,7 +66,12 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    throw buildError(data?.error, data?.error?.message ?? 'Erreur API inconnue', response.status);
+    throw buildError(
+      data?.error,
+      data?.error?.message ??
+        translate(currentLocale(), 'error.unknownApi', {}, 'Erreur API inconnue'),
+      response.status,
+    );
   }
   return data;
 }
@@ -343,7 +334,14 @@ function createHttpClient() {
       download: async (id) => {
         const response = await fetch(`/api/media/${id}/content`);
         if (!response.ok) {
-          throw new Error('Impossible de télécharger le média');
+          throw new Error(
+            translate(
+              currentLocale(),
+              'error.mediaDownload',
+              {},
+              'Impossible de télécharger le média',
+            ),
+          );
         }
         const blob = await response.blob();
         const filename = parseContentDispositionFilename(
