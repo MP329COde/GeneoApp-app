@@ -219,6 +219,8 @@
     "other": "{count} people marked living but very old"
   },
   "verification.checkConsistency": "Check tree consistency",
+  "verification.certainTitle": "Certain errors to fix",
+  "verification.unusualTitle": "Unusual situations to check",
   "verification.cyclesTitle": "Descent cycles",
   "verification.noCycle": "No cycle detected.",
   "verification.cycleBadge": "Cycle",

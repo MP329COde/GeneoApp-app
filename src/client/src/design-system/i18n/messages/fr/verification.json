@@ -219,6 +219,8 @@
     "other": "{count} personnes marquées vivantes mais très âgées"
   },
   "verification.checkConsistency": "Vérifier la cohérence de l’arbre",
+  "verification.certainTitle": "Erreurs certaines à corriger",
+  "verification.unusualTitle": "Situations inhabituelles à vérifier",
   "verification.cyclesTitle": "Cycles de filiation",
   "verification.noCycle": "Aucun cycle détecté.",
   "verification.cycleBadge": "Cycle",
