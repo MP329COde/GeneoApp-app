@@ -1,5 +1,10 @@
 import { NotFoundError, ValidationError } from '../errors.js';
-import { assertId, validatePersonCreate, validatePersonUpdate } from '../validation/schemas.js';
+import {
+  assertId,
+  validatePersonCreate,
+  validatePersonIdentifier,
+  validatePersonUpdate,
+} from '../validation/schemas.js';
 import {
   PERSONS_PAGE_DEFAULT_LIMIT,
   PERSONS_PAGE_MAX_LIMIT,
@@ -131,5 +136,29 @@ export class PersonService {
       throw new NotFoundError(`Personne non supprimée ou introuvable : ${id}`);
     }
     return this.repository.restore(id, options);
+  }
+
+  listIdentifiers(personId) {
+    this.get(personId);
+    return this.repository.listIdentifiers(personId);
+  }
+
+  addIdentifier(personId, payload, options) {
+    this.get(personId);
+    return this.repository.addIdentifier(personId, validatePersonIdentifier(payload), options);
+  }
+
+  removeIdentifier(personId, identifierId, options) {
+    this.get(personId);
+    assertId(identifierId, 'identifierId');
+    if (!this.repository.removeIdentifier(personId, identifierId, options)) {
+      throw new NotFoundError(`Identifiant introuvable : ${identifierId}`);
+    }
+  }
+
+  /** Personnes portant un identifiant externe : plusieurs résultats = doublon probable. */
+  findByIdentifier(scheme, value) {
+    const normalized = validatePersonIdentifier({ scheme, value });
+    return this.repository.findByIdentifier(normalized.scheme, normalized.value);
   }
 }

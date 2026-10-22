@@ -15,10 +15,18 @@
  * (PersonRepository) pour qu'une réindexation ne modifie pas les résultats
  * de recherche.
  */
-function personDocument(person) {
+export function personDocument(person) {
   return {
     title: `${person.given_names} ${person.family_name}`,
-    body: [person.birth_family_name, person.nickname, person.notes].filter(Boolean).join(' — '),
+    body: [
+      person.birth_family_name,
+      person.married_name,
+      person.alias,
+      person.nickname,
+      person.notes,
+    ]
+      .filter(Boolean)
+      .join(' — '),
   };
 }
 
@@ -50,10 +58,10 @@ function sourceDocument(source) {
  */
 export function reindexAll(database) {
   const persons = database
-    .prepare(
-      `SELECT id, given_names, family_name, birth_family_name, nickname, notes
-       FROM persons WHERE deleted_at IS NULL`,
-    )
+    // `SELECT *` : la migration 0021 exécute cette fonction sur un schéma
+    // antérieur aux colonnes `alias` et `married_name` ; elles sont simplement
+    // absentes de la ligne (donc ignorées par `personDocument`).
+    .prepare('SELECT * FROM persons WHERE deleted_at IS NULL')
     .all();
   const media = database
     .prepare(`SELECT id, original_filename, ocr_text FROM media WHERE deleted_at IS NULL`)

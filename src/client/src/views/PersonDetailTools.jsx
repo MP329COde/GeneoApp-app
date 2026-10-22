@@ -95,10 +95,12 @@ export function IdentityTool({ selected, onUpdated }) {
   const [birthFamilyName, setBirthFamilyName] = useState(selected.birth_family_name ?? '');
   const [sex, setSex] = useState(selected.sex ?? 'U');
   const [nickname, setNickname] = useState(selected.nickname ?? '');
+  const [alias, setAlias] = useState(selected.alias ?? '');
   const [marriedName, setMarriedName] = useState(selected.married_name ?? '');
   const [title, setTitle] = useState(selected.title ?? '');
   const [suffix, setSuffix] = useState(selected.suffix ?? '');
   const [isLiving, setIsLiving] = useState(selected.is_living !== 0);
+  const [isPrivate, setIsPrivate] = useState(selected.is_private === 1);
   const [identityError, setIdentityError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -108,10 +110,12 @@ export function IdentityTool({ selected, onUpdated }) {
     setBirthFamilyName(selected.birth_family_name ?? '');
     setSex(selected.sex ?? 'U');
     setNickname(selected.nickname ?? '');
+    setAlias(selected.alias ?? '');
     setMarriedName(selected.married_name ?? '');
     setTitle(selected.title ?? '');
     setSuffix(selected.suffix ?? '');
     setIsLiving(selected.is_living !== 0);
+    setIsPrivate(selected.is_private === 1);
   }, [selected]);
 
   const handleSubmit = async (event) => {
@@ -135,10 +139,12 @@ export function IdentityTool({ selected, onUpdated }) {
         birthFamilyName: birthFamilyName.trim() || null,
         sex,
         nickname: nickname.trim() || null,
+        alias: alias.trim() || null,
         marriedName: marriedName.trim() || null,
         title: title.trim() || null,
         suffix: suffix.trim() || null,
         isLiving,
+        isPrivate,
       });
       await onUpdated();
     } catch (updateError) {
@@ -176,8 +182,12 @@ export function IdentityTool({ selected, onUpdated }) {
         </select>
       </label>
       <label>
-        <span>{t('personTools.identity.nickname', 'Surnom / alias')}</span>
+        <span>{t('personTools.identity.nickname', 'Surnom')}</span>
         <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
+      </label>
+      <label>
+        <span>{t('personTools.identity.alias', 'Alias (autre nom connu)')}</span>
+        <input value={alias} onChange={(event) => setAlias(event.target.value)} />
       </label>
       <label>
         <span>{t('personTools.identity.marriedName', 'Nom marital')}</span>
@@ -198,6 +208,16 @@ export function IdentityTool({ selected, onUpdated }) {
           onChange={(event) => setIsLiving(event.target.checked)}
         />
         <span>{t('personTools.identity.living', 'Personne vivante')}</span>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          onChange={(event) => setIsPrivate(event.target.checked)}
+        />
+        <span>
+          {t('personTools.identity.private', 'Informations privées (à ne pas divulguer)')}
+        </span>
       </label>
       <Button type="submit" size="sm" disabled={busy}>
         {t('personTools.identity.save', 'Enregistrer')}

@@ -295,6 +295,7 @@
   "radialGraph.link.adoptive": "adoptive",
   "radialGraph.link.foster": "nourricière",
   "radialGraph.link.step": "par alliance",
+  "radialGraph.link.guardian": "par tutelle",
   "radialGraph.link.unknown": "de nature inconnue",
   "radialGraph.ariaLabel": "Graphe familial de {name}",
   "radialGraph.nodeLabel": "{name}{years}, degré {degree}",

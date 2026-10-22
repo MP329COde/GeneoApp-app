@@ -64,7 +64,7 @@ const PARTICIPANT_ROLES = [
 ];
 const UNION_TYPES = ['MARRIAGE', 'CIVIL_PARTNERSHIP', 'COHABITATION', 'OTHER'];
 const PARENT_ROLES = ['FATHER', 'MOTHER', 'PARENT'];
-const LINK_TYPES = ['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'STEP', 'UNKNOWN'];
+const LINK_TYPES = ['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'STEP', 'GUARDIAN', 'UNKNOWN'];
 const ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE'];
 const CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 const MEDIA_ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE'];
@@ -87,10 +87,12 @@ const PERSON_IDENTITY_FIELDS = [
   'sex',
   'notes',
   'nickname',
+  'alias',
   'marriedName',
   'title',
   'suffix',
   'isLiving',
+  'isPrivate',
   'externalId',
 ];
 
@@ -99,10 +101,12 @@ function validatePersonIdentityFields({
   sex,
   notes,
   nickname,
+  alias,
   marriedName,
   title,
   suffix,
   isLiving,
+  isPrivate,
   externalId,
 }) {
   assertValid({
@@ -113,10 +117,12 @@ function validatePersonIdentityFields({
     sex: [oneOf(sex, SEX_VALUES, 'sex')],
     notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
     nickname: [isString(nickname, 'nickname'), maxLength(nickname, 200, 'nickname')],
+    alias: [isString(alias, 'alias'), maxLength(alias, 200, 'alias')],
     marriedName: [isString(marriedName, 'marriedName'), maxLength(marriedName, 200, 'marriedName')],
     title: [isString(title, 'title'), maxLength(title, 100, 'title')],
     suffix: [isString(suffix, 'suffix'), maxLength(suffix, 50, 'suffix')],
     isLiving: [isBoolean(isLiving, 'isLiving')],
+    isPrivate: [isBoolean(isPrivate, 'isPrivate')],
     externalId: [isString(externalId, 'externalId'), maxLength(externalId, 200, 'externalId')],
   });
 }
@@ -169,10 +175,12 @@ export function validatePersonCreate(payload) {
     sex: rest.sex ?? 'U',
     notes: rest.notes ?? null,
     nickname: rest.nickname ?? null,
+    alias: rest.alias ?? null,
     marriedName: rest.marriedName ?? null,
     title: rest.title ?? null,
     suffix: rest.suffix ?? null,
     isLiving: rest.isLiving ?? true,
+    isPrivate: rest.isPrivate ?? false,
     externalId: rest.externalId ?? null,
   };
 }
@@ -212,6 +220,32 @@ export function validatePersonUpdate(payload) {
     }
   }
   return patch;
+}
+
+export function validatePersonIdentifier(payload) {
+  assertPayload(payload);
+  const { scheme, value } = payload;
+  assertValid({
+    scheme: [
+      required(scheme, 'scheme'),
+      isString(scheme, 'scheme'),
+      maxLength(scheme, 40, 'scheme'),
+    ],
+    value: [required(value, 'value'), isString(value, 'value'), maxLength(value, 200, 'value')],
+  });
+  const normalizedScheme = scheme.trim().toUpperCase();
+  if (!/^[A-Z0-9_]+$/.test(normalizedScheme)) {
+    throw fieldError(
+      'scheme',
+      'INVALID',
+      'server.validation.invalid',
+      'scheme ne peut contenir que des lettres, chiffres et _',
+    );
+  }
+  if (value.trim() === '') {
+    throw fieldError('value', 'REQUIRED', 'server.validation.required', 'value est obligatoire');
+  }
+  return { scheme: normalizedScheme, value: value.trim() };
 }
 
 export function validatePlaceCreate(payload) {

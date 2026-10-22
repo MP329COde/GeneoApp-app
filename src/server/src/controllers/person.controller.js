@@ -54,6 +54,28 @@ export function createPersonController(services) {
       response.json(person);
     },
 
+    listIdentifiers(request, response) {
+      response.json(persons.listIdentifiers(Number(request.params.id)));
+    },
+
+    addIdentifier(request, response) {
+      const identifier = persons.addIdentifier(Number(request.params.id), request.body, {
+        performedBy: request.performedBy,
+      });
+      response.status(201).json(identifier);
+    },
+
+    removeIdentifier(request, response) {
+      persons.removeIdentifier(Number(request.params.id), Number(request.params.identifierId), {
+        performedBy: request.performedBy,
+      });
+      response.status(204).end();
+    },
+
+    findByIdentifier(request, response) {
+      response.json(persons.findByIdentifier(request.query.scheme, request.query.value));
+    },
+
     remove(request, response) {
       persons.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();

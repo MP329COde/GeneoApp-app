@@ -301,7 +301,13 @@ export class GedcomService {
   }
 }
 
-const PEDIGREE_TAGS = { BIOLOGICAL: 'BIRTH', ADOPTIVE: 'ADOPTED', FOSTER: 'FOSTER', STEP: 'OTHER' };
+const PEDIGREE_TAGS = {
+  BIOLOGICAL: 'BIRTH',
+  ADOPTIVE: 'ADOPTED',
+  FOSTER: 'FOSTER',
+  STEP: 'OTHER',
+  GUARDIAN: 'OTHER',
+};
 const PEDIGREE_TO_LINK = {
   BIRTH: 'BIOLOGICAL',
   ADOPTED: 'ADOPTIVE',
@@ -366,8 +372,29 @@ function generateGedcom(database, persons, families, format, media = []) {
     const xref = `@I${person.id}@`;
     lines.push(`0 ${xref} INDI`);
     lines.push(`1 NAME ${person.given_names} /${person.family_name}/`);
+    // Titre et suffixe sont des parties du nom principal (NPFX / NSFX).
+    if (person.title) lines.push(`2 NPFX ${person.title}`);
+    if (person.suffix) lines.push(`2 NSFX ${person.suffix}`);
+    // Autres noms : GEDCOM 5.5.1 écrit le type en minuscules, GEDCOM 7 en majuscules.
+    const nameType = (type) => `2 TYPE ${format === '7' ? type : type.toLowerCase()}`;
+    if (person.birth_family_name && person.birth_family_name !== person.family_name) {
+      lines.push(`1 NAME ${person.given_names} /${person.birth_family_name}/`, nameType('BIRTH'));
+    }
+    if (person.married_name) {
+      lines.push(`1 NAME ${person.given_names} /${person.married_name}/`, nameType('MARRIED'));
+    }
+    if (person.alias) lines.push(`1 NAME ${person.alias}`, nameType('AKA'));
     lines.push(`1 SEX ${person.sex}`);
     if (person.nickname) lines.push(`1 NICK ${person.nickname}`);
+    if (person.is_private) lines.push(`1 RESN ${format === '7' ? 'PRIVACY' : 'privacy'}`);
+    for (const identifier of database
+      .prepare(
+        `SELECT scheme, value FROM person_identifiers
+         WHERE person_id = ? AND deleted_at IS NULL ORDER BY scheme, value`,
+      )
+      .all(person.id)) {
+      lines.push(`1 REFN ${identifier.value}`, `2 TYPE ${identifier.scheme}`);
+    }
     const events = database
       .prepare(
         `SELECT e.* FROM events e
@@ -398,6 +425,9 @@ function generateGedcom(database, persons, families, format, media = []) {
         lines.push(`1 FAMC ${family.xref}`);
         const pedigree = PEDIGREE_TAGS[link.linkType];
         if (pedigree) lines.push(`2 PEDI ${format === '7' ? pedigree : pedigree.toLowerCase()}`);
+        // La tutelle n'a pas de valeur PEDI propre : balise utilisateur, pour
+        // la distinguer d'une filiation par alliance (PEDI other) au réimport.
+        if (link.linkType === 'GUARDIAN') lines.push('2 _GUARDIAN Y');
       }
     }
   }
@@ -460,8 +490,14 @@ function applyMapping(database, records, performedBy) {
   const eventIds = new Map();
   const ids = { persons: [], events: [], unions: [], parentages: [] };
   const insertPerson = database.prepare(
-    `INSERT INTO persons (given_names, family_name, birth_family_name, sex, notes, nickname, external_id, is_living)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO persons (
+       given_names, family_name, birth_family_name, sex, notes, nickname, external_id, is_living,
+       alias, married_name, title, suffix, is_private
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertIdentifier = database.prepare(
+    `INSERT OR IGNORE INTO person_identifiers (person_id, scheme, value) VALUES (?, ?, ?)`,
   );
   const insertPlace = database.prepare(`INSERT INTO places (name, normalized_name) VALUES (?, ?)`);
   const insertEvent = database.prepare(
@@ -484,7 +520,9 @@ function applyMapping(database, records, performedBy) {
   const insertedPairs = new Set();
 
   for (const person of records.filter((record) => record.tag === 'INDI')) {
-    const name = parseName(value(person, 'NAME'));
+    const nameRecords = children(person, 'NAME');
+    const name = parseName(nameRecords[0]?.value);
+    const otherNames = readOtherNames(nameRecords.slice(1));
     const ownEvents = [
       ...children(person, 'DEAT').map(() => ({ type: 'DEATH' })),
       ...children(person, 'BURI').map(() => ({ type: 'BURIAL' })),
@@ -500,7 +538,7 @@ function applyMapping(database, records, performedBy) {
     const result = insertPerson.run(
       name.givenNames,
       name.familyName,
-      null,
+      otherNames.birthFamilyName,
       sex(value(person, 'SEX')),
       notes(person),
       value(person, 'NICK') ?? null,
@@ -508,7 +546,18 @@ function applyMapping(database, records, performedBy) {
       // Décès/inhumation connus, ou naissance/baptême de plus de 110 ans :
       // la personne est présumée non-vivante.
       shouldBeDeceased(ownEvents) ? 0 : 1,
+      otherNames.alias,
+      otherNames.marriedName,
+      value(nameRecords[0], 'NPFX') ?? value(person, 'TITL') ?? null,
+      value(nameRecords[0], 'NSFX') ?? null,
+      /^(privacy|confidential)$/i.test(value(person, 'RESN') ?? '') ? 1 : 0,
     );
+    for (const reference of children(person, 'REFN')) {
+      const scheme = (value(reference, 'TYPE') ?? 'REFN').trim().toUpperCase().replace(/\W+/g, '_');
+      if (reference.value?.trim() && scheme) {
+        insertIdentifier.run(result.lastInsertRowid, scheme.slice(0, 40), reference.value.trim());
+      }
+    }
     personIds.set(person.xref, result.lastInsertRowid);
     ids.persons.push(result.lastInsertRowid);
     audit(database, 'persons', result.lastInsertRowid, { xref: person.xref }, performedBy);
@@ -669,6 +718,22 @@ function parseName(raw = '') {
   return { givenNames: match[1].trim() || 'Inconnu', familyName: match[2].trim() || 'Inconnu' };
 }
 
+// Noms secondaires d'un INDI (NAME répétés) : le type GEDCOM (TYPE) dit s'il
+// s'agit du nom de naissance, du nom marital ou d'un alias.
+function readOtherNames(records) {
+  const result = { birthFamilyName: null, marriedName: null, alias: null };
+  for (const record of records) {
+    const type = (value(record, 'TYPE') ?? '').trim().toUpperCase();
+    const surname = /\/([^/]*)\//.exec(record.value ?? '')?.[1]?.trim() || null;
+    if ((type === 'BIRTH' || type === 'MAIDEN') && surname) result.birthFamilyName ??= surname;
+    else if (type === 'MARRIED' && surname) result.marriedName ??= surname;
+    else if (type === 'AKA') {
+      result.alias ??= (record.value ?? '').replace(/\//g, ' ').replace(/\s+/g, ' ').trim() || null;
+    }
+  }
+  return result;
+}
+
 function sex(value) {
   return ['M', 'F'].includes(value) ? value : 'U';
 }
@@ -733,6 +798,7 @@ function pedigreeOf(records, childXref, familyXref) {
   const person = records.find((record) => record.tag === 'INDI' && record.xref === childXref);
   if (!person) return 'BIOLOGICAL';
   const famc = children(person, 'FAMC').find((link) => link.value === familyXref);
+  if (famc && value(famc, '_GUARDIAN')) return 'GUARDIAN';
   const pedigree = famc ? value(famc, 'PEDI')?.toUpperCase() : null;
   return PEDIGREE_TO_LINK[pedigree] ?? 'BIOLOGICAL';
 }

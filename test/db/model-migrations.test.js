@@ -126,3 +126,71 @@ test('0026 : événements et participants existants sont conservés, nouveaux ty
     },
   );
 });
+
+test('0027 : filiations et personnes existantes conservées, tutelle et identité étendue acceptées', () => {
+  upgradeFrom(
+    '0027',
+    (database) => {
+      const insertPerson = database.prepare(
+        "INSERT INTO persons (given_names, family_name, external_id) VALUES (?, 'Test', ?)",
+      );
+      const child = insertPerson.run('Enfant', '@I1@').lastInsertRowid;
+      const parent = insertPerson.run('Parent', '@I2@').lastInsertRowid;
+      const parentage = database
+        .prepare(
+          `INSERT INTO parentages (child_id, parent_id, parent_role, link_type, notes)
+           VALUES (?, ?, 'FATHER', 'ADOPTIVE', 'adoption plénière')`,
+        )
+        .run(child, parent).lastInsertRowid;
+      return { child, parent, parentage };
+    },
+    (database, { child, parent, parentage }) => {
+      const kept = database.prepare('SELECT * FROM parentages WHERE id = ?').get(parentage);
+      assert.equal(kept.link_type, 'ADOPTIVE');
+      assert.equal(kept.parent_role, 'FATHER');
+      assert.equal(kept.notes, 'adoption plénière');
+
+      // Valeurs par défaut des colonnes ajoutées sur une personne existante.
+      const person = database.prepare('SELECT * FROM persons WHERE id = ?').get(child);
+      assert.equal(person.alias, null);
+      assert.equal(person.is_private, 0);
+      assert.equal(person.external_id, '@I1@');
+
+      // Tutelle acceptée, valeur inconnue toujours refusée, unicité préservée.
+      database.prepare('DELETE FROM parentages WHERE id = ?').run(parentage);
+      database
+        .prepare(
+          "INSERT INTO parentages (child_id, parent_id, link_type) VALUES (?, ?, 'GUARDIAN')",
+        )
+        .run(child, parent);
+      assert.throws(
+        () =>
+          database
+            .prepare("INSERT INTO parentages (child_id, parent_id, link_type) VALUES (?, ?, 'X')")
+            .run(parent, child),
+        /CHECK constraint failed/,
+      );
+      assert.throws(
+        () =>
+          database
+            .prepare(
+              "INSERT INTO parentages (child_id, parent_id, link_type) VALUES (?, ?, 'STEP')",
+            )
+            .run(child, parent),
+        /UNIQUE constraint failed/,
+      );
+      assert.throws(
+        () => database.prepare('UPDATE persons SET is_private = 2 WHERE id = ?').run(child),
+        /CHECK constraint failed/,
+      );
+
+      // Identifiants externes : unicité (personne, schéma, valeur) parmi les actifs.
+      const addIdentifier = database.prepare(
+        'INSERT INTO person_identifiers (person_id, scheme, value) VALUES (?, ?, ?)',
+      );
+      addIdentifier.run(child, 'WIKIDATA', 'Q1');
+      assert.throws(() => addIdentifier.run(child, 'WIKIDATA', 'Q1'), /UNIQUE constraint failed/);
+      addIdentifier.run(parent, 'WIKIDATA', 'Q1');
+    },
+  );
+});

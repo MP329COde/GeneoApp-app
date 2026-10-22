@@ -9,10 +9,15 @@ export function personRoutes(services) {
 
   router.post('/', controller.create);
   router.get('/', controller.list);
+  // Avant « /:id » : « by-identifier » ne doit pas être pris pour un identifiant.
+  router.get('/by-identifier', controller.findByIdentifier);
   router.get('/:id', controller.get);
   router.patch('/:id', controller.update);
   router.delete('/:id', controller.remove);
   router.post('/:id/restore', controller.restore);
+  router.get('/:id/identifiers', controller.listIdentifiers);
+  router.post('/:id/identifiers', controller.addIdentifier);
+  router.delete('/:id/identifiers/:identifierId', controller.removeIdentifier);
   router.put('/:id/portrait', (request, response) =>
     response.json(
       services.documents.setPortrait(request.params.id, request.body ?? {}, {

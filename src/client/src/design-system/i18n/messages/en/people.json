@@ -295,6 +295,7 @@
   "radialGraph.link.adoptive": "adoptive",
   "radialGraph.link.foster": "foster",
   "radialGraph.link.step": "by marriage",
+  "radialGraph.link.guardian": "by guardianship",
   "radialGraph.link.unknown": "of unknown nature",
   "radialGraph.ariaLabel": "Family graph of {name}",
   "radialGraph.nodeLabel": "{name}{years}, degree {degree}",

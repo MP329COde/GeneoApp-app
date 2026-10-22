@@ -1,5 +1,6 @@
 import { withTransaction, recordAudit } from './base-repository.js';
 import { indexDocument, removeFromIndex } from './search-index.js';
+import { personDocument } from './search-reindex.js';
 
 const UPDATABLE_FIELDS = [
   'givenNames',
@@ -8,10 +9,12 @@ const UPDATABLE_FIELDS = [
   'sex',
   'notes',
   'nickname',
+  'alias',
   'marriedName',
   'title',
   'suffix',
   'isLiving',
+  'isPrivate',
   'externalId',
 ];
 
@@ -22,10 +25,12 @@ const FIELD_TO_COLUMN = {
   sex: 'sex',
   notes: 'notes',
   nickname: 'nickname',
+  alias: 'alias',
   marriedName: 'married_name',
   title: 'title',
   suffix: 'suffix',
   isLiving: 'is_living',
+  isPrivate: 'is_private',
   externalId: 'external_id',
 };
 
@@ -47,10 +52,12 @@ export class PersonRepository {
       sex = 'U',
       notes = null,
       nickname = null,
+      alias = null,
       marriedName = null,
       title = null,
       suffix = null,
       isLiving = true,
+      isPrivate = false,
       externalId = null,
     },
     { performedBy = null } = {},
@@ -66,11 +73,11 @@ export class PersonRepository {
         .prepare(
           `INSERT INTO persons (
              given_names, family_name, birth_family_name, sex, notes,
-             nickname, married_name, title, suffix, is_living, external_id
+             nickname, alias, married_name, title, suffix, is_living, is_private, external_id
            )
            VALUES (
              @givenNames, @familyName, @birthFamilyName, @sex, @notes,
-             @nickname, @marriedName, @title, @suffix, @isLiving, @externalId
+             @nickname, @alias, @marriedName, @title, @suffix, @isLiving, @isPrivate, @externalId
            )`,
         )
         .run({
@@ -80,10 +87,12 @@ export class PersonRepository {
           sex,
           notes,
           nickname,
+          alias,
           marriedName,
           title,
           suffix,
           isLiving: isLiving ? 1 : 0,
+          isPrivate: isPrivate ? 1 : 0,
           externalId,
         });
 
@@ -99,10 +108,12 @@ export class PersonRepository {
           sex,
           notes,
           nickname,
+          alias,
           marriedName,
           title,
           suffix,
           isLiving,
+          isPrivate,
           externalId,
         },
         performedBy,
@@ -111,8 +122,15 @@ export class PersonRepository {
       indexDocument(this.database, {
         entityType: 'PERSON',
         entityId: id,
-        title: `${givenNames} ${familyName}`,
-        body: [birthFamilyName, nickname, notes].filter(Boolean).join(' — '),
+        ...personDocument({
+          given_names: givenNames,
+          family_name: familyName,
+          birth_family_name: birthFamilyName,
+          married_name: marriedName,
+          alias,
+          nickname,
+          notes,
+        }),
       });
 
       return this.findById(id);
@@ -207,7 +225,7 @@ export class PersonRepository {
         ...Object.fromEntries(
           fields.map((field) => [
             field,
-            field === 'isLiving' ? (patch[field] ? 1 : 0) : patch[field],
+            ['isLiving', 'isPrivate'].includes(field) ? (patch[field] ? 1 : 0) : patch[field],
           ]),
         ),
       };
@@ -231,14 +249,106 @@ export class PersonRepository {
       indexDocument(this.database, {
         entityType: 'PERSON',
         entityId: id,
-        title: `${updated.given_names} ${updated.family_name}`,
-        body: [updated.birth_family_name, updated.nickname, updated.notes]
-          .filter(Boolean)
-          .join(' — '),
+        ...personDocument(updated),
       });
 
       return updated;
     });
+  }
+
+  /** Identifiants externes de la personne (FamilySearch, Geneanet…). */
+  listIdentifiers(personId) {
+    return this.database
+      .prepare(
+        `SELECT id, person_id AS personId, scheme, value
+         FROM person_identifiers
+         WHERE person_id = ? AND deleted_at IS NULL
+         ORDER BY scheme, value`,
+      )
+      .all(personId);
+  }
+
+  /**
+   * Ajoute un identifiant externe. Le schéma est normalisé en majuscules ;
+   * ajouter deux fois le même couple (schéma, valeur) est sans effet et
+   * renvoie l'identifiant existant.
+   */
+  addIdentifier(personId, { scheme, value }, { performedBy = null } = {}) {
+    const normalizedScheme = String(scheme ?? '')
+      .trim()
+      .toUpperCase();
+    const normalizedValue = String(value ?? '').trim();
+    if (!normalizedScheme || !normalizedValue) {
+      throw new Error('scheme et value sont obligatoires');
+    }
+
+    return withTransaction(this.database, () => {
+      if (!this.findById(personId)) {
+        throw new Error(`Personne introuvable : ${personId}`);
+      }
+      const existing = this.database
+        .prepare(
+          `SELECT id FROM person_identifiers
+           WHERE person_id = ? AND scheme = ? AND value = ? AND deleted_at IS NULL`,
+        )
+        .get(personId, normalizedScheme, normalizedValue);
+      if (existing)
+        return { id: existing.id, personId, scheme: normalizedScheme, value: normalizedValue };
+
+      const info = this.database
+        .prepare('INSERT INTO person_identifiers (person_id, scheme, value) VALUES (?, ?, ?)')
+        .run(personId, normalizedScheme, normalizedValue);
+      recordAudit(this.database, {
+        tableName: 'person_identifiers',
+        rowId: info.lastInsertRowid,
+        operation: 'INSERT',
+        changes: { personId, scheme: normalizedScheme, value: normalizedValue },
+        performedBy,
+      });
+      return {
+        id: info.lastInsertRowid,
+        personId,
+        scheme: normalizedScheme,
+        value: normalizedValue,
+      };
+    });
+  }
+
+  removeIdentifier(personId, identifierId, { performedBy = null } = {}) {
+    return withTransaction(this.database, () => {
+      const result = this.database
+        .prepare(
+          `UPDATE person_identifiers
+           SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = ? AND person_id = ? AND deleted_at IS NULL`,
+        )
+        .run(identifierId, personId);
+      if (result.changes === 0) return false;
+      recordAudit(this.database, {
+        tableName: 'person_identifiers',
+        rowId: identifierId,
+        operation: 'DELETE',
+        performedBy,
+      });
+      return true;
+    });
+  }
+
+  /**
+   * Personnes portant un identifiant externe donné. Plusieurs résultats
+   * signalent un doublon probable : c'est une information, jamais une
+   * fusion automatique.
+   */
+  findByIdentifier(scheme, value) {
+    return this.database
+      .prepare(
+        `SELECT p.* FROM persons p
+         JOIN person_identifiers i ON i.person_id = p.id AND i.deleted_at IS NULL
+         WHERE i.scheme = ? AND i.value = ? AND p.deleted_at IS NULL
+         ORDER BY p.id`,
+      )
+      .all(String(scheme).trim().toUpperCase(), String(value).trim());
   }
 
   softDelete(id, { performedBy = null } = {}) {
@@ -297,10 +407,7 @@ export class PersonRepository {
       indexDocument(this.database, {
         entityType: 'PERSON',
         entityId: id,
-        title: `${existing.given_names} ${existing.family_name}`,
-        body: [existing.birth_family_name, existing.nickname, existing.notes]
-          .filter(Boolean)
-          .join(' — '),
+        ...personDocument(existing),
       });
 
       return this.findById(id);

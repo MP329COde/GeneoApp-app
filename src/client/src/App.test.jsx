@@ -399,8 +399,12 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText('Surnom / alias'), { target: { value: 'Jeannot' } });
+    fireEvent.change(screen.getByLabelText('Surnom'), { target: { value: 'Jeannot' } });
+    fireEvent.change(screen.getByLabelText('Alias (autre nom connu)'), {
+      target: { value: 'J. Dupont' },
+    });
     fireEvent.click(screen.getByLabelText('Personne vivante'));
+    fireEvent.click(screen.getByLabelText('Informations privées (à ne pas divulguer)'));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     await waitFor(() =>
@@ -410,10 +414,12 @@ describe('App', () => {
         birthFamilyName: null,
         sex: 'U',
         nickname: 'Jeannot',
+        alias: 'J. Dupont',
         marriedName: null,
         title: null,
         suffix: null,
         isLiving: false,
+        isPrivate: true,
       }),
     );
   });
