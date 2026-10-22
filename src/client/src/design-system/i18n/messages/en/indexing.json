@@ -1,0 +1,31 @@
+{
+  "siteSearch.index.optIn": "Allow local indexing of this site’s pages",
+  "siteSearch.index.hint": "Downloaded pages are stored in GeneoApp; nothing is sent back to the site.",
+  "siteSearch.index.enabled": "Local indexing allowed for this site.",
+  "siteSearch.index.disabled": "Local indexing disabled for this site.",
+  "siteSearch.index.estimate": "Estimate the number of pages",
+  "siteSearch.index.run": "Index locally",
+  "siteSearch.index.estimateValue": {
+    "one": "Estimate: {count} page to index.",
+    "other": "Estimate: {count} pages to index."
+  },
+  "siteSearch.index.estimated": {
+    "one": "{count} page will be indexed locally.",
+    "other": "{count} pages will be indexed locally."
+  },
+  "siteSearch.index.done": {
+    "one": "{count} page indexed locally.",
+    "other": "{count} pages indexed locally."
+  },
+  "siteSearch.index.robotsDisallowed": "This site forbids indexing this page (robots.txt): nothing was downloaded.",
+  "siteSearch.index.unreachable": "The site is unreachable: no page could be downloaded.",
+  "siteSearch.index.tooLarge": "The page is too large to be indexed.",
+  "siteSearch.index.invalidAddress": "This site cannot be indexed locally.",
+  "siteSearch.index.notOptedIn": "First allow local indexing for this site.",
+  "siteSearch.index.networkDisabled": "Internet access is disabled in the settings.",
+  "siteSearch.index.stateError": "The local indexing state could not be read.",
+  "server.indexing.connectorNotFound": "Connector not found",
+  "server.indexing.connectorNotOptedIn": "Connector not allowed: enable its local indexing before querying it",
+  "server.indexing.networkDisabled": "Internet access is disabled in the settings",
+  "server.indexing.connectorSource": "This source belongs to a connector: use the connector indexing instead"
+}

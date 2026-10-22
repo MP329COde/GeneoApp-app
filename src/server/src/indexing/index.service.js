@@ -1,12 +1,20 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { ConflictError, NotFoundError } from '../errors.js';
+import { ConflictError, ForbiddenError, NotFoundError } from '../errors.js';
 import { invalidError, notFoundError } from '../validation/field-errors.js';
 import { IndexRepository } from './index-repository.js';
 import { scanFolder } from './folder-scanner.js';
 import { crawlSite } from './crawler.js';
 import { CancelledError, normalizeUrl } from './fetcher.js';
 import { OPEN_DATA_PRESETS, dataGouvPage, dataGouvSlug, indexDataset } from './datasets.js';
+import {
+  CONNECTORS,
+  CONNECTOR_LIMITS,
+  estimateConnectorPages,
+  findConnector,
+  indexConnectorPages,
+  sanitizeSearchValues,
+} from './connectors.js';
 
 const MODES = ['CRAWL', 'DIRECT', 'DATAGOUV'];
 const TEXT_STATUSES = ['EXTRACTED', 'OCR', 'UNAVAILABLE'];
@@ -85,6 +93,145 @@ export class IndexService {
 
   listSources() {
     return this.repository.listSources();
+  }
+
+  /**
+   * Connecteurs multi-sites : catalogue, état d'opt-in et nombre de pages
+   * déjà indexées. Aucune requête réseau ici.
+   */
+  listConnectors() {
+    const saved = new Map(this.repository.listConnectors().map((row) => [row.connector_id, row]));
+    return CONNECTORS.map((connector) => {
+      const row = saved.get(connector.id) ?? null;
+      return {
+        id: connector.id,
+        label: row?.label ?? connector.label,
+        baseUrl: connector.baseUrl,
+        optedIn: row?.opted_in === 1,
+        maxPages: row?.max_pages ?? CONNECTOR_LIMITS.maxPages,
+        documentCount: row?.document_count ?? 0,
+        lastStatus: row?.last_status ?? null,
+        lastMessage: row?.last_message ?? null,
+        lastRunAt: row?.last_run_at ?? null,
+      };
+    });
+  }
+
+  /** Connecteur du catalogue, ou erreur si l'identifiant est inconnu. */
+  requireConnector(connectorId) {
+    const connector = findConnector(connectorId);
+    if (!connector) {
+      const error = new NotFoundError('Connecteur introuvable');
+      error.code = 'CONNECTOR_NOT_FOUND';
+      error.translationKey = 'server.indexing.connectorNotFound';
+      throw error;
+    }
+    return connector;
+  }
+
+  /**
+   * Opt-in explicite par connecteur. Sans lui, aucune requête ne part vers
+   * le site ; le déconnecter interrompt aussi les indexations suivantes.
+   */
+  setConnectorOptIn(connectorId, payload = {}) {
+    const connector = this.requireConnector(connectorId);
+    const existing = this.repository.findConnector(connector.id);
+    const optedIn = payload.optedIn === undefined ? Boolean(existing?.opted_in) : Boolean(payload.optedIn);
+    const maxPages =
+      payload.maxPages === undefined
+        ? (existing?.max_pages ?? CONNECTOR_LIMITS.maxPages)
+        : boundedInteger(payload.maxPages, 'maxPages', 1, CONNECTOR_LIMITS.maxPages, CONNECTOR_LIMITS.maxPages);
+    const saved = this.repository.saveConnector({
+      connectorId: connector.id,
+      label: connector.label,
+      baseUrl: connector.baseUrl,
+      optedIn,
+      maxPages,
+    });
+    return {
+      id: saved.connector_id,
+      label: saved.label,
+      baseUrl: saved.base_url,
+      optedIn: saved.opted_in === 1,
+      maxPages: saved.max_pages,
+      documentCount: 0,
+    };
+  }
+
+  /**
+   * Estimation du nombre de pages qu'une indexation de ce connecteur
+   * produirait. Refusée si l'utilisateur n'a pas autorisé le connecteur
+   * ou si l'accès internet est désactivé.
+   */
+  async estimateConnector(connectorId, values) {
+    const connector = this.requireConnector(connectorId);
+    this.requireConnectorOptIn(connector.id);
+    const state = this.repository.findConnector(connector.id);
+    const estimate = await estimateConnectorPages(
+      { ...connector, max_pages: state?.max_pages ?? CONNECTOR_LIMITS.maxPages },
+      {
+        values: sanitizeSearchValues(values),
+        fetchImpl: this.fetchImpl,
+        ...(this.crawlLimits ? { limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits } } : {}),
+      },
+    );
+    return { connectorId: connector.id, ...estimate };
+  }
+
+  /** Vérifie l'opt-in et l'autorisation réseau : deux verrous distincts. */
+  requireConnectorOptIn(connectorId) {
+    const state = this.repository.findConnector(connectorId);
+    if (!state || state.opted_in !== 1) {
+      const error = new ForbiddenError(
+        'Connecteur non autorisé : activez son indexation locale avant de l’interroger',
+      );
+      error.code = 'CONNECTOR_NOT_OPTED_IN';
+      error.translationKey = 'server.indexing.connectorNotOptedIn';
+      throw error;
+    }
+    if (!this.getSettings().networkAllowed) {
+      const error = new ForbiddenError('Accès internet désactivé dans les réglages');
+      error.code = 'NETWORK_DISABLED';
+      error.translationKey = 'server.indexing.networkDisabled';
+      throw error;
+    }
+    return state;
+  }
+
+  /**
+   * Indexe localement les pages distantes d'un connecteur autorisé : le
+   * contenu est stocké dans l'index local, rien n'est renvoyé au site.
+   */
+  async indexConnector(connectorId, values) {
+    const connector = this.requireConnector(connectorId);
+    const state = this.requireConnectorOptIn(connector.id);
+    if (this.running) throw new ConflictError('Une indexation est en cours');
+    const counts = { indexed: 0, unchanged: 0, skipped: 0, errors: 0, removed: 0 };
+    const runId = this.repository.startRun('MANUAL', state.source_id);
+    const outcome = await indexConnectorPages(
+      { ...connector, max_pages: state.max_pages },
+      {
+        values: sanitizeSearchValues(values),
+        repository: this.repository,
+        sourceId: state.source_id,
+        counts,
+        fetchImpl: this.fetchImpl,
+        ...(this.crawlLimits ? { limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits } } : {}),
+        runId,
+      },
+    );
+    // Le journal n'accepte que RUNNING, DONE ou FAILED : un refus (robots.txt,
+    // site injoignable) est un échec explicite, jamais un succès silencieux.
+    const status = outcome.reason ? 'FAILED' : 'DONE';
+    this.repository.recordConnectorOutcome(connector.id, {
+      status,
+      message: outcome.reason ?? null,
+    });
+    return this.repository.finishRun(runId, {
+      status,
+      counts,
+      message: outcome.reason ?? null,
+    });
   }
 
   presets() {
@@ -173,6 +320,16 @@ export class IndexService {
   requireSource(id) {
     const source = this.repository.findSource(Number(id));
     if (!source) throw new NotFoundError('Source introuvable');
+    // Les sources d'un connecteur ne se pilotent pas comme les autres : elles
+    // ne sont indexées que par la route dédiée, qui vérifie l'opt-in.
+    if (source.connector_id) {
+      const error = new ForbiddenError(
+        'Cette source appartient à un connecteur : passez par l’indexation du connecteur',
+      );
+      error.code = 'CONNECTOR_SOURCE';
+      error.translationKey = 'server.indexing.connectorSource';
+      throw error;
+    }
     return source;
   }
 

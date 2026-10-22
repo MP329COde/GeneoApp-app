@@ -8,9 +8,74 @@ export class IndexRepository {
     return this.database
       .prepare(
         `SELECT s.*, (SELECT COUNT(*) FROM indexed_documents d WHERE d.source_id = s.id) AS document_count
-         FROM index_sources s WHERE s.deleted_at IS NULL ORDER BY s.id`,
+         FROM index_sources s WHERE s.deleted_at IS NULL AND s.connector_id IS NULL ORDER BY s.id`,
       )
       .all();
+  }
+
+  // Connecteurs multi-sites : l'opt-in est enregistré ici, côté serveur.
+  listConnectors() {
+    return this.database
+      .prepare(
+        `SELECT c.*, (SELECT COUNT(*) FROM indexed_documents d WHERE d.source_id = c.source_id) AS document_count
+         FROM index_connectors c ORDER BY c.id`,
+      )
+      .all();
+  }
+
+  findConnector(connectorId) {
+    return (
+      this.database
+        .prepare('SELECT * FROM index_connectors WHERE connector_id = ?')
+        .get(connectorId) ?? null
+    );
+  }
+
+  /**
+   * Enregistre (ou met à jour) l'opt-in d'un connecteur. La source
+   * d'indexation associée est créée au premier accord : elle reste
+   * désactivée pour que l'indexation générale n'explore jamais le site.
+   */
+  saveConnector({ connectorId, label, baseUrl, optedIn, maxPages }) {
+    const existing = this.findConnector(connectorId);
+    if (!existing) {
+      this.database
+        .prepare(
+          `INSERT INTO index_connectors (connector_id, label, base_url, opted_in, max_pages)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(connectorId, label, baseUrl, optedIn ? 1 : 0, maxPages);
+    } else {
+      this.database
+        .prepare(
+          `UPDATE index_connectors SET label = ?, base_url = ?, opted_in = ?, max_pages = ?
+           WHERE connector_id = ?`,
+        )
+        .run(label, baseUrl, optedIn ? 1 : 0, maxPages, connectorId);
+    }
+    const connector = this.findConnector(connectorId);
+    if (!connector.source_id) {
+      const source = this.database
+        .prepare(
+          `INSERT INTO index_sources (kind, mode, label, location, enabled, max_depth, max_documents, connector_id)
+           VALUES ('SITE', 'CRAWL', ?, ?, 0, 1, ?, ?)`,
+        )
+        .run(label, baseUrl, maxPages, connectorId);
+      this.database
+        .prepare('UPDATE index_connectors SET source_id = ? WHERE connector_id = ?')
+        .run(source.lastInsertRowid, connectorId);
+    }
+    return this.findConnector(connectorId);
+  }
+
+  recordConnectorOutcome(connectorId, { status, message }) {
+    this.database
+      .prepare(
+        `UPDATE index_connectors SET last_run_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           last_status = ?, last_message = ? WHERE connector_id = ?`,
+      )
+      .run(status, message ?? null, connectorId);
+    return this.findConnector(connectorId);
   }
 
   findSource(id) {

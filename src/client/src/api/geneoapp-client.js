@@ -288,6 +288,13 @@ function createHttpClient() {
       runSource: (id) => fetchJson(`/api/indexing/sources/${id}/run`, { method: 'POST' }),
       clearSource: (id) => fetchJson(`/api/indexing/sources/${id}/clear`, { method: 'POST' }),
       cancel: () => fetchJson('/api/indexing/run/cancel', { method: 'POST' }),
+      connectors: () => fetchJson('/api/indexing/connectors'),
+      setConnectorOptIn: (id, data) =>
+        fetchJson(`/api/indexing/connectors/${id}`, { method: 'PATCH', body: data }),
+      estimateConnector: (id, values) =>
+        fetchJson(`/api/indexing/connectors/${id}/estimate`, { method: 'POST', body: { values } }),
+      indexConnector: (id, values) =>
+        fetchJson(`/api/indexing/connectors/${id}/index`, { method: 'POST', body: { values } }),
     },
     advancedSearch: (filters) =>
       fetchJson('/api/search/advanced', { method: 'POST', body: filters }),
@@ -542,6 +549,10 @@ function createIpcClient(rawBridge) {
       runSource: (id) => bridge.indexing.runSource(id),
       clearSource: (id) => bridge.indexing.clearSource(id),
       cancel: () => bridge.indexing.cancel(),
+      connectors: () => bridge.indexing.connectors(),
+      setConnectorOptIn: (id, data) => bridge.indexing.setConnectorOptIn(id, data),
+      estimateConnector: (id, values) => bridge.indexing.estimateConnector(id, values),
+      indexConnector: (id, values) => bridge.indexing.indexConnector(id, values),
     },
     advancedSearch: (filters) => bridge.advancedSearch(filters),
     history: {

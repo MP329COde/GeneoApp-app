@@ -33,6 +33,24 @@ export function indexingRoutes(services) {
     handle(() => indexing().presets()),
   );
   router.get(
+    '/connectors',
+    handle(() => indexing().listConnectors()),
+  );
+  router.patch(
+    '/connectors/:id',
+    handle((request) =>
+      indexing().setConnectorOptIn(request.params.id, request.body ?? {}),
+    ),
+  );
+  router.post(
+    '/connectors/:id/estimate',
+    handle((request) => indexing().estimateConnector(request.params.id, request.body?.values)),
+  );
+  router.post(
+    '/connectors/:id/index',
+    handle((request) => indexing().indexConnector(request.params.id, request.body?.values)),
+  );
+  router.get(
     '/documents/:id',
     handle((request) => indexing().getDocument(request.params.id)),
   );

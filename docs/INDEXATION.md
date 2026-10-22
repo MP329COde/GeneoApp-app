@@ -26,6 +26,40 @@ geneoapp index run --source 3
 geneoapp index search '"jean baptiste" rouen -paris'
 ```
 
+## Indexation locale des pages de recherche multi-sites
+
+La recherche multi-sites ouvre par défaut les recherches dans le navigateur : GeneoApp ne
+contacte aucun site. Un site peut être **autorisé explicitement** à l'indexation locale : les
+pages de résultats autorisées par le site sont alors téléchargées et rangées dans l'index local,
+puis retrouvables dans la recherche plein texte.
+
+L'autorisation est donnée **par connecteur**, dans l'application, et conservée par le serveur
+(table `index_connectors`). Elle est révocable à tout moment. Deux verrous doivent être levés :
+l'opt-in du connecteur **et** le réglage global « Autoriser l'accès internet ».
+
+Garanties :
+
+- **Aucune requête sans autorisation** : sans opt-in, l'estimation et l'indexation sont refusées
+  (403) et aucune requête ne part vers le site.
+- **`robots.txt` respecté** : il est consulté avant toute autre adresse ; si le site interdit la
+  page de recherche, rien n'est téléchargé et le motif est affiché. Les liens vers un autre site,
+  les médias et les pages interdites ne sont pas suivis.
+- **Aucune adresse imposée par le client** : le serveur seul connaît l'adresse du connecteur et
+  le modèle de recherche ; le client n'envoie que quatre valeurs de recherche (`nom`, `prenom`,
+  `annee`, `lieu`), nettoyées et tronquées.
+- **Pas d'authentification ni de cookie** : requêtes en lecture seule, sans identifiants.
+- **Ressources bornées** : nombre de pages (au plus 50, réglable), taille de réponse, temps de
+  réponse, nombre de redirections, délai entre deux pages (`Crawl-delay` respecté).
+- **Rien n'est renvoyé** : le contenu téléchargé reste dans l'index local.
+
+```bash
+# HTTP (application lancée)
+GET    /api/indexing/connectors                  # catalogue et état des autorisations
+PATCH  /api/indexing/connectors/geneanet         # { "optedIn": true, "maxPages": 20 }
+POST   /api/indexing/connectors/geneanet/estimate # { "values": { "nom": "Dupont" } }
+POST   /api/indexing/connectors/geneanet/index    # { "values": { "nom": "Dupont" } }
+```
+
 ## Planification nocturne
 
 Dans l'écran : « Indexer automatiquement chaque nuit » + heure (2 h par défaut). L'indexation
