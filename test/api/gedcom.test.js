@@ -527,3 +527,47 @@ test('GEDCOM import alimente la recherche locale', async () => {
     await server.close();
   }
 });
+
+test('export : en-tête conforme, relu et vérifié ; un retour à la ligne dans un nom ne casse pas le fichier', async () => {
+  const server = await startTestServer();
+  try {
+    const empty = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.equal(empty.status, 200, 'un arbre vide s’exporte aussi');
+    assert.equal(empty.body.summary.verified, true);
+    assert.match(
+      empty.body.gedcom,
+      /^0 HEAD\n1 SOUR GeneoApp\n2 NAME GeneoApp\n1 GEDC\n2 VERS 5\.5\.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n1 SUBM @SUBM1@/,
+    );
+
+    const hostile = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {
+        givenNames: 'Ada\n0 TRLR\n0 @I999@ INDI',
+        familyName: 'Lovelace\r\n1 SEX M',
+        notes: 'ligne 1\nligne 2',
+      },
+    });
+    assert.equal(hostile.status, 201);
+
+    for (const format of ['5.5.1', '7']) {
+      const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+        method: 'POST',
+        body: { format },
+      });
+      assert.equal(exported.status, 200);
+      assert.equal(exported.body.summary.persons, 1);
+      const records = parseGedcom(exported.body.gedcom);
+      assert.equal(records.filter((record) => record.tag === 'INDI').length, 1, format);
+      assert.equal(records.filter((record) => record.tag === 'TRLR').length, 1, format);
+      if (format === '7') {
+        assert.match(exported.body.gedcom, /2 VERS 7\.0/);
+        assert.doesNotMatch(exported.body.gedcom, /1 CHAR/);
+      }
+    }
+  } finally {
+    await server.close();
+  }
+});

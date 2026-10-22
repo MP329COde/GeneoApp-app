@@ -270,10 +270,17 @@ export class GedcomService {
       .all()
       .filter((item) => selectedIds.has(item.entity_id))
       .map((item) => ({ ...item, path: mediaPath(item) }));
+    const gedcom = generateGedcom(this.database, persons, families, format, media);
+    verifyExport(gedcom, { persons: persons.length, families: families.length });
     return {
       format,
-      gedcom: generateGedcom(this.database, persons, families, format, media),
-      summary: { persons: persons.length, families: families.length, media: media.length },
+      gedcom,
+      summary: {
+        persons: persons.length,
+        families: families.length,
+        media: media.length,
+        verified: true,
+      },
       media: media.map((item) => ({ id: item.id, path: item.path, mimeType: item.mime_type })),
     };
   }
@@ -367,7 +374,21 @@ function buildExportFamilies(database, selectedIds) {
 
 function generateGedcom(database, persons, families, format, media = []) {
   const personIds = new Set(persons.map((person) => person.id));
-  const lines = ['0 HEAD', `1 GEDC`, `2 VERS ${format}`, '1 CHAR UTF-8'];
+  const lines =
+    format === '7'
+      ? ['0 HEAD', '1 GEDC', '2 VERS 7.0', '1 SOUR GeneoApp', '2 NAME GeneoApp']
+      : [
+          '0 HEAD',
+          '1 SOUR GeneoApp',
+          '2 NAME GeneoApp',
+          '1 GEDC',
+          '2 VERS 5.5.1',
+          '2 FORM LINEAGE-LINKED',
+          '1 CHAR UTF-8',
+          '1 SUBM @SUBM1@',
+          '0 @SUBM1@ SUBM',
+          '1 NAME GeneoApp',
+        ];
   for (const person of persons) {
     const xref = `@I${person.id}@`;
     lines.push(`0 ${xref} INDI`);
@@ -454,7 +475,84 @@ function generateGedcom(database, persons, families, format, media = []) {
     lines.push(`${format === '7' ? '3' : '2'} TITL ${item.original_filename}`.replace(/\n/g, ' '));
   }
   lines.push('0 TRLR');
-  return `${lines.join('\n')}\n`;
+  return `${finalizeLines(lines).join('\n')}\n`;
+}
+
+// Un retour à la ligne dans une valeur casserait la structure du fichier (un
+// nom « Ada\n0 TRLR » fermerait le fichier). Les textes longs (NOTE, TEXT)
+// l'expriment avec CONT, comme le prévoit la norme ; partout ailleurs il est
+// remplacé par une espace. Les lignes trop longues sont coupées en CONC.
+const MULTILINE_TAGS = new Set(['NOTE', 'TEXT', 'QUOT']);
+const MAX_LINE_VALUE = 240;
+
+function finalizeLines(lines) {
+  const result = [];
+  for (const line of lines) {
+    const match = /^(\d+) (@[^@]+@ )?(\S+)(?: ([\s\S]*))?$/.exec(line);
+    if (!match) {
+      result.push(line.replace(/[\r\n]+/g, ' '));
+      continue;
+    }
+    const [, level, xref = '', tag, value = ''] = match;
+    const head = `${level} ${xref}${tag}`;
+    const parts = MULTILINE_TAGS.has(tag)
+      ? value.split(/\r\n|\r|\n/)
+      : [value.replace(/[\r\n]+/g, ' ')];
+    parts.forEach((part, index) => {
+      const chunks = [];
+      // Coupure jamais devant une espace : le lecteur ignore les espaces qui
+      // suivent la balise et perdrait celle du début du morceau.
+      for (let start = 0; start < part.length || start === 0;) {
+        let end = Math.min(start + MAX_LINE_VALUE, part.length);
+        while (end < part.length && part[end] === ' ') end += 1;
+        chunks.push(part.slice(start, end));
+        if (end >= part.length) break;
+        start = end;
+      }
+      const subLevel = Number(level) + 1;
+      chunks.forEach((chunk, chunkIndex) => {
+        if (index === 0 && chunkIndex === 0) result.push(chunk === '' ? head : `${head} ${chunk}`);
+        else {
+          const continuation = chunkIndex === 0 ? 'CONT' : 'CONC';
+          result.push(`${subLevel} ${continuation}${chunk === '' ? '' : ` ${chunk}`}`);
+        }
+      });
+    });
+  }
+  return result;
+}
+
+/**
+ * Un export est relu par notre propre parser avant d'être remis : un fichier
+ * que GeneoApp ne saurait pas relire (ou qui perd des personnes ou des
+ * familles) ne doit jamais atteindre l'utilisateur. Un échec ici est un bogue
+ * de l'export, pas une erreur de saisie : il est signalé comme erreur interne.
+ */
+function verifyExport(gedcom, expected) {
+  const records = parseGedcom(gedcom);
+  const report = validateGedcom(records);
+  const problems = report.errors.filter(
+    (error) => !(error.code === 'MISSING_INDIVIDUALS' && expected.persons === 0),
+  );
+  if (report.summary.individuals !== expected.persons) {
+    problems.push({
+      code: 'COUNT_MISMATCH',
+      message: `${report.summary.individuals} individu(s) relus pour ${expected.persons} exporté(s)`,
+    });
+  }
+  if (report.summary.families !== expected.families) {
+    problems.push({
+      code: 'COUNT_MISMATCH',
+      message: `${report.summary.families} famille(s) relues pour ${expected.families} exportée(s)`,
+    });
+  }
+  if (problems.length > 0) {
+    const error = new Error(
+      `Export GEDCOM invalide, non remis : ${problems.map((p) => p.message).join(' ; ')}`,
+    );
+    error.code = 'GEDCOM_EXPORT_VERIFICATION_FAILED';
+    throw error;
+  }
 }
 
 function buildMappingPreview(records) {
