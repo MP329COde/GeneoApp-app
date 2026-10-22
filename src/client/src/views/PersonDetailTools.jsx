@@ -3,6 +3,7 @@ import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { AssertionsPanel } from './AssertionsPanel.jsx';
+import { CitationEditForm } from './CitationEditForm.jsx';
 import { MediaUrlForm } from './MediaLinksPanel.jsx';
 import { IdentifiersPanel } from './IdentifiersPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
@@ -248,6 +249,7 @@ export function SourcesPanel({ selected }) {
   const [confidence, setConfidence] = useState('MEDIUM');
   const [sourcesError, setSourcesError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const loadCitations = useCallback(async () => {
     if (!selected) return;
@@ -279,6 +281,20 @@ export function SourcesPanel({ selected }) {
       </p>
     );
   }
+
+  const runCitation = async (action) => {
+    setBusy(true);
+    setSourcesError(null);
+    try {
+      await action();
+      setEditingId(null);
+      await loadCitations();
+    } catch (actionError) {
+      setSourcesError(actionError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -367,6 +383,39 @@ export function SourcesPanel({ selected }) {
                   )}
               </strong>
               {citation.page ? ` — ${citation.page}` : ''}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-expanded={editingId === citation.id}
+                onClick={() => setEditingId(editingId === citation.id ? null : citation.id)}
+                disabled={busy}
+              >
+                {t('personTools.sources.edit', 'Modifier')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => runCitation(() => client.sources.removeCitation(citation.id))}
+                disabled={busy}
+              >
+                {t('personTools.sources.removeCitation', 'Retirer la citation')}
+              </Button>
+              {editingId === citation.id ? (
+                <CitationEditForm
+                  citation={citation}
+                  source={sourcesById[citation.source_id]}
+                  busy={busy}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(data) =>
+                    runCitation(async () => {
+                      await client.sources.update(citation.source_id, data.source);
+                      await client.sources.updateCitation(citation.id, data.citation);
+                    })
+                  }
+                />
+              ) : null}
               <SourceMediaTool sourceId={citation.source_id} />
             </li>
           ))}
