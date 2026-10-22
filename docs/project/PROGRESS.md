@@ -256,3 +256,38 @@ passé à `t(...)`), la version anglaise devient complète.
 - `node scripts/check-i18n-hardcoded.js` : 52 fichiers audités, 0 texte en dur
 - `node scripts/check-i18n-keys.js` : 1105 clés en français, 1105 en anglais,
   0 erreur, 0 avertissement (aucune clé manquante, aucun repli divergent)
+
+## Tickets atomiques (2026-10, branche `fix/audit-2026-09`)
+
+Les tickets restants sont découpés en tâches courtes et indépendantes, traitées
+en parallèle par des sous-agents, chacune avec son commit et ses validations.
+
+| Ticket | Sujet | Statut | Commits |
+|---|---|---|---|
+| #47 | Confirmation partagée au lieu de `window.confirm` (unions, filiations, personnes) | Terminé | `c591b8a`, `6f7f81d`, `8f2fac2` |
+| #48 | Zoom et déplacement de la carte locale hors ligne | Terminé | `fdae2dc` |
+| #46 | Traduction des écrans métier restants | En cours | — |
+| #49 | Indexation locale des pages distantes (opt-in) | En cours | — |
+| — | Pagination de `client.persons.list()` | En cours | — |
+
+### #47 — Confirmation partagée
+
+La confirmation native du navigateur est remplacée par un composant unique
+(`ConfirmDialog`, `role="alertdialog"`) utilisé pour les unions, les liens de
+parenté et la suppression d'une personne : focus piégé, focus initial sur
+« Annuler », annulation par Échap, libellés traduits (nouveau domaine i18n
+`confirm.json`). `Modal` accepte désormais `role`, `describedById` et
+`initialFocusRef`.
+
+Validations : `npm run test:client` (tests unitaires `ConfirmDialog` et
+`FamiliesView`), `npx playwright test test/e2e/confirm-dialog.spec.js`
+(desktop et mobile 390×844), `npm run lint`.
+
+### #48 — Zoom et déplacement de la carte hors ligne
+
+La carte SVG locale devient interactive : molette et boutons (zoom ancré sur
+le point visé), glissement souris/doigt, pincement à deux doigts, flèches du
+clavier, recentrage. Aucun appel réseau, aucun tuile distante. La logique de
+transformation est isolée dans `map-viewport.js` (fonctions pures, testables
+sans navigateur) et les libellés sont regroupés dans un domaine i18n `map.json`.
+

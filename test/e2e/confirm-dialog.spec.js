@@ -41,7 +41,9 @@ test.describe('confirmation partagée', () => {
     await page.goto('/');
     await addPerson(page, 'Grace', 'Hopper');
 
-    const personCard = page.locator('.sidenav__people').getByRole('button', { name: 'Grace Hopper' });
+    const personCard = page
+      .locator('.sidenav__people')
+      .getByRole('button', { name: 'Grace Hopper' });
 
     // Annulation au clavier : la personne reste en place.
     const { dialog } = await openConfirmDialog(page, 'Grace Hopper');
