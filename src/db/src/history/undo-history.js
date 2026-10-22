@@ -22,6 +22,8 @@ const EXCLUDED_TABLES = new Set([
   'indexed_documents',
   'index_settings',
   'index_runs',
+  // Réglages de l'IA locale : configuration de la machine, hors historique.
+  'local_ai_settings',
 ]);
 
 const HISTORY_LIMIT = 200;

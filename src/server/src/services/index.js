@@ -75,10 +75,13 @@ export function createServices(
   const accounts = new AccountService(new AccountRepository(database), new SessionStore());
   const backups = new BackupService(database, { backupDir, mirrorDir });
 
-  const localAi = new LocalAiService();
-
   const research = new ResearchService(new ResearchRepository(database));
   const assertions = new AssertionService(new AssertionRepository(database));
+  const notes = new NoteService(new NoteRepository(database));
+  const localAi = new LocalAiService({
+    database,
+    sources: { notes, sources, research, assertions },
+  });
   const search = new SearchService(new SearchRepository(database), database);
 
   return {
@@ -102,7 +105,7 @@ export function createServices(
     }),
     backups,
     graph: new GenealogyGraphService(database, { search }),
-    notes: new NoteService(new NoteRepository(database)),
+    notes,
     research,
     statistics: new StatisticsService(database),
     localAi,

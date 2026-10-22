@@ -112,6 +112,7 @@ const NOT_BACKED_UP = {
   index_connectors: 'configuration d’indexation, reconstructible',
   index_runs: 'journal d’indexation',
   index_settings: 'configuration d’indexation',
+  local_ai_settings: 'réglages de l’IA locale, propres à la machine',
   index_sources: 'index de documents, reconstructible',
   indexed_documents: 'index de documents, reconstructible',
   search_index_map: 'correspondance de l’index de recherche, reconstruite avec lui',
