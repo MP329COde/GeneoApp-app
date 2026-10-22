@@ -577,7 +577,13 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'GEDCOM' }));
     fireEvent.click(screen.getByRole('button', { name: 'Exporter l’arbre complet' }));
 
-    await waitFor(() => expect(gedcom.export).toHaveBeenCalledWith({ format: '7' }));
+    await waitFor(() =>
+      expect(gedcom.export).toHaveBeenCalledWith({
+        format: '7',
+        excludePrivate: false,
+        anonymizeLiving: false,
+      }),
+    );
     expect(clickSpy).toHaveBeenCalled();
 
     clickSpy.mockRestore();
@@ -1807,6 +1813,8 @@ describe('App', () => {
         format: '5.5.1',
         branchOf: 4,
         side: 'MATERNAL',
+        excludePrivate: false,
+        anonymizeLiving: false,
       }),
     );
     expect(await screen.findByText('Exporté : 3 personnes, 1 famille')).toBeInTheDocument();

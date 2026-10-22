@@ -562,3 +562,39 @@ incohérentes) et sur les métadonnées renvoyées. Validé par `npm run lint`, 
   restent `CONNECTED` sans libellé inventé.
 - Après un mariage entre parents, le libellé principal reste le plus court chemin (conjoint) ; le lien de
   sang est dans `consanguinity`.
+
+## Phase D du prompt maître — API locale complète (2026-10-22)
+
+Audit des routes contre la liste de la phase D, puis comblement des écarts. `npm test` et la suite E2E
+passent ; un test (`test/api/route-robustness.test.js`) parcourt toutes les routes déclarées avec des
+identifiants et corps invalides et exige l'absence de 500 et de détail interne.
+
+| Écart | Livré | Commit |
+|---|---|---|
+| Événements, unions, filiations : création et suppression seulement | `PATCH`, retrait d'un participant, liste, partenaires d'union (ajout / retrait, deux au minimum), références inexistantes (404), doublons et cycles de filiation (409) | `3438fa6` |
+| Sources et citations : création seulement | Liste, `PATCH`, suppression (refusée tant que la source est utilisée), corbeille, restauration, purge | `98a6304` |
+| Familles absentes | `GET /api/unions/:id/family`, `GET /api/unions/families-of/:personId` | `fd5552f` |
+| Une recherche avec un caractère de contrôle provoquait une erreur SQLite | Corrigé ; le code d'une erreur interne n'est plus exposé | `fd5552f` |
+
+## Phase E du prompt maître — GEDCOM final (2026-10-22)
+
+Pipeline : analyse → validation → aperçu (avec doublons) → confirmation → import transactionnel → rapport.
+
+| Exigence | Livré | Commit |
+|---|---|---|
+| Export relu et validé avant remise | Relecture par le parser, comparaison des individus et familles ; un fichier non relisible n'est jamais remis | `a0b2698` |
+| En-têtes conformes | 5.5.1 (SOUR, FORM, CHAR, SUBM) et 7.0 (`VERS 7.0`, sans CHAR) | `a0b2698` |
+| Valeur contenant un retour à la ligne (injection d'enregistrements) | Aplatie, ou CONT pour les notes ; lignes longues en CONC | `a0b2698` |
+| Sources, citations, notes, coordonnées, mariage / divorce, type d'union | Import et export, aller-retour vérifié en 5.5.1 et 7 ; les notes partagées (`NOTE @N1@`) sont résolues | `39cb6b4` |
+| Tags inconnus conservés | `gedcom_extensions` (migration 0030) : signalés dans l'aperçu, réécrits au même rang, pointeurs réécrits ou vidés | `b344acc` |
+| Encodages | ANSEL, ANSI / Windows-1252, UTF-16 LE / BE, UTF-8 avec ou sans BOM, ASCII ; fins de ligne CR, LF, CRLF ; `gedcomBase64` ; décodeur partagé avec le navigateur | `b845aca` |
+| Import sans écrasement silencieux, rollback | Doublons probables signalés, import refusé (409) sans confirmation ; un fichier incohérent annule tout et répond 400 | `8733b15` |
+| Export d'une branche, d'une sélection, etc. | Déjà présent ; s'ajoute l'exclusion des fiches privées et l'anonymisation des personnes vivantes | ci-dessous |
+
+### Limites restantes (GEDCOM)
+
+- Les participants autres que le principal (témoins, parrains) ne sont pas exportés (`ASSO` / `WITN`
+  non produits) ; ils sont conservés à l'import comme balises inconnues quand le fichier en contient.
+- Les affirmations (`assertions`) n'ont pas d'équivalent GEDCOM : elles ne sont pas exportées.
+- L'import ne fusionne jamais : un réimport confirmé ajoute les personnes en double (signalées avant).
+- IBM PC (CP437) n'est pas décodé spécifiquement (lu comme Windows-1252).

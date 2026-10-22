@@ -235,3 +235,77 @@ test('balises inconnues : signalées à l’aperçu, conservées, rendues à l�
     await target.close();
   }
 });
+
+test('confidentialité : fiches privées exclues, personnes vivantes anonymisées, aucune référence orpheline', async () => {
+  const server = await startTestServer();
+  try {
+    const person = async (body) =>
+      (await post(server, '/api/persons', { familyName: 'Test', ...body })).body;
+    const parent = await person({ givenNames: 'Parent', isLiving: false, notes: 'note du parent' });
+    const secret = await person({ givenNames: 'Secret', isLiving: false, isPrivate: true });
+    const vivant = await person({ givenNames: 'Vivant', isLiving: true, notes: 'ne pas diffuser' });
+    for (const child of [secret, vivant]) {
+      await post(server, '/api/parentages', { childId: child.id, parentId: parent.id });
+    }
+    await post(server, '/api/events', {
+      type: 'BIRTH',
+      dateText: '2001',
+      participants: [{ personId: vivant.id, role: 'PRINCIPAL' }],
+    });
+    const source = (await post(server, '/api/sources', { title: 'Source privée' })).body;
+    await post(server, '/api/sources/citations', {
+      sourceId: source.id,
+      entityType: 'PERSON',
+      entityId: vivant.id,
+    });
+    await post(server, `/api/persons/${vivant.id}/identifiers`, {
+      scheme: 'WIKIDATA',
+      value: 'Q1',
+    });
+    server.database
+      .prepare(
+        "INSERT INTO gedcom_extensions (entity_type, entity_id, tag, payload) VALUES ('PERSON', ?, 'ASSO', ?)",
+      )
+      .run(parent.id, JSON.stringify({ tag: 'ASSO', value: `@I${secret.id}@`, children: [] }));
+
+    const exportWith = async (options) =>
+      (await post(server, '/api/gedcom/export', { format: '5.5.1', ...options })).body;
+
+    const complete = await exportWith({});
+    assert.match(complete.gedcom, /1 NAME Secret \/Test\//);
+    assert.match(complete.gedcom, /ne pas diffuser/);
+
+    const withoutPrivate = await exportWith({ excludePrivate: true });
+    assert.equal(withoutPrivate.summary.persons, 2);
+    assert.equal(withoutPrivate.summary.privacy.excludedPrivate, 1);
+    assert.doesNotMatch(withoutPrivate.gedcom, /Secret/);
+    assert.doesNotMatch(
+      withoutPrivate.gedcom,
+      new RegExp(`@I${secret.id}@`),
+      'aucune référence orpheline',
+    );
+    assert.equal(validateGedcom(parseGedcom(withoutPrivate.gedcom)).valid, true);
+
+    const anonymous = await exportWith({ anonymizeLiving: true });
+    assert.equal(anonymous.summary.privacy.anonymizedLiving, 1);
+    assert.match(anonymous.gedcom, /1 NAME Vivant \/Privé\//);
+    for (const leak of [
+      /ne pas diffuser/,
+      /2001/,
+      /Source privée/,
+      /Q1/,
+      /1 NAME Vivant \/Test\//,
+    ]) {
+      assert.doesNotMatch(anonymous.gedcom, leak);
+    }
+    assert.match(anonymous.gedcom, /note du parent/, 'les personnes décédées restent complètes');
+    assert.equal(validateGedcom(parseGedcom(anonymous.gedcom)).valid, true);
+
+    // Les deux options se cumulent.
+    const both = await exportWith({ excludePrivate: true, anonymizeLiving: true });
+    assert.equal(both.summary.persons, 2);
+    assert.doesNotMatch(both.gedcom, /Secret|ne pas diffuser/);
+  } finally {
+    await server.close();
+  }
+});

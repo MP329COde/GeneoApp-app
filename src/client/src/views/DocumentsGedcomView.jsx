@@ -326,6 +326,8 @@ export function GedcomPanel({ onImported, selected }) {
   const [preview, setPreview] = useState(null);
   const [report, setReport] = useState(null);
   const [duplicatesConfirmed, setDuplicatesConfirmed] = useState(false);
+  const [excludePrivate, setExcludePrivate] = useState(false);
+  const [anonymizeLiving, setAnonymizeLiving] = useState(false);
   const [gedcomError, setGedcomError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [exportFormat, setExportFormat] = useState('7');
@@ -443,6 +445,8 @@ export function GedcomPanel({ onImported, selected }) {
       const result = await client.gedcom.export({
         format: exportFormat,
         ...exportOptions(scope, selected?.id),
+        excludePrivate,
+        anonymizeLiving,
       });
       downloadText(
         scope === 'all'
@@ -646,6 +650,22 @@ export function GedcomPanel({ onImported, selected }) {
             <option value="7">{t('gedcom.export.format7', 'GEDCOM 7')}</option>
             <option value="5.5.1">{t('gedcom.export.format551', 'GEDCOM 5.5.1')}</option>
           </select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={excludePrivate}
+            onChange={(event) => setExcludePrivate(event.target.checked)}
+          />{' '}
+          <span>{t('gedcom.export.excludePrivate', 'Exclure les fiches privées')}</span>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={anonymizeLiving}
+            onChange={(event) => setAnonymizeLiving(event.target.checked)}
+          />{' '}
+          <span>{t('gedcom.export.anonymizeLiving', 'Anonymiser les personnes vivantes')}</span>
         </label>
         <label>
           <span>{t('gedcom.export.scope', 'Périmètre')}</span>

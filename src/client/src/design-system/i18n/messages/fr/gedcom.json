@@ -23,6 +23,8 @@
   "gedcom.import.contentLabel": "Contenu GEDCOM",
   "gedcom.import.preview": "Aperçu",
   "gedcom.import.run": "Importer",
+  "gedcom.export.excludePrivate": "Exclure les fiches privées",
+  "gedcom.export.anonymizeLiving": "Anonymiser les personnes vivantes",
   "gedcom.import.duplicates": "{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.",
   "gedcom.import.confirmDuplicates": "J’ai vérifié : importer quand même",
   "gedcom.import.unmapped": "Balises conservées sans être affichées : {tags}.",

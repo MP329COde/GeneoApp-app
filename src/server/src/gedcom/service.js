@@ -307,6 +307,8 @@ export class GedcomService {
     descendantsOf = null,
     branchOf = null,
     side = null,
+    excludePrivate = false,
+    anonymizeLiving = false,
   } = {}) {
     if (!['5.5.1', '7'].includes(format)) {
       throw invalidError('format', `Format GEDCOM non supporté pour l’export : ${format}`, {
@@ -366,7 +368,18 @@ export class GedcomService {
         this.collectParents(parent.parent_id, selectedIds);
       }
     }
+    // Confidentialité : les personnes marquées « privées » peuvent être exclues
+    // du fichier, et les personnes vivantes rendues anonymes (nom remplacé,
+    // aucun événement, note, source ni média), pour partager un arbre sans
+    // exposer de données sur des personnes qui peuvent l'être encore.
+    let excludedPrivate = 0;
+    if (excludePrivate === true) {
+      for (const person of allPersons) {
+        if (person.is_private && selectedIds.delete(person.id)) excludedPrivate += 1;
+      }
+    }
     const persons = allPersons.filter((person) => selectedIds.has(person.id));
+    const anonymized = anonymizeLiving === true;
     const families = buildExportFamilies(this.database, selectedIds);
     const media = this.database
       .prepare(
@@ -374,8 +387,11 @@ export class GedcomService {
       )
       .all()
       .filter((item) => selectedIds.has(item.entity_id))
+      .filter((item) => !anonymized || !persons.find((p) => p.id === item.entity_id)?.is_living)
       .map((item) => ({ ...item, path: mediaPath(item) }));
-    const gedcom = generateGedcom(this.database, persons, families, format, media);
+    const gedcom = generateGedcom(this.database, persons, families, format, media, {
+      anonymizeLiving: anonymized,
+    });
     verifyExport(gedcom, { persons: persons.length, families: families.length });
     return {
       format,
@@ -385,6 +401,10 @@ export class GedcomService {
         families: families.length,
         media: media.length,
         verified: true,
+        privacy: {
+          excludedPrivate,
+          anonymizedLiving: anonymized ? persons.filter((person) => person.is_living).length : 0,
+        },
       },
       media: media.map((item) => ({ id: item.id, path: item.path, mimeType: item.mime_type })),
     };
@@ -483,7 +503,7 @@ function buildExportFamilies(database, selectedIds) {
   );
 }
 
-function generateGedcom(database, persons, families, format, media = []) {
+function generateGedcom(database, persons, families, format, media = [], options = {}) {
   const personIds = new Set(persons.map((person) => person.id));
   const lines =
     format === '7'
@@ -500,6 +520,20 @@ function generateGedcom(database, persons, families, format, media = []) {
           '0 @SUBM1@ SUBM',
           '1 NAME GeneoApp',
         ];
+  const emitFamilyLinks = (person) => {
+    for (const family of families) {
+      if (family.partners.includes(person.id)) lines.push(`1 FAMS ${family.xref}`);
+      const link = family.children.find((item) => item.id === person.id);
+      if (link) {
+        lines.push(`1 FAMC ${family.xref}`);
+        const pedigree = PEDIGREE_TAGS[link.linkType];
+        if (pedigree) lines.push(`2 PEDI ${format === '7' ? pedigree : pedigree.toLowerCase()}`);
+        // La tutelle n'a pas de valeur PEDI propre : balise utilisateur, pour
+        // la distinguer d'une filiation par alliance (PEDI other) au réimport.
+        if (link.linkType === 'GUARDIAN') lines.push('2 _GUARDIAN Y');
+      }
+    }
+  };
   const usedSources = new Set();
   const citationsFor = database.prepare(
     `SELECT c.* FROM citations c
@@ -542,7 +576,11 @@ function generateGedcom(database, persons, families, format, media = []) {
      WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY position, id`,
   );
   const emitNode = (level, node) => {
-    lines.push(`${level} ${node.tag}${node.value ? ` ${node.value}` : ''}`);
+    // Un pointeur vers une personne absente du fichier (périmètre, exclusion
+    // d'une fiche privée) serait une référence orpheline : il est vidé.
+    const pointer = /^@I(\d+)@$/.exec(node.value ?? '');
+    const value = pointer && !personIds.has(Number(pointer[1])) ? '' : node.value;
+    lines.push(`${level} ${node.tag}${value ? ` ${value}` : ''}`);
     node.children.forEach((childNode) => emitNode(level + 1, childNode));
   };
   const emitExtensions = (level, entityType, entityId) => {
@@ -560,6 +598,12 @@ function generateGedcom(database, persons, families, format, media = []) {
   for (const person of persons) {
     const xref = `@I${person.id}@`;
     lines.push(`0 ${xref} INDI`);
+    if (options.anonymizeLiving && person.is_living) {
+      lines.push('1 NAME Vivant /Privé/', `1 SEX ${person.sex}`);
+      lines.push(`1 RESN ${format === '7' ? 'PRIVACY' : 'privacy'}`);
+      emitFamilyLinks(person);
+      continue;
+    }
     lines.push(`1 NAME ${person.given_names} /${person.family_name}/`);
     // Titre et suffixe sont des parties du nom principal (NPFX / NSFX).
     if (person.title) lines.push(`2 NPFX ${person.title}`);
@@ -606,18 +650,7 @@ function generateGedcom(database, persons, families, format, media = []) {
     for (const item of media.filter((candidate) => candidate.entity_id === person.id)) {
       lines.push(`1 OBJE @O${item.id}@`);
     }
-    for (const family of families) {
-      if (family.partners.includes(person.id)) lines.push(`1 FAMS ${family.xref}`);
-      const link = family.children.find((item) => item.id === person.id);
-      if (link) {
-        lines.push(`1 FAMC ${family.xref}`);
-        const pedigree = PEDIGREE_TAGS[link.linkType];
-        if (pedigree) lines.push(`2 PEDI ${format === '7' ? pedigree : pedigree.toLowerCase()}`);
-        // La tutelle n'a pas de valeur PEDI propre : balise utilisateur, pour
-        // la distinguer d'une filiation par alliance (PEDI other) au réimport.
-        if (link.linkType === 'GUARDIAN') lines.push('2 _GUARDIAN Y');
-      }
-    }
+    emitFamilyLinks(person);
   }
   const sexById = new Map(persons.map((person) => [person.id, person.sex]));
   for (const family of families) {

@@ -281,7 +281,17 @@ function buildRawHandlers(services, workspace, storage) {
       }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(
-      ({ format, personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>
+      ({
+        format,
+        personIds,
+        personOnly,
+        ancestorsOf,
+        descendantsOf,
+        branchOf,
+        side,
+        excludePrivate,
+        anonymizeLiving,
+      } = {}) =>
         gedcom.export({
           format,
           personIds,
@@ -290,6 +300,8 @@ function buildRawHandlers(services, workspace, storage) {
           descendantsOf,
           branchOf,
           side,
+          excludePrivate: excludePrivate === true,
+          anonymizeLiving: anonymizeLiving === true,
         }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE]: wrap(

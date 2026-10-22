@@ -23,6 +23,8 @@
   "gedcom.import.contentLabel": "GEDCOM content",
   "gedcom.import.preview": "Preview",
   "gedcom.import.run": "Import",
+  "gedcom.export.excludePrivate": "Exclude private records",
+  "gedcom.export.anonymizeLiving": "Anonymize living people",
   "gedcom.import.duplicates": "{count} person(s) in the file probably already exist in this tree. Nothing is merged: they would be added as duplicates.",
   "gedcom.import.confirmDuplicates": "I checked: import anyway",
   "gedcom.import.unmapped": "Tags kept but not displayed: {tags}.",
