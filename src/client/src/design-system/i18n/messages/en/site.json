@@ -1,0 +1,20 @@
+{
+  "site.badge": "Open project, under governance",
+  "site.title": "Fully local genealogy",
+  "site.intro": "GeneoApp is a genealogy application that runs entirely on your computer, with no online account and no cloud synchronisation.",
+  "site.cta": "Discover the features",
+  "site.features.label": "Features",
+  "site.feature.local.title": "Fully local",
+  "site.feature.local.text": "No data is sent to a third-party service. The application works entirely offline.",
+  "site.feature.backup.title": "Backup & restore",
+  "site.feature.backup.text": "SQLite or JSON export, checksum-verified with SHA-256, restorable without any network dependency.",
+  "site.feature.a11y.title": "Accessible by design",
+  "site.feature.a11y.text": "Full keyboard navigation, WCAG 2.1 AA contrast, never information carried by colour alone.",
+  "site.feature.multi.title": "Cross-platform",
+  "site.feature.multi.text": "Distributed with Electron: macOS, Windows and Linux installers built from the same sources.",
+  "site.feature.genealogy.title": "A real genealogy engine",
+  "site.feature.genealogy.text": "Tree, relationships, timeline, map, research log, GEDCOM, duplicates and inconsistencies detected automatically.",
+  "site.feature.indexation.title": "Local indexing under control",
+  "site.feature.indexation.text": "Documents and remote sites indexed on your machine, only after your explicit consent, and respecting robots.txt.",
+  "site.footer": "This site is a static showcase, independent of the application (ADR 0009)."
+}
