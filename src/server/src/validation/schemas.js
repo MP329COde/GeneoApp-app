@@ -68,6 +68,18 @@ const LINK_TYPES = ['BIOLOGICAL', 'ADOPTIVE', 'FOSTER', 'STEP', 'GUARDIAN', 'UNK
 const ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE'];
 const CONFIDENCE_LEVELS = ['LOW', 'MEDIUM', 'HIGH'];
 const MEDIA_ENTITY_TYPES = ['PERSON', 'EVENT', 'UNION', 'PARENTAGE', 'SOURCE'];
+const PLACE_TYPES = [
+  'COUNTRY',
+  'REGION',
+  'DEPARTMENT',
+  'COUNTY',
+  'DISTRICT',
+  'COMMUNE',
+  'PARISH',
+  'LOCALITY',
+  'BUILDING',
+  'OTHER',
+];
 const SEARCH_ENTITY_TYPES = ['PERSON', 'PLACE', 'EVENT', 'SOURCE', 'MEDIA'];
 
 export function assertId(value, label = 'id') {
@@ -250,15 +262,89 @@ export function validatePersonIdentifier(payload) {
 
 export function validatePlaceCreate(payload) {
   assertPayload(payload);
-  const { name, latitude, longitude } = payload;
+  const { name, latitude, longitude, placeType } = payload;
 
   assertValid({
     name: [required(name, 'name'), isString(name, 'name'), maxLength(name, 300, 'name')],
     latitude: [isFiniteNumber(latitude, 'latitude')],
     longitude: [isFiniteNumber(longitude, 'longitude')],
+    placeType: [oneOf(placeType, PLACE_TYPES, 'placeType')],
   });
 
-  return { name, latitude: latitude ?? null, longitude: longitude ?? null };
+  return {
+    name,
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
+    placeType: placeType ?? null,
+  };
+}
+
+export function validatePlaceUpdate(payload) {
+  assertPayload(payload);
+  const { name, latitude, longitude, placeType } = payload;
+
+  assertValid({
+    name: [isString(name, 'name'), maxLength(name, 300, 'name')],
+    latitude: [isFiniteNumber(latitude, 'latitude')],
+    longitude: [isFiniteNumber(longitude, 'longitude')],
+    placeType: [oneOf(placeType, PLACE_TYPES, 'placeType')],
+  });
+  if (name !== undefined && name.trim() === '') {
+    throw fieldError('name', 'REQUIRED', 'server.validation.required', 'name est obligatoire');
+  }
+
+  const patch = {};
+  for (const key of ['name', 'latitude', 'longitude', 'placeType']) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
+}
+
+// Période de validité en années (bornes ouvertes si absentes).
+function validatePeriod({ validFromYear, validToYear }) {
+  assertValid({
+    validFromYear: [isInteger(validFromYear, 'validFromYear')],
+    validToYear: [isInteger(validToYear, 'validToYear')],
+  });
+  if (
+    Number.isInteger(validFromYear) &&
+    Number.isInteger(validToYear) &&
+    validFromYear > validToYear
+  ) {
+    throw fieldError(
+      'validToYear',
+      'INVALID',
+      'server.validation.invalid',
+      'validToYear ne peut pas être antérieur à validFromYear',
+    );
+  }
+  return { validFromYear: validFromYear ?? null, validToYear: validToYear ?? null };
+}
+
+export function validatePlaceName(payload) {
+  assertPayload(payload);
+  const { name, language } = payload;
+  assertValid({
+    name: [required(name, 'name'), isString(name, 'name'), maxLength(name, 300, 'name')],
+    language: [isString(language, 'language'), maxLength(language, 35, 'language')],
+  });
+  if (name.trim() === '') {
+    throw fieldError('name', 'REQUIRED', 'server.validation.required', 'name est obligatoire');
+  }
+  return { name: name.trim(), language: language?.trim() || null, ...validatePeriod(payload) };
+}
+
+export function validatePlaceParent(payload) {
+  assertPayload(payload);
+  assertValid({ parentPlaceId: [required(payload.parentPlaceId, 'parentPlaceId')] });
+  assertId(payload.parentPlaceId, 'parentPlaceId');
+  return { parentPlaceId: payload.parentPlaceId, ...validatePeriod(payload) };
 }
 
 export function validateEventCreate(payload) {

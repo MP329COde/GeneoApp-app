@@ -194,3 +194,44 @@ test('0027 : filiations et personnes existantes conservées, tutelle et identit�
     },
   );
 });
+
+test('0028 : lieux existants conservés, nature administrative, noms et rattachements datés', () => {
+  upgradeFrom(
+    '0028',
+    (database) => ({
+      place: database
+        .prepare(
+          "INSERT INTO places (name, normalized_name, latitude, longitude) VALUES ('Paris', 'paris', 48.85, 2.35)",
+        )
+        .run().lastInsertRowid,
+      other: database
+        .prepare("INSERT INTO places (name, normalized_name) VALUES ('France', 'france')")
+        .run().lastInsertRowid,
+    }),
+    (database, { place, other }) => {
+      const kept = database.prepare('SELECT * FROM places WHERE id = ?').get(place);
+      assert.equal(kept.name, 'Paris');
+      assert.equal(kept.latitude, 48.85);
+      assert.equal(kept.place_type, null);
+
+      database.prepare("UPDATE places SET place_type = 'COMMUNE' WHERE id = ?").run(place);
+      assert.throws(
+        () => database.prepare("UPDATE places SET place_type = 'GALAXY' WHERE id = ?").run(place),
+        /CHECK constraint failed/,
+      );
+
+      const addName = database.prepare(
+        'INSERT INTO place_names (place_id, name, valid_from_year, valid_to_year) VALUES (?, ?, ?, ?)',
+      );
+      addName.run(place, 'Lutèce', null, 400);
+      assert.throws(() => addName.run(place, 'Incohérent', 1900, 1800), /CHECK constraint failed/);
+      assert.throws(() => addName.run(place, '   ', null, null), /CHECK constraint failed/);
+
+      const addParent = database.prepare(
+        'INSERT INTO place_parents (place_id, parent_place_id, valid_from_year) VALUES (?, ?, ?)',
+      );
+      addParent.run(place, other, 1800);
+      assert.throws(() => addParent.run(place, place, 1800), /CHECK constraint failed/);
+    },
+  );
+});

@@ -44,6 +44,7 @@ const CASCADE_DEPENDENCIES = {
     { table: 'parentages', column: 'child_id', mode: 'row' },
     { table: 'parentages', column: 'parent_id', mode: 'row' },
     { table: 'media_regions', column: 'person_id', mode: 'row' },
+    { table: 'person_identifiers', column: 'person_id', mode: 'row' },
     { table: 'research_notebook', column: 'person_id', mode: 'row' },
     { table: 'citations', entityType: 'PERSON', mode: 'link' },
     { table: 'notes', entityType: 'PERSON', mode: 'link' },
@@ -51,6 +52,9 @@ const CASCADE_DEPENDENCIES = {
   places: [
     { table: 'events', column: 'place_id', mode: 'row' },
     { table: 'media', column: 'place_id', mode: 'row' },
+    { table: 'place_names', column: 'place_id', mode: 'row' },
+    { table: 'place_parents', column: 'place_id', mode: 'row' },
+    { table: 'place_parents', column: 'parent_place_id', mode: 'row' },
   ],
   events: [
     { table: 'event_participants', column: 'event_id', mode: 'row' },

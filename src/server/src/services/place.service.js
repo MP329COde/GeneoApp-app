@@ -1,5 +1,11 @@
-import { NotFoundError, ValidationError } from '../errors.js';
-import { assertId, validatePlaceCreate } from '../validation/schemas.js';
+import { ConflictError, NotFoundError, ValidationError } from '../errors.js';
+import {
+  assertId,
+  validatePlaceCreate,
+  validatePlaceName,
+  validatePlaceParent,
+  validatePlaceUpdate,
+} from '../validation/schemas.js';
 import { findCommunesByName } from '../geo/communes-fr.js';
 
 export class PlaceService {
@@ -80,6 +86,70 @@ export class PlaceService {
 
   list(options) {
     return this.repository.list(options);
+  }
+
+  update(id, payload, options) {
+    this.get(id);
+    return this.repository.update(id, validatePlaceUpdate(payload), options);
+  }
+
+  listNames(placeId) {
+    this.get(placeId);
+    return this.repository.listNames(placeId);
+  }
+
+  addName(placeId, payload, options) {
+    this.get(placeId);
+    return this.repository.addName(placeId, validatePlaceName(payload), options);
+  }
+
+  removeName(placeId, nameId, options) {
+    this.get(placeId);
+    assertId(nameId, 'nameId');
+    if (!this.repository.removeName(placeId, nameId, options)) {
+      throw new NotFoundError(`Nom de lieu introuvable : ${nameId}`);
+    }
+  }
+
+  listParents(placeId) {
+    this.get(placeId);
+    return this.repository.listParents(placeId);
+  }
+
+  addParent(placeId, payload, options) {
+    this.get(placeId);
+    const data = validatePlaceParent(payload);
+    if (data.parentPlaceId === placeId) {
+      throw new ValidationError('Un lieu ne peut pas être son propre parent');
+    }
+    this.get(data.parentPlaceId);
+    try {
+      return this.repository.addParent(placeId, data, options);
+    } catch (error) {
+      // Cycle ou chevauchement de période : conflit métier, pas une erreur serveur.
+      throw new ConflictError(error.message);
+    }
+  }
+
+  removeParent(placeId, parentLinkId, options) {
+    this.get(placeId);
+    assertId(parentLinkId, 'parentLinkId');
+    if (!this.repository.removeParent(placeId, parentLinkId, options)) {
+      throw new NotFoundError(`Rattachement introuvable : ${parentLinkId}`);
+    }
+  }
+
+  /** Nom et hiérarchie d'un lieu à une date (année) donnée, ou aujourd'hui sans année. */
+  resolve(placeId, year) {
+    this.get(placeId);
+    let resolvedYear = null;
+    if (year !== undefined && year !== null && year !== '') {
+      resolvedYear = Number(year);
+      if (!Number.isInteger(resolvedYear)) {
+        throw new ValidationError('year doit être une année entière');
+      }
+    }
+    return this.repository.resolveAt(placeId, resolvedYear);
   }
 
   remove(id, options) {
