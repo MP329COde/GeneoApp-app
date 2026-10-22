@@ -1,3 +1,8 @@
+import { ValidationError } from '../errors.js';
+import { validateMediaMetadata } from '../validation/schemas.js';
+
+const optionalNumber = (value) => (value === undefined ? undefined : Number(value));
+
 export function createMediaController(services) {
   const { media } = services;
 
@@ -7,16 +12,38 @@ export function createMediaController(services) {
       response.status(201).json(record);
     },
 
+    // Corps binaire brut (Content-Type quelconque) : nom et rattachement en paramètres.
+    async uploadRaw(request, response) {
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length === 0) {
+        throw new ValidationError('Le corps de la requête doit contenir le fichier (octets bruts)');
+      }
+      const metadata = validateMediaMetadata({
+        filename: request.query.filename,
+        sourceId: optionalNumber(request.query.sourceId),
+        entityType: request.query.entityType,
+        entityId: optionalNumber(request.query.entityId),
+        notes: request.query.notes,
+      });
+      const record = await media.uploadRaw(body, metadata, { performedBy: request.performedBy });
+      response.status(201).json(record);
+    },
+
     get(request, response) {
       response.json(media.get(Number(request.params.id)));
     },
 
     async download(request, response) {
       const { media: record, content } = await media.download(Number(request.params.id));
+      // Le type vient de la signature du contenu, jamais du nom : `nosniff`
+      // empêche le navigateur de le réinterpréter. Un document Word est proposé
+      // en téléchargement plutôt qu'ouvert dans l'application.
+      const disposition = record.mime_type.includes('wordprocessingml') ? 'attachment' : 'inline';
       response.set('Content-Type', record.mime_type);
+      response.set('X-Content-Type-Options', 'nosniff');
       response.set(
         'Content-Disposition',
-        `inline; filename="${encodeURIComponent(record.original_filename)}"`,
+        `${disposition}; filename="${encodeURIComponent(record.original_filename)}"`,
       );
       response.send(content);
     },

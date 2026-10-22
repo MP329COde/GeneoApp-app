@@ -754,9 +754,9 @@ export function validateCitationCreate(payload) {
 
 const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/;
 
-export function validateMediaUpload(payload) {
+export function validateMediaMetadata(payload) {
   assertPayload(payload);
-  const { filename, contentBase64, sourceId, entityType, entityId, notes } = payload;
+  const { filename, sourceId, entityType, entityId, notes } = payload;
 
   assertValid({
     filename: [
@@ -764,25 +764,11 @@ export function validateMediaUpload(payload) {
       isString(filename, 'filename'),
       maxLength(filename, 255, 'filename'),
     ],
-    contentBase64: [
-      required(contentBase64, 'contentBase64'),
-      isString(contentBase64, 'contentBase64'),
-    ],
     sourceId: [isInteger(sourceId, 'sourceId')],
     entityType: [oneOf(entityType, MEDIA_ENTITY_TYPES, 'entityType')],
     entityId: [isInteger(entityId, 'entityId')],
     notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
   });
-
-  if (typeof contentBase64 !== 'string' || !BASE64_PATTERN.test(contentBase64.trim())) {
-    throw fieldError(
-      'contentBase64',
-      'INVALID_BASE64',
-      'server.validation.invalidBase64',
-      'doit être encodé en base64 valide',
-      { field: 'contentBase64' },
-    );
-  }
 
   if (
     (entityType === undefined || entityType === null) !==
@@ -799,12 +785,37 @@ export function validateMediaUpload(payload) {
 
   return {
     filename,
-    contentBase64: contentBase64.trim(),
     sourceId: sourceId ?? null,
     entityType: entityType ?? null,
     entityId: entityId ?? null,
     notes: notes ?? null,
   };
+}
+
+export function validateMediaUpload(payload) {
+  assertPayload(payload);
+  const { contentBase64 } = payload;
+
+  assertValid({
+    contentBase64: [
+      required(contentBase64, 'contentBase64'),
+      isString(contentBase64, 'contentBase64'),
+    ],
+  });
+
+  const metadata = validateMediaMetadata(payload);
+
+  if (typeof contentBase64 !== 'string' || !BASE64_PATTERN.test(contentBase64.trim())) {
+    throw fieldError(
+      'contentBase64',
+      'INVALID_BASE64',
+      'server.validation.invalidBase64',
+      'doit être encodé en base64 valide',
+      { field: 'contentBase64' },
+    );
+  }
+
+  return { ...metadata, contentBase64: contentBase64.trim() };
 }
 
 export function validateSearchQuery(payload) {

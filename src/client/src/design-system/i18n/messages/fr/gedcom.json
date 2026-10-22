@@ -23,6 +23,8 @@
   "gedcom.import.contentLabel": "Contenu GEDCOM",
   "gedcom.import.preview": "Aperçu",
   "gedcom.import.run": "Importer",
+  "media.player.play": "Lire {name}",
+  "media.player.label": "Lecteur : {name}",
   "gedcom.export.excludePrivate": "Exclure les fiches privées",
   "gedcom.export.anonymizeLiving": "Anonymiser les personnes vivantes",
   "gedcom.import.duplicates": "{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.",

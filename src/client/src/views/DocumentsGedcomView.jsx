@@ -5,6 +5,7 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { OldDocumentDecoder, PortraitPicker, WhoOwnsFile } from './DocumentTools.jsx';
 import { PhotoViewer } from './PhotoViewer.jsx';
+import { MediaPlayer } from '../components/MediaPlayer.jsx';
 import { decodeGedcomBuffer } from '../../../server/src/gedcom/encoding.js';
 
 const LOCALE_STORAGE_KEY = 'geneoapp.locale';
@@ -214,6 +215,9 @@ export function MediaPanel({ selected, persons = [], onPersonChanged }) {
             <li key={item.id}>
               <Badge tone="neutral">{item.ocr_status}</Badge> {item.original_filename}
               {item.taken_date ? <span className="data-id">{item.taken_date}</span> : null}
+              {item.mime_type?.startsWith('audio/') || item.mime_type?.startsWith('video/') ? (
+                <MediaPlayer item={item} />
+              ) : null}
               <Button
                 type="button"
                 size="sm"
