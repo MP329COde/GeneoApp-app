@@ -2,9 +2,36 @@ import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { auditFile, listSourceFiles, ROOT } from '../../../../../scripts/check-i18n-hardcoded.js';
+import {
+  auditFile,
+  listSiteSourceFiles,
+  listSourceFiles,
+  ROOT,
+} from '../../../../../scripts/check-i18n-hardcoded.js';
 
 const VIEWS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'views');
+
+/**
+ * Le site vitrine (`site/src`) est une application React séparée qui
+ * réutilise le design system, donc le même catalogue de messages et les
+ * mêmes règles : plus aucun texte affiché ne doit y être écrit en dur.
+ *
+ * Le chemin est résolu depuis la racine du dépôt (importée du script
+ * d'audit), ce qui reste correct quel que soit le répertoire d'exécution.
+ */
+const SITE_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'site',
+  'src',
+);
+
+/** Racine du dépôt, déduite du chemin relatif ci-dessus. */
+const REPO_ROOT = path.resolve(SITE_DIR, '..', '..');
 
 /**
  * Vues migrées vers l'i18n : plus aucun texte affiché ne doit y être écrit
@@ -75,5 +102,31 @@ describe('i18n : pas de texte en dur dans le client', () => {
       }
     }
     expect(violations, 'Textes à traduire en passant par t()').toEqual([]);
+  });
+});
+
+/**
+ * Garde-fou du site vitrine : le site (`site/src`) est une application React
+ * séparée qui réutilise le design system via l'alias `@design-system`, donc
+ * le même catalogue de messages et le même hook `useTranslation`. Les règles
+ * d'audit sont donc identiques à celles du client : aucun texte affiché ne
+ * doit y être écrit en dur.
+ */
+describe('i18n : pas de texte en dur dans le site vitrine', () => {
+  it('le chemin du site est bien résolu depuis le dépôt', () => {
+    expect(REPO_ROOT).toBe(ROOT);
+    expect(SITE_DIR).toBe(path.join(ROOT, 'site', 'src'));
+  });
+
+  it('ne signale aucun texte à traduire', () => {
+    const violations = [];
+    for (const file of listSiteSourceFiles()) {
+      for (const entry of auditFile(file)) {
+        violations.push(
+          `${path.relative(ROOT, file)}:${entry.line} — ${JSON.stringify(entry.text)}`,
+        );
+      }
+    }
+    expect(violations, 'Textes à traduire en passant par t() dans le site').toEqual([]);
   });
 });

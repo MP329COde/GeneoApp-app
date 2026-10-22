@@ -7,19 +7,24 @@
  * écartant les valeurs techniques — noms de classes, URL, tracés SVG, clés
  * de traduction, identifiants.
  *
+ * L'audit porte sur le client (`src/client/src`) ET sur le site vitrine
+ * (`site/src`), qui réutilise le même design system et le même catalogue de
+ * messages : les mêmes règles s'y appliquent.
+ *
  * Usage :
  *   node scripts/check-i18n-hardcoded.js [fichier…]
  *
- * Sans argument, le script audite toutes les vues du client et sort en
- * erreur si un texte en dur subsiste. Il ne modifie aucun fichier.
+ * Sans argument, le script audite toutes les vues du client et du site et
+ * sort en erreur si un texte en dur subsiste. Il ne modifie aucun fichier.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from '@babel/parser';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWS_DIR = path.join(ROOT, 'src', 'client', 'src');
+const SITE_DIR = path.join(ROOT, 'site', 'src');
 
 /** Attributs qui portent du texte lu par l'utilisateur. */
 const TEXT_ATTRIBUTES = new Set([
@@ -64,6 +69,9 @@ function isUserText(value) {
   if (!text) return false;
   if (text.length < 2) return false;
   if (BRAND_NAMES.has(text)) return false;
+  // Un contenu sans aucune lettre (emoji, symbole, ponctuation) est décoratif,
+  // pas un texte à traduire.
+  if (!/\p{L}/u.test(text)) return false;
   // Un chemin, une URL, un sélecteur, un nom de classe.
   if (/^(https?:\/\/|data:|[./#_])/.test(text)) return false;
   // Un sélecteur CSS (« button, [role="button"] ») ou un pseudo-élément.
@@ -262,14 +270,28 @@ export function listSourceFiles() {
   );
 }
 
+/**
+ * Liste les fichiers sources du site vitrine à auditer. Le site est une
+ * application React séparée qui réutilise le design system (donc le même
+ * catalogue de messages) : les règles d'audit sont identiques.
+ */
+export function listSiteSourceFiles() {
+  if (!existsSync(SITE_DIR)) return [];
+  return walk(SITE_DIR).filter(
+    (file) => !/\.test\.jsx?$/.test(file) && !/\.stories\.jsx?$/.test(file),
+  );
+}
+
 export { ROOT };
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const requested = process.argv.slice(2);
+  const clientFiles = listSourceFiles();
+  const siteFiles = listSiteSourceFiles();
   const files = requested.length
     ? requested.map((file) => path.resolve(process.cwd(), file))
-    : listSourceFiles();
+    : [...clientFiles, ...siteFiles];
   let total = 0;
   const flagged = [];
   for (const file of files) {
@@ -295,7 +317,9 @@ if (isMain) {
   }
 
   console.log(
-    `\n${files.length} fichier(s) audité(s), ${total} texte(s) en dur dans ${flagged.length} fichier(s).`,
+    `\n${clientFiles.length} fichier(s) du client audité(s), ` +
+      `${siteFiles.length} fichier(s) du site vitrine audité(s), ` +
+      `${files.length} fichier(s) au total, ${total} texte(s) en dur dans ${flagged.length} fichier(s).`,
   );
   if (total > 0) process.exitCode = 1;
 }
