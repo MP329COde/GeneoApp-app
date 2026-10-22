@@ -79,12 +79,13 @@ export function createServices(
 
   const research = new ResearchService(new ResearchRepository(database));
   const assertions = new AssertionService(new AssertionRepository(database));
+  const search = new SearchService(new SearchRepository(database), database);
 
   return {
     ...entityServices,
     sources,
     assertions,
-    search: new SearchService(new SearchRepository(database), database),
+    search,
     audit: new AuditService(new AuditRepository(database)),
     notifications: new NotificationService(new NotificationRepository(database)),
     gedcom: new GedcomService(database, { media: entityServices.media, backups }),
@@ -97,7 +98,7 @@ export function createServices(
       assertions,
     }),
     backups,
-    graph: new GenealogyGraphService(database),
+    graph: new GenealogyGraphService(database, { search }),
     notes: new NoteService(new NoteRepository(database)),
     research,
     statistics: new StatisticsService(database),

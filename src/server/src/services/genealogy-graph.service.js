@@ -2,8 +2,17 @@ import { validateTimeline } from './timeline-validation.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
 export class GenealogyGraphService {
-  constructor(database) {
+  constructor(database, { search = null } = {}) {
     this.database = database;
+    this.search = search;
+  }
+
+  // Doublons potentiels, avec score et raisons explicables ; jamais de fusion
+  // automatique. Délègue au service de recherche, qui porte l'index phonétique.
+  detectPotentialDuplicates(options = {}) {
+    if (!this.search)
+      throw new Error('Le service de recherche est requis pour détecter les doublons');
+    return this.search.potentialDuplicates(options);
   }
 
   getPerson(personId) {
@@ -284,7 +293,9 @@ export class GenealogyGraphService {
             next.push(edge.id);
           }
           if (distance.get(edge.id) === level + 1) {
-            predecessors.get(edge.id).push({ from: current, via: edge.via });
+            predecessors
+              .get(edge.id)
+              .push({ from: current, via: edge.via, linkType: edge.linkType });
           }
           if (edge.id === personB) found = true;
         }
@@ -300,8 +311,8 @@ export class GenealogyGraphService {
         paths.push([{ personId: personA, via: 'START' }, ...suffix]);
         return;
       }
-      for (const { from, via } of predecessors.get(node)) {
-        walk(from, [{ personId: node, via }, ...suffix]);
+      for (const { from, via, linkType } of predecessors.get(node)) {
+        walk(from, [{ personId: node, via, linkType }, ...suffix]);
       }
     };
     walk(personB, []);
@@ -395,15 +406,52 @@ export class GenealogyGraphService {
     return row?.link_type ?? null;
   }
 
+  // Choisit la forme masculine, féminine ou neutre d'un terme de parenté selon
+  // le sexe connu de la personne désignée. Sexe inconnu : forme neutre si elle
+  // existe, sinon « masculin ou féminin » plutôt qu'un choix arbitraire.
+  pickGendered(sex, masculine, feminine, neutral) {
+    if (sex === 'M') return masculine;
+    if (sex === 'F') return feminine;
+    return neutral ?? `${masculine} ou ${feminine}`;
+  }
+
+  // Préfixe « arrière- » répété (arrière-grand-père, arrière-arrière-grand-père…),
+  // au-delà de cinq générations un terme explicite évite une suite illisible.
+  generationalLabel(count, sex, forms) {
+    const base = this.pickGendered(sex, ...forms[count > 1 ? 1 : 0]);
+    if (count <= 2) return base;
+    if (count <= 5) return `${'arrière-'.repeat(count - 2)}${base}`;
+    return `${forms[2]} à la ${count}e génération`;
+  }
+
+  ascendantLabel(count, sex) {
+    return this.generationalLabel(count, sex, [
+      ['père', 'mère', 'parent'],
+      ['grand-père', 'grand-mère', 'grand-parent'],
+      'ancêtre',
+    ]);
+  }
+
+  descendantLabel(count, sex) {
+    return this.generationalLabel(count, sex, [
+      ['fils', 'fille', 'enfant'],
+      ['petit-fils', 'petite-fille', 'petit-enfant'],
+      'descendant',
+    ]);
+  }
+
   // Qualifie le libellé « parent »/« enfant » d'après la nature réelle du
   // lien de filiation (parentages.link_type) : une filiation adoptive,
-  // nourricière ou par recomposition familiale (STEP) n'est jamais présentée
+  // nourricière, par alliance (STEP) ou par tutelle n'est jamais présentée
   // comme biologique par défaut, et un lien resté UNKNOWN le dit explicitement
   // plutôt que de laisser croire à une filiation biologique certaine.
-  qualifyKinshipLabel(base, linkType) {
+  qualifyKinshipLabel(base, linkType, { child = false, sex = 'U' } = {}) {
     if (linkType === 'ADOPTIVE') return `${base} adoptif`;
     if (linkType === 'FOSTER') return `${base} nourricier`;
     if (linkType === 'STEP') return `${base} par alliance (famille recomposée)`;
+    if (linkType === 'GUARDIAN') {
+      return child ? 'pupille' : this.pickGendered(sex, 'tuteur', 'tutrice', 'tuteur légal');
+    }
     if (linkType === 'UNKNOWN') return `${base} (lien de filiation non précisé)`;
     return base;
   }
@@ -416,33 +464,51 @@ export class GenealogyGraphService {
 
   // Nomme en français le degré de parenté collatérale de personB vis-à-vis de
   // personA, à partir du nombre de générations remontées (up, jusqu'à
-  // l'ancêtre commun) puis redescendues (down). Ne couvre que les cas
-  // canoniques (aucune alliance/SPOUSE dans le chemin) : au-delà des degrés
-  // usuels, renvoie une étiquette honnête et générique plutôt que d'inventer
-  // un terme incertain.
-  collateralLabel(up, down, sex) {
-    const isFeminine = sex === 'F';
-    const isMasculine = sex === 'M';
-    const pick = (masculine, feminine, neutral) => {
-      if (isMasculine) return masculine;
-      if (isFeminine) return feminine;
-      return neutral ?? `${masculine} ou ${feminine}`;
-    };
-    const [younger, older] = up <= down ? [up, down] : [down, up];
-    const personBIsOlderBranch = down < up;
+  // l'ancêtre commun) puis redescendues (down). Hors des degrés usuels, renvoie
+  // une étiquette honnête et générique plutôt que d'inventer un terme incertain.
+  collateralLabel(up, down, sex, { siblingType = null } = {}) {
+    const pick = (masculine, feminine, neutral) =>
+      this.pickGendered(sex, masculine, feminine, neutral);
+    const younger = Math.min(up, down);
+    const gap = Math.abs(up - down);
+    // personB est d'une génération plus ancienne que personA (oncle, tante…).
+    const older = down < up;
 
-    if (younger === 1 && older === 1) return pick('frère', 'sœur');
-    if (younger === 1 && older === 2) {
-      return personBIsOlderBranch ? pick('oncle', 'tante') : pick('neveu', 'nièce');
+    if (younger === 1 && gap === 0) {
+      if (siblingType === 'STEP') return pick('frère par alliance', 'sœur par alliance');
+      if (siblingType?.startsWith('HALF')) {
+        return pick('demi-frère', 'demi-sœur', 'demi-frère ou demi-sœur');
+      }
+      return pick('frère', 'sœur');
     }
-    if (younger === 1 && older === 3) {
-      return personBIsOlderBranch
-        ? pick('grand-oncle', 'grand-tante')
-        : pick('petit-neveu', 'petite-nièce');
+    if (younger === 1) {
+      const labels = {
+        1: older ? ['oncle', 'tante'] : ['neveu', 'nièce'],
+        2: older ? ['grand-oncle', 'grand-tante'] : ['petit-neveu', 'petite-nièce'],
+        3: older
+          ? ['arrière-grand-oncle', 'arrière-grand-tante']
+          : ['arrière-petit-neveu', 'arrière-petite-nièce'],
+      }[gap];
+      if (labels) return pick(...labels);
+      return pick(
+        `${older ? 'oncle' : 'neveu'} éloigné (${up}×${down})`,
+        `${older ? 'tante' : 'nièce'} éloignée (${up}×${down})`,
+        `${older ? 'oncle ou tante' : 'neveu ou nièce'} éloigné(e) (${up}×${down})`,
+      );
     }
-    if (younger === 2 && older === 2) return pick('cousin germain', 'cousine germaine');
-    if (younger === 2 && older === 3) {
-      return pick('cousin issu de germain', 'cousine issue de germaine');
+    if (gap === 0) {
+      const degree = up - 1;
+      if (degree === 1) return pick('cousin germain', 'cousine germaine');
+      if (degree === 2) return pick('cousin issu de germain', 'cousine issue de germaine');
+      if (degree === 3) {
+        return pick('cousin arrière-issu de germain', 'cousine arrière-issue de germaine');
+      }
+      return pick(`cousin au ${degree}e degré`, `cousine au ${degree}e degré`);
+    }
+    if (gap === 1) {
+      return older
+        ? pick('oncle à la mode de Bretagne', 'tante à la mode de Bretagne')
+        : pick('neveu à la mode de Bretagne', 'nièce à la mode de Bretagne');
     }
     return pick(
       `cousin éloigné (${up}×${down})`,
@@ -451,48 +517,198 @@ export class GenealogyGraphService {
     );
   }
 
-  findRelationship(personA, personB) {
-    const path = this.findPath(personA, personB);
-    if (path.length === 0)
-      return { relationship: null, distance: null, path, branch: null, label: null };
+  // Nature du lien d'un chemin : sang, adoption (ou accueil), alliance par
+  // remarimage/tutelle (STEP, GUARDIAN), mariage (AFFINITY), ou incertaine si
+  // une filiation reste de nature inconnue. L'ordre de priorité reflète ce que
+  // l'on peut affirmer : une seule arête d'alliance suffit à écarter « sang ».
+  bondOf(path) {
+    const edges = path.slice(1);
+    const kinds = new Set(edges.map((edge) => edge.linkType));
+    if (edges.some((edge) => edge.via === 'SPOUSE')) return 'AFFINITY';
+    if (kinds.has('STEP') || kinds.has('GUARDIAN')) return 'STEP';
+    if (kinds.has('ADOPTIVE') || kinds.has('FOSTER')) return 'ADOPTIVE';
+    if (kinds.has('UNKNOWN')) return 'UNCERTAIN';
+    return 'BLOOD';
+  }
+
+  // Décrit un chemin de personA vers personB : catégorie, degré, libellé
+  // français, branche et nature du lien. Les cas hors des motifs usuels restent
+  // `CONNECTED`, sans libellé inventé.
+  classifyPath(path) {
+    const personA = path[0].personId;
+    const personB = path.at(-1).personId;
     const edges = path.slice(1).map((step) => step.via);
-    let relationship = 'CONNECTED';
-    let branch = null;
-    let label = null;
-    let linkType = null;
-    if (edges.length === 1 && edges[0] === 'SPOUSE') {
-      relationship = 'SPOUSE';
-      label = 'conjoint(e)';
-    } else if (edges.every((edge) => edge === 'PARENT')) {
-      relationship = `ANCESTOR_${edges.length}`;
-      branch = this.branchOf(this.getParentRole(personA, path[1].personId));
-      if (edges.length === 1) {
-        linkType = this.getLinkType(personA, path[1].personId);
-        label = this.qualifyKinshipLabel('parent', linkType);
-      } else {
-        label = edges.length === 2 ? 'grand-parent' : null;
-      }
-    } else if (edges.every((edge) => edge === 'CHILD')) {
-      relationship = `DESCENDANT_${edges.length}`;
-      branch = this.branchOf(this.getParentRole(path[1].personId, personA));
-      if (edges.length === 1) {
-        linkType = this.getLinkType(path[1].personId, personA);
-        label = this.qualifyKinshipLabel('enfant', linkType);
-      } else {
-        label = edges.length === 2 ? 'petit-enfant' : null;
-      }
-    } else if (edges.includes('PARENT') && edges.includes('CHILD')) {
-      relationship = 'COLLATERAL';
-      branch = this.branchOf(this.getParentRole(personA, path[1].personId));
-      let up = 0;
-      while (up < edges.length && edges[up] === 'PARENT') up += 1;
-      const canonical = edges.slice(up).every((edge) => edge === 'CHILD');
-      if (canonical) {
-        const down = edges.length - up;
-        label = this.collateralLabel(up, down, this.getPerson(personB).sex);
-      }
+    const sexB = this.getPerson(personB).sex;
+    const result = {
+      relationship: 'CONNECTED',
+      distance: edges.length,
+      branch: null,
+      label: null,
+      linkType: null,
+      bond: this.bondOf(path),
+      up: null,
+      down: null,
+    };
+    const isRun = (list, value) => list.length > 0 && list.every((edge) => edge === value);
+    const pattern = edges.join(',');
+
+    if (edges.length === 0) {
+      return { ...result, relationship: 'SELF', label: 'la même personne', bond: 'BLOOD' };
     }
-    return { relationship, distance: edges.length, path, branch, label, linkType };
+    if (pattern === 'SPOUSE') {
+      return {
+        ...result,
+        relationship: 'SPOUSE',
+        label: this.pickGendered(sexB, 'époux', 'épouse', 'conjoint(e)'),
+      };
+    }
+    if (isRun(edges, 'PARENT')) {
+      const count = edges.length;
+      result.relationship = `ANCESTOR_${count}`;
+      result.branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+      result.up = count;
+      result.down = 0;
+      if (count === 1) {
+        result.linkType = this.getLinkType(personA, path[1].personId);
+        result.label = this.qualifyKinshipLabel(this.ascendantLabel(1, sexB), result.linkType, {
+          sex: sexB,
+        });
+      } else {
+        result.label = this.ascendantLabel(count, sexB);
+      }
+      return result;
+    }
+    if (isRun(edges, 'CHILD')) {
+      const count = edges.length;
+      result.relationship = `DESCENDANT_${count}`;
+      result.branch = this.branchOf(this.getParentRole(path[1].personId, personA));
+      result.up = 0;
+      result.down = count;
+      if (count === 1) {
+        result.linkType = this.getLinkType(path[1].personId, personA);
+        result.label = this.qualifyKinshipLabel(this.descendantLabel(1, sexB), result.linkType, {
+          child: true,
+        });
+      } else {
+        result.label = this.descendantLabel(count, sexB);
+      }
+      return result;
+    }
+    // Collatéral : remonter d'abord, redescendre ensuite, sans passer par une alliance.
+    let up = 0;
+    while (up < edges.length && edges[up] === 'PARENT') up += 1;
+    if (up > 0 && edges.slice(up).length > 0 && isRun(edges.slice(up), 'CHILD')) {
+      const down = edges.length - up;
+      result.relationship = 'COLLATERAL';
+      result.branch = this.branchOf(this.getParentRole(personA, path[1].personId));
+      result.up = up;
+      result.down = down;
+      const siblingType =
+        up === 1 && down === 1
+          ? (this.getSiblings(personA).find((sibling) => sibling.id === personB)?.sibling_type ??
+            null)
+          : null;
+      result.label = this.collateralLabel(up, down, sexB, { siblingType });
+      if (siblingType) result.siblingType = siblingType;
+      return result;
+    }
+    // Belle-famille : motifs usuels passant par un conjoint.
+    const inLaw = {
+      'SPOUSE,PARENT': ['beau-père', 'belle-mère', 'beau-parent'],
+      'CHILD,SPOUSE': ['gendre', 'belle-fille', 'gendre ou belle-fille'],
+      'SPOUSE,PARENT,CHILD': ['beau-frère', 'belle-sœur', 'beau-frère ou belle-sœur'],
+      'PARENT,CHILD,SPOUSE': ['beau-frère', 'belle-sœur', 'beau-frère ou belle-sœur'],
+    }[pattern];
+    if (inLaw) {
+      return {
+        ...result,
+        relationship: 'IN_LAW',
+        label: this.pickGendered(sexB, ...inLaw),
+      };
+    }
+    return result;
+  }
+
+  // Relation de personB vis-à-vis de personA. Le résultat principal décrit le
+  // plus court chemin ; `relationships` liste les natures distinctes trouvées
+  // sur tous les plus courts chemins (relations multiples) et `consanguinity`
+  // donne le lien de sang par les ancêtres communs les plus récents, même quand
+  // un chemin plus court passe par un mariage (cousins mariés). Aucune relation
+  // n'est inventée : sans chemin, `relationship` vaut null et `connected` false.
+  findRelationship(personA, personB, { maxDepth } = {}) {
+    const paths = this.findPaths(personA, personB, { maxDepth, limit: 10 });
+    if (paths.length === 0) {
+      return {
+        connected: false,
+        relationship: null,
+        distance: null,
+        path: [],
+        branch: null,
+        label: null,
+        bond: null,
+        relationships: [],
+        consanguinity: null,
+      };
+    }
+    const primary = this.classifyPath(paths[0]);
+    const seen = new Set();
+    const relationships = [];
+    for (const path of paths) {
+      const description = this.classifyPath(path);
+      const key = `${description.relationship}|${description.label}|${description.bond}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      relationships.push(description);
+    }
+    return {
+      connected: true,
+      ...primary,
+      path: paths[0],
+      relationships,
+      consanguinity: personA === personB ? null : this.consanguinityOf(personA, personB),
+    };
+  }
+
+  // Lien de sang par les ancêtres communs les plus récents (filiations
+  // biologiques ou de nature inconnue uniquement) : degré et libellé, ou null
+  // s'il n'y a aucun ancêtre commun.
+  consanguinityOf(personA, personB) {
+    const lowest = this.findCommonAncestors(personA, personB, {
+      linkTypes: ['BIOLOGICAL', 'UNKNOWN'],
+    }).filter((common) => common.lowest);
+    if (lowest.length === 0) return null;
+    const best = [...lowest].sort(
+      (x, y) => x.generationFromA + x.generationFromB - (y.generationFromA + y.generationFromB),
+    )[0];
+    const up = best.generationFromA;
+    const down = best.generationFromB;
+    const sexB = this.getPerson(personB).sex;
+    let relationship;
+    let label;
+    if (down === 0) {
+      relationship = `ANCESTOR_${up}`;
+      label = this.ascendantLabel(up, sexB);
+    } else if (up === 0) {
+      relationship = `DESCENDANT_${down}`;
+      label = this.descendantLabel(down, sexB);
+    } else {
+      relationship = 'COLLATERAL';
+      const siblingType =
+        up === 1 && down === 1
+          ? (this.getSiblings(personA).find((sibling) => sibling.id === personB)?.sibling_type ??
+            null)
+          : null;
+      label = this.collateralLabel(up, down, sexB, { siblingType });
+    }
+    return {
+      relationship,
+      label,
+      up,
+      down,
+      commonAncestorIds: lowest
+        .filter((common) => common.generationFromA === up && common.generationFromB === down)
+        .map((common) => common.person.id),
+    };
   }
 
   // Parcours en profondeur ITÉRATIF à trois couleurs (blanc/gris/noir),

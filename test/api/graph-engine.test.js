@@ -341,3 +341,290 @@ test('ancêtres communs : plus récents, anciens, soi-même, absence et profonde
     await server.close();
   }
 });
+
+async function chain(server, length, sexes = []) {
+  const { person, link } = await build(server);
+  const ids = [];
+  for (let i = 0; i <= length; i += 1) ids.push(await person(`P${i}`, sexes[i] ?? 'U'));
+  for (let i = 0; i < length; i += 1) await link(ids[i], ids[i + 1], 'PARENT');
+  return ids;
+}
+
+test('libellés d’ascendance et de descendance genrés, jusqu’aux générations lointaines', async () => {
+  const server = await startTestServer();
+  try {
+    const { get } = await build(server);
+    const ids = await chain(server, 6, ['U', 'M', 'F', 'M', 'F', 'M', 'F']);
+    const label = async (a, b) =>
+      (await get(`/api/graph/relationship?personA=${ids[a]}&personB=${ids[b]}`)).label;
+    assert.equal(await label(0, 1), 'père');
+    assert.equal(await label(0, 2), 'grand-mère');
+    assert.equal(await label(0, 3), 'arrière-grand-père');
+    assert.equal(await label(0, 4), 'arrière-arrière-grand-mère');
+    assert.equal(await label(0, 6), 'ancêtre à la 6e génération');
+    assert.equal(await label(1, 0), 'enfant');
+    assert.equal(await label(2, 0), 'petit-enfant');
+    assert.equal(await label(3, 0), 'arrière-petit-enfant');
+    assert.equal(await label(6, 0), 'descendant à la 6e génération');
+  } finally {
+    await server.close();
+  }
+});
+
+test('demi-fratrie, fratrie par alliance et cousinages nommés avec exactitude', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const pere = await person('Père', 'M');
+    const mere = await person('Mère', 'F');
+    const autreMere = await person('Autre mère', 'F');
+    const moi = await person('Moi');
+    const demiFrere = await person('Demi-frère', 'M');
+    const demiSoeur = await person('Demi-sœur', 'F');
+    const beauFrere = await person('Frère par alliance', 'M');
+    for (const [child, mother] of [
+      [moi, mere],
+      [demiFrere, autreMere],
+      [demiSoeur, autreMere],
+    ]) {
+      await link(child, pere, 'FATHER');
+      await link(child, mother, 'MOTHER');
+    }
+    await link(beauFrere, pere, 'FATHER', 'STEP');
+    const rel = async (a, b) => get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+    assert.equal((await rel(moi, demiFrere)).label, 'demi-frère');
+    assert.equal((await rel(moi, demiSoeur)).label, 'demi-sœur');
+    assert.equal((await rel(moi, demiFrere)).siblingType, 'HALF_PATERNAL');
+    const step = await rel(moi, beauFrere);
+    assert.equal(step.label, 'frère par alliance');
+    assert.equal(step.bond, 'STEP');
+
+    // Cousins issus de germains (3×3) et « à la mode de Bretagne » (2×3).
+    const racine = await person('Racine');
+    const g1 = await person('G1');
+    const g2 = await person('G2');
+    const h1 = await person('H1');
+    const h2 = await person('H2');
+    const c1 = await person('C1', 'M');
+    const c2 = await person('C2', 'F');
+    const c3 = await person('C3', 'M');
+    await link(g1, racine);
+    await link(g2, racine);
+    await link(h1, g1);
+    await link(h2, g2);
+    await link(c1, h1);
+    await link(c2, h2);
+    const mid = await person('Mid');
+    await link(mid, g2);
+    await link(c3, mid);
+    assert.equal((await rel(c1, c3)).label, 'cousin issu de germain');
+    assert.equal((await rel(c3, c1)).relationship, 'COLLATERAL');
+    // c1 (3 générations sous racine) et c2 (3 aussi) : issus de germains.
+    assert.equal((await rel(c2, c1)).label, 'cousin issu de germain');
+    // H1 (2 sous racine) vs C2 (3 sous racine) : écart d'une génération.
+    assert.equal((await rel(h1, c2)).label, 'nièce à la mode de Bretagne');
+    assert.match((await rel(c2, h1)).label, /^oncle à la mode de Bretagne ou tante/);
+  } finally {
+    await server.close();
+  }
+});
+
+test('belle-famille : beau-père, gendre / belle-fille, beau-frère / belle-sœur', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const moi = await person('Moi');
+    const conjointe = await person('Conjointe', 'F');
+    const beauPere = await person('Beau-père', 'M');
+    const soeurConjointe = await person('Sœur de la conjointe', 'F');
+    const enfant = await person('Enfant');
+    const brue = await person('Conjoint de l’enfant', 'F');
+    const frere = await person('Frère', 'M');
+    const epouseDuFrere = await person('Épouse du frère', 'F');
+    const parent = await person('Parent', 'M');
+    for (const [a, b] of [
+      [moi, conjointe],
+      [enfant, brue],
+      [frere, epouseDuFrere],
+    ]) {
+      const union = await requestJson(server.baseUrl, '/api/unions', {
+        method: 'POST',
+        body: { partnerIds: [a, b] },
+      });
+      assert.equal(union.status, 201);
+    }
+    await link(conjointe, beauPere, 'FATHER');
+    await link(soeurConjointe, beauPere, 'FATHER');
+    await link(enfant, moi);
+    await link(moi, parent, 'FATHER');
+    await link(frere, parent, 'FATHER');
+    const rel = (a, b) => get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+    assert.equal((await rel(moi, conjointe)).label, 'épouse');
+    const bp = await rel(moi, beauPere);
+    assert.equal(bp.relationship, 'IN_LAW');
+    assert.equal(bp.label, 'beau-père');
+    assert.equal(bp.bond, 'AFFINITY');
+    assert.equal((await rel(moi, brue)).label, 'belle-fille');
+    assert.equal((await rel(moi, soeurConjointe)).label, 'belle-sœur');
+    assert.equal((await rel(moi, epouseDuFrere)).label, 'belle-sœur');
+  } finally {
+    await server.close();
+  }
+});
+
+test('nature du lien : adoption, tutelle, lien inconnu et relations multiples', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const enfant = await person('Enfant');
+    const adoptant = await person('Adoptant', 'M');
+    const grandAdoptant = await person('Parent de l’adoptant', 'F');
+    const tuteur = await person('Tuteur', 'M');
+    const inconnu = await person('Lien inconnu');
+    await link(enfant, adoptant, 'FATHER', 'ADOPTIVE');
+    await link(adoptant, grandAdoptant, 'MOTHER');
+    await link(enfant, tuteur, 'PARENT', 'GUARDIAN');
+    await link(enfant, inconnu, 'PARENT', 'UNKNOWN');
+    const rel = (a, b) => get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+
+    const adopte = await rel(enfant, adoptant);
+    assert.equal(adopte.label, 'père adoptif');
+    assert.equal(adopte.bond, 'ADOPTIVE');
+    const grand = await rel(enfant, grandAdoptant);
+    assert.equal(grand.label, 'grand-mère');
+    assert.equal(
+      grand.bond,
+      'ADOPTIVE',
+      'la lignée adoptive reste signalée aux générations suivantes',
+    );
+    const legal = await rel(enfant, tuteur);
+    assert.equal(legal.label, 'tuteur');
+    assert.equal(legal.bond, 'STEP');
+    assert.equal((await rel(tuteur, enfant)).label, 'pupille');
+    const incertain = await rel(enfant, inconnu);
+    assert.equal(incertain.bond, 'UNCERTAIN');
+    assert.match(incertain.label, /non précisé/);
+    // Sans lien de sang établi, aucun lien de consanguinité n'est affirmé.
+    assert.equal(adopte.consanguinity, null);
+  } finally {
+    await server.close();
+  }
+});
+
+test('cousins mariés : le mariage est la relation la plus courte, le lien de sang reste signalé', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const grandPere = await person('Grand-père', 'M');
+    const pereA = await person('Père A', 'M');
+    const pereB = await person('Père B', 'M');
+    const a = await person('A', 'M');
+    const b = await person('B', 'F');
+    await link(pereA, grandPere, 'FATHER');
+    await link(pereB, grandPere, 'FATHER');
+    await link(a, pereA, 'FATHER');
+    await link(b, pereB, 'FATHER');
+    await requestJson(server.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { partnerIds: [a, b] },
+    });
+
+    const relation = await get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+    assert.equal(relation.relationship, 'SPOUSE');
+    assert.equal(relation.label, 'épouse');
+    assert.equal(relation.distance, 1);
+    assert.equal(relation.consanguinity.relationship, 'COLLATERAL');
+    assert.equal(relation.consanguinity.label, 'cousine germaine');
+    assert.deepEqual(relation.consanguinity.commonAncestorIds, [grandPere]);
+    assert.equal(relation.consanguinity.up, 2);
+  } finally {
+    await server.close();
+  }
+});
+
+test('relation : absence de lien, même personne, profondeur limitée', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, get } = await build(server);
+    const a = await person('A');
+    const b = await person('B');
+    const none = await get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+    assert.equal(none.connected, false);
+    assert.equal(none.relationship, null);
+    assert.deepEqual(none.relationships, []);
+    const same = await get(`/api/graph/relationship?personA=${a}&personB=${a}`);
+    assert.equal(same.relationship, 'SELF');
+    assert.equal(same.distance, 0);
+
+    const ids = await chain(server, 4);
+    const far = await get(`/api/graph/relationship?personA=${ids[0]}&personB=${ids[4]}`);
+    assert.equal(far.relationship, 'ANCESTOR_4');
+    assert.equal(far.connected, true);
+    const limited = await get(
+      `/api/graph/relationship?personA=${ids[0]}&personB=${ids[4]}&depth=3`,
+    );
+    assert.equal(limited.connected, false);
+  } finally {
+    await server.close();
+  }
+});
+
+test('le moteur expose la détection de doublons potentiels, sans jamais fusionner', async () => {
+  const server = await startTestServer();
+  try {
+    const { person } = await build(server);
+    const first = await person('Jean');
+    const second = await person('Jean');
+    await person('Zacharie');
+    for (const id of [first, second]) {
+      await requestJson(server.baseUrl, '/api/events', {
+        method: 'POST',
+        body: {
+          type: 'BIRTH',
+          dateText: '1850',
+          participants: [{ personId: id, role: 'PRINCIPAL' }],
+        },
+      });
+    }
+    const duplicates = server.services.graph.detectPotentialDuplicates();
+    assert.equal(duplicates.total, 1);
+    assert.equal(duplicates.items[0].requiresValidation, true);
+    assert.equal(
+      server.database.prepare('SELECT COUNT(*) AS n FROM persons WHERE deleted_at IS NULL').get().n,
+      3,
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('performance : relation et ancêtres communs sur 4 000 personnes restent instantanés', async () => {
+  const server = await startTestServer();
+  try {
+    const db = server.database;
+    const insertPerson = db.prepare(
+      "INSERT INTO persons (given_names, family_name) VALUES (?, 'Perf')",
+    );
+    const insertLink = db.prepare(
+      "INSERT INTO parentages (child_id, parent_id, parent_role) VALUES (?, ?, 'PARENT')",
+    );
+    // Arbre binaire complet de 12 générations (4 095 personnes), pères et mères.
+    db.transaction(() => {
+      for (let i = 1; i <= 4095; i += 1) insertPerson.run(`P${i}`);
+      for (let i = 1; i <= 2047; i += 1) {
+        insertLink.run(i, 2 * i);
+        insertLink.run(i, 2 * i + 1);
+      }
+    })();
+    const started = performance.now();
+    const relation = server.services.graph.findRelationship(1, 4095);
+    const common = server.services.graph.findCommonAncestors(1, 2);
+    const elapsed = performance.now() - started;
+    assert.ok(relation.connected);
+    assert.ok(common.length > 0);
+    assert.equal(relation.relationship, 'ANCESTOR_11');
+    assert.ok(elapsed < 3000, `trop lent : ${Math.round(elapsed)} ms`);
+  } finally {
+    await server.close();
+  }
+});

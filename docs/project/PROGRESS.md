@@ -526,3 +526,39 @@ a son commit, validé par `npm run lint`, `npm run format:check` et `npm test` (
   pas encore un filtre d'export (phase E).
 - Un seul nom de chaque type par personne (pas de table de noms multiples datés).
 - Arbres multiples : isolation par espace de travail, inchangée par ce lot.
+
+## Phase C du prompt maître — moteur généalogique (2026-10-22, branche `fix/audit-2026-09`)
+
+Les douze fonctions demandées existaient ; l'audit a porté sur les exigences de la phase (demi-fratries,
+relations et chemins multiples, ancêtres communs, branches, profondeur configurable, données
+incohérentes) et sur les métadonnées renvoyées. Validé par `npm run lint`, `npm run format:check`,
+`npm test` (Node 24) ; 16 tests dédiés dans `test/api/graph-engine.test.js`.
+
+| Exigence | Avant | Maintenant | Commit |
+|---|---|---|---|
+| Demi-frères / demi-sœurs | Fratrie = toute personne partageant un parent, sans distinction | `sibling_type` : plein, demi paternel / maternel, par alliance, **indéterminé** (jamais deviné quand un seul parent est connu) ; libellés « demi-frère », « frère par alliance » | `d3d85fa`, ci-dessous |
+| Branches paternelle / maternelle | Seulement sur la relation directe | `branch`, `branches` sur chaque ancêtre / descendant | `d3d85fa` |
+| Chemins multiples | Un seul chemin (une requête SQL par personne) | `findPaths` : tous les plus courts chemins (limite configurable), graphe en mémoire (3 requêtes), `GET /api/graph/path` | `c4e400a` |
+| Ancêtres communs | Excluaient une personne ancêtre de l'autre ; aucune hiérarchie | Inclut soi-même, `lowest` (ancêtres communs les plus récents), générations et branches de chaque côté | `4d717e7` |
+| Relations multiples | Un seul résultat | `relationships` (natures distinctes sur tous les plus courts chemins) et `consanguinity` (lien de sang même quand un mariage est plus court : cousins mariés) | ci-dessous |
+| Profondeur configurable | `maxDepth` sur ancêtres / descendants seulement | Aussi sur chemins, ancêtres communs et relation (`?depth=`) ; filtre `?linkTypes=` | idem |
+| Cycles / données incohérentes | Pas de boucle infinie mais sans signalement | Parcours par niveaux borné (un chemin plus long que le nombre de personnes prouve un cycle et est coupé) ; test avec cycle injecté | `d3d85fa` |
+| Métadonnées | génération, distance, branche, chemin | + `generations` (implexe), `bond` (sang / adoption / alliance / mariage / incertain), `up` / `down`, nature du lien par étape | idem |
+
+### Libellés français corrigés
+
+- Genrés selon le sexe connu (père, grand-mère, arrière-grand-père… jusqu'à 5 générations, puis « ancêtre
+  à la 6e génération ») ; neutres si le sexe est inconnu, sans choix arbitraire.
+- **Correction d'une erreur** : « cousin issu de germain » désignait les cousins de degré 2×3 ; c'est en
+  fait 3×3. Les degrés 2×3 sont désormais « oncle / neveu à la mode de Bretagne ».
+- Belle-famille : beau-père / belle-mère, gendre / belle-fille, beau-frère / belle-sœur ; tutelle :
+  « tuteur », « pupille ».
+
+### Limites restantes
+
+- `findPath`, `findPaths` et `consanguinity` ne sont pas encore affichés dans l'interface (phase I) ;
+  `RelationshipPanel` continue d'afficher libellé, distance, branche et chemin.
+- Belle-famille limitée aux motifs usuels (parent / enfant / frère ou sœur du conjoint) : les autres
+  restent `CONNECTED` sans libellé inventé.
+- Après un mariage entre parents, le libellé principal reste le plus court chemin (conjoint) ; le lien de
+  sang est dans `consanguinity`.

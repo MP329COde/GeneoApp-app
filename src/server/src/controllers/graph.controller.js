@@ -40,7 +40,9 @@ export function createGraphController(services) {
       const personA = Number(request.query.personA);
       const personB = Number(request.query.personB);
       graph.assertPair(personA, personB);
-      response.json(graph.findRelationship(personA, personB));
+      response.json(
+        graph.findRelationship(personA, personB, { maxDepth: parseDepth(request.query.depth) }),
+      );
     },
     commonAncestors(request, response) {
       const personA = Number(request.query.personA);
