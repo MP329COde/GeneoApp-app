@@ -55,11 +55,17 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
 
   useEffect(() => {
     let cancelled = false;
-    client.indexing
-      .connectors()
-      .then((connectors) => {
+    // Un client ancien (ou un test) peut ne pas connaître l'API des
+    // connecteurs : l'écran doit rester utilisable dans ce cas.
+    const connectors = client.indexing?.connectors?.();
+    if (!connectors) {
+      setLoaded(true);
+      return undefined;
+    }
+    connectors
+      .then((list) => {
         if (cancelled) return;
-        const connector = connectors.find((item) => item.id === site?.id);
+        const connector = (list ?? []).find((item) => item.id === site?.id);
         setOptedIn(Boolean(connector?.optedIn));
       })
       .catch(() => {
