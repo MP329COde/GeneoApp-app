@@ -472,9 +472,65 @@ function validateEventParticipant(participant, index) {
   return { personId, role };
 }
 
+export function validateEventUpdate(payload) {
+  assertPayload(payload);
+  const { type, value, dateText, datePrecision, placeId, notes } = payload;
+  assertValid({
+    type: [oneOf(type, EVENT_TYPES, 'type')],
+    value: [isString(value, 'value'), maxLength(value, 500, 'value')],
+    dateText: [isString(dateText, 'dateText'), maxLength(dateText, 100, 'dateText')],
+    datePrecision: [oneOf(datePrecision, DATE_PRECISIONS, 'datePrecision')],
+    placeId: [isInteger(placeId, 'placeId')],
+    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+  });
+  // Le type et la précision sont obligatoires en base : les vider est refusé.
+  for (const key of ['type', 'datePrecision']) {
+    if (key in payload && payload[key] === null) {
+      throw fieldError(key, 'REQUIRED', 'server.validation.required', `${key} est obligatoire`);
+    }
+  }
+  const patch = {};
+  for (const key of ['type', 'value', 'dateText', 'datePrecision', 'placeId', 'notes']) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if ('value' in patch && typeof patch.value === 'string') patch.value = patch.value.trim() || null;
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
+}
+
 export function validateParticipantAdd(payload) {
   assertPayload(payload);
   return validateEventParticipant(payload, 0);
+}
+
+export function validateUnionUpdate(payload) {
+  assertPayload(payload);
+  const { type, startEventId, endEventId, notes } = payload;
+  assertValid({
+    type: [oneOf(type, UNION_TYPES, 'type')],
+    startEventId: [isInteger(startEventId, 'startEventId')],
+    endEventId: [isInteger(endEventId, 'endEventId')],
+    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+  });
+  if ('type' in payload && type === null) {
+    throw fieldError('type', 'REQUIRED', 'server.validation.required', 'type est obligatoire');
+  }
+  const patch = {};
+  for (const key of ['type', 'startEventId', 'endEventId', 'notes']) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
 }
 
 export function validateUnionCreate(payload) {
@@ -507,6 +563,33 @@ export function validateUnionCreate(payload) {
     notes: notes ?? null,
     partnerIds,
   };
+}
+
+export function validateParentageUpdate(payload) {
+  assertPayload(payload);
+  const { parentRole, linkType, unionId, notes } = payload;
+  assertValid({
+    parentRole: [oneOf(parentRole, PARENT_ROLES, 'parentRole')],
+    linkType: [oneOf(linkType, LINK_TYPES, 'linkType')],
+    unionId: [isInteger(unionId, 'unionId')],
+    notes: [isString(notes, 'notes'), maxLength(notes, 5000, 'notes')],
+  });
+  for (const key of ['parentRole', 'linkType']) {
+    if (key in payload && payload[key] === null) {
+      throw fieldError(key, 'REQUIRED', 'server.validation.required', `${key} est obligatoire`);
+    }
+  }
+  const patch = {};
+  for (const key of ['parentRole', 'linkType', 'unionId', 'notes']) {
+    if (key in payload) patch[key] = payload[key];
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new ValidationError('Aucun champ modifiable fourni', {
+      code: 'NO_UPDATABLE_FIELD',
+      translationKey: 'server.validation.noUpdatableField',
+    });
+  }
+  return patch;
 }
 
 export function validateParentageCreate(payload) {

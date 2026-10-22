@@ -6,8 +6,12 @@ export function unionRoutes(services) {
   const router = Router();
 
   router.post('/', controller.create);
-  router.get('/:id', controller.get);
+  router.get('/', controller.list);
   router.get('/by-person/:personId', controller.listForPerson);
+  router.get('/:id', controller.get);
+  router.patch('/:id', controller.update);
+  router.post('/:id/partners', controller.addPartner);
+  router.delete('/:id/partners/:personId', controller.removePartner);
   router.delete('/:id', controller.remove);
 
   return router;

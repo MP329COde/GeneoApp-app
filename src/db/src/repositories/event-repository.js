@@ -109,6 +109,61 @@ export class EventRepository {
     });
   }
 
+  /** Modifie les champs propres de l'événement (pas ses participants). */
+  update(id, patch, { performedBy = null } = {}) {
+    const columns = {
+      type: 'type',
+      value: 'value',
+      dateText: 'date_text',
+      datePrecision: 'date_precision',
+      placeId: 'place_id',
+      notes: 'notes',
+    };
+    const fields = Object.keys(patch).filter((key) => key in columns);
+    if (fields.length === 0) throw new Error('Aucun champ modifiable fourni');
+
+    return withTransaction(this.database, () => {
+      if (!this.findById(id)) throw new Error(`Événement introuvable : ${id}`);
+      this.database
+        .prepare(
+          `UPDATE events SET ${fields.map((f) => `${columns[f]} = @${f}`).join(', ')},
+                             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = @id AND deleted_at IS NULL`,
+        )
+        .run({ id, ...Object.fromEntries(fields.map((f) => [f, patch[f]])) });
+      recordAudit(this.database, {
+        tableName: 'events',
+        rowId: id,
+        operation: 'UPDATE',
+        changes: Object.fromEntries(fields.map((f) => [f, patch[f]])),
+        performedBy,
+      });
+      return this.findById(id);
+    });
+  }
+
+  /** Retire un participant (suppression logique ; le rôle reste dans l'audit). */
+  removeParticipant(eventId, participantId, { performedBy = null } = {}) {
+    return withTransaction(this.database, () => {
+      const result = this.database
+        .prepare(
+          `UPDATE event_participants
+           SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = ? AND event_id = ? AND deleted_at IS NULL`,
+        )
+        .run(participantId, eventId);
+      if (result.changes === 0) return false;
+      recordAudit(this.database, {
+        tableName: 'event_participants',
+        rowId: participantId,
+        operation: 'DELETE',
+        performedBy,
+      });
+      return true;
+    });
+  }
+
   findById(id, { includeDeleted = false } = {}) {
     const clause = includeDeleted ? '' : 'AND deleted_at IS NULL';
     const event = this.database.prepare(`SELECT * FROM events WHERE id = ? ${clause}`).get(id);

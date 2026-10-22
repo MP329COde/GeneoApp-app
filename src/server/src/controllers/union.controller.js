@@ -16,6 +16,34 @@ export function createUnionController(services) {
       response.json(unions.listForPerson(Number(request.params.personId)));
     },
 
+    list(_request, response) {
+      response.json(unions.list());
+    },
+
+    update(request, response) {
+      response.json(
+        unions.update(Number(request.params.id), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    addPartner(request, response) {
+      response.status(201).json(
+        unions.addPartner(Number(request.params.id), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    removePartner(request, response) {
+      response.json(
+        unions.removePartner(Number(request.params.id), Number(request.params.personId), {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
     remove(request, response) {
       unions.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();

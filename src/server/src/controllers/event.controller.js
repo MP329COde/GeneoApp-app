@@ -27,6 +27,21 @@ export function createEventController(services) {
       response.status(201).json({ id: participantId });
     },
 
+    update(request, response) {
+      response.json(
+        events.update(Number(request.params.id), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    removeParticipant(request, response) {
+      events.removeParticipant(Number(request.params.id), Number(request.params.participantId), {
+        performedBy: request.performedBy,
+      });
+      response.status(204).end();
+    },
+
     remove(request, response) {
       events.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();
