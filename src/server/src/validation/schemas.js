@@ -13,7 +13,7 @@ import {
 import { ValidationError, fieldError } from '../errors.js';
 
 const SEX_VALUES = ['M', 'F', 'U'];
-const EVENT_TYPES = [
+export const EVENT_TYPES = [
   'BIRTH',
   'DEATH',
   'MARRIAGE',

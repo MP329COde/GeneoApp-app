@@ -13,6 +13,8 @@
   "advancedSearch.yearTo": "Année de fin",
   "advancedSearch.source": "Source citée",
   "advancedSearch.identifier": "Identifiant (#12 ou externe)",
+  "advancedSearch.occupation": "Profession",
+  "advancedSearch.note": "Texte d’une note",
   "advancedSearch.fuzzy": "Orthographes proches (Dupont, Dupond, Dupon…)",
   "advancedSearch.submit": "Filtrer",
   "advancedSearch.clear": "Effacer les filtres",

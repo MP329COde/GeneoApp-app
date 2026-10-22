@@ -13,6 +13,8 @@ const EMPTY = {
   eventType: '',
   source: '',
   identifier: '',
+  occupation: '',
+  note: '',
   fuzzy: true,
 };
 
@@ -109,6 +111,14 @@ export function AdvancedSearch({ client, onNavigate }) {
         <label>
           <span>{t('advancedSearch.identifier', 'Identifiant (#12 ou externe)')}</span>
           <input value={filters.identifier} onChange={set('identifier')} />
+        </label>
+        <label>
+          <span>{t('advancedSearch.occupation', 'Profession')}</span>
+          <input value={filters.occupation} onChange={set('occupation')} />
+        </label>
+        <label>
+          <span>{t('advancedSearch.note', 'Texte d’une note')}</span>
+          <input value={filters.note} onChange={set('note')} />
         </label>
         <label className="settings-toggle">
           <input type="checkbox" checked={filters.fuzzy} onChange={set('fuzzy')} />

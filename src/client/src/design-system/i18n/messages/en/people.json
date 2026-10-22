@@ -13,6 +13,8 @@
   "advancedSearch.yearTo": "End year",
   "advancedSearch.source": "Cited source",
   "advancedSearch.identifier": "Identifier (#12 or external)",
+  "advancedSearch.occupation": "Occupation",
+  "advancedSearch.note": "Note text",
   "advancedSearch.fuzzy": "Close spellings (Dupont, Dupond, Dupon…)",
   "advancedSearch.submit": "Filter",
   "advancedSearch.clear": "Clear filters",
