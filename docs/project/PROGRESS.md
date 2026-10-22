@@ -560,6 +560,16 @@ Défaut trouvé par ce parcours : le tableau de bord appelait `client.notebook` 
 | Pas de décision automatique | Suggestions à valider ; faits non fondés signalés ; aucune écriture côté serveur |
 | Tests sans modèle | Faux serveurs injectés : 15 tests serveur / API, 6 tests d'écran |
 
+### Phase L (CI/CD, distribution)
+
+| Exigence | État |
+|---|---|
+| CI sur pull request | lint, formatage, tests, build, Storybook, E2E, site, packaging Linux (`--dir`), matrice Ubuntu / Windows / macOS |
+| Packaging | `package:mac` exécuté ici : `.dmg` et `.zip` produits. `package:linux` : l'application est assemblée (`linux-unpacked`) mais l'AppImage ne peut pas se construire depuis macOS (limite de l'outil) — vérifié par la CI sous Ubuntu. `package:win` non exécuté (nécessite Windows ou Wine) |
+| Checksums, release en brouillon | Workflow `release.yml` (déjà en place) ; procédure et vérification dans `docs/RELEASE.md` |
+| Mise à jour depuis GitHub | Documentée (manuelle, sauvegarde avant, aucune requête réseau automatique) |
+| Branches | `feature/*` → `dev` → `main` (CONTRIBUTING, GOVERNANCE) |
+
 ### Limites restantes
  (assumées, hors phase B)
 
