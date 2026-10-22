@@ -1,0 +1,5 @@
+{
+  "mapControls.label": "Map controls",
+  "mapControls.instructions": "Mouse: drag to pan the map, wheel to zoom. Keyboard: arrow keys to pan, plus and minus keys to zoom, zero key to reset.",
+  "mapControls.zoomLevel": "Zoom {percent}%"
+}

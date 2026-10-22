@@ -306,6 +306,70 @@ test('place automatiquement un lieu contre le référentiel des communes frança
   await expect(unlocatedSection.getByText('Bordeaux', { exact: true })).toHaveCount(0);
 });
 
+test('zoome, déplace et recentre la carte locale hors ligne, sans requête réseau', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Événements', exact: true }).click();
+  await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Rennes');
+  await page.getByLabel('Latitude (optionnel)').fill('48.1173');
+  await page.getByLabel('Longitude (optionnel)').fill('-1.6778');
+  await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
+  await expect(page.locator('.search-results li', { hasText: 'Rennes' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  const canvas = page.locator('svg.local-map__canvas');
+  await expect(canvas).toBeVisible();
+  const viewport = page.locator('.local-map__viewport');
+
+  // Aucune tuile distante ne doit être demandée par la carte hors ligne.
+  const remoteRequests = [];
+  page.on('request', (request) => {
+    const url = request.url();
+    if (!url.startsWith('http://127.0.0.1') && !url.startsWith('data:')) {
+      remoteRequests.push(url);
+    }
+  });
+
+  // Bouton « Zoom + » : l'échelle du groupe transformé augmente.
+  await expect(viewport).toHaveAttribute('data-zoom', '1');
+  await page.getByRole('button', { name: 'Zoom +' }).click();
+  await expect(viewport).not.toHaveAttribute('data-zoom', '1');
+
+  // Molette : zoom centré sur le curseur, toujours hors ligne.
+  const box = await canvas.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, -240);
+  const zoomedIn = Number(await viewport.getAttribute('data-zoom'));
+  expect(zoomedIn).toBeGreaterThan(1);
+
+  // Glissement à la souris : le groupe est translaté.
+  const beforeDrag = await viewport.getAttribute('data-translate');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 80, { steps: 8 });
+  await page.mouse.up();
+  const afterDrag = await viewport.getAttribute('data-translate');
+  expect(afterDrag).not.toBe(beforeDrag);
+
+  // Clavier : les flèches déplacent la carte quand le SVG a le focus.
+  await canvas.focus();
+  const beforeKeys = await viewport.getAttribute('data-translate');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  expect(await viewport.getAttribute('data-translate')).not.toBe(beforeKeys);
+
+  // Recentrage : le zoom revient à 100 % et la translation à zéro.
+  await page.getByRole('button', { name: 'Recentrer' }).click();
+  await expect(viewport).toHaveAttribute('data-zoom', '1');
+  await expect(viewport).toHaveAttribute('data-translate', '0 0');
+
+  expect(remoteRequests, `requêtes distantes inattendues : ${remoteRequests.join(', ')}`).toEqual(
+    [],
+  );
+});
+
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
   await page.goto('/');
   const list = page.getByRole('navigation', { name: 'Personnes' });

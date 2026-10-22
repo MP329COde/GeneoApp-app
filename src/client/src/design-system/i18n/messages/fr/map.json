@@ -1,0 +1,5 @@
+{
+  "mapControls.label": "Commandes de la carte",
+  "mapControls.instructions": "Souris : glisser pour déplacer la carte, molette pour zoomer. Clavier : flèches pour déplacer, touches plus et moins pour zoomer, touche zéro pour réinitialiser.",
+  "mapControls.zoomLevel": "Zoom {percent} %"
+}

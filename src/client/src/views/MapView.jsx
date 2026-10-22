@@ -6,6 +6,19 @@ import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice } from '../components/shared.jsx';
 import { useSettings } from '../settings/SettingsContext.jsx';
+import {
+  GESTURE_THRESHOLD,
+  KEYBOARD_PAN_STEP,
+  VIEWBOX_SIZE,
+  ZOOM_FACTOR,
+  clampTranslation,
+  clientToViewBox,
+  createViewport,
+  distance,
+  panBy,
+  toTransform,
+  zoomAt,
+} from './map-viewport.js';
 
 export function MapPanel() {
   const { t } = useTranslation();
@@ -257,8 +270,18 @@ const EUROPE_BOUNDS = { minLon: -10, maxLon: 40, minLat: 34, maxLat: 70 };
 // leur contexte géographique sans dépendre d'un fournisseur externe.
 export function LocalMap({ places }) {
   const { t } = useTranslation();
-  const [zoom, setZoom] = useState(1);
+  const [viewport, setViewport] = useState(createViewport);
   const [selectedId, setSelectedId] = useState(null);
+  const svgRef = useRef(null);
+  // Pointeurs actifs (souris ou doigts) : sert au glissement et au
+  // pincement. Une Map conserve l'ordre d'arrivée, indispensable pour
+  // distinguer les deux doigts d'un pincement.
+  const pointersRef = useRef(new Map());
+  const gestureRef = useRef({ moved: false, pinchDistance: null, pinchCenter: null });
+  // Fonction de retrait des écouteurs de mouvement posés sur la fenêtre
+  // (null tant qu'aucun geste n'est en cours).
+  const windowListenersRef = useRef(null);
+  const instructionsId = 'local-map-instructions';
 
   const lats = places.map((place) => place.latitude);
   const lons = places.map((place) => place.longitude);
@@ -270,7 +293,7 @@ export function LocalMap({ places }) {
   const maxLon = Math.max(EUROPE_BOUNDS.maxLon, ...lons);
   const spanLat = Math.max(maxLat - minLat, 0.01);
   const spanLon = Math.max(maxLon - minLon, 0.01);
-  const size = 480;
+  const size = VIEWBOX_SIZE;
   const padding = 40;
 
   const project = ({ longitude, latitude }) => {
@@ -288,39 +311,240 @@ export function LocalMap({ places }) {
       })
       .join(' ');
 
+  // Rectangle affiché du SVG : sert à convertir les coordonnées de l'écran
+  // (souris, doigt) en unités du viewBox.
+  const svgRect = () => svgRef.current?.getBoundingClientRect();
+
+  const zoomBy = useCallback((factor, point) => {
+    setViewport((current) => {
+      const zoomed = zoomAt(current, factor, point);
+      return clampTranslation(zoomed, VIEWBOX_SIZE);
+    });
+  }, []);
+
+  const zoomIn = useCallback(() => {
+    // Zoom centré : le milieu de la fenêtre reste le point de référence.
+    zoomBy(ZOOM_FACTOR, { x: VIEWBOX_SIZE / 2, y: VIEWBOX_SIZE / 2 });
+  }, [zoomBy]);
+
+  const zoomOut = useCallback(() => {
+    zoomBy(1 / ZOOM_FACTOR, { x: VIEWBOX_SIZE / 2, y: VIEWBOX_SIZE / 2 });
+  }, [zoomBy]);
+
+  const reset = useCallback(() => {
+    setViewport(createViewport());
+  }, []);
+
+  // Molette : zoom centré sur le curseur. Le_listener est natif (et non
+  // passif) pour pouvoir empêcher le défilement de la page pendant le geste.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return undefined;
+    const onWheel = (event) => {
+      event.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const point = clientToViewBox(rect, event.clientX, event.clientY, VIEWBOX_SIZE);
+      zoomBy(event.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR, point);
+    };
+    svg.addEventListener('wheel', onWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', onWheel);
+  }, [zoomBy]);
+
+  // Glissement (souris ou doigt unique) et pincement (deux doigts).
+  // Les déplacements sont écoutés sur la fenêtre : le geste peut sortir du
+  // SVG sans s'interrompre, et la capture de pointeur n'est pas utilisée
+  // afin que le clic sur un repère reste possible.
+  const onPointerDown = (event) => {
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size === 1) {
+      gestureRef.current = { moved: false, pinchDistance: null, pinchCenter: null };
+    }
+    // Les déplacements et la fin du geste sont suivis sur la fenêtre : le
+    // geste peut sortir du SVG sans s'interrompre, et la capture de pointeur
+    // n'est pas utilisée afin que le clic sur un repère reste possible.
+    if (!windowListenersRef.current) {
+      const move = (moveEvent) => onPointerMove(moveEvent);
+      const up = (upEvent) => {
+        endPointer(upEvent);
+        if (pointersRef.current.size === 0) {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          window.removeEventListener('pointercancel', up);
+          windowListenersRef.current = null;
+        }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+      windowListenersRef.current = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+      };
+    }
+  };
+
+  const onPointerMove = (event) => {
+    const previous = pointersRef.current.get(event.pointerId);
+    if (!previous) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...pointersRef.current.values()];
+    const rect = svgRect();
+
+    if (points.length >= 2) {
+      // Pincement : le rapport des distances entre les doigts donne le
+      // facteur de zoom, le milieu des doigts sert de point d'ancrage.
+      const [first, second] = points;
+      const currentDistance = distance(first, second);
+      const center = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+      const previousDistance = gestureRef.current.pinchDistance;
+      const previousCenter = gestureRef.current.pinchCenter;
+      if (previousDistance && currentDistance > 0 && previousCenter && rect) {
+        // Le contenu situé sous le milieu précédent des doigts reste sous
+        // ce milieu : on zoome d'abord sur ce point, puis on suit le
+        // déplacement du geste.
+        const anchor = clientToViewBox(
+          rect,
+          previousCenter.x,
+          previousCenter.y,
+          VIEWBOX_SIZE,
+        );
+        const factor = currentDistance / previousDistance;
+        const unitX = rect.width / VIEWBOX_SIZE || 1;
+        const unitY = rect.height / VIEWBOX_SIZE || 1;
+        setViewport((current) => {
+          const zoomed = zoomAt(current, factor, anchor);
+          const panned = panBy(
+            zoomed,
+            (center.x - previousCenter.x) / unitX,
+            (center.y - previousCenter.y) / unitY,
+          );
+          return clampTranslation(panned, VIEWBOX_SIZE);
+        });
+      }
+      gestureRef.current.pinchDistance = currentDistance;
+      gestureRef.current.pinchCenter = center;
+      gestureRef.current.moved = true;
+      return;
+    }
+
+    const dx = event.clientX - previous.x;
+    const dy = event.clientY - previous.y;
+    if (Math.abs(dx) > GESTURE_THRESHOLD || Math.abs(dy) > GESTURE_THRESHOLD) {
+      gestureRef.current.moved = true;
+    }
+    if (!gestureRef.current.moved || !rect) return;
+    // Le contenu suit le pointeur : le déplacement est exprimé dans les
+    // unités du viewBox.
+    const unitX = rect.width / VIEWBOX_SIZE || 1;
+    const unitY = rect.height / VIEWBOX_SIZE || 1;
+    setViewport((current) => {
+      const panned = panBy(current, dx / unitX, dy / unitY);
+      return clampTranslation(panned, VIEWBOX_SIZE);
+    });
+  };
+
+  const endPointer = (event) => {
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) {
+      gestureRef.current.pinchDistance = null;
+      gestureRef.current.pinchCenter = null;
+    }
+  };
+
+  // Nettoyage des écouteurs de mouvement posés sur la fenêtre.
+  useEffect(
+    () => () => {
+      windowListenersRef.current?.();
+      windowListenersRef.current = null;
+    },
+    [],
+  );
+
+  // Clavier : flèches pour déplacer, + et - pour zoomer, 0 pour réinitialiser.
+  const onKeyDown = (event) => {
+    if (event.target !== event.currentTarget) return;
+    const step = KEYBOARD_PAN_STEP;
+    // Sens : la flèche déplace la vue (le contenu défile dans l'autre sens).
+    const moves = {
+      ArrowLeft: [step, 0],
+      ArrowRight: [-step, 0],
+      ArrowUp: [0, step],
+      ArrowDown: [0, -step],
+    };
+    if (moves[event.key]) {
+      event.preventDefault();
+      const [dx, dy] = moves[event.key];
+      setViewport((current) => clampTranslation(panBy(current, dx, dy), VIEWBOX_SIZE));
+      return;
+    }
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      zoomIn();
+      return;
+    }
+    if (event.key === '-' || event.key === '_') {
+      event.preventDefault();
+      zoomOut();
+      return;
+    }
+    if (event.key === '0' || event.key === 'Home') {
+      event.preventDefault();
+      reset();
+    }
+  };
+
+  const zoomPercent = Math.round(viewport.scale * 100);
+
   return (
     <div className="local-map">
-      <div className="local-map__controls">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          onClick={() => setZoom((z) => Math.min(z * 1.4, 6))}
-        >
+      <div className="local-map__controls" role="toolbar" aria-label={t('mapControls.label')}>
+        <Button type="button" size="sm" variant="secondary" onClick={zoomIn}>
           {t('mapView.zoomIn', 'Zoom +')}
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          onClick={() => setZoom((z) => Math.max(z / 1.4, 1))}
-        >
+        <Button type="button" size="sm" variant="secondary" onClick={zoomOut}>
           {t('mapView.zoomOut', 'Zoom −')}
         </Button>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setZoom(1)}>
+        <Button type="button" size="sm" variant="secondary" onClick={reset}>
           {t('mapView.recenter', 'Recentrer')}
         </Button>
+        <output className="local-map__zoom-level" aria-live="polite">
+          {t('mapControls.zoomLevel', { percent: zoomPercent })}
+        </output>
       </div>
+      <p className="gds-visually-hidden" id={instructionsId}>
+        {t(
+          'mapControls.instructions',
+          'Souris : glisser pour déplacer la carte, molette pour zoomer. Clavier : flèches pour déplacer, touches plus et moins pour zoomer, touche zéro pour réinitialiser.',
+        )}
+      </p>
       <svg
+        ref={svgRef}
         role="img"
         aria-label={t(
           'mapView.localMapLabel',
           'Carte locale des lieux enregistrés, sur un fond simplifié de l’Europe et de la France (aucune donnée téléchargée)',
         )}
+        aria-describedby={instructionsId}
         viewBox={`0 0 ${size} ${size}`}
         className="local-map__canvas"
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        onPointerDown={onPointerDown}
+        onClickCapture={(event) => {
+          // Un glissement ne doit pas sélectionner un repère.
+          if (gestureRef.current.moved) {
+            event.stopPropagation();
+            event.preventDefault();
+          }
+        }}
       >
-        <g transform={`scale(${zoom})`} style={{ transformOrigin: 'center' }}>
+        <g
+          className="local-map__viewport"
+          data-zoom={viewport.scale}
+          data-translate={`${viewport.tx} ${viewport.ty}`}
+          transform={toTransform(viewport)}
+        >
           <g className="local-map__basemap" aria-hidden="true">
             {europeOutline.features.map((feature) => (
               <polygon
