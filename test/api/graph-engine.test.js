@@ -211,3 +211,75 @@ test('données incohérentes : un cycle de filiations ne provoque aucune boucle 
     await server.close();
   }
 });
+
+test('chemins multiples : deux frères pleins sont reliés par leur père et par leur mère', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, link, get } = await build(server);
+    const pere = await person('Père', 'M');
+    const mere = await person('Mère', 'F');
+    const a = await person('A');
+    const b = await person('B');
+    for (const child of [a, b]) {
+      await link(child, pere, 'FATHER');
+      await link(child, mere, 'MOTHER');
+    }
+
+    const paths = await get(`/api/graph/path?personA=${a}&personB=${b}`);
+    assert.equal(paths.length, 2);
+    assert.deepEqual(
+      paths.map((path) => path.map((step) => step.via)),
+      [
+        ['START', 'PARENT', 'CHILD'],
+        ['START', 'PARENT', 'CHILD'],
+      ],
+    );
+    assert.deepEqual(paths.map((path) => path[1].personId).sort(), [pere, mere].sort());
+
+    assert.equal((await get(`/api/graph/path?personA=${a}&personB=${b}&limit=1`)).length, 1);
+    assert.equal((await get(`/api/graph/path?personA=${a}&personB=${b}&depth=1`)).length, 0);
+    assert.equal((await get(`/api/graph/path?personA=${a}&personB=${b}&depth=2`)).length, 2);
+    assert.deepEqual(await get(`/api/graph/path?personA=${a}&personB=${a}`), [
+      [{ personId: a, via: 'SELF' }],
+    ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test('chemin : absence de relation, conjoint, personne inconnue, paramètres invalides', async () => {
+  const server = await startTestServer();
+  try {
+    const { person, get } = await build(server);
+    const a = await person('A');
+    const b = await person('B');
+    assert.deepEqual(await get(`/api/graph/path?personA=${a}&personB=${b}`), []);
+    const relation = await get(`/api/graph/relationship?personA=${a}&personB=${b}`);
+    assert.equal(relation.path.length, 0);
+    assert.equal(relation.distance, null);
+
+    const union = await requestJson(server.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { partnerIds: [a, b] },
+    });
+    assert.equal(union.status, 201);
+    const spouse = await get(`/api/graph/path?personA=${a}&personB=${b}`);
+    assert.deepEqual(
+      spouse[0].map((step) => step.via),
+      ['START', 'SPOUSE'],
+    );
+
+    for (const query of [
+      `personA=${a}&personB=9999`,
+      `personA=${a}&personB=${b}&depth=-1`,
+      `personA=${a}&personB=${b}&limit=0`,
+      `personA=${a}&personB=${b}&limit=abc`,
+      `personA=x&personB=${b}`,
+    ]) {
+      const response = await requestJson(server.baseUrl, `/api/graph/path?${query}`);
+      assert.ok([400, 404].includes(response.status), query);
+    }
+  } finally {
+    await server.close();
+  }
+});

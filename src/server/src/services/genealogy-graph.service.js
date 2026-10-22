@@ -211,38 +211,105 @@ export class GenealogyGraphService {
     };
   }
 
-  findPath(personA, personB) {
+  // Graphe en mémoire (3 requêtes) : parcourir de grands arbres sans une
+  // requête par personne. Arêtes orientées depuis chaque personne : PARENT
+  // (vers un parent), CHILD (vers un enfant), SPOUSE (vers un partenaire).
+  loadAdjacency() {
+    const adjacency = new Map();
+    const seen = new Set();
+    const add = (from, to, via, linkType = null) => {
+      const key = `${from}>${to}:${via}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      if (!adjacency.has(from)) adjacency.set(from, []);
+      adjacency.get(from).push({ id: to, via, linkType });
+    };
+    const parentages = this.database
+      .prepare(
+        `SELECT pa.child_id, pa.parent_id, pa.link_type FROM parentages pa
+         JOIN persons c ON c.id = pa.child_id AND c.deleted_at IS NULL
+         JOIN persons p ON p.id = pa.parent_id AND p.deleted_at IS NULL
+         WHERE pa.deleted_at IS NULL ORDER BY pa.id`,
+      )
+      .all();
+    // Ordre d'exploration identique à l'historique : parents, enfants, conjoints.
+    for (const row of parentages) add(row.child_id, row.parent_id, 'PARENT', row.link_type);
+    for (const row of parentages) add(row.parent_id, row.child_id, 'CHILD', row.link_type);
+    const partners = this.database
+      .prepare(
+        `SELECT a.person_id AS a, b.person_id AS b
+         FROM union_partners a
+         JOIN union_partners b ON b.union_id = a.union_id AND b.person_id != a.person_id
+          AND b.deleted_at IS NULL
+         JOIN unions u ON u.id = a.union_id AND u.deleted_at IS NULL
+         JOIN persons pa ON pa.id = a.person_id AND pa.deleted_at IS NULL
+         JOIN persons pb ON pb.id = b.person_id AND pb.deleted_at IS NULL
+         WHERE a.deleted_at IS NULL ORDER BY a.id, b.id`,
+      )
+      .all();
+    for (const row of partners) add(row.a, row.b, 'SPOUSE');
+    return adjacency;
+  }
+
+  // Tous les plus courts chemins entre deux personnes (au plus `limit`), chacun
+  // décrit par ses étapes { personId, via } où `via` est la nature de l'arête
+  // qui y mène (START, PARENT, CHILD, SPOUSE). `maxDepth` borne le nombre
+  // d'arêtes ; au-delà, aucun chemin n'est renvoyé. Les données cycliques ne
+  // posent pas de problème : chaque personne n'est visitée qu'une fois.
+  findPaths(personA, personB, { maxDepth, limit = 10 } = {}) {
     this.getPerson(personA);
     this.getPerson(personB);
-    if (personA === personB) return [{ personId: personA, via: 'SELF' }];
-
-    const queue = [personA];
-    const previous = new Map([[personA, null]]);
-    while (queue.length > 0) {
-      const current = queue.shift();
-      const neighbours = [
-        ...this.getParents(current).map((person) => ({ id: person.id, via: 'PARENT' })),
-        ...this.getChildren(current).map((person) => ({ id: person.id, via: 'CHILD' })),
-        ...this.getSpouses(current).map((person) => ({ id: person.id, via: 'SPOUSE' })),
-      ];
-      for (const neighbour of neighbours) {
-        if (previous.has(neighbour.id)) continue;
-        previous.set(neighbour.id, { id: current, via: neighbour.via });
-        if (neighbour.id === personB) {
-          const path = [{ personId: personB, via: neighbour.via }];
-          let cursor = current;
-          while (cursor !== personA) {
-            const step = previous.get(cursor);
-            path.push({ personId: cursor, via: step.via });
-            cursor = step.id;
-          }
-          path.push({ personId: personA, via: 'START' });
-          return path.reverse();
-        }
-        queue.push(neighbour.id);
-      }
+    if (maxDepth !== undefined && (!Number.isInteger(maxDepth) || maxDepth < 0)) {
+      throw new ValidationError('La profondeur doit être un entier positif ou nul');
     }
-    return [];
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new ValidationError('limit doit être un entier entre 1 et 100');
+    }
+    if (personA === personB) return [[{ personId: personA, via: 'SELF' }]];
+
+    const adjacency = this.loadAdjacency();
+    const distance = new Map([[personA, 0]]);
+    const predecessors = new Map();
+    let queue = [personA];
+    let found = false;
+    while (queue.length > 0 && !found) {
+      const next = [];
+      for (const current of queue) {
+        const level = distance.get(current);
+        if (maxDepth !== undefined && level >= maxDepth) continue;
+        for (const edge of adjacency.get(current) ?? []) {
+          if (!distance.has(edge.id)) {
+            distance.set(edge.id, level + 1);
+            predecessors.set(edge.id, []);
+            next.push(edge.id);
+          }
+          if (distance.get(edge.id) === level + 1) {
+            predecessors.get(edge.id).push({ from: current, via: edge.via });
+          }
+          if (edge.id === personB) found = true;
+        }
+      }
+      queue = next;
+    }
+    if (!distance.has(personB)) return [];
+
+    const paths = [];
+    const walk = (node, suffix) => {
+      if (paths.length >= limit) return;
+      if (node === personA) {
+        paths.push([{ personId: personA, via: 'START' }, ...suffix]);
+        return;
+      }
+      for (const { from, via } of predecessors.get(node)) {
+        walk(from, [{ personId: node, via }, ...suffix]);
+      }
+    };
+    walk(personB, []);
+    return paths;
+  }
+
+  findPath(personA, personB, options = {}) {
+    return this.findPaths(personA, personB, { ...options, limit: 1 })[0] ?? [];
   }
 
   findCommonAncestors(personA, personB) {

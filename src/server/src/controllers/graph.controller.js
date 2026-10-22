@@ -48,6 +48,14 @@ export function createGraphController(services) {
       graph.assertPair(personA, personB);
       response.json(graph.findCommonAncestors(personA, personB));
     },
+    path(request, response) {
+      const personA = Number(request.query.personA);
+      const personB = Number(request.query.personB);
+      graph.assertPair(personA, personB);
+      const maxDepth = parseDepth(request.query.depth);
+      const limit = request.query.limit === undefined ? undefined : Number(request.query.limit);
+      response.json(graph.findPaths(personA, personB, { maxDepth, limit }));
+    },
     cycles(_request, response) {
       response.json(graph.detectCycles());
     },
