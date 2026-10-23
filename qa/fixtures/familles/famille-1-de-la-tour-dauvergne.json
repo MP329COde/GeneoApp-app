@@ -1,0 +1,210 @@
+{
+  "nomFamille": "de La Tour-d'Auvergne",
+  "description": "Famille noble fictive, 5 générations, région Auvergne. Utilisée pour tester particules, traits d'union, apostrophes.",
+  "generations": [
+    {
+      "gen": 1,
+      "personnes": [
+        {
+          "id": "F1-G1-1",
+          "prenom": "Godefroy",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "naissance": { "date": "1712-03-14", "lieu": "Clermont-Ferrand, Auvergne" },
+          "deces": { "date": "1781-11-02", "lieu": "Clermont-Ferrand, Auvergne" },
+          "profession": "Seigneur terrien",
+          "unions": [
+            {
+              "conjointId": "F1-G1-2",
+              "date": "1734-06-01",
+              "lieu": "Riom, Auvergne",
+              "type": "mariage"
+            }
+          ]
+        },
+        {
+          "id": "F1-G1-2",
+          "prenom": "Isabeau",
+          "nom": "Müller",
+          "sexe": "F",
+          "naissance": { "date": "1715-09-20", "lieu": "Strasbourg, Alsace" },
+          "deces": { "date": "1789-01-17", "lieu": "Clermont-Ferrand, Auvergne" },
+          "profession": "Sans profession déclarée",
+          "note": "Nom d'origine alsacienne avec tréma, testé pour la recherche/tri."
+        }
+      ]
+    },
+    {
+      "gen": 2,
+      "personnes": [
+        {
+          "id": "F1-G2-1",
+          "prenom": "Armand",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G1-1", "F1-G1-2"],
+          "naissance": { "date": "1736-04-02", "lieu": "Clermont-Ferrand, Auvergne" },
+          "deces": { "date": "1798-08-30", "lieu": "Lyon, Lyonnais" },
+          "profession": "Officier de cavalerie",
+          "unions": [
+            {
+              "conjointId": "F1-G2-2",
+              "date": "1758-05-12",
+              "lieu": "Lyon, Lyonnais",
+              "type": "mariage"
+            },
+            {
+              "conjointId": "F1-G2-3",
+              "date": "1772-10-03",
+              "lieu": "Lyon, Lyonnais",
+              "type": "remariage",
+              "note": "Veuf en 1770, remarié"
+            }
+          ]
+        },
+        {
+          "id": "F1-G2-2",
+          "prenom": "Constance",
+          "nom": "Dupont",
+          "sexe": "F",
+          "naissance": { "date": "1739-01-11", "lieu": "Lyon, Lyonnais" },
+          "deces": { "date": "1770-02-19", "lieu": "Lyon, Lyonnais" },
+          "note": "Variante orthographique volontaire : Dupont/Dupond testée dans la fratrie de ses enfants."
+        },
+        {
+          "id": "F1-G2-3",
+          "prenom": "Victoire",
+          "nom": "N'Diaye",
+          "sexe": "F",
+          "naissance": { "date": "1745-07-25", "lieu": "Nantes, Bretagne" },
+          "deces": { "date": "1812-12-05", "lieu": "Lyon, Lyonnais" },
+          "note": "Nom avec apostrophe interne, origine sénégalaise fictive (port de Nantes, XVIIIe)."
+        },
+        {
+          "id": "F1-G2-4",
+          "prenom": "Marguerite",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "F",
+          "parents": ["F1-G1-1", "F1-G1-2"],
+          "naissance": { "date": "1740-12-01", "lieu": "Clermont-Ferrand, Auvergne" },
+          "deces": { "date": "1741-01-15", "lieu": "Clermont-Ferrand, Auvergne" },
+          "note": "Décédée en bas âge (test cas limite : durée de vie < 1 an)."
+        }
+      ]
+    },
+    {
+      "gen": 3,
+      "personnes": [
+        {
+          "id": "F1-G3-1",
+          "prenom": "Louis-Auguste",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G2-1", "F1-G2-2"],
+          "naissance": { "date": "1759-03-08", "lieu": "Lyon, Lyonnais" },
+          "deces": { "date": "1825-06-14", "lieu": "Paris" },
+          "profession": "Avocat",
+          "unions": [
+            { "conjointId": "F1-G3-2", "date": "1782-09-09", "lieu": "Paris", "type": "mariage" }
+          ]
+        },
+        {
+          "id": "F1-G3-2",
+          "prenom": "Eléonore",
+          "nom": "Dupond",
+          "sexe": "F",
+          "naissance": { "date": "1762-05-30", "lieu": "Paris" },
+          "deces": { "date": "1830-03-22", "lieu": "Paris" },
+          "note": "Variante orthographique de Dupont (sœur cadette de Constance Dupont, orthographe divergente selon les actes)."
+        },
+        {
+          "id": "F1-G3-3",
+          "prenom": "Jean-Baptiste",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G2-1", "F1-G2-3"],
+          "naissance": { "date": "1773-11-19", "lieu": "Lyon, Lyonnais" },
+          "deces": { "date": "1840-02-28", "lieu": "Lyon, Lyonnais" },
+          "profession": "Notaire",
+          "note": "Enfant issu de la seconde union d'Armand (avec Victoire N'Diaye)."
+        }
+      ]
+    },
+    {
+      "gen": 4,
+      "personnes": [
+        {
+          "id": "F1-G4-1",
+          "prenom": "Charles",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G3-1", "F1-G3-2"],
+          "naissance": { "date": "1783-07-04", "lieu": "Paris" },
+          "deces": { "date": "1851-10-10", "lieu": "Paris" },
+          "profession": "Médecin",
+          "unions": [
+            { "conjointId": "F1-G4-2", "date": "1806-04-18", "lieu": "Paris", "type": "mariage" }
+          ]
+        },
+        {
+          "id": "F1-G4-2",
+          "prenom": "Amélie",
+          "nom": "Rousseau",
+          "sexe": "F",
+          "naissance": { "date": "1786-02-14", "lieu": "Paris" },
+          "deces": { "date": "1855-09-01", "lieu": "Paris" }
+        },
+        {
+          "id": "F1-G4-3",
+          "prenom": "Suzanne",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "F",
+          "parents": ["F1-G3-1", "F1-G3-2"],
+          "naissance": { "date": "1785-01-01", "lieu": "Paris" },
+          "adoption": {
+            "adoptee": true,
+            "date": "1785-03-01",
+            "note": "Fille adoptive, née hors mariage puis reconnue (test module adoption)."
+          },
+          "deces": { "date": "1860-12-12", "lieu": "Paris" }
+        },
+        {
+          "id": "F1-G4-4",
+          "prenom": "Adrien",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G3-3"],
+          "naissance": { "date": "1801-06-06", "lieu": "Lyon, Lyonnais" },
+          "deces": { "date": "1870-04-04", "lieu": "Lyon, Lyonnais" }
+        }
+      ]
+    },
+    {
+      "gen": 5,
+      "personnes": [
+        {
+          "id": "F1-G5-1",
+          "prenom": "Hippolyte",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "M",
+          "parents": ["F1-G4-1", "F1-G4-2"],
+          "naissance": { "date": "1807-08-08", "lieu": "Paris" },
+          "jumeauDe": "F1-G5-2",
+          "deces": { "date": "1878-03-03", "lieu": "Paris" },
+          "profession": "Ingénieur"
+        },
+        {
+          "id": "F1-G5-2",
+          "prenom": "Hyacinthe",
+          "nom": "de La Tour-d'Auvergne",
+          "sexe": "F",
+          "parents": ["F1-G4-1", "F1-G4-2"],
+          "naissance": { "date": "1807-08-08", "lieu": "Paris" },
+          "jumeauDe": "F1-G5-1",
+          "deces": { "date": "1880-05-20", "lieu": "Paris" },
+          "note": "Jumelle d'Hippolyte (test gestion des jumeaux)."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+/* ---------- Typographie de données ---------- */
+.person-name {
+  font: var(--type-person-name);
+}
+.data-id {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-id);
+}
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+  font: var(--type-label);
+}
+h2 {
+  margin-bottom: 0;
+  font: var(--type-heading-lg);
+}
+h3 {
+  margin-bottom: var(--space-3);
+  font: var(--type-heading);
+}

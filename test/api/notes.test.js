@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 
 test('les notes locales conservent le niveau de preuve et les contradictions', async () => {
@@ -61,9 +64,40 @@ test('la détection de doublons propose un score sans fusion automatique', async
     });
     const result = await requestJson(server.baseUrl, '/api/search/duplicates');
     assert.equal(result.status, 200);
-    assert.equal(result.body.length, 1);
-    assert.equal(result.body[0].requiresValidation, true);
-    assert.ok(result.body[0].score >= 60);
+    assert.equal(result.body.total, 1);
+    assert.equal(result.body.items.length, 1);
+    assert.equal(result.body.items[0].requiresValidation, true);
+    assert.ok(result.body.items[0].score >= 60);
+  } finally {
+    await server.close();
+  }
+});
+
+// Avant correctif : l'API tronquait à `limit` (défaut 100) sans renvoyer le
+// total réel, donc « 100 doublon(s) » s'affichait même quand des milliers de
+// paires avaient été détectées.
+test('le nombre total de doublons détectés est distinct du nombre affiché (troncature à `limit`)', async () => {
+  const server = await startTestServer();
+  try {
+    // 4 variantes du même nom : C(4,2) = 6 paires, toutes détectées comme
+    // doublons possibles.
+    for (const givenNames of ['Jean-Pierre', 'Jean Pierre', 'Jean-Pierre', 'Jean-Pierres']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Dupont' },
+      });
+    }
+
+    const truncated = await requestJson(server.baseUrl, '/api/search/duplicates?limit=2');
+    assert.equal(truncated.status, 200);
+    assert.equal(truncated.body.items.length, 2);
+    assert.ok(
+      truncated.body.total > truncated.body.items.length,
+      `total (${truncated.body.total}) doit dépasser le nombre affiché (${truncated.body.items.length})`,
+    );
+
+    const untruncated = await requestJson(server.baseUrl, '/api/search/duplicates?limit=100');
+    assert.equal(untruncated.body.total, untruncated.body.items.length);
   } finally {
     await server.close();
   }
@@ -136,6 +170,76 @@ test('modifie, recherche et supprime (logiquement, annulable) des annotations de
     });
     assert.equal(invalid.status, 400);
     assert.equal((await requestJson(server.baseUrl, '/api/notes?entityType=HACK')).status, 400);
+  } finally {
+    await server.close();
+  }
+});
+
+// Les notes ne pouvaient viser ni une union ni une filiation, alors que les
+// citations le permettaient : une note de recherche sur un couple ou sur un
+// lien de parenté était impossible à saisir. Inversement, 'FAMILY' était
+// accepté sans table backing — une note de famille était inaccessible.
+test('une note peut viser une union et un lien de parenté', async () => {
+  const server = await startTestServer();
+  try {
+    const ada = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const byron = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Byron', familyName: 'King' },
+    });
+    const anne = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Anne', familyName: 'King' },
+    });
+    const union = await requestJson(server.baseUrl, '/api/unions', {
+      method: 'POST',
+      body: { type: 'MARRIAGE', partnerIds: [ada.body.id, byron.body.id] },
+    });
+    const parentage = await requestJson(server.baseUrl, '/api/parentages', {
+      method: 'POST',
+      body: { childId: anne.body.id, parentId: ada.body.id, parentRole: 'MOTHER' },
+    });
+
+    const onUnion = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: {
+        entityType: 'UNION',
+        entityId: union.body.id,
+        body: 'Le mariage a pu être célébré en secret.',
+      },
+    });
+    assert.equal(onUnion.status, 201);
+    assert.equal(onUnion.body.entity_type, 'UNION');
+
+    const onParentage = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: {
+        entityType: 'PARENTAGE',
+        entityId: parentage.body.id,
+        body: 'Filiation adoptive à confirmer.',
+      },
+    });
+    assert.equal(onParentage.status, 201);
+    assert.equal(onParentage.body.entity_type, 'PARENTAGE');
+
+    // Les notes sont retrouvées par cible.
+    const listed = await requestJson(server.baseUrl, `/api/notes/UNION/${union.body.id}`);
+    assert.equal(listed.body.length, 1);
+    assert.equal(listed.body[0].body, 'Le mariage a pu être célébré en secret.');
+
+    // Le filtre par cible fonctionne aussi.
+    const filtered = await requestJson(server.baseUrl, '/api/notes?entityType=PARENTAGE');
+    assert.equal(filtered.body.length, 1);
+
+    // 'FAMILY' n'a aucune table backing : la cible est refusée.
+    const family = await requestJson(server.baseUrl, '/api/notes', {
+      method: 'POST',
+      body: { entityType: 'FAMILY', entityId: union.body.id, body: 'Note de famille' },
+    });
+    assert.equal(family.status, 400);
   } finally {
     await server.close();
   }

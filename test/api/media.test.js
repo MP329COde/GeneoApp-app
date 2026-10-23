@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { readdir } from 'node:fs/promises';
 import { startTestServer, requestJson } from './helpers.js';
 
@@ -48,7 +51,10 @@ test('POST /api/media téléverse un fichier lié à une source, puis le téléc
 test('POST /api/media rejette un contenu dont le type réel ne correspond à aucun format accepté (MIME falsifié)', async () => {
   const server = await startTestServer();
   try {
-    const fakeContent = Buffer.from('#!/bin/sh\necho pas une image\n').toString('base64');
+    // En-tête d'exécutable ELF (octets nuls) : ni image, ni document, ni texte.
+    const fakeContent = Buffer.from([
+      0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+    ]).toString('base64');
 
     const { status, body } = await requestJson(server.baseUrl, '/api/media', {
       method: 'POST',

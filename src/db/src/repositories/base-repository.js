@@ -31,4 +31,20 @@ export function recordAudit(
     });
 }
 
+/**
+ * Ouvre, le temps de `fn`, la fenêtre pendant laquelle le journal d'audit
+ * accepte des suppressions (purge explicite, restauration complète). Le
+ * drapeau est lui-même transactionnel : il ne peut pas rester ouvert.
+ */
+export function withAuditPurgeAllowed(database, fn) {
+  return withTransaction(database, () => {
+    database.prepare('UPDATE audit_state SET allow_purge = 1 WHERE id = 1').run();
+    try {
+      return fn();
+    } finally {
+      database.prepare('UPDATE audit_state SET allow_purge = 0 WHERE id = 1').run();
+    }
+  });
+}
+
 export { NOW_EXPRESSION };

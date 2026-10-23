@@ -118,7 +118,6 @@ const OFFICE_PARTS = [
   /^ppt\/slides\/slide\d+\.xml$/,
   /^content\.xml$/,
 ];
-export const OFFICE_EXTENSIONS = new Set(['.docx', '.xlsx', '.pptx', '.odt', '.ods', '.odp']);
 
 /** Texte d'un document Word, Excel, PowerPoint ou LibreOffice. */
 export function officeText(buffer) {

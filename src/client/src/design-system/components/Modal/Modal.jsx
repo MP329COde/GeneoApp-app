@@ -18,7 +18,15 @@ const FOCUSABLE_SELECTOR = [
  * - restaure le focus sur l'élément déclencheur à la fermeture ;
  * - se ferme avec Échap et annonce son rôle/titre aux lecteurs d'écran.
  */
-export function Modal({ isOpen, title, onClose, children }) {
+export function Modal({
+  isOpen,
+  title,
+  describedById,
+  role = 'dialog',
+  initialFocusRef,
+  onClose,
+  children,
+}) {
   const titleId = useId();
   const dialogRef = useRef(null);
   const previouslyFocusedElement = useRef(null);
@@ -32,7 +40,8 @@ export function Modal({ isOpen, title, onClose, children }) {
     previouslyFocusedElement.current = document.activeElement;
     const dialogNode = dialogRef.current;
     const focusableElements = dialogNode.querySelectorAll(FOCUSABLE_SELECTOR);
-    (focusableElements[0] ?? dialogNode).focus();
+    const initialFocus = initialFocusRef?.current ?? focusableElements[0] ?? dialogNode;
+    initialFocus.focus();
 
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
@@ -67,7 +76,7 @@ export function Modal({ isOpen, title, onClose, children }) {
       document.removeEventListener('keydown', handleKeyDown);
       previouslyFocusedElement.current?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, initialFocusRef]);
 
   if (!isOpen) {
     return null;
@@ -75,12 +84,20 @@ export function Modal({ isOpen, title, onClose, children }) {
 
   return createPortal(
     <div className="gds-modal__overlay">
+      <button
+        type="button"
+        className="gds-modal__overlay-dismiss"
+        onClick={onClose}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
         ref={dialogRef}
         className="gds-modal"
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={describedById}
         tabIndex={-1}
       >
         <div className="gds-modal__header">

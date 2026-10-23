@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 
 async function createPerson(baseUrl, given, family) {
@@ -238,6 +241,144 @@ test('un décès enregistré (saisie ou GEDCOM) rend la personne décédée, et 
     const [dead, alive] = imported.body.ids.persons;
     assert.equal((await requestJson(server.baseUrl, `/api/persons/${dead}`)).body.is_living, 0);
     assert.equal((await requestJson(server.baseUrl, `/api/persons/${alive}`)).body.is_living, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/events accepte les types, précisions et rôles étendus du modèle', async () => {
+  const server = await startTestServer();
+  try {
+    const heir = await createPerson(server.baseUrl, 'Louise', 'Heritiere');
+    const godparent = await createPerson(server.baseUrl, 'Marc', 'Parrain');
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: {
+        type: 'SUCCESSION',
+        dateText: 'EST 1852',
+        datePrecision: 'ESTIMATED',
+        participants: [
+          { personId: heir, role: 'HEIR' },
+          { personId: godparent, role: 'GODPARENT' },
+        ],
+      },
+    });
+
+    assert.equal(status, 201);
+    assert.equal(body.type, 'SUCCESSION');
+    assert.equal(body.date_precision, 'ESTIMATED');
+    assert.deepEqual(body.participants.map((p) => p.role).sort(), ['GODPARENT', 'HEIR']);
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/events rejette un rôle de participant inconnu', async () => {
+  const server = await startTestServer();
+  try {
+    const personId = await createPerson(server.baseUrl, 'Ada', 'Lovelace');
+    const { status } = await requestJson(server.baseUrl, '/api/events', {
+      method: 'POST',
+      body: { type: 'BIRTH', participants: [{ personId, role: 'KING' }] },
+    });
+    assert.equal(status, 400);
+  } finally {
+    await server.close();
+  }
+});
+
+test('PATCH /api/events/:id modifie l’événement ; valeurs invalides et lieu inconnu refusés', async () => {
+  const server = await startTestServer();
+  try {
+    const personId = await createPerson(server.baseUrl, 'Ada', 'Lovelace');
+    const place = (
+      await requestJson(server.baseUrl, '/api/places', {
+        method: 'POST',
+        body: { name: 'Londres' },
+      })
+    ).body;
+    const event = (
+      await requestJson(server.baseUrl, '/api/events', {
+        method: 'POST',
+        body: { type: 'BIRTH', participants: [{ personId, role: 'PRINCIPAL' }] },
+      })
+    ).body;
+
+    const patch = (body, id = event.id) =>
+      requestJson(server.baseUrl, `/api/events/${id}`, { method: 'PATCH', body });
+    const updated = await patch({
+      dateText: '10 décembre 1815',
+      datePrecision: 'EXACT',
+      placeId: place.id,
+      notes: 'acte n° 12',
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.date_text, '10 décembre 1815');
+    assert.equal(updated.body.place_id, place.id);
+    assert.equal(updated.body.participants.length, 1, 'les participants sont conservés');
+
+    // Effacer un champ facultatif est possible ; un champ obligatoire, non.
+    assert.equal((await patch({ placeId: null })).body.place_id, null);
+    assert.equal((await patch({ type: null })).status, 400);
+    assert.equal((await patch({ datePrecision: 'MAYBE' })).status, 400);
+    assert.equal((await patch({})).status, 400);
+    assert.equal((await patch({ placeId: 9999 })).status, 404);
+    assert.equal((await patch({ notes: 'x' }, 9999)).status, 404);
+  } finally {
+    await server.close();
+  }
+});
+
+test('DELETE /api/events/:id/participants/:participantId retire un participant', async () => {
+  const server = await startTestServer();
+  try {
+    const ada = await createPerson(server.baseUrl, 'Ada', 'Lovelace');
+    const marc = await createPerson(server.baseUrl, 'Marc', 'Témoin');
+    const event = (
+      await requestJson(server.baseUrl, '/api/events', {
+        method: 'POST',
+        body: {
+          type: 'MARRIAGE',
+          participants: [
+            { personId: ada, role: 'PARTNER1' },
+            { personId: marc, role: 'WITNESS' },
+          ],
+        },
+      })
+    ).body;
+    const witness = event.participants.find((p) => p.role === 'WITNESS');
+
+    const removed = await requestJson(
+      server.baseUrl,
+      `/api/events/${event.id}/participants/${witness.id}`,
+      { method: 'DELETE' },
+    );
+    assert.equal(removed.status, 204);
+    const after = await requestJson(server.baseUrl, `/api/events/${event.id}`);
+    assert.deepEqual(
+      after.body.participants.map((p) => p.role),
+      ['PARTNER1'],
+    );
+    const again = await requestJson(
+      server.baseUrl,
+      `/api/events/${event.id}/participants/${witness.id}`,
+      { method: 'DELETE' },
+    );
+    assert.equal(again.status, 404);
+    // Le participant d'un autre événement ne peut pas être retiré par ce chemin.
+    const other = (
+      await requestJson(server.baseUrl, '/api/events', {
+        method: 'POST',
+        body: { type: 'BIRTH', participants: [{ personId: ada, role: 'PRINCIPAL' }] },
+      })
+    ).body;
+    const crossed = await requestJson(
+      server.baseUrl,
+      `/api/events/${event.id}/participants/${other.participants[0].id}`,
+      { method: 'DELETE' },
+    );
+    assert.equal(crossed.status, 404);
   } finally {
     await server.close();
   }

@@ -4,52 +4,73 @@ import {
   yearOf,
 } from '../../../db/src/dates/genealogy-date.js';
 
+// Repli français : sans fonction de traduction fournie, le libellé reste en
+// français. Les écrans passent leur propre `t` pour suivre la langue choisie.
+const FRENCH = (key, fallback) => fallback;
+
 // Année courte d'une date, avec son approximation (« vers 1760 », « av. 1790 »).
-export function shortYear(parsed) {
+export function shortYear(parsed, t = FRENCH) {
   if (!parsed?.valid) return null;
   const year = yearOf(parsed);
   const prefix =
-    { ABOUT: 'vers ', ESTIMATED: 'vers ', BEFORE: 'av. ', AFTER: 'ap. ' }[parsed.kind] ?? '';
+    {
+      ABOUT: t('dates.around', 'vers '),
+      ESTIMATED: t('dates.around', 'vers '),
+      BEFORE: t('dates.before', 'av. '),
+      AFTER: t('dates.after', 'ap. '),
+    }[parsed.kind] ?? '';
   const range = parsed.kind === 'BETWEEN' ? `${parsed.start.year}/${parsed.end.year}` : null;
   return `${prefix}${range ?? year}${parsed.uncertain ? ' ?' : ''}`;
 }
 
-function earliest(dates) {
-  return dates.filter((parsed) => parsed.valid).sort(compareGenealogyDates)[0] ?? null;
+// Associe à une date parsée le nom du lieu de l'événement dont elle provient,
+// pour permettre d'afficher « ° 1850 (Rouen) » et distinguer les homonymes.
+function earliestWithPlace(entries) {
+  const valid = (entries ?? []).filter(({ parsed }) => parsed.valid);
+  valid.sort((a, b) => compareGenealogyDates(a.parsed, b.parsed));
+  return valid[0] ?? null;
 }
 
 /**
  * Années de vie par personne depuis les événements (naissance, sinon
- * baptême ; décès, sinon inhumation) : `{ birth, death, label, birthYear }`.
+ * baptême ; décès, sinon inhumation) : `{ birth, death, label, birthYear,
+ * deathYear, birthPlace }`. `birthPlace` sert à distinguer deux personnes
+ * homonymes dans les listes.
  */
-export function buildLifespans(events) {
+export function buildLifespans(events, t = FRENCH) {
   const collected = new Map();
   for (const event of events ?? []) {
     if (!event?.date_text) continue;
     for (const participant of event.participants ?? []) {
       if (participant.role !== 'PRINCIPAL') continue;
       const entry = collected.get(participant.personId) ?? {};
-      (entry[event.type] ??= []).push(parseGenealogyDate(event.date_text));
+      (entry[event.type] ??= []).push({
+        parsed: parseGenealogyDate(event.date_text),
+        place: event.place_name ?? null,
+      });
       collected.set(participant.personId, entry);
     }
   }
   const lifespans = new Map();
   for (const [personId, byType] of collected) {
-    const birth = earliest(byType.BIRTH ?? []) ?? earliest(byType.BAPTISM ?? []);
-    const death = earliest(byType.DEATH ?? []) ?? earliest(byType.BURIAL ?? []);
+    const birthEntry = earliestWithPlace(byType.BIRTH) ?? earliestWithPlace(byType.BAPTISM);
+    const deathEntry = earliestWithPlace(byType.DEATH) ?? earliestWithPlace(byType.BURIAL);
+    const birth = birthEntry?.parsed ?? null;
+    const death = deathEntry?.parsed ?? null;
     if (!birth && !death) continue;
     const label =
       birth && death
-        ? `${shortYear(birth)} – ${shortYear(death)}`
+        ? `${shortYear(birth, t)} – ${shortYear(death, t)}`
         : birth
-          ? `° ${shortYear(birth)}`
-          : `† ${shortYear(death)}`;
+          ? `° ${shortYear(birth, t)}`
+          : `† ${shortYear(death, t)}`;
     lifespans.set(personId, {
       birth,
       death,
       label,
       birthYear: birth ? yearOf(birth) : null,
       deathYear: death ? yearOf(death) : null,
+      birthPlace: birthEntry?.place ?? null,
     });
   }
   return lifespans;

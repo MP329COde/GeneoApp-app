@@ -15,7 +15,9 @@ export function parseGedcom(input) {
   const stack = [];
   let previous = null;
 
-  lines.forEach((line, index) => {
+  lines.forEach((rawLine, index) => {
+    let line = rawLine;
+    line = line.trim();
     if (line === '') return;
     const match = /^(\d+)\s+(?:(@[^@]+@)\s+)?([^ ]+)(?:\s+(.*))?$/.exec(line);
     if (!match) {

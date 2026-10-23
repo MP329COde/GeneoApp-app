@@ -1,12 +1,16 @@
-import { withTransaction, recordAudit } from '../repositories/base-repository.js';
+import { withAuditPurgeAllowed, recordAudit } from '../repositories/base-repository.js';
 
 // Ordre de dépendance (FK) croissant : utilisé tel quel pour la ré-insertion
 // et inversé pour la purge avant import.
 export const EXPORTABLE_TABLES = [
   'places',
+  'place_names',
+  'place_parents',
   'persons',
+  'person_identifiers',
   'sources',
   'citations',
+  'assertions',
   'events',
   'event_participants',
   'unions',
@@ -14,7 +18,9 @@ export const EXPORTABLE_TABLES = [
   'parentages',
   'media',
   'media_regions',
+  'media_links',
   'notes',
+  'gedcom_extensions',
   'research_notebook',
   'research_hypotheses',
   'research_tasks',
@@ -22,6 +28,7 @@ export const EXPORTABLE_TABLES = [
   'search_index',
   'local_accounts',
   'audit_log',
+  'notifications',
 ];
 
 export const BACKUP_FORMAT = 'geneoapp-backup';
@@ -72,7 +79,9 @@ export function importDatabaseFromJson(database, dump, { performedBy = null } = 
   // échec, pour ne jamais laisser la connexion dans un état dégradé.
   database.pragma('foreign_keys = OFF');
   try {
-    withTransaction(database, () => {
+    // La restauration remplace tout, journal compris : seule occasion (avec la
+    // purge demandée) où l'audit accepte des suppressions.
+    withAuditPurgeAllowed(database, () => {
       for (const table of [...EXPORTABLE_TABLES].reverse()) {
         database.prepare(`DELETE FROM ${table}`).run();
       }

@@ -1,0 +1,27 @@
+/* ---------- Chronologie ---------- */
+.timeline {
+  max-width: var(--measure);
+  margin: var(--space-8) auto;
+  display: grid;
+  gap: var(--space-5);
+  position: relative;
+}
+.timeline__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  border-left: var(--border-thick) solid var(--border);
+}
+.timeline__event {
+  padding-left: var(--space-8);
+}
+.timeline__event::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  position: absolute;
+  margin: 5px 0 0 -27px;
+  border-radius: var(--radius-full);
+  background: var(--text-secondary);
+}

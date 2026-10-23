@@ -13,7 +13,51 @@
 //   directement l'API REST locale via `fetch`, relayée par le proxy Vite
 //   `/api` (voir vite.config.js) vers le serveur Express local.
 
-async function fetchJson(path, { method = 'GET', body, token } = {}) {
+// Point d'accès unique aux données métier depuis le renderer.
+//
+// Le frontend ne doit jamais contenir de logique généalogique : ce module ne
+// fait qu'appeler l'API locale, via l'un des deux transports possibles selon
+// le contexte d'exécution -- jamais de données fictives en repli.
+//
+// - Dans Electron (production) : `window.geneoapp`, exposé par le preload via
+//   contextBridge, qui relaie chaque appel à travers l'allowlist IPC
+//   (`src/electron/src/ipc/channels.js`). Le renderer n'a jamais accès direct
+//   à Node ni à ipcRenderer.
+// - En développement navigateur (`npm run dev`, ou tests) : `window.geneoapp`
+//   n'existe pas, le client tourne sur le serveur Vite. On appelle alors
+//   directement l'API REST locale via `fetch`, relayée par le proxy Vite
+//   `/api` (voir vite.config.js) vers le serveur Express local.
+
+import { translate } from '../design-system/i18n/I18nProvider.jsx';
+import { currentLocale } from '../design-system/i18n/locale.js';
+import { createExtendedApi, mergeExtendedApi } from './extended-api.js';
+
+/**
+ * Traduit le message d'une erreur serveur.
+ *
+ * Le serveur ne connaît pas la langue de l'utilisateur : il renvoie un code
+ * stable et une clé i18n. Le message français reste le repli quand la
+ * traduction n'est pas disponible.
+ */
+function translateError(payload, fallback) {
+  const key = payload?.translationKey;
+  if (!key) return fallback;
+  return translate(currentLocale(), key, payload.variables ?? {}, fallback);
+}
+
+function buildError(payload, fallback, status) {
+  const error = new Error(translateError(payload, fallback));
+  error.status = status;
+  error.fields = payload?.fields;
+  error.code = payload?.code;
+  error.translationKey = payload?.translationKey;
+  error.variables = payload?.variables;
+  return error;
+}
+
+// `acceptStatuses` : codes d'erreur dont le corps est un résultat métier à afficher
+// (rapport d'import invalide, doublons à confirmer) et non une panne.
+async function fetchJson(path, { method = 'GET', body, token, acceptStatuses = [] } = {}) {
   const response = await fetch(path, {
     method,
     headers: {
@@ -24,13 +68,90 @@ async function fetchJson(path, { method = 'GET', body, token } = {}) {
   });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    const error = new Error(data?.error?.message ?? 'Erreur API inconnue');
-    error.status = response.status;
-    error.fields = data?.error?.fields;
-    throw error;
+  if (!response.ok && !acceptStatuses.includes(response.status)) {
+    throw buildError(
+      data?.error,
+      data?.error?.message ??
+        translate(currentLocale(), 'error.unknownApi', {}, 'Erreur API inconnue'),
+      response.status,
+    );
   }
   return data;
+}
+
+// Pagination de la liste des personnes.
+//
+// Le contrat de `persons.list()` est une enveloppe normalisée :
+// `{ items, total, limit, offset }`.
+//
+// - `persons.list()` sans option : la liste complète. Elle est chargée en
+//   une seule requête (`GET /api/persons`, sans paramètre) dans les deux
+//   transports : le serveur renvoie alors l'intégralité des personnes et le
+//   total, sans coût de `COUNT(*)` répété page par page.
+// - `persons.list({ limit, offset, q })` : une seule page, avec `total` =
+//   nombre total de personnes correspondant au filtre — indispensable pour
+//   virtualiser la liste.
+// - `persons.list({ total: true, q })` : uniquement le nombre de personnes
+//   correspondantes (`{ total }`).
+//
+// Bornes appliquées côté client (le serveur les applique aussi) : page
+// par défaut de 50, page maximale de 200, `offset` >= 0.
+const PERSONS_PAGE_DEFAULT_LIMIT = 50;
+const PERSONS_PAGE_MAX_LIMIT = 200;
+
+function normalizePersonsPageOptions(options) {
+  if (!options || typeof options !== 'object') return null;
+  const hasLimit = options.limit !== undefined && options.limit !== null;
+  const hasOffset = options.offset !== undefined && options.offset !== null;
+  const hasQuery = typeof options.q === 'string' && options.q.trim() !== '';
+  const totalOnly = options.total === true || options.total === 'true';
+  if (!hasLimit && !hasOffset && !hasQuery && !totalOnly) return null;
+
+  const parsedLimit = Math.trunc(Number(options.limit));
+  const limit =
+    Number.isFinite(parsedLimit) && parsedLimit >= 1
+      ? Math.min(parsedLimit, PERSONS_PAGE_MAX_LIMIT)
+      : PERSONS_PAGE_DEFAULT_LIMIT;
+  const parsedOffset = Math.trunc(Number(options.offset));
+  const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
+
+  return { limit, offset, q: hasQuery ? options.q.trim() : undefined, totalOnly };
+}
+
+// Repli de casse ASCII uniquement (A-Z -> a-z), comme le `LIKE` de SQLite,
+// qui ne replie que l'ASCII : les accents ne sont PAS normalisés.
+function asciiLowerCase(value) {
+  return String(value).replace(/[A-Z]/g, (character) => character.toLowerCase());
+}
+
+// Même sémantique que le `LIKE` du serveur sur `given_names || ' ' ||
+// family_name` :
+// - repli de casse ASCII uniquement (les accents ne sont pas repliés, c'est
+//   une limite de SQLite, pas un oubli) ;
+// - si `given_names` est NULL, l'expression `given_names || ' ' ||
+//   family_name` vaut NULL : aucune correspondance.
+function personMatchesQuery(person, query) {
+  if (person?.given_names === null || person?.given_names === undefined) return false;
+  const haystack = asciiLowerCase(`${person.given_names} ${person.family_name ?? ''}`);
+  return haystack.includes(asciiLowerCase(query));
+}
+
+// Normalise la réponse d'une liste de personnes en enveloppe
+// `{ items, total, limit, offset }`, quelle que soit sa forme : un tableau
+// simple (serveur ancien ou implémentation non conforme) est converti, une
+// enveloppe est complétée si `limit`/`offset` manquent.
+function normalizePersonsListResponse(response) {
+  if (Array.isArray(response)) {
+    return { items: response, total: response.length, limit: response.length, offset: 0 };
+  }
+  const items = response?.items ?? [];
+  return {
+    ...response,
+    items,
+    total: response?.total ?? items.length,
+    limit: response?.limit ?? items.length,
+    offset: response?.offset ?? 0,
+  };
 }
 
 function base64ToBlob(base64, mimeType) {
@@ -50,16 +171,40 @@ function parseContentDispositionFilename(header) {
 function createHttpClient() {
   return {
     persons: {
-      list: () => fetchJson('/api/persons'),
+      list: async (options) => {
+        const page = normalizePersonsPageOptions(options);
+        if (page?.totalOnly) {
+          const params = new URLSearchParams({ total: 'true' });
+          if (page.q) params.set('q', page.q);
+          return fetchJson(`/api/persons?${params.toString()}`);
+        }
+        if (page) {
+          const params = new URLSearchParams({
+            limit: String(page.limit),
+            offset: String(page.offset),
+          });
+          if (page.q) params.set('q', page.q);
+          return fetchJson(`/api/persons?${params.toString()}`);
+        }
+        // Liste complète : une seule requête, sans pagination. Le serveur
+        // renvoie toute la liste ; on normalise la réponse au cas où elle
+        // ne serait pas conforme au contrat d'enveloppe.
+        return normalizePersonsListResponse(await fetchJson('/api/persons'));
+      },
       get: (id) => fetchJson(`/api/persons/${id}`),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
       update: (id, data) => fetchJson(`/api/persons/${id}`, { method: 'PATCH', body: data }),
+      remove: (id) => fetchJson(`/api/persons/${id}`, { method: 'DELETE' }),
+      restore: (id) => fetchJson(`/api/persons/${id}/restore`, { method: 'POST' }),
     },
     places: {
       create: (data) => fetchJson('/api/places', { method: 'POST', body: data }),
       list: () => fetchJson('/api/places'),
       get: (id) => fetchJson(`/api/places/${id}`),
       remove: (id) => fetchJson(`/api/places/${id}`, { method: 'DELETE' }),
+      previewAutoLocate: () => fetchJson('/api/places/auto-locate/preview'),
+      applyAutoLocate: (assignments) =>
+        fetchJson('/api/places/auto-locate/apply', { method: 'POST', body: { assignments } }),
     },
     events: {
       create: (data) => fetchJson('/api/events', { method: 'POST', body: data }),
@@ -72,6 +217,13 @@ function createHttpClient() {
     },
     audit: {
       listForEntity: (tableName, rowId) => fetchJson(`/api/audit/${tableName}/${rowId}`),
+    },
+    notifications: {
+      list: (options = {}) =>
+        fetchJson(`/api/notifications?${new URLSearchParams(options).toString()}`),
+      markRead: (id) => fetchJson(`/api/notifications/${id}/read`, { method: 'POST' }),
+      markAllRead: () => fetchJson('/api/notifications/read-all', { method: 'POST' }),
+      publish: (items) => fetchJson('/api/notifications', { method: 'POST', body: { items } }),
     },
     graph: {
       ancestors: (personId, depth) =>
@@ -124,7 +276,12 @@ function createHttpClient() {
     },
     gedcom: {
       preview: (gedcom) => fetchJson('/api/gedcom/preview', { method: 'POST', body: { gedcom } }),
-      import: (gedcom) => fetchJson('/api/gedcom/import', { method: 'POST', body: { gedcom } }),
+      import: (gedcom, options = {}) =>
+        fetchJson('/api/gedcom/import', {
+          method: 'POST',
+          body: { gedcom, confirmDuplicates: options.confirmDuplicates === true },
+          acceptStatuses: [409, 422],
+        }),
       export: (options) => fetchJson('/api/gedcom/export', { method: 'POST', body: options }),
       exportArchive: (options) =>
         fetchJson('/api/gedcom/export-archive', { method: 'POST', body: options }),
@@ -132,12 +289,17 @@ function createHttpClient() {
         fetchJson('/api/gedcom/import-archive', { method: 'POST', body: { contentBase64 } }),
     },
     accounts: {
-      create: (data) => fetchJson('/api/accounts', { method: 'POST', body: data }),
+      create: (data, token) => fetchJson('/api/accounts', { method: 'POST', body: data, token }),
       list: () => fetchJson('/api/accounts'),
       login: (name, pin) =>
         fetchJson('/api/accounts/login', { method: 'POST', body: { name, pin } }),
       logout: (token) => fetchJson('/api/accounts/logout', { method: 'POST', token }),
-      remove: (id, token) => fetchJson(`/api/accounts/${id}`, { method: 'DELETE', token }),
+      remove: (id, token, pin) =>
+        fetchJson(`/api/accounts/${id}`, {
+          method: 'DELETE',
+          token,
+          body: pin ? { pin } : undefined,
+        }),
     },
     backups: {
       create: (data, token) => fetchJson('/api/backups', { method: 'POST', body: data, token }),
@@ -212,6 +374,29 @@ function createHttpClient() {
       updateSettings: (data) =>
         fetchJson('/api/indexing/settings', { method: 'PATCH', body: data }),
       run: () => fetchJson('/api/indexing/run', { method: 'POST' }),
+      searchPage: (q, options = {}) =>
+        fetchJson(
+          `/api/indexing/search?${new URLSearchParams({
+            q,
+            page: '1',
+            ...Object.fromEntries(
+              Object.entries(options).filter(([, value]) => value !== null && value !== undefined),
+            ),
+          })}`,
+        ),
+      document: (id) => fetchJson(`/api/indexing/documents/${id}`),
+      updateSource: (id, data) =>
+        fetchJson(`/api/indexing/sources/${id}`, { method: 'PATCH', body: data }),
+      runSource: (id) => fetchJson(`/api/indexing/sources/${id}/run`, { method: 'POST' }),
+      clearSource: (id) => fetchJson(`/api/indexing/sources/${id}/clear`, { method: 'POST' }),
+      cancel: () => fetchJson('/api/indexing/run/cancel', { method: 'POST' }),
+      connectors: () => fetchJson('/api/indexing/connectors'),
+      setConnectorOptIn: (id, data) =>
+        fetchJson(`/api/indexing/connectors/${id}`, { method: 'PATCH', body: data }),
+      estimateConnector: (id, values) =>
+        fetchJson(`/api/indexing/connectors/${id}/estimate`, { method: 'POST', body: { values } }),
+      indexConnector: (id, values) =>
+        fetchJson(`/api/indexing/connectors/${id}/index`, { method: 'POST', body: { values } }),
     },
     advancedSearch: (filters) =>
       fetchJson('/api/search/advanced', { method: 'POST', body: filters }),
@@ -236,9 +421,10 @@ function createHttpClient() {
         fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'PATCH', body: data }),
       activate: (id) =>
         fetchJson(`/api/trees/${encodeURIComponent(id)}/activate`, { method: 'POST' }),
-      remove: (id) => fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-      restore: (id) =>
-        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+      remove: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}`, { method: 'DELETE', token }),
+      restore: (id, token) =>
+        fetchJson(`/api/trees/${encodeURIComponent(id)}/restore`, { method: 'POST', token }),
     },
     notes: {
       create: (data) => fetchJson('/api/notes', { method: 'POST', body: data }),
@@ -257,7 +443,14 @@ function createHttpClient() {
       download: async (id) => {
         const response = await fetch(`/api/media/${id}/content`);
         if (!response.ok) {
-          throw new Error('Impossible de télécharger le média');
+          throw new Error(
+            translate(
+              currentLocale(),
+              'error.mediaDownload',
+              {},
+              'Impossible de télécharger le média',
+            ),
+          );
         }
         const blob = await response.blob();
         const filename = parseContentDispositionFilename(
@@ -276,23 +469,91 @@ function createHttpClient() {
         fetchJson(`/api/media/${id}/regions`, { method: 'POST', body: data }),
       removeRegion: (regionId) => fetchJson(`/api/media/regions/${regionId}`, { method: 'DELETE' }),
       photosForPerson: (personId) => fetchJson(`/api/media/photos/by-person/${personId}`),
+      decode: (id, data = {}) =>
+        fetchJson(`/api/media/${id}/decode`, { method: 'POST', body: data }),
+      saveTranscription: (id, data) =>
+        fetchJson(`/api/media/${id}/transcription`, { method: 'PUT', body: data }),
+      owners: (id) => fetchJson(`/api/media/${id}/owners`),
+      link: (id, data) => fetchJson(`/api/media/${id}/link`, { method: 'PUT', body: data }),
+      identify: (data) => fetchJson('/api/media/identify', { method: 'POST', body: data }),
+      setPortrait: (personId, data) =>
+        fetchJson(`/api/persons/${personId}/portrait`, { method: 'PUT', body: data }),
+      uploadPortrait: (personId, data) =>
+        fetchJson(`/api/persons/${personId}/portrait`, { method: 'POST', body: data }),
     },
   };
 }
 
-function createIpcClient(bridge) {
+/**
+ * Enveloppe le pont IPC pour traduire les erreurs qu'il rejette.
+ *
+ * Le preload ne peut pas utiliser l'i18n du renderer : il transmet donc le
+ * code, la clé et les variables, et c'est ici, dans le renderer, que le
+ * message est traduit dans la langue courante.
+ */
+function withTranslatedErrors(bridge) {
+  const wrap = (value) => {
+    if (typeof value === 'function') {
+      return async (...args) => {
+        try {
+          return await value(...args);
+        } catch (error) {
+          if (error instanceof Error && error.translationKey) {
+            throw buildError(error, error.message, error.status);
+          }
+          throw error;
+        }
+      };
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, wrap(item)]));
+    }
+    return value;
+  };
+  return wrap(bridge);
+}
+
+export function createIpcClient(rawBridge) {
+  const bridge = withTranslatedErrors(rawBridge);
   return {
     persons: {
-      list: () => bridge.persons.list(),
+      // Le canal IPC Electron ne connaît pas encore la pagination : on
+      // récupère la liste complète puis on découpe côté client, en renvoyant
+      // exactement la même enveloppe que le transport HTTP.
+      list: async (options) => {
+        const page = normalizePersonsPageOptions(options);
+        const raw = await bridge.persons.list();
+        const all = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const filtered = page?.q ? all.filter((person) => personMatchesQuery(person, page.q)) : all;
+        if (page?.totalOnly) return { total: filtered.length };
+        if (!page) {
+          return {
+            items: filtered,
+            total: filtered.length,
+            limit: filtered.length,
+            offset: 0,
+          };
+        }
+        return {
+          items: filtered.slice(page.offset, page.offset + page.limit),
+          total: filtered.length,
+          limit: page.limit,
+          offset: page.offset,
+        };
+      },
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),
       update: (id, data) => bridge.persons.update(id, data),
+      remove: (id) => bridge.persons.remove(id),
+      restore: (id) => bridge.persons.restore(id),
     },
     places: {
       create: (data) => bridge.places.create(data),
       list: () => bridge.places.list(),
       get: (id) => bridge.places.get(id),
       remove: (id) => bridge.places.remove(id),
+      previewAutoLocate: () => bridge.places.previewAutoLocate(),
+      applyAutoLocate: (assignments) => bridge.places.applyAutoLocate(assignments),
     },
     events: {
       create: (data) => bridge.events.create(data),
@@ -304,6 +565,12 @@ function createIpcClient(bridge) {
     },
     audit: {
       listForEntity: (tableName, rowId) => bridge.audit.listForEntity(tableName, rowId),
+    },
+    notifications: {
+      list: (options = {}) => bridge.notifications.list(options),
+      markRead: (id) => bridge.notifications.markRead(id),
+      markAllRead: () => bridge.notifications.markAllRead(),
+      publish: (items) => bridge.notifications.publish(items),
     },
     graph: {
       ancestors: (personId, depth) => bridge.graph.ancestors(personId, depth),
@@ -344,17 +611,18 @@ function createIpcClient(bridge) {
     },
     gedcom: {
       preview: (gedcom) => bridge.gedcom.preview(gedcom),
-      import: (gedcom) => bridge.gedcom.import(gedcom),
+      import: (gedcom, options = {}) =>
+        bridge.gedcom.import(gedcom, undefined, options.confirmDuplicates === true),
       export: (options) => bridge.gedcom.export(options),
       exportArchive: (options) => bridge.gedcom.exportArchive(options),
       importArchive: (contentBase64) => bridge.gedcom.importArchive(contentBase64),
     },
     accounts: {
-      create: (data) => bridge.accounts.create(data),
+      create: (data, token) => bridge.accounts.create(data, token),
       list: () => bridge.accounts.list(),
       login: (name, pin) => bridge.accounts.login(name, pin),
       logout: (token) => bridge.accounts.logout(token),
-      remove: (id, token) => bridge.accounts.remove(id, token),
+      remove: (id, token, pin) => bridge.accounts.remove(id, token, pin),
     },
     backups: {
       create: (data, token) => bridge.backups.create(data, token),
@@ -401,6 +669,16 @@ function createIpcClient(bridge) {
       removeSource: (id) => bridge.indexing.removeSource(id),
       updateSettings: (data) => bridge.indexing.updateSettings(data),
       run: () => bridge.indexing.run(),
+      searchPage: (q, options) => bridge.indexing.searchPage(q, options),
+      document: (id) => bridge.indexing.document(id),
+      updateSource: (id, data) => bridge.indexing.updateSource(id, data),
+      runSource: (id) => bridge.indexing.runSource(id),
+      clearSource: (id) => bridge.indexing.clearSource(id),
+      cancel: () => bridge.indexing.cancel(),
+      connectors: () => bridge.indexing.connectors(),
+      setConnectorOptIn: (id, data) => bridge.indexing.setConnectorOptIn(id, data),
+      estimateConnector: (id, values) => bridge.indexing.estimateConnector(id, values),
+      indexConnector: (id, values) => bridge.indexing.indexConnector(id, values),
     },
     advancedSearch: (filters) => bridge.advancedSearch(filters),
     history: {
@@ -420,8 +698,8 @@ function createIpcClient(bridge) {
       create: (data) => bridge.trees.create(data),
       update: (id, data) => bridge.trees.update(id, data),
       activate: (id) => bridge.trees.activate(id),
-      remove: (id) => bridge.trees.remove(id),
-      restore: (id) => bridge.trees.restore(id),
+      remove: (id, token) => bridge.trees.remove(id, token),
+      restore: (id, token) => bridge.trees.restore(id, token),
     },
     notes: {
       create: (data) => bridge.notes.create(data),
@@ -446,13 +724,48 @@ function createIpcClient(bridge) {
       addRegion: (id, data) => bridge.media.addRegion(id, data),
       removeRegion: (regionId) => bridge.media.removeRegion(regionId),
       photosForPerson: (personId) => bridge.media.photosForPerson(personId),
+      decode: (id, data = {}) => bridge.media.decode(id, data),
+      saveTranscription: (id, data) => bridge.media.saveTranscription(id, data),
+      owners: (id) => bridge.media.owners(id),
+      link: (id, data) => bridge.media.link(id, data),
+      identify: (data) => bridge.media.identify(data),
+      setPortrait: (personId, data) => bridge.media.setPortrait(personId, data),
+      uploadPortrait: (personId, data) => bridge.media.uploadPortrait(personId, data),
     },
+  };
+}
+
+// Transport HTTP (navigateur, développement) des routes étendues.
+function httpRequest(method, path, body) {
+  return fetchJson(path, { method, body });
+}
+
+// Transport IPC (Electron) : la passerelle `api.request` relaie vers l'API locale
+// et renvoie { status, body } ; un code d'erreur HTTP devient une erreur typée
+// comme avec fetch.
+function ipcRequest(bridge) {
+  return async (method, path, body) => {
+    const { status, body: data } = await bridge.api.request({ method, path, body });
+    if (status >= 400) {
+      throw buildError(
+        data?.error,
+        data?.error?.message ??
+          translate(currentLocale(), 'error.unknownApi', {}, 'Erreur API inconnue'),
+        status,
+      );
+    }
+    return data;
   };
 }
 
 export function createGeneoAppClient() {
   if (typeof window !== 'undefined' && window.geneoapp) {
-    return createIpcClient(window.geneoapp);
+    const bridge = window.geneoapp;
+    const base = createIpcClient(bridge);
+    // Un pont sans passerelle (anciens tests) garde le client de base.
+    return bridge.api?.request
+      ? mergeExtendedApi(base, createExtendedApi(ipcRequest(bridge)))
+      : base;
   }
-  return createHttpClient();
+  return mergeExtendedApi(createHttpClient(), createExtendedApi(httpRequest));
 }

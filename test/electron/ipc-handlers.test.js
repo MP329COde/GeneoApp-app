@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { openDatabase } from '../../src/db/src/database.js';
 import { runMigrations } from '../../src/db/src/migrate.js';
 import { createServices } from '../../src/server/src/services/index.js';
@@ -38,7 +41,11 @@ test('PERSONS_CREATE crée une personne et journalise l’acteur transmis', asyn
 test('PERSONS_CREATE renvoie une enveloppe d’erreur 400 pour un payload invalide, sans lever', async () => {
   const handlers = createHandlers();
 
-  const response = await handlers[IPC_CHANNELS.PERSONS_CREATE]({ data: { givenNames: 'Ada' } });
+  // givenNames et familyName vides tous les deux : seul cas désormais rejeté
+  // (un prénom OU un nom suffit, voir validatePersonCreate).
+  const response = await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: '', familyName: '' },
+  });
 
   assert.equal(response.ok, false);
   assert.equal(response.error.status, 400);
@@ -603,6 +610,57 @@ test('les canaux d’arbres basculent les services IPC « live » sur l’arbre 
     const invalid = await handlers[IPC_CHANNELS.TREES_ACTIVATE]({ id: '../x' });
     assert.equal(invalid.ok, false);
     assert.equal(invalid.error.status, 400);
+  } finally {
+    workspace.close();
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+// Avant correctif : TREES_REMOVE et TREES_RESTORE n'exigeaient aucun jeton
+// de session, contrairement à STORAGE_SET_MIRROR/STORAGE_SET_DATA_DIR qui
+// suivent la même règle de protection (contre-audit, point 4).
+test('TREES_REMOVE et TREES_RESTORE exigent une session protégée côté IPC', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { TreeWorkspace, createLiveServices } =
+    await import('../../src/server/src/trees/tree-workspace.js');
+  const dataDir = await mkdtemp(path.join(tmpdir(), 'geneoapp-ipc-trees-session-'));
+  const workspace = new TreeWorkspace({
+    dataDir,
+    defaultDatabaseFile: path.join(dataDir, 'geneoapp.sqlite'),
+  });
+  try {
+    const services = createLiveServices(workspace);
+    const handlers = buildIpcHandlers(services, workspace);
+    const created = await handlers[IPC_CHANNELS.TREES_CREATE]({ data: { name: 'Cible' } });
+
+    const removedWithoutToken = await handlers[IPC_CHANNELS.TREES_REMOVE]({
+      id: created.data.id,
+    });
+    assert.equal(removedWithoutToken.ok, false);
+    assert.equal(removedWithoutToken.error.status, 401);
+
+    const restoredWithoutToken = await handlers[IPC_CHANNELS.TREES_RESTORE]({
+      id: created.data.id,
+    });
+    assert.equal(restoredWithoutToken.ok, false);
+    assert.equal(restoredWithoutToken.error.status, 401);
+
+    await services.accounts.create({ name: 'Alice' });
+    const { token } = services.accounts.login({ name: 'Alice' });
+
+    const removed = await handlers[IPC_CHANNELS.TREES_REMOVE]({
+      id: created.data.id,
+      token,
+    });
+    assert.equal(removed.ok, true);
+
+    const restored = await handlers[IPC_CHANNELS.TREES_RESTORE]({
+      id: created.data.id,
+      token,
+    });
+    assert.equal(restored.ok, true);
   } finally {
     workspace.close();
     await rm(dataDir, { recursive: true, force: true });

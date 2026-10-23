@@ -1,16 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button } from '../design-system/index.js';
+import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 
-export const RESEARCH_STATUS_LABELS = {
-  TODO: 'À faire',
-  IN_PROGRESS: 'En cours',
-  DONE: 'Terminé',
-  ABANDONED: 'Abandonné',
+// Libellés du carnet : indexés par code, traduits via l'i18n. Le repli
+// affiche le code brut quand la clé manque, pour ne jamais laisser un
+// écran vide si le serveur introduit une nouvelle valeur.
+export const RESEARCH_STATUS_KEYS = {
+  TODO: 'notebook.status.todo',
+  IN_PROGRESS: 'notebook.status.inProgress',
+  DONE: 'notebook.status.done',
+  ABANDONED: 'notebook.status.abandoned',
 };
-export const PRIORITY_LABELS = { HIGH: 'Haute', MEDIUM: 'Moyenne', LOW: 'Basse' };
-const HYPOTHESIS_LABELS = { OPEN: 'À étayer', SUPPORTED: 'Étayée', REJECTED: 'Écartée' };
-const STANCE_LABELS = { SUPPORTS: 'Pour', CONTRADICTS: 'Contre', NEUTRAL: 'Neutre' };
+export const PRIORITY_KEYS = {
+  HIGH: 'notebook.priority.high',
+  MEDIUM: 'notebook.priority.medium',
+  LOW: 'notebook.priority.low',
+};
+const HYPOTHESIS_KEYS = {
+  OPEN: 'notebook.hypothesis.open',
+  SUPPORTED: 'notebook.hypothesis.supported',
+  REJECTED: 'notebook.hypothesis.rejected',
+};
+const STANCE_KEYS = {
+  SUPPORTS: 'notebook.stance.supports',
+  CONTRADICTS: 'notebook.stance.contradicts',
+  NEUTRAL: 'notebook.stance.neutral',
+};
 
 function personName(person) {
   return `${person.given_names} ${person.family_name}`;
@@ -27,14 +42,17 @@ function isOverdue(task) {
   return task.due_date < new Date().toISOString().slice(0, 10);
 }
 
+// Les options portent une clé de traduction ; le repli est le code brut,
+// ce qui évite une liste vide si le serveur introduit une nouvelle valeur.
 function SelectField({ label, value, onChange, options }) {
+  const { t } = useTranslation();
   return (
     <label>
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {Object.entries(options).map(([key, text]) => (
           <option key={key} value={key}>
-            {text}
+            {t(text, key)}
           </option>
         ))}
       </select>
@@ -43,6 +61,7 @@ function SelectField({ label, value, onChange, options }) {
 }
 
 function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onChanged }) {
+  const { t } = useTranslation();
   const [research, setResearch] = useState(null);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState(null);
@@ -50,6 +69,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
   const [hypothesis, setHypothesis] = useState({ title: '', content: '' });
   const [task, setTask] = useState({ title: '', priority: 'MEDIUM', dueDate: '' });
   const [evidence, setEvidence] = useState({});
+  const [history, setHistory] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -94,7 +114,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
       </p>
     ) : (
       <p role="status" className="loading-line">
-        Chargement de la recherche…
+        {t('notebook.loading', 'Chargement de la recherche…')}
       </p>
     );
   }
@@ -105,13 +125,15 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
     <article className="research-detail" aria-labelledby="research-title">
       <header className="research-detail__header">
         <Button variant="secondary" size="sm" onClick={onClose}>
-          ← Toutes les recherches
+          {t('notebook.backToList', '← Toutes les recherches')}
         </Button>
-        <p className="data-id">Recherche #{research.id}</p>
+        <p className="data-id">
+          {t('notebook.researchNumber', 'Recherche')} #{research.id}
+        </p>
         <h4 id="research-title">{research.title}</h4>
         {person ? (
           <p>
-            Personne :{' '}
+            {t('notebook.person', 'Personne')} :{' '}
             <button type="button" className="link-button" onClick={() => onNavigate(person.id)}>
               {personName(person)}
             </button>
@@ -141,24 +163,24 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                 ...draft,
                 dueDate: draft.dueDate || null,
               }),
-            'Recherche enregistrée.',
+            t('notebook.saved', 'Recherche enregistrée.'),
           );
         }}
       >
         <SelectField
-          label="Statut"
+          label={t('notebook.status', 'Statut')}
           value={draft.status}
-          options={RESEARCH_STATUS_LABELS}
+          options={RESEARCH_STATUS_KEYS}
           onChange={(value) => setDraft({ ...draft, status: value })}
         />
         <SelectField
-          label="Priorité"
+          label={t('notebook.priority', 'Priorité')}
           value={draft.priority}
-          options={PRIORITY_LABELS}
+          options={PRIORITY_KEYS}
           onChange={(value) => setDraft({ ...draft, priority: value })}
         />
         <label>
-          <span>Échéance</span>
+          <span>{t('notebook.dueDate', 'Échéance')}</span>
           <input
             type="date"
             value={draft.dueDate}
@@ -166,34 +188,93 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           />
         </label>
         <label className="research-detail__wide">
-          <span>Objectif</span>
+          <span>{t('notebook.objective', 'Objectif')}</span>
           <textarea
             value={draft.objective}
             onChange={(event) => setDraft({ ...draft, objective: event.target.value })}
           />
         </label>
         <label className="research-detail__wide">
-          <span>Archives consultées</span>
+          <span>{t('notebook.archives', 'Archives consultées')}</span>
           <textarea
             value={draft.archives}
             onChange={(event) => setDraft({ ...draft, archives: event.target.value })}
           />
         </label>
         <label className="research-detail__wide">
-          <span>Résultat</span>
+          <span>{t('notebook.result', 'Résultat')}</span>
           <textarea
             value={draft.result}
             onChange={(event) => setDraft({ ...draft, result: event.target.value })}
           />
         </label>
-        <Button type="submit">Enregistrer la recherche</Button>
+        <Button type="submit">{t('notebook.save', 'Enregistrer la recherche')}</Button>
       </form>
 
+      <section aria-labelledby="research-documents-title" className="research-section">
+        <h4 id="research-documents-title">{t('notebook.documents', 'Documents liés')}</h4>
+        {(research.documents ?? []).length === 0 ? (
+          <p className="notice">{t('notebook.noDocuments', 'Aucun document lié.')}</p>
+        ) : (
+          <ul className="search-results">
+            {research.documents.map((doc) => (
+              <li key={doc.id}>
+                {doc.external_url ? (
+                  <a href={doc.external_url} target="_blank" rel="noopener noreferrer">
+                    {doc.description || doc.external_url}
+                  </a>
+                ) : (
+                  (doc.original_filename ?? `#${doc.id}`)
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="research-history-title" className="research-section">
+        <h4 id="research-history-title">{t('notebook.history', 'Historique des modifications')}</h4>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={async () => {
+            try {
+              setHistory(await client.research.history(research.id));
+            } catch (historyError) {
+              setError(historyError.message);
+            }
+          }}
+        >
+          {history
+            ? t('notebook.refreshHistory', 'Actualiser')
+            : t('notebook.showHistory', 'Afficher l’historique')}
+        </Button>
+        {history && history.length === 0 ? (
+          <p className="notice">{t('notebook.noHistory', 'Aucune modification enregistrée.')}</p>
+        ) : null}
+        {history && history.length > 0 ? (
+          <ol className="search-results">
+            {history.map((entry) => (
+              <li key={entry.id}>
+                <Badge tone="neutral">{entry.operation}</Badge> {entry.table} #{entry.rowId} ·{' '}
+                {entry.at}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </section>
+
       <section aria-labelledby="hypotheses-title" className="research-section">
-        <h4 id="hypotheses-title">Hypothèses ({research.hypotheses.length})</h4>
+        <h4 id="hypotheses-title">
+          {t('notebook.hypotheses', 'Hypothèses')} ({research.hypotheses.length})
+        </h4>
         {research.hypotheses.length === 0 ? (
           <p className="settings-hint">
-            Aucune hypothèse. Formulez-en une pour y rattacher des preuves.
+            {t(
+              'notebook.noHypothesis',
+              'Aucune hypothèse. Formulez-en une pour y rattacher des preuves.',
+            )}
           </p>
         ) : (
           <ol className="hypotheses">
@@ -202,12 +283,15 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                 <div className="hypothesis__head">
                   <p className="hypothesis__title">
                     <span className="data-id">
-                      Hypothèse {String.fromCharCode(65 + (index % 26))}
+                      {t('notebook.hypothesis', 'Hypothèse')}{' '}
+                      {String.fromCharCode(65 + (index % 26))}
                     </span>{' '}
                     {item.title}
                   </p>
                   <label className="hypothesis__status">
-                    <span className="gds-visually-hidden">Statut de l’hypothèse {item.title}</span>
+                    <span className="gds-visually-hidden">
+                      {t('notebook.hypothesisStatus', 'Statut de l’hypothèse')} {item.title}
+                    </span>
                     <select
                       value={item.status}
                       onChange={(event) =>
@@ -216,9 +300,9 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                         )
                       }
                     >
-                      {Object.entries(HYPOTHESIS_LABELS).map(([key, text]) => (
+                      {Object.entries(HYPOTHESIS_KEYS).map(([key, text]) => (
                         <option key={key} value={key}>
-                          {text}
+                          {t(text, key)}
                         </option>
                       ))}
                     </select>
@@ -233,7 +317,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                         className={`evidence evidence--${proof.stance.toLowerCase()}`}
                       >
                         <Badge tone={proof.stance === 'CONTRADICTS' ? 'danger' : 'neutral'}>
-                          {STANCE_LABELS[proof.stance]}
+                          {t(STANCE_KEYS[proof.stance] ?? 'notebook.stance.neutral', proof.stance)}
                         </Badge>
                         <span>{proof.content}</span>
                         <button
@@ -241,7 +325,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                           className="link-button link-button--small"
                           onClick={() => run(() => client.research.removeEvidence(proof.id))}
                         >
-                          Retirer
+                          {t('notebook.remove', 'Retirer')}
                         </button>
                       </li>
                     ))}
@@ -259,14 +343,20 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                           stance: entry.stance,
                           content: entry.content.trim(),
                         }),
-                      'Preuve ajoutée.',
+                      t('notebook.evidenceAdded', 'Preuve ajoutée.'),
                     );
                     if (ok)
                       setEvidence({ ...evidence, [item.id]: { stance: 'SUPPORTS', content: '' } });
                   }}
                 >
                   <label>
-                    <span>Preuve pour « {item.title} »</span>
+                    <span>
+                      {t(
+                        'notebook.evidenceFor',
+                        { title: item.title },
+                        `Preuve pour « ${item.title} »`,
+                      )}
+                    </span>
                     <input
                       value={evidence[item.id]?.content ?? ''}
                       onChange={(event) =>
@@ -281,9 +371,9 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                     />
                   </label>
                   <SelectField
-                    label="Sens"
+                    label={t('notebook.stance', 'Sens')}
                     value={evidence[item.id]?.stance ?? 'SUPPORTS'}
-                    options={STANCE_LABELS}
+                    options={STANCE_KEYS}
                     onChange={(value) =>
                       setEvidence({
                         ...evidence,
@@ -292,7 +382,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                     }
                   />
                   <Button type="submit" size="sm" variant="secondary">
-                    Ajouter la preuve
+                    {t('notebook.addEvidence', 'Ajouter la preuve')}
                   </Button>
                 </form>
               </li>
@@ -310,39 +400,39 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                   title: hypothesis.title.trim(),
                   content: hypothesis.content.trim(),
                 }),
-              'Hypothèse ajoutée.',
+              t('notebook.hypothesisAdded', 'Hypothèse ajoutée.'),
             );
             if (ok) setHypothesis({ title: '', content: '' });
           }}
         >
           <label>
-            <span>Nouvelle hypothèse</span>
+            <span>{t('notebook.newHypothesis', 'Nouvelle hypothèse')}</span>
             <input
               value={hypothesis.title}
-              placeholder="Jean serait né à Nantes"
+              placeholder={t('notebook.hypothesisPlaceholder', 'Jean serait né à Nantes')}
               onChange={(event) => setHypothesis({ ...hypothesis, title: event.target.value })}
             />
           </label>
           <label>
-            <span>Argumentation (facultatif)</span>
+            <span>{t('notebook.hypothesisArgument', 'Argumentation (facultatif)')}</span>
             <input
               value={hypothesis.content}
               onChange={(event) => setHypothesis({ ...hypothesis, content: event.target.value })}
             />
           </label>
           <Button type="submit" size="sm">
-            Ajouter l’hypothèse
+            {t('notebook.addHypothesis', 'Ajouter l’hypothèse')}
           </Button>
         </form>
       </section>
 
       <section aria-labelledby="tasks-title" className="research-section">
         <h4 id="tasks-title">
-          Tâches ({research.tasks.filter((item) => item.status === 'DONE').length}/
-          {research.tasks.length})
+          {t('notebook.tasks', 'Tâches')} (
+          {research.tasks.filter((item) => item.status === 'DONE').length}/{research.tasks.length})
         </h4>
         {research.tasks.length === 0 ? (
-          <p className="settings-hint">Aucune tâche.</p>
+          <p className="settings-hint">{t('notebook.noTask', 'Aucune tâche.')}</p>
         ) : (
           <ul className="task-list">
             {research.tasks.map((item) => (
@@ -362,21 +452,25 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                   <span>{item.title}</span>
                 </label>
                 <Badge tone={item.priority === 'HIGH' ? 'danger' : 'neutral'}>
-                  {PRIORITY_LABELS[item.priority]}
+                  {t(PRIORITY_KEYS[item.priority] ?? 'notebook.priority.medium', item.priority)}
                 </Badge>
                 {item.due_date ? (
                   <span className={`data-id${isOverdue(item) ? ' task__overdue' : ''}`}>
-                    {isOverdue(item) ? 'En retard · ' : ''}
+                    {isOverdue(item) ? `${t('notebook.overdue', 'En retard')} · ` : ''}
                     {formatDate(item.due_date)}
                   </span>
                 ) : null}
                 <button
                   type="button"
                   className="link-button link-button--small"
-                  aria-label={`Supprimer la tâche ${item.title}`}
+                  aria-label={t(
+                    'notebook.deleteTask',
+                    { title: item.title },
+                    `Supprimer la tâche ${item.title}`,
+                  )}
                   onClick={() => run(() => client.research.removeTask(item.id))}
                 >
-                  Supprimer
+                  {t('notebook.delete', 'Supprimer')}
                 </button>
               </li>
             ))}
@@ -394,27 +488,27 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
                   priority: task.priority,
                   dueDate: task.dueDate || null,
                 }),
-              'Tâche ajoutée.',
+              t('notebook.taskAdded', 'Tâche ajoutée.'),
             );
             if (ok) setTask({ title: '', priority: 'MEDIUM', dueDate: '' });
           }}
         >
           <label>
-            <span>Nouvelle tâche</span>
+            <span>{t('notebook.newTask', 'Nouvelle tâche')}</span>
             <input
               value={task.title}
-              placeholder="Consulter les registres de Vendée"
+              placeholder={t('notebook.taskPlaceholder', 'Consulter les registres de Vendée')}
               onChange={(event) => setTask({ ...task, title: event.target.value })}
             />
           </label>
           <SelectField
-            label="Priorité de la tâche"
+            label={t('notebook.taskPriority', 'Priorité de la tâche')}
             value={task.priority}
-            options={PRIORITY_LABELS}
+            options={PRIORITY_KEYS}
             onChange={(value) => setTask({ ...task, priority: value })}
           />
           <label>
-            <span>Échéance de la tâche</span>
+            <span>{t('notebook.taskDueDate', 'Échéance de la tâche')}</span>
             <input
               type="date"
               value={task.dueDate}
@@ -422,7 +516,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
             />
           </label>
           <Button type="submit" size="sm">
-            Ajouter la tâche
+            {t('notebook.addTask', 'Ajouter la tâche')}
           </Button>
         </form>
       </section>
@@ -432,8 +526,8 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           client={client}
           entityType="SEARCH"
           entityId={research.id}
-          heading="Notes de recherche"
-          emptyLabel="Aucune note pour cette recherche."
+          heading={t('notebook.notes', 'Notes de recherche')}
+          emptyLabel={t('notebook.noNote', 'Aucune note pour cette recherche.')}
         />
       ) : null}
 
@@ -444,7 +538,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           if (ok) onClose();
         }}
       >
-        Mettre la recherche à la corbeille
+        {t('notebook.trash', 'Mettre la recherche à la corbeille')}
       </Button>
     </article>
   );
@@ -453,6 +547,7 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
 // Carnet de recherche : pistes, objectifs, hypothèses étayées par des preuves,
 // tâches avec priorité et échéance. Toutes les données viennent de l'API locale.
 export function NotebookPanel({ client, persons, onNavigate }) {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [filter, setFilter] = useState('ALL');
@@ -526,7 +621,7 @@ export function NotebookPanel({ client, persons, onNavigate }) {
 
   return (
     <div className="search-panel notebook">
-      <h3>Carnet de recherche</h3>
+      <h3>{t('notebook.title', 'Carnet de recherche')}</h3>
       {notebookError ? (
         <p role="alert" className="notice notice--error">
           {notebookError}
@@ -535,37 +630,37 @@ export function NotebookPanel({ client, persons, onNavigate }) {
 
       <form onSubmit={handleSubmit}>
         <label>
-          <span>Titre</span>
+          <span>{t('notebook.fieldTitle', 'Titre')}</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label>
-          <span>Note</span>
+          <span>{t('notebook.fieldNote', 'Note')}</span>
           <input value={content} onChange={(event) => setContent(event.target.value)} />
         </label>
         <label>
-          <span>Objectif (facultatif)</span>
+          <span>{t('notebook.fieldObjective', 'Objectif (facultatif)')}</span>
           <input
             value={objective}
-            placeholder="Trouver son acte de mariage"
+            placeholder={t('notebook.objectivePlaceholder', 'Trouver son acte de mariage')}
             onChange={(event) => setObjective(event.target.value)}
           />
         </label>
         <SelectField
-          label="Statut"
+          label={t('notebook.status', 'Statut')}
           value={status}
-          options={RESEARCH_STATUS_LABELS}
+          options={RESEARCH_STATUS_KEYS}
           onChange={setStatus}
         />
         <SelectField
-          label="Priorité"
+          label={t('notebook.priority', 'Priorité')}
           value={priority}
-          options={PRIORITY_LABELS}
+          options={PRIORITY_KEYS}
           onChange={setPriority}
         />
         <label>
-          <span>Personne liée (optionnel)</span>
+          <span>{t('notebook.linkedPerson', 'Personne liée (optionnel)')}</span>
           <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
-            <option value="">— Aucune —</option>
+            <option value="">{t('notebook.noPerson', '— Aucune —')}</option>
             {persons.map((person) => (
               <option key={person.id} value={person.id}>
                 {personName(person)}
@@ -574,29 +669,39 @@ export function NotebookPanel({ client, persons, onNavigate }) {
           </select>
         </label>
         <Button type="submit" size="sm" disabled={busy}>
-          Ajouter une piste de recherche
+          {t('notebook.addEntry', 'Ajouter une piste de recherche')}
         </Button>
       </form>
 
-      <div className="segmented notebook__filter" role="group" aria-label="Filtrer par statut">
-        {[['ALL', 'Toutes'], ...Object.entries(RESEARCH_STATUS_LABELS)].map(([key, text]) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={filter === key}
-            onClick={() => setFilter(key)}
-          >
-            {text}
-          </button>
-        ))}
+      <div
+        className="segmented notebook__filter"
+        role="group"
+        aria-label={t('notebook.filterByStatus', 'Filtrer par statut')}
+      >
+        {[['ALL', 'notebook.filterAll'], ...Object.entries(RESEARCH_STATUS_KEYS)].map(
+          ([key, text]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+            >
+              {t(text, key)}
+            </button>
+          ),
+        )}
       </div>
 
       {entries === null ? (
-        <p role="status">Chargement…</p>
+        <p role="status">{t('notebook.loadingShort', 'Chargement…')}</p>
       ) : entries.length === 0 ? (
-        <p className="notice">Aucune piste de recherche pour l’instant.</p>
+        <p className="notice">
+          {t('notebook.noEntry', 'Aucune piste de recherche pour l’instant.')}
+        </p>
       ) : visible.length === 0 ? (
-        <p className="notice">Aucune recherche avec ce statut.</p>
+        <p className="notice">
+          {t('notebook.noEntryWithStatus', 'Aucune recherche avec ce statut.')}
+        </p>
       ) : (
         <ul className="research-cards">
           {visible.map((entry) => {
@@ -605,10 +710,10 @@ export function NotebookPanel({ client, persons, onNavigate }) {
               <li key={entry.id} className="research-card">
                 <div className="research-card__badges">
                   <Badge tone={entry.status === 'DONE' ? 'success' : 'neutral'}>
-                    {RESEARCH_STATUS_LABELS[entry.status] ?? entry.status}
+                    {t(RESEARCH_STATUS_KEYS[entry.status] ?? 'notebook.status.todo', entry.status)}
                   </Badge>
                   <Badge tone={entry.priority === 'HIGH' ? 'danger' : 'neutral'}>
-                    {PRIORITY_LABELS[entry.priority] ?? entry.priority}
+                    {t(PRIORITY_KEYS[entry.priority] ?? 'notebook.priority.medium', entry.priority)}
                   </Badge>
                   <span className="data-id">#{entry.id}</span>
                 </div>
@@ -621,9 +726,14 @@ export function NotebookPanel({ client, persons, onNavigate }) {
                 </button>
                 <p className="research-card__content">{entry.content}</p>
                 <p className="data-id">
-                  {entry.hypothesis_count ?? 0} hypothèse(s) · {entry.done_task_count ?? 0}/
-                  {entry.task_count ?? 0} tâche(s)
-                  {entry.due_date ? ` · échéance ${formatDate(entry.due_date)}` : ''}
+                  {t('notebook.hypothesisCount', { count: entry.hypothesis_count ?? 0 })} ·{' '}
+                  {t('notebook.taskProgress', {
+                    count: entry.task_count ?? 0,
+                    done: entry.done_task_count ?? 0,
+                  })}
+                  {entry.due_date
+                    ? ` · ${t('notebook.dueDateShort', 'échéance')} ${formatDate(entry.due_date)}`
+                    : ''}
                 </p>
                 {entry.person_id ? (
                   <button
@@ -631,7 +741,13 @@ export function NotebookPanel({ client, persons, onNavigate }) {
                     className="link-button"
                     onClick={() => onNavigate(entry.person_id)}
                   >
-                    {person ? personName(person) : `Personne #${entry.person_id}`}
+                    {person
+                      ? personName(person)
+                      : t(
+                          'notebook.personNumber',
+                          { id: entry.person_id },
+                          `Personne #${entry.person_id}`,
+                        )}
                   </button>
                 ) : null}
               </li>

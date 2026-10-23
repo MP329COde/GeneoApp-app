@@ -1,3 +1,5 @@
+import { recordAudit } from '../repositories/base-repository.js';
+
 /**
  * Historique annulable générique, fondé sur des triggers SQLite : aucune
  * modification des dépôts métier n'est nécessaire, et toute table métier
@@ -8,6 +10,7 @@
 // sessions (sécurité), historique lui-même, index FTS (journalisé à part).
 const EXCLUDED_TABLES = new Set([
   'audit_log',
+  'audit_state',
   'local_accounts',
   'schema_migrations',
   'undo_groups',
@@ -19,6 +22,8 @@ const EXCLUDED_TABLES = new Set([
   'indexed_documents',
   'index_settings',
   'index_runs',
+  // Réglages de l'IA locale : configuration de la machine, hors historique.
+  'local_ai_settings',
 ]);
 
 const HISTORY_LIMIT = 200;
@@ -123,11 +128,40 @@ export function recordSearchIndexChange(database, { operation, rowId, oldRow, ne
     );
 }
 
+/**
+ * Synchronise la table de correspondance de l'index FTS5 après un rejeu
+ * d'annulation.
+ *
+ * Le rejeu écrit directement dans `search_index` (FTS5 n'accepte pas de
+ * trigger), sans repasser par le dépôt qui tient la correspondance. Sans
+ * cette synchronisation, la table de correspondance se désynchronise de
+ * l'index et les écritures suivantes cibleraient une ligne périmée.
+ */
+function syncSearchIndexMap(database, operation, row, rowId) {
+  const hasMap = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'search_index_map'")
+    .get();
+  if (!hasMap) return;
+  if (operation === 'delete') {
+    database.prepare('DELETE FROM search_index_map WHERE rowid = ?').run(rowId);
+    return;
+  }
+  if (!row) return;
+  database
+    .prepare(
+      `INSERT INTO search_index_map (entity_type, entity_id, rowid)
+       VALUES (?, ?, ?)
+       ON CONFLICT (entity_type, entity_id) DO UPDATE SET rowid = excluded.rowid`,
+    )
+    .run(row.entity_type, row.entity_id, rowId);
+}
+
 function applyRow(database, table, operation, row, rowId) {
   const t = quote(table);
   const idColumn = table === SEARCH_INDEX ? 'rowid' : 'id';
   if (operation === 'delete') {
     database.prepare(`DELETE FROM ${t} WHERE ${idColumn} = ?`).run(rowId);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'delete', null, rowId);
     return;
   }
   const values = { ...row };
@@ -143,6 +177,7 @@ function applyRow(database, table, operation, row, rowId) {
         `INSERT INTO ${t} (${columns.map(quote).join(', ')}) VALUES (${placeholders.join(', ')})`,
       )
       .run(values);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'insert', values, rowId);
   } else {
     database
       .prepare(
@@ -152,6 +187,7 @@ function applyRow(database, table, operation, row, rowId) {
           .join(', ')} WHERE ${idColumn} = @${idColumn}`,
       )
       .run(values);
+    if (table === SEARCH_INDEX) syncSearchIndexMap(database, 'update', values, rowId);
   }
 }
 
@@ -272,7 +308,25 @@ export class UndoHistory {
     }
   }
 
-  undo() {
+  // Annuler et rétablir sont des actions comme les autres : elles s'ajoutent au
+  // journal d'audit (qui ne se réécrit jamais) avec les tables touchées.
+  journal(group, operation, performedBy) {
+    const tables = this.database
+      .prepare(
+        'SELECT DISTINCT table_name FROM undo_entries WHERE group_id = ? ORDER BY table_name',
+      )
+      .all(group.id)
+      .map((row) => row.table_name);
+    recordAudit(this.database, {
+      tableName: 'history',
+      rowId: group.id,
+      operation,
+      changes: { label: group.label, tables },
+      performedBy,
+    });
+  }
+
+  undo({ performedBy = null } = {}) {
     const group = this.database
       .prepare('SELECT id, label FROM undo_groups WHERE undone = 0 ORDER BY id DESC LIMIT 1')
       .get();
@@ -280,11 +334,12 @@ export class UndoHistory {
     this.database.transaction(() => {
       this.replay(group.id, 'undo');
       this.database.prepare('UPDATE undo_groups SET undone = 1 WHERE id = ?').run(group.id);
+      this.journal(group, 'UNDO', performedBy);
     })();
     return { undone: group.label, ...this.status() };
   }
 
-  redo() {
+  redo({ performedBy = null } = {}) {
     const group = this.database
       .prepare('SELECT id, label FROM undo_groups WHERE undone = 1 ORDER BY id ASC LIMIT 1')
       .get();
@@ -292,6 +347,7 @@ export class UndoHistory {
     this.database.transaction(() => {
       this.replay(group.id, 'redo');
       this.database.prepare('UPDATE undo_groups SET undone = 0 WHERE id = ?').run(group.id);
+      this.journal(group, 'REDO', performedBy);
     })();
     return { redone: group.label, ...this.status() };
   }

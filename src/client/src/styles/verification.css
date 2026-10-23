@@ -1,0 +1,94 @@
+/* ---------- Vérification intégrée ---------- */
+.tree-node,
+.person-card {
+  position: relative;
+}
+.issue-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface-raised);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .issue-dot {
+    animation: issue-dot-in var(--duration-slow) var(--ease-enter);
+  }
+}
+@keyframes issue-dot-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.verification h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.verification__empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.verification__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.verification__item {
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-accent) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.verification__item p {
+  margin: 0;
+}
+.verification__item--duplicate,
+.verification__item--possible {
+  border-left-color: var(--warning);
+}
+.verification__item--cycle,
+.verification__item--certain {
+  border-left-color: var(--danger);
+}
+.verification__detail {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.verification__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.verification__confirm {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-selected);
+}
+.verification__confirm ul {
+  margin: var(--space-2) 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .verification__item,
+  .verification__confirm {
+    animation: tree-enter var(--duration-base) var(--ease-enter);
+  }
+}
+.notification-center__item--danger {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+.notification-center__item--warning {
+  box-shadow: inset 3px 0 0 var(--warning);
+}

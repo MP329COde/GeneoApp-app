@@ -1,0 +1,22 @@
+/* ---------- Aperçu et progression de l’indexation ---------- */
+.indexing-preview {
+  flex-basis: 100%;
+  max-height: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: var(--color-surface-muted, rgba(127, 127, 127, 0.08));
+}
+.indexing-presets,
+.indexing-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.indexing-progress progress {
+  flex: 1 1 10rem;
+}

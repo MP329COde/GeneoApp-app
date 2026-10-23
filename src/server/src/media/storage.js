@@ -4,7 +4,11 @@ import path from 'node:path';
 import { sniffMimeType } from './mime-sniffer.js';
 import { PayloadTooLargeError, UnsupportedMediaTypeError } from '../errors.js';
 
-const DEFAULT_MAX_BYTES = 25 * 1024 * 1024; // 25 Mo
+const DEFAULT_MAX_BYTES = 25 * 1024 * 1024; // 25 Mo : images, PDF, texte, Word
+
+// Limites par catégorie, multiples de la limite des documents : un enregistrement
+// audio ou une vidéo de famille est naturellement plus gros qu'un acte scanné.
+const CATEGORY_FACTORS = { document: 1, audio: 4, video: 8 };
 
 /**
  * Stockage de fichiers médias sur disque, hors de la base de données.
@@ -42,10 +46,21 @@ export class MediaStorage {
     return resolved;
   }
 
+  /** Taille maximale d'une catégorie de fichier (documents, audio, vidéo). */
+  limitFor(category) {
+    return this.maxBytes * (CATEGORY_FACTORS[category] ?? 1);
+  }
+
+  /** Plafond absolu, avant même d'analyser le contenu. */
+  get hardLimit() {
+    return this.limitFor('video');
+  }
+
   async save(buffer) {
-    if (buffer.length > this.maxBytes) {
+    // Plafond absolu avant toute analyse : pas de lecture d'un contenu démesuré.
+    if (buffer.length > this.hardLimit) {
       throw new PayloadTooLargeError(
-        `Fichier trop volumineux (${buffer.length} octets, maximum ${this.maxBytes})`,
+        `Fichier trop volumineux (${buffer.length} octets, maximum ${this.hardLimit})`,
       );
     }
 
@@ -53,6 +68,13 @@ export class MediaStorage {
     if (!detected) {
       throw new UnsupportedMediaTypeError(
         'Type de fichier non reconnu ou non autorisé (contenu vérifié par signature binaire)',
+      );
+    }
+    // Limite propre au type réellement détecté (jamais au type déclaré).
+    const limit = this.limitFor(detected.category);
+    if (buffer.length > limit) {
+      throw new PayloadTooLargeError(
+        `Fichier trop volumineux (${buffer.length} octets, maximum ${limit} pour ce type)`,
       );
     }
 

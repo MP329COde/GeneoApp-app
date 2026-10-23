@@ -8,6 +8,12 @@ const RESTORE_SERVICE_BY_TABLE = {
   unions: 'unions',
   parentages: 'parentages',
   media: 'media',
+  assertions: 'assertions',
+  sources: 'sources',
+  citations: 'citations',
+  // Le carnet de recherche est supprimé logiquement : il doit donc être
+  // restaurable depuis la corbeille, comme les autres tables métier.
+  research_notebook: 'research',
 };
 
 export class TrashService {

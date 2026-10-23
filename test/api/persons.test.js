@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 
 test('POST /api/persons crée une personne valide', async () => {
@@ -18,7 +21,7 @@ test('POST /api/persons crée une personne valide', async () => {
   }
 });
 
-test('POST /api/persons rejette un payload invalide avec 400 et le détail des champs', async () => {
+test('POST /api/persons accepte un prénom seul (nom de famille vide, comme en import GEDCOM)', async () => {
   const server = await startTestServer();
   try {
     const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
@@ -26,7 +29,24 @@ test('POST /api/persons rejette un payload invalide avec 400 et le détail des c
       body: { givenNames: 'Ada' },
     });
 
+    assert.equal(status, 201);
+    assert.equal(body.given_names, 'Ada');
+    assert.equal(body.family_name, '');
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/persons rejette un payload invalide (prénom et nom vides) avec 400 et le détail des champs', async () => {
+  const server = await startTestServer();
+  try {
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {},
+    });
+
     assert.equal(status, 400);
+    assert.ok(body.error.fields.givenNames);
     assert.ok(body.error.fields.familyName);
   } finally {
     await server.close();
@@ -173,6 +193,250 @@ test('POST /api/persons rejette un isLiving non booléen', async () => {
 
     assert.equal(status, 400);
     assert.ok(body.error.fields.isLiving);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons sans paramètre renvoie un tableau simple (comportement historique)', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body));
+    assert.equal(body.length, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?limit=2&offset=0 pagine avec total et respecte q', async () => {
+  const server = await startTestServer();
+  try {
+    for (const givenNames of ['Ada', 'Byron', 'Charles', 'Diane', 'Ernest']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Lovelace' },
+      });
+    }
+
+    const firstPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '0' })}`,
+    );
+    assert.equal(firstPage.status, 200);
+    assert.equal(firstPage.body.total, 5);
+    assert.equal(firstPage.body.items.length, 2);
+
+    const secondPage = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '2', offset: '2' })}`,
+    );
+    assert.equal(secondPage.body.items.length, 2);
+    assert.notDeepEqual(
+      firstPage.body.items.map((p) => p.id),
+      secondPage.body.items.map((p) => p.id),
+    );
+
+    const filtered = await requestJson(
+      server.baseUrl,
+      `/api/persons?${new URLSearchParams({ limit: '10', q: 'byron' })}`,
+    );
+    assert.equal(filtered.body.total, 1);
+    assert.equal(filtered.body.items[0].given_names, 'Byron');
+  } finally {
+    await server.close();
+  }
+});
+
+test("GET /api/persons?limit= borne la page et n'échoue jamais sur une valeur invalide", async () => {
+  const server = await startTestServer();
+  try {
+    for (const givenNames of ['Ada', 'Byron', 'Charles']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Lovelace' },
+      });
+    }
+
+    // Une page plus grande que la borne maximale est ramenée à la borne.
+    const tooLarge = await requestJson(server.baseUrl, '/api/persons?limit=100000');
+    assert.equal(tooLarge.status, 200);
+    assert.equal(tooLarge.body.total, 3);
+    assert.equal(tooLarge.body.limit, 200);
+    assert.equal(tooLarge.body.items.length, 3);
+
+    // Valeurs invalides : on retombe sur les valeurs par défaut, sans 500.
+    for (const query of ['limit=abc', 'limit=-5', 'limit=0', 'offset=-1', 'offset=abc']) {
+      const { status, body } = await requestJson(server.baseUrl, `/api/persons?${query}`);
+      assert.equal(status, 200, query);
+      assert.equal(body.total, 3, query);
+      assert.equal(body.items.length, 3, query);
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?offset= hors borne renvoie une page vide mais le bon total', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Lovelace' },
+    });
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons?limit=10&offset=100');
+    assert.equal(status, 200);
+    assert.deepEqual(body.items, []);
+    assert.equal(body.total, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?total=true renvoie uniquement le nombre de personnes', async () => {
+  const server = await startTestServer();
+  try {
+    for (const givenNames of ['Ada', 'Byron']) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName: 'Lovelace' },
+      });
+    }
+
+    const all = await requestJson(server.baseUrl, '/api/persons?total=true');
+    assert.equal(all.status, 200);
+    assert.equal(all.body.total, 2);
+    assert.equal(all.body.items, undefined);
+
+    const filtered = await requestJson(server.baseUrl, '/api/persons?total=true&q=byron');
+    assert.equal(filtered.body.total, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons paginé : les pages successives couvrent la liste sans doublon', async () => {
+  const server = await startTestServer();
+  try {
+    const families = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel'];
+    for (const familyName of families) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames: 'Jean', familyName },
+      });
+    }
+
+    const collected = [];
+    let total = null;
+    for (let offset = 0; offset < 20; offset += 3) {
+      const { body } = await requestJson(
+        server.baseUrl,
+        `/api/persons?${new URLSearchParams({ limit: '3', offset: String(offset) })}`,
+      );
+      total = body.total;
+      collected.push(...body.items);
+      if (body.items.length < 3) break;
+    }
+
+    assert.equal(total, families.length);
+    assert.equal(collected.length, families.length);
+    assert.equal(new Set(collected.map((person) => person.id)).size, families.length);
+    assert.deepEqual(collected.map((person) => person.family_name).sort(), [...families].sort());
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?q= filtre les personnes même sans pagination', async () => {
+  const server = await startTestServer();
+  try {
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Byron', familyName: 'Lovelace' },
+    });
+    await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: { givenNames: 'Ada', familyName: 'Dupont' },
+    });
+
+    // Sans `limit` : forme historique (tableau simple), mais filtré.
+    const byron = await requestJson(server.baseUrl, '/api/persons?q=byron');
+    assert.equal(byron.status, 200);
+    assert.ok(Array.isArray(byron.body));
+    assert.equal(byron.body.length, 1);
+    assert.equal(byron.body[0].given_names, 'Byron');
+
+    const ada = await requestJson(server.baseUrl, '/api/persons?q=ada');
+    assert.ok(Array.isArray(ada.body));
+    assert.equal(ada.body.length, 1);
+    assert.equal(ada.body[0].given_names, 'Ada');
+
+    // Un `q` vide est traité comme absent : aucun filtre, toutes les personnes.
+    const empty = await requestJson(server.baseUrl, '/api/persons?q=');
+    assert.ok(Array.isArray(empty.body));
+    assert.equal(empty.body.length, 2);
+
+    // Une recherche sans correspondance renvoie un tableau vide.
+    const noMatch = await requestJson(server.baseUrl, '/api/persons?q=zzz');
+    assert.ok(Array.isArray(noMatch.body));
+    assert.equal(noMatch.body.length, 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?limit= ou ?offset= vide pagine avec les valeurs par défaut', async () => {
+  const server = await startTestServer();
+  try {
+    for (const [givenNames, familyName] of [
+      ['Byron', 'Lovelace'],
+      ['Ada', 'Dupont'],
+    ]) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName },
+      });
+    }
+
+    for (const query of ['limit=', 'offset=']) {
+      const { status, body } = await requestJson(server.baseUrl, `/api/persons?${query}`);
+      assert.equal(status, 200, query);
+      assert.ok(Array.isArray(body.items), query);
+      assert.equal(body.total, 2, query);
+      assert.equal(body.limit, 50, query);
+      assert.equal(body.offset, 0, query);
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/persons?offset=0 seul pagine avec la limite par défaut', async () => {
+  const server = await startTestServer();
+  try {
+    for (const [givenNames, familyName] of [
+      ['Byron', 'Lovelace'],
+      ['Ada', 'Dupont'],
+    ]) {
+      await requestJson(server.baseUrl, '/api/persons', {
+        method: 'POST',
+        body: { givenNames, familyName },
+      });
+    }
+
+    const { status, body } = await requestJson(server.baseUrl, '/api/persons?offset=0');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body.items));
+    assert.equal(body.total, 2);
+    assert.equal(body.limit, 50);
+    assert.equal(body.offset, 0);
+    assert.deepEqual(body.items.map((person) => person.family_name).sort(), ['Dupont', 'Lovelace']);
   } finally {
     await server.close();
   }

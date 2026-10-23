@@ -1,0 +1,62 @@
+/* ---------- Arbre : repli, filtres ---------- */
+.tree-branch__toggle {
+  min-width: 28px;
+  height: 24px;
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-1);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  z-index: 1;
+}
+.tree-branch__toggle:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.tree-branch__toggle + .tree-branch__children {
+  margin-left: var(--space-4);
+}
+.tree-branch__toggle + .tree-branch__children::before {
+  left: calc(var(--space-4) * -1);
+  width: var(--space-4);
+}
+.tree-node--dimmed {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.tree-toolbar__period {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.tree-toolbar__period legend {
+  float: left;
+  margin-right: var(--space-2);
+  font: var(--type-label);
+}
+.tree-toolbar__period input {
+  width: 76px;
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.tree-toolbar__depth select {
+  min-height: var(--control-md);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.tree-toolbar__plain {
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}

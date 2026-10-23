@@ -1,0 +1,52 @@
+/* Portraits : vignette ronde (photo ou initiales) dans l'arbre et les fiches. */
+.portrait-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface-selected);
+  color: var(--action);
+  font-weight: 600;
+  border: var(--border-hairline) solid var(--border);
+}
+.portrait-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.person-card:has(> .portrait-avatar),
+.tree-node:has(> .portrait-avatar) {
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-2);
+  align-items: center;
+}
+.person-card > .portrait-avatar,
+.tree-node > .portrait-avatar {
+  grid-row: span 3;
+}
+.portrait-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.portrait-picker__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.portrait-picker__file {
+  position: relative;
+  cursor: pointer;
+}
+.portrait-picker__file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.media-panel__portrait {
+  margin-bottom: var(--space-3);
+}

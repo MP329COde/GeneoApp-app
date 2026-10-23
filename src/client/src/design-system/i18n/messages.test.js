@@ -28,4 +28,18 @@ describe('traductions', () => {
     expect(translate('xx', 'nav.tree')).toBe('Arbre');
     expect(translate('en', 'clé.inconnue', {}, 'repli')).toBe('repli');
   });
+
+  it('traduit les erreurs du serveur dans la langue du client', () => {
+    // Le serveur renvoie une clé et des variables, jamais une phrase choisie
+    // par lui : c'est le client qui met les phrases dans sa langue.
+    expect(
+      translate('en', 'server.validation.notAllowed', { field: 'sex', allowed: 'M, F, U' }),
+    ).toBe('sex must be one of the following values: M, F, U');
+    expect(translate('fr', 'server.validation.required', { field: 'nom' })).toBe(
+      'nom est obligatoire',
+    );
+    expect(translate('en', 'server.error.constraintUnique')).toBe(
+      'This item already exists: an identical value is already in use',
+    );
+  });
 });

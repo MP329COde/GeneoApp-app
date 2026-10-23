@@ -3,7 +3,10 @@ export function createAccountController(services) {
 
   return {
     create(request, response) {
-      const account = accounts.create(request.body, { performedBy: request.performedBy });
+      const account = accounts.create(request.body, {
+        performedBy: request.performedBy,
+        sessionToken: request.get('x-geneoapp-session'),
+      });
       response.status(201).json(account);
     },
 
@@ -12,7 +15,11 @@ export function createAccountController(services) {
     },
 
     remove(request, response) {
-      accounts.remove(Number(request.params.id), { performedBy: request.performedBy });
+      accounts.remove(Number(request.params.id), {
+        performedBy: request.performedBy,
+        sessionToken: request.get('x-geneoapp-session'),
+        pin: request.body?.pin,
+      });
       response.status(204).end();
     },
 

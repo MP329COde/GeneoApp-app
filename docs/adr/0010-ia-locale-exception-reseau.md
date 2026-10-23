@@ -24,3 +24,20 @@ Cet appel réseau est accepté comme exception à l'ADR 0006, sous les condition
 - L'ADR 0006 reste la règle générale ; cette ADR en documente la seule exception actuellement en production, conformément à sa clause de conséquences.
 - Toute évolution qui changerait la destination par défaut de cet appel (ex. un service cloud géré par défaut) nécessiterait une nouvelle ADR, pas une simple modification de cette exception.
 - La documentation utilisateur et les tests (`test/server/local-ai-service.test.js`) doivent continuer à vérifier que l'IA locale reste désactivée par défaut et n'échoue jamais silencieusement vers une réponse fabriquée.
+
+## Complément (phase K)
+
+- **Fournisseurs** : Ollama (`/api/generate`) et tout serveur compatible OpenAI comme LM Studio
+  (`/v1/chat/completions`). Réglages (activation, fournisseur, adresse, modèle) dans la table
+  `local_ai_settings`, désactivés par défaut, propres à la machine (ni sauvegardés ni annulables).
+- **Adresse locale imposée par le code** : seules les adresses de la machine (`localhost`, `127.x`, `::1`) et du
+  réseau local (`10.x`, `172.16-31.x`, `192.168.x`, `169.254.x`, `*.local`) sont acceptées ; un domaine ou une
+  adresse publique est refusé (400). Aucun identifiant dans l'URL.
+- **Prompts versionnés** (`analyze-note@1`, `analyze-source@1`, `explain-contradiction@1`, `suggest-research@1`) :
+  modifier un texte exige d'incrémenter sa version, rappelée dans chaque suggestion.
+- **Suggestions, jamais décisions** : la réponse porte `requiresHumanReview: true` ; le serveur n'écrit rien. Un
+  fait suggéré doit citer un extrait ; s'il n'est pas retrouvé dans le texte fourni, il est marqué non fondé. Côté
+  écran, « Proposer » crée une affirmation au statut PROPOSÉE (jamais retenue seule), « Ajouter » une hypothèse
+  ou une tâche. Aucune fusion, suppression ni choix entre valeurs contradictoires n'est automatique.
+- **Tests sans modèle** : `fetch` est injecté (faux serveur Ollama / LM Studio) dans `test/api/local-ai.test.js` et
+  `test/server/local-ai-suggestions.test.js` ; la CI n'installe aucun modèle.

@@ -1,0 +1,38 @@
+/* ---------- Parenté ---------- */
+.relationship-result h4 {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--type-heading);
+}
+.relationship-result__label {
+  font-size: 16px;
+}
+.relationship-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.relationship-path li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.relationship-path__via {
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.relationship-path__via::before {
+  content: '→ ';
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-link);
+  font: var(--type-person-name);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

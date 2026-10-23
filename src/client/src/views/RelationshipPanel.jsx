@@ -1,17 +1,28 @@
 import { useState } from 'react';
-import { Button } from '../design-system/index.js';
+import { Button, useTranslation } from '../design-system/index.js';
 
-const BRANCH_LABELS = { PATERNAL: 'paternelle', MATERNAL: 'maternelle' };
-const STEP_LABELS = { PARENT: 'parent', CHILD: 'enfant', SPOUSE: 'conjoint(e)' };
+// La branche et le type de lien sont des valeurs d'énumération renvoyées par
+// le moteur généalogique : ces tables en donnent la formulation dans chaque
+// langue.
+const BRANCH_KEYS = {
+  PATERNAL: 'relations.branch.paternal',
+  MATERNAL: 'relations.branch.maternal',
+};
+const STEP_KEYS = {
+  PARENT: 'relations.step.parent',
+  CHILD: 'relations.step.child',
+  SPOUSE: 'relations.step.spouse',
+};
 
-function nameOf(persons, id) {
+function nameOf(persons, id, unknownLabel) {
   const person = persons.find((candidate) => candidate.id === id);
-  return person ? `${person.given_names} ${person.family_name}` : `Personne #${id}`;
+  return person ? `${person.given_names} ${person.family_name}` : unknownLabel;
 }
 
 // Calculateur de parenté : chemin relationnel, libellé, branche et ancêtres
 // communs, calculés par le moteur généalogique (jamais côté React).
 export function RelationshipPanel({ client, persons, selected, onNavigate }) {
+  const { t } = useTranslation();
   const [personA, setPersonA] = useState(selected ? String(selected.id) : '');
   const [personB, setPersonB] = useState('');
   const [result, setResult] = useState(null);
@@ -37,14 +48,16 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
     }
   };
 
+  const unknown = (id) => t('relations.unknownPerson', { id });
+
   return (
     <div className="search-panel">
-      <h3>Calcul de parenté</h3>
+      <h3>{t('relations.title')}</h3>
       <form onSubmit={handleSubmit}>
         <label>
-          <span>Première personne</span>
+          <span>{t('relations.firstPerson')}</span>
           <select value={personA} onChange={(event) => setPersonA(event.target.value)}>
-            <option value="">— choisir —</option>
+            <option value="">{t('relations.choose')}</option>
             {persons.map((person) => (
               <option key={person.id} value={person.id}>
                 {person.given_names} {person.family_name}
@@ -53,9 +66,9 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
           </select>
         </label>
         <label>
-          <span>Seconde personne</span>
+          <span>{t('relations.secondPerson')}</span>
           <select value={personB} onChange={(event) => setPersonB(event.target.value)}>
-            <option value="">— choisir —</option>
+            <option value="">{t('relations.choose')}</option>
             {persons.map((person) => (
               <option key={person.id} value={person.id}>
                 {person.given_names} {person.family_name}
@@ -64,7 +77,7 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
           </select>
         </label>
         <Button type="submit" disabled={pending || !personA || !personB}>
-          Calculer la parenté
+          {t('relations.compute')}
         </Button>
       </form>
 
@@ -77,27 +90,61 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
       {result ? (
         <section aria-live="polite" className="relationship-result">
           {result.relationship.path.length === 0 ? (
-            <p className="notice">Aucun lien trouvé entre ces deux personnes dans cet arbre.</p>
+            <p className="notice">{t('relations.noLink')}</p>
           ) : (
             <>
               <p className="relationship-result__label">
-                <strong className="person-name">{nameOf(persons, Number(personB))}</strong> est{' '}
-                <strong>{result.relationship.label ?? 'apparenté(e)'}</strong> de{' '}
-                <strong className="person-name">{nameOf(persons, Number(personA))}</strong>.
+                <strong className="person-name">
+                  {nameOf(persons, Number(personB), unknown(Number(personB)))}
+                </strong>{' '}
+                {t('relations.isRelatedTo')}{' '}
+                <strong>{result.relationship.label ?? t('relations.related')}</strong>{' '}
+                {t('relations.of')}{' '}
+                <strong className="person-name">
+                  {nameOf(persons, Number(personA), unknown(Number(personA)))}
+                </strong>
+                .
               </p>
               <p className="data-id">
-                Distance : {result.relationship.distance}
+                {t('relations.distance', { count: result.relationship.distance })}
                 {result.relationship.branch
-                  ? ` · branche ${BRANCH_LABELS[result.relationship.branch] ?? 'indéterminée'}`
+                  ? ` · ${t('relations.branch', {
+                      branch: t(
+                        BRANCH_KEYS[result.relationship.branch] ?? 'relations.branch.unknown',
+                      ),
+                    })}`
                   : ''}
               </p>
-              <h4>Chemin</h4>
+              <p className="data-id">
+                {t('relations.bond', 'Nature du lien')} :{' '}
+                {t(`relations.bond.${result.relationship.bond}`, result.relationship.bond ?? '—')}
+              </p>
+              {result.relationship.consanguinity ? (
+                <p className="data-id">
+                  {t('relations.consanguinity', 'Lien de sang')} :{' '}
+                  {result.relationship.consanguinity.label}
+                </p>
+              ) : null}
+              {result.relationship.relationships?.length > 1 ? (
+                <>
+                  <h4>{t('relations.multiple', 'Relations multiples')}</h4>
+                  <ul className="search-results">
+                    {result.relationship.relationships.map((item) => (
+                      <li key={`${item.relationship}-${item.label}-${item.bond}`}>
+                        {item.label ?? t('relations.related')} (
+                        {t(`relations.bond.${item.bond}`, item.bond ?? '—')})
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              <h4>{t('relations.path')}</h4>
               <ol className="relationship-path">
                 {result.relationship.path.map((step, index) => (
                   <li key={`${step.personId}-${index}`}>
                     {index > 0 ? (
                       <span className="relationship-path__via">
-                        {STEP_LABELS[step.via] ?? step.via}
+                        {t(STEP_KEYS[step.via] ?? 'relations.step.unknown', { via: step.via })}
                       </span>
                     ) : null}
                     <button
@@ -105,16 +152,16 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
                       className="link-button"
                       onClick={() => onNavigate(step.personId)}
                     >
-                      {nameOf(persons, step.personId)}
+                      {nameOf(persons, step.personId, unknown(step.personId))}
                     </button>
                   </li>
                 ))}
               </ol>
             </>
           )}
-          <h4>Ancêtres communs</h4>
+          <h4>{t('relations.commonAncestors')}</h4>
           {result.common.length === 0 ? (
-            <p className="notice">Aucun ancêtre commun enregistré.</p>
+            <p className="notice">{t('relations.noCommonAncestor')}</p>
           ) : (
             <ul className="search-results">
               {result.common.map((item) => (
@@ -127,7 +174,10 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
                     {item.person.given_names} {item.person.family_name}
                   </button>
                   <span className="data-id">
-                    génération {item.generationFromA} / {item.generationFromB}
+                    {t('relations.generation', {
+                      fromA: item.generationFromA,
+                      fromB: item.generationFromB,
+                    })}
                   </span>
                 </li>
               ))}

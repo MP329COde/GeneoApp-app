@@ -44,6 +44,57 @@ export class ParentageRepository {
     });
   }
 
+  update(id, patch, { performedBy = null } = {}) {
+    const columns = {
+      parentRole: 'parent_role',
+      linkType: 'link_type',
+      unionId: 'union_id',
+      notes: 'notes',
+    };
+    const fields = Object.keys(patch).filter((key) => key in columns);
+    if (fields.length === 0) throw new Error('Aucun champ modifiable fourni');
+    return withTransaction(this.database, () => {
+      if (!this.findById(id)) throw new Error(`Filiation introuvable : ${id}`);
+      this.database
+        .prepare(
+          `UPDATE parentages SET ${fields.map((f) => `${columns[f]} = @${f}`).join(', ')},
+                                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = @id AND deleted_at IS NULL`,
+        )
+        .run({ id, ...Object.fromEntries(fields.map((f) => [f, patch[f]])) });
+      recordAudit(this.database, {
+        tableName: 'parentages',
+        rowId: id,
+        operation: 'UPDATE',
+        changes: Object.fromEntries(fields.map((f) => [f, patch[f]])),
+        performedBy,
+      });
+      return this.findById(id);
+    });
+  }
+
+  list({ includeDeleted = false } = {}) {
+    const clause = includeDeleted ? '' : 'WHERE deleted_at IS NULL';
+    return this.database.prepare(`SELECT * FROM parentages ${clause} ORDER BY id`).all();
+  }
+
+  /** `candidateId` est-il `personId` ou l'un de ses ancêtres (toutes natures de filiation) ? */
+  isSelfOrAncestor(candidateId, personId) {
+    return Boolean(
+      this.database
+        .prepare(
+          `WITH RECURSIVE line(id) AS (
+             SELECT ?
+             UNION
+             SELECT pa.parent_id FROM parentages pa JOIN line ON pa.child_id = line.id
+             WHERE pa.deleted_at IS NULL
+           )
+           SELECT 1 FROM line WHERE id = ?`,
+        )
+        .get(personId, candidateId),
+    );
+  }
+
   findById(id, { includeDeleted = false } = {}) {
     const clause = includeDeleted ? '' : 'AND deleted_at IS NULL';
     return this.database.prepare(`SELECT * FROM parentages WHERE id = ? ${clause}`).get(id) ?? null;

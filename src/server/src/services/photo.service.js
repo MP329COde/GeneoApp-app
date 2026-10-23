@@ -1,11 +1,12 @@
-import { NotFoundError, ValidationError } from '../errors.js';
+import { NotFoundError, fieldError } from '../errors.js';
+import { invalidError, requiredError } from '../validation/field-errors.js';
 
 const MAX_TAGS = 30;
 const MAX_TAG_LENGTH = 40;
 const MAX_TEXT = 5_000;
 
 function invalid(field, message = `${field} invalide`) {
-  return new ValidationError(message, { fields: { [field]: 'invalide' } });
+  return invalidError(field, message);
 }
 
 function positiveId(value, field) {
@@ -17,7 +18,13 @@ function positiveId(value, field) {
 function ratio(value, field, { allowZero = true } = {}) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0 || number > 1 || (!allowZero && number === 0)) {
-    throw invalid(field, `${field} doit être compris entre 0 et 1`);
+    throw fieldError(
+      field,
+      'OUT_OF_BOUNDS',
+      'server.validation.outOfBounds',
+      `${field} doit être compris entre 0 et 1`,
+      { field, min: 0, max: 1 },
+    );
   }
   return Math.round(number * 10_000) / 10_000;
 }
@@ -101,7 +108,13 @@ export class PhotoService {
   addRegion(mediaId, payload, options) {
     const media = this.requireMedia(mediaId);
     if (!media.mime_type.startsWith('image/')) {
-      throw new ValidationError('Les zones de personnes ne s’appliquent qu’aux images');
+      throw fieldError(
+        'mediaId',
+        'NOT_AN_IMAGE',
+        'server.validation.regionsNeedImage',
+        'Les zones de personnes ne s’appliquent qu’aux images',
+        { field: 'mediaId' },
+      );
     }
     const data = payload ?? {};
     const personId =
@@ -119,16 +132,20 @@ export class PhotoService {
     const label =
       typeof data.label === 'string' && data.label.trim() ? data.label.trim().slice(0, 120) : null;
     if (personId === null && label === null) {
-      throw new ValidationError('Indiquez une personne ou un libellé pour la zone', {
-        fields: { personId: 'obligatoire' },
-      });
+      throw requiredError('personId', 'Indiquez une personne ou un libellé pour la zone');
     }
     const x = ratio(data.x, 'x');
     const y = ratio(data.y, 'y');
     const width = ratio(data.width, 'width', { allowZero: false });
     const height = ratio(data.height, 'height', { allowZero: false });
     if (x + width > 1.0001 || y + height > 1.0001) {
-      throw new ValidationError('La zone dépasse de la photo');
+      throw fieldError(
+        'region',
+        'OUT_OF_BOUNDS',
+        'server.validation.regionOutOfBounds',
+        'La zone dépasse de la photo',
+        { field: 'region', min: 0, max: 1 },
+      );
     }
     return this.repository.addRegion(media.id, { personId, label, x, y, width, height }, options);
   }

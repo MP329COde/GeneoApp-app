@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from '../design-system/index.js';
+import { Button, useTranslation } from '../design-system/index.js';
 import {
   certainOrder,
   formatGenealogyDate,
@@ -10,7 +10,17 @@ function personName(person) {
   return `${person.given_names} ${person.family_name}`;
 }
 
-const SEX = { M: 'Homme', F: 'Femme', U: 'Inconnu' };
+// Libellés du sexe : indexés par code, traduits via l'i18n.
+const SEX_KEYS = { M: 'compare.sexMale', F: 'compare.sexFemale', U: 'compare.sexUnknown' };
+
+// Libellé du verdict de comparaison, par verdict technique.
+const VERDICT_KEYS = {
+  same: 'compare.verdictSame',
+  compatible: 'compare.verdictCompatible',
+  different: 'compare.verdictDifferent',
+  partial: 'compare.verdictPartial',
+  empty: 'compare.verdictEmpty',
+};
 
 function firstDate(events, personId, types) {
   const found = events
@@ -55,14 +65,6 @@ function compareLists(a, b) {
   return b.some((item) => left.has(normalize(item))) ? 'same' : 'different';
 }
 
-const VERDICTS = {
-  same: 'Identique',
-  compatible: 'Compatible',
-  different: 'Différent',
-  partial: 'Un seul renseigné',
-  empty: '—',
-};
-
 async function loadSide(client, person, events) {
   const relations = await client.graph.relations(person.id);
   return {
@@ -75,9 +77,10 @@ async function loadSide(client, person, events) {
 
 // Comparaison de deux personnes : utile avant une fusion de doublons ou pour
 // départager deux homonymes. Ne modifie rien.
-export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
+export function ComparePanel({ client, persons, selected, onOpenDuplicates, initialRightId }) {
+  const { t } = useTranslation();
   const [leftId, setLeftId] = useState(selected ? String(selected.id) : '');
-  const [rightId, setRightId] = useState('');
+  const [rightId, setRightId] = useState(initialRightId ? String(initialRightId) : '');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -105,11 +108,26 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
   const names = (list) => list.map(personName);
   const rows = result
     ? [
-        ['Prénom(s)', result.left.person.given_names, result.right.person.given_names, compareText],
-        ['Nom', result.left.person.family_name, result.right.person.family_name, compareText],
-        ['Sexe', SEX[result.left.person.sex], SEX[result.right.person.sex], compareText],
         [
-          'Naissance',
+          t('compare.fieldGivenNames', 'Prénom(s)'),
+          result.left.person.given_names,
+          result.right.person.given_names,
+          compareText,
+        ],
+        [
+          t('compare.fieldFamilyName', 'Nom'),
+          result.left.person.family_name,
+          result.right.person.family_name,
+          compareText,
+        ],
+        [
+          t('compare.fieldSex', 'Sexe'),
+          t(SEX_KEYS[result.left.person.sex] ?? 'compare.sexUnknown', 'Inconnu'),
+          t(SEX_KEYS[result.right.person.sex] ?? 'compare.sexUnknown', 'Inconnu'),
+          compareText,
+        ],
+        [
+          t('compare.fieldBirth', 'Naissance'),
           result.left.birth,
           result.right.birth,
           compareDates,
@@ -119,7 +137,7 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
               : '',
         ],
         [
-          'Décès',
+          t('compare.fieldDeath', 'Décès'),
           result.left.death,
           result.right.death,
           compareDates,
@@ -129,21 +147,21 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
               : '',
         ],
         [
-          'Parents',
+          t('compare.fieldParents', 'Parents'),
           names(result.left.relations.parents),
           names(result.right.relations.parents),
           compareLists,
           (v) => v.join(', '),
         ],
         [
-          'Conjoints',
+          t('compare.fieldSpouses', 'Conjoints'),
           names(result.left.relations.spouses),
           names(result.right.relations.spouses),
           compareLists,
           (v) => v.join(', '),
         ],
         [
-          'Enfants',
+          t('compare.fieldChildren', 'Enfants'),
           names(result.left.relations.children),
           names(result.right.relations.children),
           compareLists,
@@ -156,16 +174,16 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
 
   return (
     <div className="search-panel compare-panel">
-      <h3>Comparer deux personnes</h3>
+      <h3>{t('compare.title', 'Comparer deux personnes')}</h3>
       <div className="compare-panel__pickers">
         {[
-          ['Première personne', leftId, setLeftId],
-          ['Seconde personne', rightId, setRightId],
+          [t('compare.firstPerson', 'Première personne'), leftId, setLeftId],
+          [t('compare.secondPerson', 'Seconde personne'), rightId, setRightId],
         ].map(([label, value, setter]) => (
           <label key={label}>
             <span>{label}</span>
             <select value={value} onChange={(event) => setter(event.target.value)}>
-              <option value="">— choisir —</option>
+              <option value="">{t('compare.choose', '— choisir —')}</option>
               {persons.map((person) => (
                 <option key={person.id} value={person.id}>
                   {personName(person)} (#{person.id})
@@ -184,19 +202,33 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
         <>
           <p role="status" className="notice">
             {contradictions === 0
-              ? 'Aucune contradiction : ces fiches pourraient désigner la même personne.'
-              : `${contradictions} différence(s) nette(s) : probablement deux personnes distinctes.`}
+              ? t(
+                  'compare.noContradiction',
+                  'Aucune contradiction : ces fiches pourraient désigner la même personne.',
+                )
+              : t(
+                  'compare.contradictions',
+                  { count: contradictions },
+                  `${contradictions} différence(s) nette(s) : probablement deux personnes distinctes.`,
+                )}
           </p>
           <table className="compare-table">
             <caption className="gds-visually-hidden">
-              Comparaison de {personName(result.left.person)} et {personName(result.right.person)}
+              {t(
+                'compare.caption',
+                {
+                  left: personName(result.left.person),
+                  right: personName(result.right.person),
+                },
+                `Comparaison de ${personName(result.left.person)} et ${personName(result.right.person)}`,
+              )}
             </caption>
             <thead>
               <tr>
-                <th scope="col">Champ</th>
+                <th scope="col">{t('compare.columnField', 'Champ')}</th>
                 <th scope="col">{personName(result.left.person)}</th>
                 <th scope="col">{personName(result.right.person)}</th>
-                <th scope="col">Verdict</th>
+                <th scope="col">{t('compare.columnVerdict', 'Verdict')}</th>
               </tr>
             </thead>
             <tbody>
@@ -207,7 +239,7 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
                   <td>{format(b) || '—'}</td>
                   <td>
                     <span className={`compare-verdict compare-verdict--${verdicts[index]}`}>
-                      {VERDICTS[verdicts[index]]}
+                      {t(VERDICT_KEYS[verdicts[index]] ?? 'compare.verdictEmpty', '—')}
                     </span>
                   </td>
                 </tr>
@@ -216,12 +248,14 @@ export function ComparePanel({ client, persons, selected, onOpenDuplicates }) {
           </table>
           {contradictions === 0 && onOpenDuplicates ? (
             <Button variant="secondary" onClick={onOpenDuplicates}>
-              Ouvrir l’assistant de fusion des doublons
+              {t('compare.openDuplicates', 'Ouvrir l’assistant de fusion des doublons')}
             </Button>
           ) : null}
         </>
       ) : (
-        <p className="settings-hint">Choisissez deux personnes pour les comparer.</p>
+        <p className="settings-hint">
+          {t('compare.pickTwo', 'Choisissez deux personnes pour les comparer.')}
+        </p>
       )}
     </div>
   );

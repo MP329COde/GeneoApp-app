@@ -1,12 +1,18 @@
 import { forwardRef, useState } from 'react';
+import { useTranslation } from '../design-system/index.js';
 
 const fold = (value) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Raccourci clavier affiché en pastille : c'est une touche, pas un texte,
+// et il reste le même quelle que soit la langue.
+const SHORTCUT = '⌘K';
 
 /**
  * Recherche rapide d'une personne (⌘K / Ctrl+K) : liste déroulante
  * accessible (combobox ARIA), flèches pour parcourir, Entrée pour ouvrir.
  */
 export const QuickSearch = forwardRef(function QuickSearch({ persons, lifespans, onPick }, ref) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const matches = query.trim()
@@ -30,12 +36,12 @@ export const QuickSearch = forwardRef(function QuickSearch({ persons, lifespans,
         ref={ref}
         type="search"
         role="combobox"
-        aria-label="Rechercher une personne (Ctrl+K)"
+        aria-label={t('quickSearch.ariaLabel', 'Rechercher une personne (Ctrl+K)')}
         aria-expanded={open}
         aria-controls="quick-search-results"
         aria-activedescendant={open ? `quick-search-${matches[active]?.id}` : undefined}
         aria-autocomplete="list"
-        placeholder="Rechercher une personne…"
+        placeholder={t('quickSearch.placeholder', 'Rechercher une personne…')}
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -57,7 +63,7 @@ export const QuickSearch = forwardRef(function QuickSearch({ persons, lifespans,
         }}
       />
       <kbd className="quick-search__kbd" aria-hidden="true">
-        ⌘K
+        {SHORTCUT}
       </kbd>
       {open ? (
         <ul id="quick-search-results" role="listbox" className="quick-search__results">

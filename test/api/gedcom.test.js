@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { stopOcr } from '../../src/server/src/indexing/content-extract.js';
+
+after(() => stopOcr());
 import { startTestServer, requestJson } from './helpers.js';
 import { parseGedcom, validateGedcom } from '../../src/server/src/gedcom/index.js';
 
@@ -157,21 +160,26 @@ test('GEDCOM importe et réexporte les événements étendus (profession, migrat
     });
     assert.equal(imported.status, 201);
 
-    const types = server.database
+    const eventRows = server.database
       .prepare(
-        `SELECT type FROM events e
+        `SELECT type, value FROM events e
          JOIN event_participants ep ON ep.event_id = e.id
          WHERE ep.person_id = ? ORDER BY e.id`,
       )
-      .all(imported.body.ids.persons[0])
-      .map((row) => row.type);
-    assert.deepEqual(types, ['BIRTH', 'OCCUPATION', 'NATURALIZATION']);
+      .all(imported.body.ids.persons[0]);
+    assert.deepEqual(
+      eventRows.map((row) => row.type),
+      ['BIRTH', 'OCCUPATION', 'NATURALIZATION'],
+    );
+    // La valeur métier portée par la ligne du tag lui-même (« 1 OCCU Mathématicienne »)
+    // doit être conservée, pas seulement le type d'événement.
+    assert.equal(eventRows.find((row) => row.type === 'OCCUPATION').value, 'Mathématicienne');
 
     const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
       method: 'POST',
       body: { format: '7' },
     });
-    assert.match(exported.body.gedcom, /1 OCCU/);
+    assert.match(exported.body.gedcom, /1 OCCU Mathématicienne/);
     assert.match(exported.body.gedcom, /1 NATU/);
   } finally {
     await server.close();
@@ -206,6 +214,51 @@ test('GEDCOM importe et réexporte un événement militaire via le tag génériq
       body: { format: '5.5.1' },
     });
     assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Military/);
+  } finally {
+    await server.close();
+  }
+});
+
+test('GEDCOM conserve les dates estimées/calculées et les types migration, succession, engagement religieux', async () => {
+  const server = await startTestServer();
+  try {
+    const gedcom = fixture.replace(
+      '1 BIRT\n2 DATE 10 DEC 1815\n2 PLAC London',
+      [
+        '1 BIRT\n2 DATE EST 1815\n2 PLAC London',
+        '1 EVEN\n2 TYPE Migration\n2 DATE CAL 1830',
+        '1 EVEN\n2 TYPE Succession\n2 DATE 1852',
+        '1 EVEN\n2 TYPE Religious commitment\n2 DATE 1840',
+      ].join('\n'),
+    );
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom },
+    });
+    assert.equal(imported.status, 201);
+
+    const rows = server.database
+      .prepare(
+        `SELECT e.type, e.date_precision AS precision FROM events e
+         JOIN event_participants ep ON ep.event_id = e.id
+         WHERE ep.person_id = ? ORDER BY e.id`,
+      )
+      .all(imported.body.ids.persons[0]);
+    assert.deepEqual(rows, [
+      { type: 'BIRTH', precision: 'ESTIMATED' },
+      { type: 'MIGRATION', precision: 'CALCULATED' },
+      { type: 'SUCCESSION', precision: 'EXACT' },
+      { type: 'RELIGIOUS_COMMITMENT', precision: 'EXACT' },
+    ]);
+
+    const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.match(exported.body.gedcom, /2 DATE EST 1815/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Migration\n2 DATE CAL 1830/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Succession/);
+    assert.match(exported.body.gedcom, /1 EVEN\n2 TYPE Religious commitment/);
   } finally {
     await server.close();
   }
@@ -435,5 +488,236 @@ test('aller-retour GEDCOM fidèle : filiations sans union, enfant unique par fam
   } finally {
     await source.close();
     await target.close();
+  }
+});
+
+// L'import écrit en SQL direct, sans passer par les dépôts métier : l'index
+// de recherche locale n'était donc pas alimenté, et les personnes importées
+// restaient introuvables par la recherche.
+test('GEDCOM import alimente la recherche locale', async () => {
+  const server = await startTestServer();
+  try {
+    const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(imported.status, 201);
+
+    const persons = server.database.prepare('SELECT COUNT(*) AS count FROM persons').get().count;
+    const indexed = server.database
+      .prepare("SELECT COUNT(*) AS count FROM search_index WHERE entity_type = 'PERSON'")
+      .get().count;
+    assert.equal(indexed, persons, 'chaque personne importée doit être indexée');
+
+    // Une personne importée est retrouvée par la recherche locale. Le prénom
+    // est choisi car la fixture porte deux personnes de même nom de famille
+    // (Lovelace) : c'est l'indexation complète, et non une correspondance
+    // partielle, qui est vérifiée ici.
+    const givenName = server.database
+      .prepare('SELECT given_names FROM persons ORDER BY id LIMIT 1')
+      .get().given_names;
+    const found = await requestJson(
+      server.baseUrl,
+      `/api/search?q=${encodeURIComponent(givenName)}&entityTypes=PERSON`,
+    );
+    assert.equal(found.status, 200);
+    assert.equal(found.body.length, 1);
+    assert.equal(found.body[0].entity_type, 'PERSON');
+  } finally {
+    await server.close();
+  }
+});
+
+test('export : en-tête conforme, relu et vérifié ; un retour à la ligne dans un nom ne casse pas le fichier', async () => {
+  const server = await startTestServer();
+  try {
+    const empty = await requestJson(server.baseUrl, '/api/gedcom/export', {
+      method: 'POST',
+      body: { format: '5.5.1' },
+    });
+    assert.equal(empty.status, 200, 'un arbre vide s’exporte aussi');
+    assert.equal(empty.body.summary.verified, true);
+    assert.match(
+      empty.body.gedcom,
+      /^0 HEAD\n1 SOUR GeneoApp\n2 NAME GeneoApp\n1 GEDC\n2 VERS 5\.5\.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n1 SUBM @SUBM1@/,
+    );
+
+    const hostile = await requestJson(server.baseUrl, '/api/persons', {
+      method: 'POST',
+      body: {
+        givenNames: 'Ada\n0 TRLR\n0 @I999@ INDI',
+        familyName: 'Lovelace\r\n1 SEX M',
+        notes: 'ligne 1\nligne 2',
+      },
+    });
+    assert.equal(hostile.status, 201);
+
+    for (const format of ['5.5.1', '7']) {
+      const exported = await requestJson(server.baseUrl, '/api/gedcom/export', {
+        method: 'POST',
+        body: { format },
+      });
+      assert.equal(exported.status, 200);
+      assert.equal(exported.body.summary.persons, 1);
+      const records = parseGedcom(exported.body.gedcom);
+      assert.equal(records.filter((record) => record.tag === 'INDI').length, 1, format);
+      assert.equal(records.filter((record) => record.tag === 'TRLR').length, 1, format);
+      if (format === '7') {
+        assert.match(exported.body.gedcom, /2 VERS 7\.0/);
+        assert.doesNotMatch(exported.body.gedcom, /1 CHAR/);
+      }
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('import par octets bruts : ANSI, ANSEL, UTF-16 et fins de ligne CR seul, encodage rapporté', async () => {
+  const server = await startTestServer();
+  try {
+    const text = (charset, eol = '\n') =>
+      [
+        '0 HEAD',
+        '1 GEDC',
+        '2 VERS 5.5.1',
+        `1 CHAR ${charset}`,
+        '0 @I1@ INDI',
+        '1 NAME Zoé /Léger/',
+        '0 TRLR',
+      ].join(eol) + eol;
+    const files = [
+      ['WINDOWS-1252', Buffer.from(text('ANSI'), 'latin1')],
+      [
+        'UTF-16LE',
+        Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text('UNICODE'), 'utf16le')]),
+      ],
+      ['UTF-8', Buffer.from(text('UTF-8', '\r'), 'utf8')],
+      [
+        'ANSEL',
+        Buffer.concat([
+          Buffer.from('0 HEAD\n1 GEDC\n2 VERS 5.5.1\n1 CHAR ANSEL\n0 @I1@ INDI\n1 NAME Zo'),
+          Buffer.from([0xe2, 0x65]),
+          Buffer.from(' /L'),
+          Buffer.from([0xe2, 0x65]),
+          Buffer.from('ger/\n0 TRLR\n'),
+        ]),
+      ],
+    ];
+    for (const [encoding, buffer] of files) {
+      const preview = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+        method: 'POST',
+        body: { gedcomBase64: buffer.toString('base64') },
+      });
+      assert.equal(preview.status, 200, encoding);
+      assert.equal(preview.body.encoding, encoding);
+      assert.equal(preview.body.valid, true, encoding);
+
+      const imported = await requestJson(server.baseUrl, '/api/gedcom/import', {
+        method: 'POST',
+        body: { gedcomBase64: buffer.toString('base64'), confirmDuplicates: true },
+      });
+      assert.equal(imported.status, 201, encoding);
+      const person = server.database
+        .prepare('SELECT given_names, family_name FROM persons WHERE id = ?')
+        .get(imported.body.ids.persons[0]);
+      assert.deepEqual(person, { given_names: 'Zoé', family_name: 'Léger' }, encoding);
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('pipeline : doublons probables signalés à l’aperçu, import refusé sans confirmation, jamais de fusion', async () => {
+  const server = await startTestServer();
+  try {
+    const first = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(first.status, 201);
+    const count = () => server.database.prepare('SELECT COUNT(*) AS n FROM persons').get().n;
+    assert.equal(count(), 3);
+
+    const preview = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(preview.body.valid, true);
+    assert.equal(preview.body.duplicateCount, 3);
+    assert.ok(
+      preview.body.duplicates.some((d) => d.name === 'Ada Lovelace' && d.birthYear === 1815),
+    );
+    assert.ok(preview.body.duplicates.every((d) => d.reason === 'SAME_REFERENCE_AND_NAME'));
+
+    const refused = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture },
+    });
+    assert.equal(refused.status, 409);
+    assert.equal(refused.body.requiresConfirmation, true);
+    assert.equal(refused.body.imported, false);
+    assert.equal(count(), 3, 'rien n’est écrit sans confirmation');
+
+    const confirmed = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: fixture, confirmDuplicates: true },
+    });
+    assert.equal(confirmed.status, 201);
+    assert.equal(confirmed.body.duplicatesConfirmed, 3);
+    assert.equal(count(), 6, 'l’import confirmé ajoute, il ne fusionne ni n’écrase rien');
+
+    // Un homonyme né à une autre époque n'est pas signalé.
+    const other = fixture.replace('10 DEC 1815', '10 DEC 1700');
+    const homonym = await requestJson(server.baseUrl, '/api/gedcom/preview', {
+      method: 'POST',
+      body: { gedcom: other.replaceAll('@I', '@X').replaceAll('@F1@', '@Y1@') },
+    });
+    assert.ok(!homonym.body.duplicates.some((d) => d.name === 'Ada Lovelace'));
+  } finally {
+    await server.close();
+  }
+});
+
+test('rollback intégral : un fichier incohérent n’écrit rien et répond 400, pas 500', async () => {
+  const server = await startTestServer();
+  try {
+    const selfParent = [
+      '0 HEAD',
+      '1 GEDC',
+      '2 VERS 5.5.1',
+      '0 @I1@ INDI',
+      '1 NAME Valide /Personne/',
+      '1 BIRT',
+      '2 DATE 1900',
+      '0 @I2@ INDI',
+      '1 NAME Son /Propre-parent/',
+      '0 @F1@ FAM',
+      '1 HUSB @I2@',
+      '1 CHIL @I2@',
+      '0 TRLR',
+    ].join('\n');
+    const result = await requestJson(server.baseUrl, '/api/gedcom/import', {
+      method: 'POST',
+      body: { gedcom: selfParent },
+    });
+    assert.equal(result.status, 400);
+    assert.match(result.body.error.message, /aucune donnée écrite/);
+    for (const table of [
+      'persons',
+      'events',
+      'event_participants',
+      'unions',
+      'parentages',
+      'places',
+    ]) {
+      assert.equal(
+        server.database.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n,
+        0,
+        `${table} doit rester vide`,
+      );
+    }
+    assert.equal(server.database.prepare('SELECT COUNT(*) AS n FROM search_index_map').get().n, 0);
+  } finally {
+    await server.close();
   }
 });

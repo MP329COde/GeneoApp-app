@@ -12,6 +12,42 @@ export function createSourceController(services) {
       response.json(source);
     },
 
+    list(_request, response) {
+      response.json(sources.list());
+    },
+
+    update(request, response) {
+      response.json(
+        sources.update(Number(request.params.id), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    remove(request, response) {
+      sources.remove(Number(request.params.id), { performedBy: request.performedBy });
+      response.status(204).end();
+    },
+
+    getCitation(request, response) {
+      response.json(sources.getCitation(Number(request.params.citationId)));
+    },
+
+    updateCitation(request, response) {
+      response.json(
+        sources.updateCitation(Number(request.params.citationId), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
+    removeCitation(request, response) {
+      sources.removeCitation(Number(request.params.citationId), {
+        performedBy: request.performedBy,
+      });
+      response.status(204).end();
+    },
+
     addCitation(request, response) {
       const citationId = sources.addCitation(request.body, { performedBy: request.performedBy });
       response.status(201).json({ id: citationId });

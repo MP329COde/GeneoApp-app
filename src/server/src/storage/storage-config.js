@@ -2,7 +2,8 @@ import { constants } from 'node:fs';
 import { access, copyFile, cp, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { ValidationError } from '../errors.js';
+import { fieldError } from '../errors.js';
+import { invalidError, notFoundError } from '../validation/field-errors.js';
 
 const CONFIG_FILE = 'storage.json';
 
@@ -31,28 +32,24 @@ export function configuredDataDir(configDir) {
 
 async function assertWritableDirectory(directory, field) {
   if (typeof directory !== 'string' || !path.isAbsolute(directory)) {
-    throw new ValidationError('Le dossier doit être un chemin absolu', {
-      fields: { [field]: 'invalide' },
-    });
+    throw invalidError(field, 'Le dossier doit être un chemin absolu');
   }
   const resolved = path.resolve(directory);
   let info;
   try {
     info = await stat(resolved);
   } catch {
-    throw new ValidationError('Dossier introuvable (la clé est-elle branchée ?)', {
-      fields: { [field]: 'introuvable' },
-    });
+    throw notFoundError(field, 'Dossier introuvable (la clé est-elle branchée ?)');
   }
   if (!info.isDirectory()) {
-    throw new ValidationError('Ce chemin n’est pas un dossier', {
-      fields: { [field]: 'invalide' },
-    });
+    throw invalidError(field, 'Ce chemin n’est pas un dossier');
   }
   try {
     await access(resolved, constants.W_OK);
   } catch {
-    throw new ValidationError('Dossier en lecture seule', { fields: { [field]: 'lecture seule' } });
+    throw fieldError(field, 'READ_ONLY', 'server.validation.readOnly', 'Dossier en lecture seule', {
+      field,
+    });
   }
   return resolved;
 }

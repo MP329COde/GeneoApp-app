@@ -4,3 +4,6 @@ GOVERNANCE.md
 docs/
 .playwright-cli/
 **/storybook-static/
+# Rapport HTML Playwright généré (assets vendor + captures/JSON de résultats) :
+# régénéré par `npm run test:e2e`, jamais écrit à la main.
+qa/reports/

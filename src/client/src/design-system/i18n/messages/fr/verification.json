@@ -1,0 +1,251 @@
+{
+  "verification.rerun": "Relancer la vérification",
+  "verification.rerunHint": "Recherche à nouveau les doublons, cycles et incohérences de dates",
+  "verification.running": "Vérification en cours…",
+  "quality.title": "Qualité des données",
+  "quality.sourcedFacts": "Faits sourcés",
+  "quality.unsourced": {
+    "one": "{count} fait sans source :",
+    "other": "{count} faits sans source :"
+  },
+  "quality.identity": "identité",
+  "quality.citeSource": "citer une source",
+  "quality.allSourced": "Tous les faits sont sourcés.",
+  "quality.confidence.label": "Confiance :",
+  "quality.confidence.high": "élevée",
+  "quality.confidence.medium": "moyenne",
+  "quality.confidence.low": "faible",
+  "quality.issues": {
+    "one": "{count} incohérence",
+    "other": "{count} incohérences"
+  },
+  "quality.certainIssues": {
+    "one": "({count} certaine)",
+    "other": "({count} certaines)"
+  },
+  "quality.examine": "examiner",
+  "quality.score": "Indice de qualité",
+  "quality.meterLabel": "{label} : {score} sur 4",
+  "duplicates.scan": "Analyser les doublons potentiels",
+  "duplicates.confirmLabel": "Confirmer la fusion",
+  "duplicates.confirmIntro": "Fusionner {duplicate} dans {survivor} ? Cette action réattribue :",
+  "duplicates.noReassignment": "Aucune donnée liée à réattribuer.",
+  "duplicates.softDeleteHint": "La fiche de {duplicate} sera supprimée en douceur.",
+  "duplicates.confirm": "Confirmer la fusion",
+  "duplicates.cancel": "Annuler",
+  "duplicates.none": "Aucun doublon potentiel détecté.",
+  "duplicates.total": {
+    "one": "{count} doublon possible détecté au total — les {shown} scores les plus élevés sont affichés ci-dessous.",
+    "other": "{count} doublons possibles détectés au total — les {shown} scores les plus élevés sont affichés ci-dessous."
+  },
+  "duplicates.viewA": "Voir la fiche A",
+  "duplicates.viewB": "Voir la fiche B",
+  "duplicates.mergeKeepA": "Fusionner (garder A)",
+  "duplicates.mergeKeepB": "Fusionner (garder B)",
+  "merge.reassignment.parentagesAsParent": {
+    "one": "1 lien parent → enfant",
+    "other": "{count} liens parent → enfant"
+  },
+  "merge.reassignment.parentagesAsChild": {
+    "one": "1 lien enfant → parent",
+    "other": "{count} liens enfant → parent"
+  },
+  "merge.reassignment.unionPartnerships": {
+    "one": "1 union",
+    "other": "{count} unions"
+  },
+  "merge.reassignment.eventParticipations": {
+    "one": "1 participation à un événement",
+    "other": "{count} participations à un événement"
+  },
+  "merge.reassignment.citations": {
+    "one": "1 citation de source",
+    "other": "{count} citations de source"
+  },
+  "merge.reassignment.notes": {
+    "one": "1 note",
+    "other": "{count} notes"
+  },
+  "merge.reassignment.assertions": {
+    "one": "1 affirmation",
+    "other": "{count} affirmations"
+  },
+  "merge.reassignment.identifiers": {
+    "one": "1 identifiant externe",
+    "other": "{count} identifiants externes"
+  },
+  "merge.reassignment.media": {
+    "one": "1 média",
+    "other": "{count} médias"
+  },
+  "merge.identity.field.given_names": "Prénoms",
+  "merge.identity.field.family_name": "Nom",
+  "merge.identity.field.birth_family_name": "Nom de naissance",
+  "merge.identity.field.married_name": "Nom marital",
+  "merge.identity.field.alias": "Alias",
+  "merge.identity.field.nickname": "Surnom",
+  "merge.identity.field.title": "Titre",
+  "merge.identity.field.suffix": "Suffixe",
+  "merge.identity.field.sex": "Sexe",
+  "merge.identity.conflicts": "Valeurs différentes, toutes conservées comme affirmations à trancher :",
+  "merge.identity.fills": "Champs vides complétés par la fiche fusionnée :",
+  "timelineIssue.BIRTH_AFTER_DEATH": "Naissance enregistrée après le décès",
+  "timelineIssue.MARRIAGE_AFTER_DEATH": "Mariage enregistré après le décès",
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Mariage enregistré avant la naissance",
+  "timelineIssue.MARRIAGE_VERY_YOUNG": "Mariage à un âge très jeune",
+  "timelineIssue.BAPTISM_BEFORE_BIRTH": "Baptême enregistré avant la naissance",
+  "timelineIssue.BURIAL_BEFORE_DEATH": "Inhumation enregistrée avant le décès",
+  "timelineIssue.IMPOSSIBLE_AGE": "Âge au décès exceptionnel",
+  "timelineIssue.MULTIPLE_BIRTHS": "Plusieurs naissances enregistrées",
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT": "Enfant né avant son parent",
+  "timelineIssue.PARENT_TOO_YOUNG": "Parent très jeune à la naissance",
+  "timelineIssue.PARENT_TOO_OLD": "Parent âgé à la naissance",
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Naissance de l'enfant enregistrée après le décès du parent",
+  "timelineIssue.LIVING_WITH_DEATH": "Marquée vivante malgré un décès enregistré",
+  "timelineIssue.LIVING_TOO_OLD": "Marquée vivante mais très âgée",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS": "Plusieurs pères biologiques",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS": "Plusieurs mères biologiques",
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS": "Plus de deux parents biologiques",
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH": "Rôle de parent incompatible avec le sexe",
+  "timelineIssue.PARENT_NOT_IN_UNION": "Parent absent de l’union de rattachement",
+  "timelineIssue.DUPLICATE_UNION": "Union enregistrée en double",
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT": "Union entre un ancêtre et son descendant",
+  "timelineIssue.UNION_BETWEEN_SIBLINGS": "Union entre personnes ayant un parent commun",
+  "timelineIssue.severity.certain": "Erreur certaine",
+  "timelineIssue.severity.possible": "Inhabituel, à vérifier",
+  "timelineIssue.generic": "Incohérence de chronologie",
+  "timelineIssue.genericPlural": {
+    "one": "{count} incohérence de chronologie",
+    "other": "{count} incohérences de chronologie"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS.plural": {
+    "one": "{count} enfant avec plusieurs pères biologiques",
+    "other": "{count} enfants avec plusieurs pères biologiques"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS.plural": {
+    "one": "{count} enfant avec plusieurs mères biologiques",
+    "other": "{count} enfants avec plusieurs mères biologiques"
+  },
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS.plural": {
+    "one": "{count} enfant avec plus de deux parents biologiques",
+    "other": "{count} enfants avec plus de deux parents biologiques"
+  },
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH.plural": {
+    "one": "{count} rôle de parent incompatible avec le sexe",
+    "other": "{count} rôles de parent incompatibles avec le sexe"
+  },
+  "timelineIssue.PARENT_NOT_IN_UNION.plural": {
+    "one": "{count} parent absent de son union",
+    "other": "{count} parents absents de leur union"
+  },
+  "timelineIssue.DUPLICATE_UNION.plural": {
+    "one": "{count} union en double",
+    "other": "{count} unions en double"
+  },
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT.plural": {
+    "one": "{count} union entre un ancêtre et son descendant",
+    "other": "{count} unions entre un ancêtre et son descendant"
+  },
+  "timelineIssue.UNION_BETWEEN_SIBLINGS.plural": {
+    "one": "{count} union entre personnes ayant un parent commun",
+    "other": "{count} unions entre personnes ayant un parent commun"
+  },
+  "timelineIssue.duplicatesTitle": "Doublons possibles",
+  "timelineIssue.duplicatesPlural": {
+    "one": "{count} doublon possible détecté",
+    "other": "{count} doublons possibles détectés"
+  },
+  "timelineIssue.duplicatesHint": "{counted} — ouvrir la vérification.",
+  "timelineIssue.cyclesTitle": "Cycles de filiation",
+  "timelineIssue.cyclesPlural": {
+    "one": "{count} cycle de filiation détecté",
+    "other": "{count} cycles de filiation détectés"
+  },
+  "timelineIssue.cyclesHint": "{counted} — ouvrir la cohérence.",
+  "timelineIssue.BIRTH_AFTER_DEATH.plural": {
+    "one": "{count} naissance enregistrée après le décès",
+    "other": "{count} naissances enregistrées après le décès"
+  },
+  "timelineIssue.MARRIAGE_AFTER_DEATH.plural": {
+    "one": "{count} mariage enregistré après le décès",
+    "other": "{count} mariages enregistrés après le décès"
+  },
+  "timelineIssue.MARRIAGE_BEFORE_BIRTH.plural": {
+    "one": "{count} mariage enregistré avant la naissance",
+    "other": "{count} mariages enregistrés avant la naissance"
+  },
+  "timelineIssue.MARRIAGE_VERY_YOUNG.plural": {
+    "one": "{count} mariage à un âge très jeune",
+    "other": "{count} mariages à un âge très jeune"
+  },
+  "timelineIssue.BAPTISM_BEFORE_BIRTH.plural": {
+    "one": "{count} baptême enregistré avant la naissance",
+    "other": "{count} baptêmes enregistrés avant la naissance"
+  },
+  "timelineIssue.BURIAL_BEFORE_DEATH.plural": {
+    "one": "{count} inhumation enregistrée avant le décès",
+    "other": "{count} inhumations enregistrées avant le décès"
+  },
+  "timelineIssue.IMPOSSIBLE_AGE.plural": {
+    "one": "{count} âge au décès exceptionnel",
+    "other": "{count} âges au décès exceptionnels"
+  },
+  "timelineIssue.MULTIPLE_BIRTHS.plural": {
+    "one": "{count} naissance multiple enregistrée",
+    "other": "{count} naissances multiples enregistrées"
+  },
+  "timelineIssue.CHILD_BORN_BEFORE_PARENT.plural": {
+    "one": "{count} enfant né avant son parent",
+    "other": "{count} enfants nés avant leur parent"
+  },
+  "timelineIssue.PARENT_TOO_YOUNG.plural": {
+    "one": "{count} parent très jeune à la naissance",
+    "other": "{count} parents très jeunes à la naissance"
+  },
+  "timelineIssue.PARENT_TOO_OLD.plural": {
+    "one": "{count} parent âgé à la naissance",
+    "other": "{count} parents âgés à la naissance"
+  },
+  "timelineIssue.CHILD_AFTER_PARENT_DEATH.plural": {
+    "one": "{count} naissance de l'enfant enregistrée après le décès du parent",
+    "other": "{count} naissances d'enfants enregistrées après le décès du parent"
+  },
+  "timelineIssue.LIVING_WITH_DEATH.plural": {
+    "one": "{count} personne marquée vivante malgré un décès enregistré",
+    "other": "{count} personnes marquées vivantes malgré un décès enregistré"
+  },
+  "timelineIssue.LIVING_TOO_OLD.plural": {
+    "one": "{count} personne marquée vivante mais très âgée",
+    "other": "{count} personnes marquées vivantes mais très âgées"
+  },
+  "verification.checkConsistency": "Vérifier la cohérence de l’arbre",
+  "verification.certainTitle": "Erreurs certaines à corriger",
+  "verification.unusualTitle": "Situations inhabituelles à vérifier",
+  "verification.cyclesTitle": "Cycles de filiation",
+  "verification.noCycle": "Aucun cycle détecté.",
+  "verification.cycleBadge": "Cycle",
+  "verification.timelineTitle": "Incohérences de chronologie",
+  "verification.noTimelineIssue": "Aucune incohérence de date détectée.",
+  "verification.parentOf": "parent : {name}",
+  "verification.viewRecord": "Voir la fiche",
+  "verification.cycleDetail": "Une personne figure parmi ses propres ancêtres.",
+  "verification.cycleTitleShort": "Cycle de filiation",
+  "verification.sectionTitle": "À vérifier",
+  "verification.allClear": "RAS",
+  "verification.noIssue": "Aucun doublon ni incohérence détecté pour cette personne.",
+  "verification.duplicatePossible": "Doublon possible ({score} %)",
+  "verification.reason.NAME_SIMILAR": "Noms proches ({points} points)",
+  "verification.reason.BIRTH_NAME_SIMILAR": "Noms de naissance proches ({points} points)",
+  "verification.reason.BIRTH_YEAR_CLOSE": "Années de naissance proches ({points} points)",
+  "verification.reason.DEATH_YEAR_CLOSE": "Années de décès proches ({points} points)",
+  "verification.reason.SAME_BIRTH_PLACE": "Même lieu de naissance ({points} points)",
+  "verification.reason.SHARED_PARENT": "Parent commun ({points} points)",
+  "verification.reason.SEX_DIFFERS": "Sexes différents ({points} points)",
+  "verification.duplicateWith": "avec",
+  "verification.compare": "Comparer",
+  "verification.mergeHere": "Fusionner ici",
+  "verification.confirmMerge": "Confirmer la fusion",
+  "verification.confirmMergeAria": "Confirmer la fusion",
+  "verification.mergeQuestion": "Fusionner {duplicate} dans {survivor} ?",
+  "verification.cancel": "Annuler"
+}

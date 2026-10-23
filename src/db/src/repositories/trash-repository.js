@@ -6,13 +6,116 @@ import { withTransaction, recordAudit } from './base-repository.js';
 const TRASH_TABLES = {
   persons: (row) => `${row.given_names} ${row.family_name}`.trim(),
   places: (row) => row.name,
+  sources: (row) => row.title,
+  citations: (row) => `citation #${row.id} (source #${row.source_id})`,
+  assertions: (row) => `${row.field} : ${row.value}`,
   events: (row) => row.type,
   unions: (row) => row.type,
   parentages: (row) => `parent #${row.parent_id} -> enfant #${row.child_id}`,
   media: (row) => row.original_filename,
+  // Un carnet de recherche supprimé est restaurable comme les autres tables :
+  // sans cette entrée, la donnée disparaissait de toutes les vues (le carnet
+  // est filtré par `deleted_at IS NULL`) sans jamais apparaître en corbeille.
+  research_notebook: (row) => row.title,
 };
 
 export const TRASH_TABLE_NAMES = Object.keys(TRASH_TABLES);
+
+/**
+ * Dépendances à purger en cascade lors d'une suppression définitive.
+ *
+ * Une purge « simple » (`DELETE FROM table WHERE id = ?`) échoue dès qu'une
+ * ligne enfant référence la ligne supprimée : les clés étrangères étant
+ * actives, SQLite refuse la suppression et l'utilisateur ne peut jamais
+ * vider sa corbeille. Il faut donc supprimer d'abord les lignes enfants,
+ * puis la ligne elle-même — et cela récursivement, car les dépendances ont
+ * elles-mêmes des dépendances (un carnet de recherche référence des
+ * hypothèses, qui référencent des preuves).
+ *
+ * Chaque entrée décrit une dépendance directe : la table fille, la colonne
+ * qui référence le parent, et le mode de suppression.
+ *   - `row` : les lignes filles sont supprimées (référence par colonne).
+ *   - `link` : les lignes filles sont supprimées (référence polymorphe
+ *     `entity_type` + `entity_id`, non nullable).
+ *   - `detach` : les lignes filles sont conservées, le lien est retiré
+ *     (colonne nullable : le parent reste valide sans la référence).
+ */
+const CASCADE_DEPENDENCIES = {
+  persons: [
+    { table: 'event_participants', column: 'person_id', mode: 'row' },
+    { table: 'union_partners', column: 'person_id', mode: 'row' },
+    { table: 'parentages', column: 'child_id', mode: 'row' },
+    { table: 'parentages', column: 'parent_id', mode: 'row' },
+    { table: 'media_regions', column: 'person_id', mode: 'row' },
+    { table: 'media_links', entityType: 'PERSON', mode: 'link' },
+    { table: 'person_identifiers', column: 'person_id', mode: 'row' },
+    { table: 'research_notebook', column: 'person_id', mode: 'row' },
+    { table: 'citations', entityType: 'PERSON', mode: 'link' },
+    { table: 'assertions', entityType: 'PERSON', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'PERSON', mode: 'link' },
+    { table: 'notes', entityType: 'PERSON', mode: 'link' },
+  ],
+  places: [
+    { table: 'events', column: 'place_id', mode: 'row' },
+    { table: 'media', column: 'place_id', mode: 'row' },
+    { table: 'place_names', column: 'place_id', mode: 'row' },
+    { table: 'place_parents', column: 'place_id', mode: 'row' },
+    { table: 'place_parents', column: 'parent_place_id', mode: 'row' },
+    { table: 'citations', entityType: 'PLACE', mode: 'link' },
+    { table: 'assertions', entityType: 'PLACE', mode: 'link' },
+    { table: 'media_links', entityType: 'PLACE', mode: 'link' },
+  ],
+  events: [
+    { table: 'event_participants', column: 'event_id', mode: 'row' },
+    { table: 'unions', column: 'start_event_id', mode: 'row' },
+    { table: 'unions', column: 'end_event_id', mode: 'row' },
+    { table: 'citations', entityType: 'EVENT', mode: 'link' },
+    { table: 'assertions', entityType: 'EVENT', mode: 'link' },
+    { table: 'media_links', entityType: 'EVENT', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'EVENT', mode: 'link' },
+    { table: 'notes', entityType: 'EVENT', mode: 'link' },
+  ],
+  unions: [
+    { table: 'union_partners', column: 'union_id', mode: 'row' },
+    { table: 'parentages', column: 'union_id', mode: 'row' },
+    { table: 'citations', entityType: 'UNION', mode: 'link' },
+    { table: 'assertions', entityType: 'UNION', mode: 'link' },
+    { table: 'media_links', entityType: 'UNION', mode: 'link' },
+    { table: 'gedcom_extensions', entityType: 'UNION', mode: 'link' },
+    { table: 'notes', entityType: 'UNION', mode: 'link' },
+  ],
+  parentages: [
+    { table: 'citations', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'assertions', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'media_links', entityType: 'PARENTAGE', mode: 'link' },
+    { table: 'notes', entityType: 'PARENTAGE', mode: 'link' },
+  ],
+  media: [
+    { table: 'media_regions', column: 'media_id', mode: 'row' },
+    { table: 'media_links', column: 'media_id', mode: 'row' },
+    { table: 'indexed_documents', column: 'media_id', mode: 'row' },
+    { table: 'persons', column: 'portrait_media_id', mode: 'detach' },
+  ],
+  // Le carnet de recherche est supprimé avec ses hypothèses, ses tâches et
+  // les preuves rattachées : sans cela, la purge échoue sur la clé étrangère.
+  research_notebook: [
+    { table: 'research_hypotheses', column: 'research_id', mode: 'row' },
+    { table: 'research_tasks', column: 'research_id', mode: 'row' },
+    { table: 'media_links', entityType: 'RESEARCH', mode: 'link' },
+  ],
+  research_hypotheses: [{ table: 'research_evidence', column: 'hypothesis_id', mode: 'row' }],
+  sources: [
+    { table: 'citations', column: 'source_id', mode: 'row' },
+    { table: 'media_links', entityType: 'SOURCE', mode: 'link' },
+    { table: 'media', column: 'source_id', mode: 'detach' },
+    { table: 'research_evidence', column: 'source_id', mode: 'detach' },
+  ],
+  // Les citations d'une affirmation disparaissent avec elle.
+  assertions: [
+    { table: 'citations', entityType: 'ASSERTION', mode: 'link' },
+    { table: 'media_links', entityType: 'ASSERTION', mode: 'link' },
+  ],
+};
 
 export class TrashRepository {
   constructor(database) {
@@ -51,6 +154,8 @@ export class TrashRepository {
         throw new Error(`Élément introuvable dans la corbeille : ${table}#${id}`);
       }
 
+      this.#purgeDependencies(table, id, new Set());
+
       this.database.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
 
       recordAudit(this.database, {
@@ -63,5 +168,71 @@ export class TrashRepository {
 
       return true;
     });
+  }
+
+  /**
+   * Supprime (ou détache) les lignes qui référencent l'élément purgé, avant
+   * sa suppression définitive. Sans cela, la purge échoue sur une violation
+   * de clé étrangère dès que l'élément a des dépendances.
+   *
+   * La suppression est récursive : une dépendance supprimée peut elle-même
+   * être référencée (un carnet de recherche supprimé emporte ses
+   * hypothèses, qui emportent leurs preuves).
+   */
+  #purgeDependencies(table, id, visited) {
+    for (const dependency of CASCADE_DEPENDENCIES[table] ?? []) {
+      if (dependency.mode === 'detach') {
+        // Colonne nullable : la ligne fille est conservée, le lien retiré.
+        this.database
+          .prepare(
+            `UPDATE ${dependency.table} SET ${dependency.column} = NULL
+             WHERE ${dependency.column} = ?`,
+          )
+          .run(id);
+        continue;
+      }
+
+      if (dependency.mode === 'link') {
+        // Référence polymorphe (`entity_type` + `entity_id` non nullable) :
+        // la ligne de lien disparaît avec l'élément purgé.
+        // La ligne de lien peut avoir ses propres dépendances (les citations
+        // d'une affirmation) : elles sont purgées avant elle.
+        const linkIds = this.database
+          .prepare(`SELECT id FROM ${dependency.table} WHERE entity_type = ? AND entity_id = ?`)
+          .all(dependency.entityType, id)
+          .map((row) => row.id);
+        for (const linkId of linkIds) {
+          const key = `${dependency.table}#${linkId}`;
+          if (visited.has(key)) continue;
+          visited.add(key);
+          this.#purgeDependencies(dependency.table, linkId, visited);
+        }
+        this.database
+          .prepare(`DELETE FROM ${dependency.table} WHERE entity_type = ? AND entity_id = ?`)
+          .run(dependency.entityType, id);
+        continue;
+      }
+
+      // Référence par colonne : les lignes filles sont supprimées, et
+      // leurs propres dépendances avec elles. L'ordre compte : les
+      // dépendances de la ligne fille doivent être purgées AVANT que la
+      // ligne fille ne soit supprimée, sinon la clé étrangère de ses propres
+      // enfants la bloque.
+      const childIds = this.database
+        .prepare(`SELECT id FROM ${dependency.table} WHERE ${dependency.column} = ?`)
+        .all(id)
+        .map((row) => row.id);
+
+      for (const childId of childIds) {
+        const key = `${dependency.table}#${childId}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        this.#purgeDependencies(dependency.table, childId, visited);
+      }
+
+      this.database
+        .prepare(`DELETE FROM ${dependency.table} WHERE ${dependency.column} = ?`)
+        .run(id);
+    }
   }
 }
