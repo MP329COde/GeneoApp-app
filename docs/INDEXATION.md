@@ -51,6 +51,21 @@ Garanties :
 - **Ressources bornées** : nombre de pages (au plus 50, réglable), taille de réponse, temps de
   réponse, nombre de redirections, délai entre deux pages (`Crawl-delay` respecté).
 - **Rien n'est renvoyé** : le contenu téléchargé reste dans l'index local.
+- **Protection SSRF** (`net-guard.js`, appliquée à tout l'indexation distante : connecteurs, sites,
+  fichiers et jeux de données) : sont refusés `localhost`, les adresses IPv4/IPv6 privées,
+  loopback, lien-local (dont `169.254.169.254`), CGNAT, multicast et réservées, ainsi que tout
+  nom de domaine qui se résout vers l'une d'elles. Le contrôle est refait **à chaque
+  redirection** (les redirections sont suivies manuellement, au plus 3). Limite connue : la
+  résolution est vérifiée juste avant la requête, sans épinglage de l'IP (fenêtre de
+  « DNS rebinding » résiduelle).
+- **Aucune donnée personnelle** : seuls `nom`, `prenom`, `annee`, `lieu` sont transmis au
+  site choisi (c'est la recherche demandée) ; tout autre champ est ignoré. Requêtes `GET`
+  sans cookie, `Authorization` ni `Referer`, `credentials: omit`.
+
+Tests : `test/server/indexing-connectors.test.js` (opt-in, robots.txt, intégration),
+`test/server/indexing-ssrf.test.js` (SSRF, taille, durée, absence de données), `test/api/indexing-connectors.test.js`
+(routes). Ils n'utilisent aucun réseau réel (fetch simulé ou serveur local factice, avec
+`allowPrivateHosts` réservé aux tests).
 
 ```bash
 # HTTP (application lancée)

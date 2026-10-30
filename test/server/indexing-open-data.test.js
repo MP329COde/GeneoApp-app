@@ -27,6 +27,7 @@ async function setup(options = {}) {
   runMigrations(database);
   const indexing = new IndexService(database, {
     ocr: null,
+    allowPrivateHosts: true,
     crawlLimits: LIMITS,
     datasetLimits: {
       ...LIMITS,
