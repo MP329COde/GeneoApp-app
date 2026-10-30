@@ -94,6 +94,21 @@ export function decodeAnsel(buffer) {
   return (output + pending).normalize('NFC');
 }
 
+const CP1252_HIGH = [
+  0x20ac, 0x81, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160, 0x2039,
+  0x0152, 0x8d, 0x017d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x02dc,
+  0x2122, 0x0161, 0x203a, 0x0153, 0x9d, 0x017e, 0x0178,
+];
+
+/** Windows-1252 par table : `TextDecoder('windows-1252')` dépend de l'ICU de Node (absent des builds réduits). */
+function decodeWindows1252(buffer) {
+  let output = '';
+  for (const byte of buffer) {
+    output += String.fromCharCode(byte >= 0x80 && byte < 0xa0 ? CP1252_HIGH[byte - 0x80] : byte);
+  }
+  return output;
+}
+
 function decodeStrictUtf8(buffer) {
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(buffer);
@@ -132,7 +147,7 @@ export function decodeGedcomBuffer(input) {
     charset &&
     /^(ANSI|WINDOWS-1252|CP1252|ISO-?8859-?1|LATIN1|IBMPC|IBM WINDOWS)$/.test(charset)
   ) {
-    return { text: new TextDecoder('windows-1252').decode(buffer), encoding: 'WINDOWS-1252' };
+    return { text: decodeWindows1252(buffer), encoding: 'WINDOWS-1252' };
   }
   const utf8 = decodeStrictUtf8(buffer);
   if (utf8 !== null) {
@@ -141,5 +156,5 @@ export function decodeGedcomBuffer(input) {
   }
   // Octets non UTF-8 sans encodage déclaré (ou déclaré à tort) : le cas le plus
   // courant est Windows-1252 ; l'encodage retenu figure dans le rapport.
-  return { text: new TextDecoder('windows-1252').decode(buffer), encoding: 'WINDOWS-1252' };
+  return { text: decodeWindows1252(buffer), encoding: 'WINDOWS-1252' };
 }
