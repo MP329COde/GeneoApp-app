@@ -4,9 +4,15 @@ import { ConflictError, ForbiddenError, NotFoundError } from '../errors.js';
 import { invalidError, notFoundError } from '../validation/field-errors.js';
 import { IndexRepository } from './index-repository.js';
 import { scanFolder } from './folder-scanner.js';
-import { crawlSite } from './crawler.js';
+import { CRAWL_LIMITS, crawlSite } from './crawler.js';
 import { CancelledError, normalizeUrl } from './fetcher.js';
-import { OPEN_DATA_PRESETS, dataGouvPage, dataGouvSlug, indexDataset } from './datasets.js';
+import {
+  DATASET_LIMITS,
+  OPEN_DATA_PRESETS,
+  dataGouvPage,
+  dataGouvSlug,
+  indexDataset,
+} from './datasets.js';
 import {
   CONNECTORS,
   CONNECTOR_LIMITS,
@@ -77,7 +83,15 @@ function localDate(date) {
 export class IndexService {
   constructor(
     database,
-    { media = null, ocr = null, fetchImpl = fetch, crawlLimits, datasetLimits } = {},
+    {
+      media = null,
+      ocr = null,
+      fetchImpl = fetch,
+      crawlLimits,
+      datasetLimits,
+      allowPrivateHosts = false,
+      lookup,
+    } = {},
   ) {
     this.repository = new IndexRepository(database);
     this.media = media;
@@ -85,6 +99,8 @@ export class IndexService {
     this.fetchImpl = fetchImpl;
     this.crawlLimits = crawlLimits;
     this.datasetLimits = datasetLimits;
+    // Garde anti-SSRF (net-guard.js) : `allowPrivateHosts` est réservé aux tests (serveur factice local).
+    this.guard = { allowPrivateHosts, ...(lookup ? { lookup } : {}) };
     this.running = null;
     this.controller = null;
     this.progress = null;
@@ -179,7 +195,7 @@ export class IndexService {
       {
         values: sanitizeSearchValues(values),
         fetchImpl: this.fetchImpl,
-        ...(this.crawlLimits ? { limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits } } : {}),
+        limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits, ...this.guard },
       },
     );
     return { connectorId: connector.id, ...estimate };
@@ -223,7 +239,7 @@ export class IndexService {
         sourceId: state.source_id,
         counts,
         fetchImpl: this.fetchImpl,
-        ...(this.crawlLimits ? { limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits } } : {}),
+        limits: { ...CONNECTOR_LIMITS, ...this.crawlLimits, ...this.guard },
         runId,
       },
     );
@@ -461,14 +477,14 @@ export class IndexService {
         ...context,
         media: this.media,
         fetchImpl: this.fetchImpl,
-        ...(this.crawlLimits ? { limits: this.crawlLimits } : {}),
+        limits: { ...(this.crawlLimits ?? CRAWL_LIMITS), ...this.guard },
       });
     }
     return indexDataset(source, {
       ...context,
       media: this.media,
       fetchImpl: this.fetchImpl,
-      ...(this.datasetLimits ? { limits: this.datasetLimits } : {}),
+      limits: { ...(this.datasetLimits ?? DATASET_LIMITS), ...this.guard },
     });
   }
 

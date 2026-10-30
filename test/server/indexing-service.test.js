@@ -20,6 +20,7 @@ async function setup(options = {}) {
   const indexing = new IndexService(database, {
     media: services.media,
     ocr: null,
+    allowPrivateHosts: true,
     crawlLimits: { maxBytes: 1_000_000, timeoutMs: 5_000, minDelayMs: 0, maxRedirects: 3 },
     ...options,
   });

@@ -23,6 +23,7 @@ async function setup(options = {}) {
   const indexing = new IndexService(database, {
     media: services.media,
     ocr: null,
+    lookup: async () => [{ address: '93.184.216.34', family: 4 }],
     crawlLimits: { maxBytes: 1_000_000, timeoutMs: 5_000, minDelayMs: 0, maxRedirects: 3 },
     ...options,
   });

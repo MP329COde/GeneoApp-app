@@ -1,4 +1,5 @@
 import { USER_AGENT } from './robots.js';
+import { BlockedHostError, assertPublicUrl } from './net-guard.js';
 
 // Récupération HTTP de l'indexation (ADR 0011, 0012) : GET simple sans cookie
 // ni donnée de l'utilisateur, redirections suivies manuellement et filtrées,
@@ -96,6 +97,9 @@ function retryDelayMs(response, maxWaitMs) {
  * - `host` : hôte imposé (robot) ; toute redirection vers un autre hôte est refusée.
  *   Sans `host` (fichier direct), une redirection vers un autre hôte n'est suivie qu'en https.
  * - `conditional` : { etag, lastModified } connus → « not-modified » si inchangé.
+ * - `limits.allowPrivateHosts` : réservé aux tests (serveur factice local). Par défaut les
+ *   hôtes privés, loopback ou résolus vers une IP non publique sont refusés (SSRF), à
+ *   l'adresse de départ comme à chaque redirection (`limits.lookup` : résolveur injectable).
  * Retourne { response, url }, { notModified: true, url } ou { skipped: raison }.
  */
 export async function fetchResource(
@@ -106,6 +110,16 @@ export async function fetchResource(
   let retried = false;
   for (let hop = 0; hop <= limits.maxRedirects;) {
     throwIfCancelled(signal);
+    if (!limits.allowPrivateHosts) {
+      try {
+        await assertPublicUrl(current, { lookup: limits.lookup });
+      } catch (error) {
+        if (!(error instanceof BlockedHostError)) throw error;
+        return {
+          skipped: hop === 0 ? 'hôte non public refusé' : 'redirection vers un hôte non public',
+        };
+      }
+    }
     const headers = { 'user-agent': USER_AGENT, accept };
     if (conditional?.etag) headers['if-none-match'] = conditional.etag;
     if (conditional?.lastModified) headers['if-modified-since'] = conditional.lastModified;
