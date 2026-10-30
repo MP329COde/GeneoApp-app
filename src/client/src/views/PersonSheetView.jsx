@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import { Badge, Button, ConfirmDialog, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import { PortraitPicker } from './DocumentTools.jsx';
@@ -110,54 +110,19 @@ export function PersonSheet({
         >
           <Icon name="print" />
         </button>
-        {confirmingDelete ? (
-          <div
-            className="person-sheet__delete-confirm"
-            role="alertdialog"
-            aria-label={t('personSheet.delete.confirmLabel', 'Confirmer la suppression')}
-          >
-            <p>
-              {t(
-                'personSheet.delete.confirm',
-                { name: personLabel(selected) },
-                'Supprimer {name} ? La personne sera déplacée vers la corbeille.',
-              )}
-            </p>
-            {deleteError ? <ErrorNotice message={deleteError} className="form-error" /> : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="danger"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {t('personSheet.delete.confirmAction', 'Confirmer la suppression')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setConfirmingDelete(false)}
-              disabled={deleting}
-            >
-              {t('personSheet.delete.cancel', 'Annuler')}
-            </Button>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="danger"
-            aria-label={t(
-              'personSheet.delete.label',
-              { name: personLabel(selected) },
-              'Supprimer {name}',
-            )}
-            onClick={() => setConfirmingDelete(true)}
-          >
-            {t('personSheet.delete.action', 'Supprimer')}
-          </Button>
-        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="danger"
+          aria-label={t(
+            'personSheet.delete.label',
+            { name: personLabel(selected) },
+            'Supprimer {name}',
+          )}
+          onClick={() => setConfirmingDelete(true)}
+        >
+          {t('personSheet.delete.action', 'Supprimer')}
+        </Button>
       </header>
       <div
         className="tabs"
@@ -225,6 +190,22 @@ export function PersonSheet({
           <AuditPanel selected={selected} />
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmingDelete}
+        title={t('confirmDialog.deleteTitle', 'Supprimer la personne')}
+        message={t(
+          'personSheet.delete.confirm',
+          { name: personLabel(selected) },
+          'Supprimer {name} ? La personne sera déplacée vers la corbeille.',
+        )}
+        confirmLabel={t('personSheet.delete.confirmAction', 'Confirmer la suppression')}
+        isBusy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      >
+        {deleteError ? <ErrorNotice message={deleteError} className="form-error" /> : null}
+      </ConfirmDialog>
     </div>
   );
 }

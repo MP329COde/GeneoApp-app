@@ -1,0 +1,10 @@
+{
+  "confirmDialog.title": "Confirmation",
+  "confirmDialog.cancel": "Cancel",
+  "confirmDialog.confirm": "Confirm",
+  "confirmDialog.unionTitle": "Dissolve / delete the union",
+  "confirmDialog.unionAction": "Dissolve / delete",
+  "confirmDialog.kinTitle": "Remove the kinship link",
+  "confirmDialog.kinAction": "Remove link",
+  "confirmDialog.deleteTitle": "Delete the person"
+}

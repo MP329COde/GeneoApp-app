@@ -13,6 +13,7 @@ import { client, writeListeners } from './api/app-client.js';
 import { VerificationContext, useVerification } from './hooks/useVerification.js';
 export { buildVerificationIssues, verificationNotifications } from './hooks/useVerification.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
+import { DashboardView } from './views/DashboardView.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { buildLifespans } from './genealogy/lifespans.js';
 import { ComparePanel } from './views/ComparePanel.jsx';
@@ -27,6 +28,7 @@ import { SettingsPanel } from './views/SettingsPanel.jsx';
 import { SettingsProvider, useSettings } from './settings/SettingsContext.jsx';
 import appIcon from './assets/geneoapp-icon.png';
 import { Icon, ErrorNotice, personLabel } from './components/shared.jsx';
+import { TreeLegend } from './components/TreeLegend.jsx';
 import { NotificationCenter } from './components/NotificationCenter.jsx';
 import { CreatePersonForm, SearchPanel, DuplicatesPanel } from './views/PersonListPanels.jsx';
 import { FamiliesPanel } from './views/FamiliesView.jsx';
@@ -52,6 +54,7 @@ import './styles/workspace.css';
 import './styles/typography.css';
 import './styles/persons.css';
 import './styles/tree.css';
+import './styles/dashboard.css';
 import './styles/timeline.css';
 import './styles/inspector.css';
 import './styles/messages.css';
@@ -106,6 +109,7 @@ const NAV_GROUPS = [
     key: 'people',
     labelKey: 'nav.group.people',
     items: [
+      { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'stats' },
       { id: 'tree', labelKey: 'nav.tree', icon: 'tree', shortcut: '⌘1' },
       { id: 'person', labelKey: 'nav.person', icon: 'person', shortcut: '⌘2' },
       { id: 'families', labelKey: 'nav.families', icon: 'family', shortcut: '⌘3' },
@@ -310,6 +314,9 @@ function AppContent() {
   const { settings, update: updateSettings } = useSettings();
   const { t } = useI18n();
   const [persons, setPersons] = useState(null);
+  // Nombre total de personnes connu du serveur : c'est lui qui alimente la
+  // virtualisation de la liste, pas la taille du tableau filtré.
+  const [personsTotal, setPersonsTotal] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
   const { settings: initialSettings } = useSettings();
@@ -392,9 +399,12 @@ function AppContent() {
 
   const loadPersons = useCallback(async () => {
     try {
-      const list = await client.persons.list();
-      setPersons(list);
-      setSelectedId((current) => current ?? list[0]?.id ?? null);
+      const result = await client.persons.list();
+      const items = result?.items ?? [];
+      const total = result?.total ?? items.length;
+      setPersons(items);
+      setPersonsTotal(total);
+      setSelectedId((current) => current ?? items[0]?.id ?? null);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -413,11 +423,11 @@ function AppContent() {
 
   const refreshLifespans = useCallback(async () => {
     try {
-      setLifespans(buildLifespans((await client.events.listAll()) ?? []));
+      setLifespans(buildLifespans((await client.events.listAll()) ?? [], t));
     } catch {
       // les années de vie sont un confort d'affichage, jamais bloquantes
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refreshLifespans();
@@ -454,10 +464,12 @@ function AppContent() {
         );
         // Les panneaux rechargent leurs données après un retour en arrière.
         setDataVersion((version) => version + 1);
-        const list = await client.persons.list();
-        setPersons(list);
+        const personsResult = await client.persons.list();
+        const items = personsResult?.items ?? [];
+        setPersons(items);
+        setPersonsTotal(items.length);
         setSelectedId((current) =>
-          list.some((person) => person.id === current) ? current : (list[0]?.id ?? null),
+          items.some((person) => person.id === current) ? current : (items[0]?.id ?? null),
         );
       } catch (historyError) {
         setError(historyError.message);
@@ -497,7 +509,10 @@ function AppContent() {
     setSelectedId(null);
     setRelations(null);
     setSession(null);
-    setPersons(await client.persons.list());
+    const result = await client.persons.list();
+    const items = result?.items ?? [];
+    setPersons(items);
+    setPersonsTotal(items.length);
     refreshHistory();
   };
 
@@ -672,7 +687,7 @@ function AppContent() {
             <div className="sidenav__people sidenav__persons">
               <h2 className="sidenav__label">
                 {t('shell.persons')} ·{' '}
-                <span>{t('shell.personCount', { count: persons.length })}</span>
+                <span>{t('shell.personCount', { count: personsTotal ?? persons.length })}</span>
               </h2>
               <div className="new-person-button">
                 <Button size="sm" onClick={() => setCreatingOpen(true)}>
@@ -1060,6 +1075,8 @@ function AppContent() {
                       setView('tree');
                     }}
                   />
+                ) : view === 'dashboard' ? (
+                  <DashboardView onNavigate={setView} />
                 ) : view === 'statistics' ? (
                   <StatisticsPanel />
                 ) : view === 'ai' ? (
@@ -1228,19 +1245,7 @@ function AppContent() {
                             />
                           ))}
                         </div>
-                        <ul className="tree-legend" aria-label="Légende">
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--bio" /> Biologique
-                          </li>
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--adoptive" />{' '}
-                            Adoptive
-                          </li>
-                          <li>
-                            <span className="tree-legend__line tree-legend__line--unknown" />{' '}
-                            Inconnue
-                          </li>
-                        </ul>
+                        <TreeLegend />
                       </div>
                     }
                   />

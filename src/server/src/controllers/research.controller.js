@@ -11,6 +11,9 @@ export function createResearchController(services) {
     get(request, response) {
       response.json(research.get(request.params.id));
     },
+    history(request, response) {
+      response.json(research.history(request.params.id));
+    },
     update(request, response) {
       response.json(research.update(request.params.id, request.body, actor(request)));
     },

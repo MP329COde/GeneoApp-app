@@ -191,6 +191,17 @@ export class DocumentService {
 
     if (media.entity_type === 'PERSON') add(personById(media.entity_id), 'Rattaché à la fiche');
     for (const row of this.database
+      .prepare(
+        `SELECT entity_id, role FROM media_links
+         WHERE media_id = ? AND entity_type = 'PERSON' AND deleted_at IS NULL`,
+      )
+      .all(media.id)) {
+      add(
+        personById(row.entity_id),
+        row.role === 'PRESENT' ? 'Présent(e) dans le document' : 'Lié à la fiche',
+      );
+    }
+    for (const row of this.database
       .prepare(`SELECT id FROM persons WHERE portrait_media_id = ? AND deleted_at IS NULL`)
       .all(media.id)) {
       add(personById(row.id), 'Photo de portrait');

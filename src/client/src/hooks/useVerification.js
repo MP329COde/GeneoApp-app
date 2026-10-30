@@ -42,6 +42,14 @@ export const TIMELINE_ISSUE_KEYS = {
   CHILD_AFTER_PARENT_DEATH: 'timelineIssue.CHILD_AFTER_PARENT_DEATH',
   LIVING_WITH_DEATH: 'timelineIssue.LIVING_WITH_DEATH',
   LIVING_TOO_OLD: 'timelineIssue.LIVING_TOO_OLD',
+  MULTIPLE_BIOLOGICAL_FATHERS: 'timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS',
+  MULTIPLE_BIOLOGICAL_MOTHERS: 'timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS',
+  TOO_MANY_BIOLOGICAL_PARENTS: 'timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS',
+  PARENT_ROLE_SEX_MISMATCH: 'timelineIssue.PARENT_ROLE_SEX_MISMATCH',
+  PARENT_NOT_IN_UNION: 'timelineIssue.PARENT_NOT_IN_UNION',
+  DUPLICATE_UNION: 'timelineIssue.DUPLICATE_UNION',
+  UNION_BETWEEN_ANCESTOR_AND_DESCENDANT: 'timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT',
+  UNION_BETWEEN_SIBLINGS: 'timelineIssue.UNION_BETWEEN_SIBLINGS',
 };
 
 /** Clés i18n de la gravité d'une incohérence. */
@@ -83,8 +91,20 @@ export function buildVerificationIssues({ duplicates = [], cycles = [], timeline
   for (const pair of duplicates) {
     const [left, right] = pair.persons;
     const key = `duplicate:${Math.min(left.id, right.id)}:${Math.max(left.id, right.id)}`;
-    addIssue(byPerson, left.id, { key, kind: 'duplicate', score: pair.score, other: right });
-    addIssue(byPerson, right.id, { key, kind: 'duplicate', score: pair.score, other: left });
+    addIssue(byPerson, left.id, {
+      key,
+      kind: 'duplicate',
+      score: pair.score,
+      reasons: pair.reasons ?? [],
+      other: right,
+    });
+    addIssue(byPerson, right.id, {
+      key,
+      kind: 'duplicate',
+      score: pair.score,
+      reasons: pair.reasons ?? [],
+      other: left,
+    });
   }
   for (const cycle of cycles) {
     const key = `cycle:${[...cycle].sort((a, b) => a - b).join('-')}`;

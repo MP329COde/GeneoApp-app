@@ -443,6 +443,10 @@ export function TreeExplorer({
   const [branchFilter, setBranchFilter] = useState('all');
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
+  // Filtre par lieu : personnes ayant un événement dans le lieu saisi (nom
+  // actuel ou ancien, ou lieu parent), obtenues par la recherche avancée.
+  const [placeText, setPlaceText] = useState('');
+  const [placeMatch, setPlaceMatch] = useState(null);
   const toggleCollapsed = useCallback((id) => {
     setCollapsed((current) => {
       const next = new Set(current);
@@ -452,6 +456,30 @@ export function TreeExplorer({
     });
   }, []);
   const [layout, setLayout] = useState(null);
+  useEffect(() => {
+    const wanted = placeText.trim();
+    if (wanted.length < 2) {
+      setPlaceMatch(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      client
+        .advancedSearch({ place: wanted })
+        .then((found) => {
+          if (cancelled) return;
+          setPlaceMatch({
+            ids: new Set(found.results.map((entry) => entry.person.id)),
+            truncated: found.total > found.results.length,
+          });
+        })
+        .catch(() => !cancelled && setPlaceMatch(null));
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [client, placeText]);
   const period =
     periodFrom || periodTo
       ? {
@@ -662,6 +690,11 @@ export function TreeExplorer({
       return number >> (generation - 1) === wanted;
     });
   }
+  if (placeMatch && mode !== 'graph' && Array.isArray(visibleItems)) {
+    visibleItems = visibleItems.filter(
+      (item) => placeMatch.ids.has(item.id) || item.id === root?.id,
+    );
+  }
   const linksOf = new Map();
   for (const item of visibleItems) {
     if (!linksOf.has(item.viaId)) linksOf.set(item.viaId, []);
@@ -728,7 +761,7 @@ export function TreeExplorer({
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-  const contentKey = `${mode}|${root?.id}|${itemsReady}|${items?.length ?? items?.nodes?.length}|${[...collapsed].join(',')}|${branchFilter}|${refreshKey}`;
+  const contentKey = `${mode}|${root?.id}|${itemsReady}|${items?.length ?? items?.nodes?.length}|${[...collapsed].join(',')}|${branchFilter}|${placeText}|${refreshKey}`;
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const viewport = viewportRef.current;
@@ -813,6 +846,22 @@ export function TreeExplorer({
               <option value="paternal">{t('tree.toolbar.branchPaternal', 'Paternelle')}</option>
               <option value="maternal">{t('tree.toolbar.branchMaternal', 'Maternelle')}</option>
             </select>
+          </label>
+        ) : null}
+        {mode !== 'family' && mode !== 'graph' ? (
+          <label className="tree-toolbar__depth">
+            <span>{t('tree.toolbar.place', 'Lieu')}</span>
+            <input
+              type="search"
+              value={placeText}
+              placeholder={t('tree.toolbar.placePlaceholder', 'Ville, région…')}
+              onChange={(event) => setPlaceText(event.target.value)}
+            />
+            {placeMatch?.truncated ? (
+              <span className="data-id">
+                {t('tree.toolbar.placeTruncated', 'Résultats limités aux 200 premières personnes')}
+              </span>
+            ) : null}
           </label>
         ) : null}
         {mode !== 'family' ? (

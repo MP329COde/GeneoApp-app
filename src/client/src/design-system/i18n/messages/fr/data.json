@@ -46,6 +46,8 @@
   "indexing.source.removeLabel": "Retirer la source {label}",
   "indexing.source.removed": "Source retirée.",
   "indexing.source.folderPath": "Dossier (chemin complet)",
+  "indexing.source.folderPlaceholder": "/Users/moi/Généalogie/scans",
+
   "indexing.source.addFolder": "Ajouter le dossier",
   "indexing.source.folderAdded": "Dossier ajouté.",
   "indexing.source.onlineType": "Type de source en ligne",
@@ -273,5 +275,9 @@
   "notebook.taskCount": {
     "one": "{count} tâche",
     "other": "{count} tâches"
+  },
+  "notebook.taskProgress": {
+    "one": "{done}/{count} tâche",
+    "other": "{done}/{count} tâches"
   }
 }

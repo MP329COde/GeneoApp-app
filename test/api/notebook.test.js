@@ -153,3 +153,89 @@ test('la suppression d’une recherche est logique et annulable', async () => {
     await server.close();
   }
 });
+
+test('documents associés à une recherche et historique complet de son évolution', async () => {
+  const server = await startTestServer();
+  try {
+    const call = (method, path, body) =>
+      requestJson(server.baseUrl, path, { method, ...(body ? { body } : {}) });
+    const research = await createResearch(server.baseUrl, { dueDate: '2026-12-01' });
+
+    const nantes = (
+      await call('POST', `/api/notebook/${research.id}/hypotheses`, {
+        title: 'Hypothèse A : Nantes',
+      })
+    ).body;
+    await call('POST', `/api/notebook/${research.id}/hypotheses`, {
+      title: 'Hypothèse B : Angers',
+    });
+    await call('POST', `/api/notebook/hypotheses/${nantes.id}/evidence`, {
+      stance: 'SUPPORTS',
+      content: 'Registre de Nantes',
+    });
+    const task = (
+      await call('POST', `/api/notebook/${research.id}/tasks`, {
+        title: 'Consulter les registres',
+        priority: 'HIGH',
+        dueDate: '2026-11-01',
+      })
+    ).body;
+    await call('PATCH', `/api/notebook/tasks/${task.id}`, { status: 'DONE' });
+    await call('PATCH', `/api/notebook/hypotheses/${nantes.id}`, { status: 'SUPPORTED' });
+    await call('PATCH', `/api/notebook/${research.id}`, { result: 'Né à Nantes en 1850' });
+
+    // Documents rattachés : un fichier et un lien web.
+    const file = (
+      await call('POST', '/api/media', {
+        filename: 'acte.txt',
+        contentBase64: Buffer.from('Acte de naissance de Jean').toString('base64'),
+      })
+    ).body;
+    const url = (
+      await call('POST', '/api/media/url', {
+        url: 'https://archives.example.org/acte',
+        title: 'Acte en ligne',
+      })
+    ).body;
+    for (const media of [file, url]) {
+      const linked = await call('POST', `/api/media/${media.id}/links`, {
+        entityType: 'RESEARCH',
+        entityId: research.id,
+      });
+      assert.equal(linked.status, 201);
+    }
+
+    const detail = (await call('GET', `/api/notebook/${research.id}`)).body;
+    assert.deepEqual(detail.documents.map((d) => d.original_filename).sort(), [
+      'Acte en ligne',
+      'acte.txt',
+    ]);
+    assert.equal(detail.hypotheses.length, 2);
+    assert.equal(detail.tasks[0].priority, 'HIGH');
+
+    const history = (await call('GET', `/api/notebook/${research.id}/history`)).body;
+    const summary = history.map((entry) => `${entry.table}:${entry.operation}`);
+    assert.deepEqual(summary, [
+      'research_notebook:INSERT',
+      'research_hypotheses:INSERT',
+      'research_hypotheses:INSERT',
+      'research_evidence:INSERT',
+      'research_tasks:INSERT',
+      'research_tasks:UPDATE',
+      'research_hypotheses:UPDATE',
+      'research_notebook:UPDATE',
+    ]);
+    assert.equal(history.at(-1).changes.result, 'Né à Nantes en 1850');
+    assert.ok(history.every((entry, index) => index === 0 || entry.id > history[index - 1].id));
+
+    // L'historique garde la trace des éléments supprimés depuis.
+    await call('DELETE', `/api/notebook/tasks/${task.id}`);
+    const after = (await call('GET', `/api/notebook/${research.id}/history`)).body;
+    assert.equal(after.at(-1).operation, 'DELETE');
+    assert.equal(after.filter((entry) => entry.table === 'research_tasks').length, 3);
+
+    assert.equal((await call('GET', '/api/notebook/9999/history')).status, 404);
+  } finally {
+    await server.close();
+  }
+});

@@ -35,8 +35,12 @@ test('save() écrit le fichier sous un nom généré côté serveur, jamais dér
 
 test('le type réel du contenu est déterminé par ses octets, pas par le nom ou le Content-Type déclarés', async () => {
   await withTempStorage(async (storage) => {
-    const fakeImage = Buffer.from('#!/bin/sh\necho "not an image"\n');
+    const fakeImage = Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x03]);
     await assert.rejects(() => storage.save(fakeImage), UnsupportedMediaTypeError);
+    // Un script texte n'est jamais « exécutable » : il est stocké comme simple texte.
+    const script = await storage.save(Buffer.from('#!/bin/sh\necho "not an image"\n'));
+    assert.equal(script.mimeType, 'text/plain');
+    assert.match(script.storedFilename, /\.txt$/);
   });
 });
 

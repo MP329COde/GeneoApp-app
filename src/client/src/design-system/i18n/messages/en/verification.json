@@ -66,10 +66,29 @@
     "one": "1 note",
     "other": "{count} notes"
   },
+  "merge.reassignment.assertions": {
+    "one": "1 assertion",
+    "other": "{count} assertions"
+  },
+  "merge.reassignment.identifiers": {
+    "one": "1 external identifier",
+    "other": "{count} external identifiers"
+  },
   "merge.reassignment.media": {
     "one": "1 media",
     "other": "{count} media"
   },
+  "merge.identity.field.given_names": "Given names",
+  "merge.identity.field.family_name": "Family name",
+  "merge.identity.field.birth_family_name": "Birth name",
+  "merge.identity.field.married_name": "Married name",
+  "merge.identity.field.alias": "Alias",
+  "merge.identity.field.nickname": "Nickname",
+  "merge.identity.field.title": "Title",
+  "merge.identity.field.suffix": "Suffix",
+  "merge.identity.field.sex": "Sex",
+  "merge.identity.conflicts": "Different values, all kept as assertions to decide:",
+  "merge.identity.fills": "Empty fields filled from the merged record:",
   "timelineIssue.BIRTH_AFTER_DEATH": "Birth recorded after death",
   "timelineIssue.MARRIAGE_AFTER_DEATH": "Marriage recorded after death",
   "timelineIssue.MARRIAGE_BEFORE_BIRTH": "Marriage recorded before birth",
@@ -84,12 +103,52 @@
   "timelineIssue.CHILD_AFTER_PARENT_DEATH": "Child's birth recorded after the parent's death",
   "timelineIssue.LIVING_WITH_DEATH": "Marked living despite a recorded death",
   "timelineIssue.LIVING_TOO_OLD": "Marked living but very old",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS": "Several biological fathers",
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS": "Several biological mothers",
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS": "More than two biological parents",
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH": "Parent role does not match sex",
+  "timelineIssue.PARENT_NOT_IN_UNION": "Parent missing from the linked union",
+  "timelineIssue.DUPLICATE_UNION": "Union recorded twice",
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT": "Union between an ancestor and a descendant",
+  "timelineIssue.UNION_BETWEEN_SIBLINGS": "Union between people sharing a parent",
   "timelineIssue.severity.certain": "Certain error",
   "timelineIssue.severity.possible": "Unusual, to verify",
   "timelineIssue.generic": "Chronology inconsistency",
   "timelineIssue.genericPlural": {
     "one": "{count} chronology inconsistency",
     "other": "{count} chronology inconsistencies"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_FATHERS.plural": {
+    "one": "{count} child with several biological fathers",
+    "other": "{count} children with several biological fathers"
+  },
+  "timelineIssue.MULTIPLE_BIOLOGICAL_MOTHERS.plural": {
+    "one": "{count} child with several biological mothers",
+    "other": "{count} children with several biological mothers"
+  },
+  "timelineIssue.TOO_MANY_BIOLOGICAL_PARENTS.plural": {
+    "one": "{count} child with more than two biological parents",
+    "other": "{count} children with more than two biological parents"
+  },
+  "timelineIssue.PARENT_ROLE_SEX_MISMATCH.plural": {
+    "one": "{count} parent role does not match sex",
+    "other": "{count} parent roles do not match sex"
+  },
+  "timelineIssue.PARENT_NOT_IN_UNION.plural": {
+    "one": "{count} parent missing from their union",
+    "other": "{count} parents missing from their union"
+  },
+  "timelineIssue.DUPLICATE_UNION.plural": {
+    "one": "{count} duplicate union",
+    "other": "{count} duplicate unions"
+  },
+  "timelineIssue.UNION_BETWEEN_ANCESTOR_AND_DESCENDANT.plural": {
+    "one": "{count} union between an ancestor and a descendant",
+    "other": "{count} unions between an ancestor and a descendant"
+  },
+  "timelineIssue.UNION_BETWEEN_SIBLINGS.plural": {
+    "one": "{count} union between people sharing a parent",
+    "other": "{count} unions between people sharing a parent"
   },
   "timelineIssue.duplicatesTitle": "Possible duplicates",
   "timelineIssue.duplicatesPlural": {
@@ -160,6 +219,8 @@
     "other": "{count} people marked living but very old"
   },
   "verification.checkConsistency": "Check tree consistency",
+  "verification.certainTitle": "Certain errors to fix",
+  "verification.unusualTitle": "Unusual situations to check",
   "verification.cyclesTitle": "Descent cycles",
   "verification.noCycle": "No cycle detected.",
   "verification.cycleBadge": "Cycle",
@@ -173,6 +234,13 @@
   "verification.allClear": "All clear",
   "verification.noIssue": "No duplicate nor inconsistency detected for this person.",
   "verification.duplicatePossible": "Possible duplicate ({score} %)",
+  "verification.reason.NAME_SIMILAR": "Similar names ({points} points)",
+  "verification.reason.BIRTH_NAME_SIMILAR": "Similar birth names ({points} points)",
+  "verification.reason.BIRTH_YEAR_CLOSE": "Close birth years ({points} points)",
+  "verification.reason.DEATH_YEAR_CLOSE": "Close death years ({points} points)",
+  "verification.reason.SAME_BIRTH_PLACE": "Same birth place ({points} points)",
+  "verification.reason.SHARED_PARENT": "Shared parent ({points} points)",
+  "verification.reason.SEX_DIFFERS": "Different sexes ({points} points)",
   "verification.duplicateWith": "with",
   "verification.compare": "Compare",
   "verification.mergeHere": "Merge here",

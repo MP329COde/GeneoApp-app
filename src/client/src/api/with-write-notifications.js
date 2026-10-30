@@ -1,5 +1,7 @@
+// Toute méthode qui écrit : création, modification, ajout / retrait, décision
+// sur une affirmation, import, fusion, envoi, purge.
 const WRITE_METHOD =
-  /^(create|update|remove|restore|merge|import|addParticipant|addCitation|upload|purge)$/;
+  /^(create|update|remove|restore|merge|import|upload|purge|accept|reject|reopen|add[A-Z]\w*|remove[A-Z]\w*|update[A-Z]\w*)$/;
 const SILENT_DOMAINS = new Set(['history', 'trees', 'accounts', 'backups', 'ai']);
 
 /**

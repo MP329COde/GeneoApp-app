@@ -7,19 +7,24 @@
  * écartant les valeurs techniques — noms de classes, URL, tracés SVG, clés
  * de traduction, identifiants.
  *
+ * L'audit porte sur le client (`src/client/src`) ET sur le site vitrine
+ * (`site/src`), qui réutilise le même design system et le même catalogue de
+ * messages : les mêmes règles s'y appliquent.
+ *
  * Usage :
  *   node scripts/check-i18n-hardcoded.js [fichier…]
  *
- * Sans argument, le script audite toutes les vues du client et sort en
- * erreur si un texte en dur subsiste. Il ne modifie aucun fichier.
+ * Sans argument, le script audite toutes les vues du client et du site et
+ * sort en erreur si un texte en dur subsiste. Il ne modifie aucun fichier.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from '@babel/parser';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWS_DIR = path.join(ROOT, 'src', 'client', 'src');
+const SITE_DIR = path.join(ROOT, 'site', 'src');
 
 /** Attributs qui portent du texte lu par l'utilisateur. */
 const TEXT_ATTRIBUTES = new Set([
@@ -44,8 +49,9 @@ const BRAND_NAMES = new Set(['GeneoApp']);
 
 /**
  * Modules dont les chaînes ne sont pas de l'habillage d'interface : données
- * par défaut (noms de sites modifiables par l'utilisateur) ou messages
- * destinés aux développeurs (invariantes de programmation).
+ * par défaut (noms de sites modifiables par l'utilisateur, traduits à
+ * l'affichage par `SiteSearch`) ou messages destinés aux développeurs
+ * (invariantes de programmation).
  */
 const NON_UI_FILES = new Set([
   path.join('src', 'client', 'src', 'genealogy', 'search-sites.js'),
@@ -63,6 +69,9 @@ function isUserText(value) {
   if (!text) return false;
   if (text.length < 2) return false;
   if (BRAND_NAMES.has(text)) return false;
+  // Un contenu sans aucune lettre (emoji, symbole, ponctuation) est décoratif,
+  // pas un texte à traduire.
+  if (!/\p{L}/u.test(text)) return false;
   // Un chemin, une URL, un sélecteur, un nom de classe.
   if (/^(https?:\/\/|data:|[./#_])/.test(text)) return false;
   // Un sélecteur CSS (« button, [role="button"] ») ou un pseudo-élément.
@@ -100,12 +109,92 @@ function isSentence(value) {
   return /\s/.test(value.trim());
 }
 
+/** Un littéral ressemble-t-il à une clé de traduction (« shell.emptyTree ») ? */
+function isTranslationKey(value) {
+  return /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)+$/.test(value);
+}
+
+/** Recense tous les littéraux d'un sous-arbre. */
+function collectLiterals(node, out) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const child of node) collectLiterals(child, out);
+    return;
+  }
+  if (!node.type) return;
+  if (node.type === 'StringLiteral') {
+    out.add(node);
+    return;
+  }
+  for (const key of Object.keys(node)) {
+    if (key === 'loc' || key === 'start' || key === 'end' || key === 'leadingComments') continue;
+    const child = node[key];
+    if (child && typeof child === 'object') collectLiterals(child, out);
+  }
+}
+
+/**
+ * Recense les littéraux qui sont des replis de traduction, donc exclus de
+ * l'audit :
+ *  - tout littéral situé dans un appel `t(...)` / `translate(...)`, quelle
+ *    que soit sa profondeur (un repli peut être un ternaire) ;
+ *  - le second élément d'un tableau `[clé, repli]`, forme courante pour
+ *    table des messages d'erreur indexés par code serveur.
+ */
+function collectTranslationFallbacks(ast) {
+  const fallbacks = new Set();
+
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child);
+      return;
+    }
+    if (!node.type) return;
+
+    if (node.type === 'CallExpression' && node.callee?.type === 'Identifier') {
+      const name = node.callee.name;
+      if (name === 't' || name === 'translate') {
+        // Les arguments de `t(...)` sont des replis : tout littéral qui s'y
+        // trouve est une traduction, jamais un texte en dur.
+        collectLiterals(node.arguments, fallbacks);
+        for (const key of Object.keys(node)) {
+          if (key === 'loc' || key === 'start' || key === 'end' || key === 'arguments') continue;
+          const child = node[key];
+          if (child && typeof child === 'object') visit(child);
+        }
+        return;
+      }
+    }
+
+    if (
+      node.type === 'ArrayExpression' &&
+      node.elements.length === 2 &&
+      node.elements[0]?.type === 'StringLiteral' &&
+      node.elements[1]?.type === 'StringLiteral' &&
+      isTranslationKey(node.elements[0].value)
+    ) {
+      fallbacks.add(node.elements[1]);
+    }
+
+    for (const key of Object.keys(node)) {
+      if (key === 'loc' || key === 'start' || key === 'end' || key === 'leadingComments') continue;
+      const child = node[key];
+      if (child && typeof child === 'object') visit(child);
+    }
+  };
+
+  visit(ast);
+  return fallbacks;
+}
+
 /**
  * Parcourt l'arbre syntaxique et remonte les littéraux de texte affichés
  * hors appels `t(...)`, avec leur numéro de ligne.
  */
 export function collectHardCodedText(ast) {
   const found = [];
+  const fallbacks = collectTranslationFallbacks(ast);
 
   const visit = (node, parent) => {
     if (!node || typeof node !== 'object') return;
@@ -118,23 +207,24 @@ export function collectHardCodedText(ast) {
     if (node.type === 'StringLiteral' && parent?.type !== 'JSXAttribute') {
       // Les replis passés à `t(...)` ou `translate(...)` sont des traductions,
       // pas des textes en dur.
-      const isTranslationCall =
-        parent?.type === 'CallExpression' &&
-        (parent.callee?.name === 't' || parent.callee?.name === 'translate');
-      if (!isTranslationCall && isUserText(node.value) && isSentence(node.value)) {
+      if (!fallbacks.has(node) && isUserText(node.value) && isSentence(node.value)) {
         found.push({ line: node.loc?.start.line ?? 0, text: node.value.trim() });
       }
     }
 
-    if (node.type === 'JSXAttribute' && node.name?.type === 'JSXIdentifier') {
+    if (
+      node.type === 'JSXAttribute' &&
+      node.name?.type === 'JSXIdentifier' &&
+      node.value?.type === 'StringLiteral'
+    ) {
       const name = node.name.name;
-      if (node.value?.type !== 'StringLiteral') return;
-      if (TECHNICAL_ATTRIBUTES.has(name)) return;
-      const isTextual = TEXT_ATTRIBUTES.has(name);
-      const value = node.value.value;
-      if (!isUserText(value)) return;
-      if (isTextual || isSentence(value))
-        found.push({ line: node.loc?.start.line ?? 0, text: value.trim() });
+      if (!TECHNICAL_ATTRIBUTES.has(name)) {
+        const isTextual = TEXT_ATTRIBUTES.has(name);
+        const value = node.value.value;
+        if (isUserText(value) && (isTextual || isSentence(value))) {
+          found.push({ line: node.loc?.start.line ?? 0, text: value.trim() });
+        }
+      }
     }
 
     if (node.type === 'JSXText') {
@@ -170,15 +260,38 @@ function walk(dir, out = []) {
   return out;
 }
 
+/**
+ * Liste les fichiers sources du client à auditer : hors tests et scénarios,
+ * qui contiennent volontairement des chaînes en dur (ce qu'ils vérifient).
+ */
+export function listSourceFiles() {
+  return walk(VIEWS_DIR).filter(
+    (file) => !/\.test\.jsx?$/.test(file) && !/\.stories\.jsx?$/.test(file),
+  );
+}
+
+/**
+ * Liste les fichiers sources du site vitrine à auditer. Le site est une
+ * application React séparée qui réutilise le design system (donc le même
+ * catalogue de messages) : les règles d'audit sont identiques.
+ */
+export function listSiteSourceFiles() {
+  if (!existsSync(SITE_DIR)) return [];
+  return walk(SITE_DIR).filter(
+    (file) => !/\.test\.jsx?$/.test(file) && !/\.stories\.jsx?$/.test(file),
+  );
+}
+
+export { ROOT };
+
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const requested = process.argv.slice(2);
+  const clientFiles = listSourceFiles();
+  const siteFiles = listSiteSourceFiles();
   const files = requested.length
     ? requested.map((file) => path.resolve(process.cwd(), file))
-    : walk(VIEWS_DIR).filter(
-        (file) => !/\.test\.jsx?$/.test(file) && !/\.stories\.jsx?$/.test(file),
-      );
-
+    : [...clientFiles, ...siteFiles];
   let total = 0;
   const flagged = [];
   for (const file of files) {
@@ -204,7 +317,9 @@ if (isMain) {
   }
 
   console.log(
-    `\n${files.length} fichier(s) audité(s), ${total} texte(s) en dur dans ${flagged.length} fichier(s).`,
+    `\n${clientFiles.length} fichier(s) du client audité(s), ` +
+      `${siteFiles.length} fichier(s) du site vitrine audité(s), ` +
+      `${files.length} fichier(s) au total, ${total} texte(s) en dur dans ${flagged.length} fichier(s).`,
   );
   if (total > 0) process.exitCode = 1;
 }

@@ -34,6 +34,8 @@ export const MERGE_REASSIGNMENT_KEYS = {
   eventParticipations: 'merge.reassignment.eventParticipations',
   citations: 'merge.reassignment.citations',
   notes: 'merge.reassignment.notes',
+  assertions: 'merge.reassignment.assertions',
+  identifiers: 'merge.reassignment.identifiers',
   media: 'merge.reassignment.media',
 };
 

@@ -20,6 +20,18 @@ export function createParentageController(services) {
       response.json(parentages.listChildrenOf(Number(request.params.personId)));
     },
 
+    list(_request, response) {
+      response.json(parentages.list());
+    },
+
+    update(request, response) {
+      response.json(
+        parentages.update(Number(request.params.id), request.body, {
+          performedBy: request.performedBy,
+        }),
+      );
+    },
+
     remove(request, response) {
       parentages.remove(Number(request.params.id), { performedBy: request.performedBy });
       response.status(204).end();

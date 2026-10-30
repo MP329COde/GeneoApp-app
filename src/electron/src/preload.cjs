@@ -155,6 +155,10 @@ const IPC_CHANNELS = Object.freeze({
   INDEXING_RUN_SOURCE: 'geneoapp:indexing:runSource',
   INDEXING_CLEAR_SOURCE: 'geneoapp:indexing:clearSource',
   INDEXING_CANCEL: 'geneoapp:indexing:cancel',
+  INDEXING_CONNECTORS: 'geneoapp:indexing:connectors',
+  INDEXING_CONNECTOR_OPT_IN: 'geneoapp:indexing:connectorOptIn',
+  INDEXING_CONNECTOR_ESTIMATE: 'geneoapp:indexing:connectorEstimate',
+  INDEXING_CONNECTOR_INDEX: 'geneoapp:indexing:connectorIndex',
   HISTORY_STATUS: 'geneoapp:history:status',
   HISTORY_UNDO: 'geneoapp:history:undo',
   HISTORY_REDO: 'geneoapp:history:redo',
@@ -171,6 +175,8 @@ const IPC_CHANNELS = Object.freeze({
   TREES_ACTIVATE: 'geneoapp:trees:activate',
   TREES_REMOVE: 'geneoapp:trees:remove',
   TREES_RESTORE: 'geneoapp:trees:restore',
+
+  API_REQUEST: 'geneoapp:api:request',
 });
 
 // Jeton du serveur HTTP local embarqué (voir main.js/local-http-guard.js),
@@ -291,7 +297,8 @@ const api = {
 
   gedcom: {
     preview: (gedcom) => invoke(IPC_CHANNELS.GEDCOM_PREVIEW, { gedcom }),
-    import: (gedcom, performedBy) => invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy }),
+    import: (gedcom, performedBy, confirmDuplicates) =>
+      invoke(IPC_CHANNELS.GEDCOM_IMPORT, { gedcom, performedBy, confirmDuplicates }),
     export: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT, options),
     exportArchive: (options) => invoke(IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE, options),
     importArchive: (contentBase64) => invoke(IPC_CHANNELS.GEDCOM_IMPORT_ARCHIVE, { contentBase64 }),
@@ -402,6 +409,11 @@ const api = {
     runSource: (id) => invoke(IPC_CHANNELS.INDEXING_RUN_SOURCE, { id }),
     clearSource: (id) => invoke(IPC_CHANNELS.INDEXING_CLEAR_SOURCE, { id }),
     cancel: () => invoke(IPC_CHANNELS.INDEXING_CANCEL),
+    connectors: () => invoke(IPC_CHANNELS.INDEXING_CONNECTORS),
+    setConnectorOptIn: (id, data) => invoke(IPC_CHANNELS.INDEXING_CONNECTOR_OPT_IN, { id, data }),
+    estimateConnector: (id, values) =>
+      invoke(IPC_CHANNELS.INDEXING_CONNECTOR_ESTIMATE, { id, values }),
+    indexConnector: (id, values) => invoke(IPC_CHANNELS.INDEXING_CONNECTOR_INDEX, { id, values }),
   },
   quality: (personId) => invoke(IPC_CHANNELS.PERSON_QUALITY, { personId }),
   advancedSearch: (filters) => invoke(IPC_CHANNELS.SEARCH_ADVANCED, { filters }),
@@ -428,6 +440,13 @@ const api = {
   // Jeton du serveur HTTP local embarqué : requis pour l'appeler directement
   // (hors IPC) sans être bloqué par local-http-guard.js.
   httpToken,
+
+  // Passerelle générique vers l'API locale (liste blanche de préfixes côté
+  // process principal) : sert les routes sans canal IPC dédié.
+  api: {
+    request: ({ method, path, body, sessionToken } = {}) =>
+      invoke(IPC_CHANNELS.API_REQUEST, { method, path, body, sessionToken }),
+  },
 
   trees: {
     list: () => invoke(IPC_CHANNELS.TREES_LIST),
