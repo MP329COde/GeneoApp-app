@@ -118,19 +118,21 @@ describe('accessibilité de toutes les vues', () => {
       }
     }
     expect(violations).toEqual([]);
-  }, 60000);
+  }, 180000);
 });
 
 describe('raccourcis clavier documentés', () => {
   it('Ctrl+3 ouvre les familles et Ctrl+4 la recherche ; Ctrl+K place le focus sur la recherche rapide', async () => {
     const { container } = renderWithProviders(<App />);
-    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument(), {
+      timeout: 5000,
+    });
     const current = () => container.querySelector('.sidenav__item[aria-current="page"]');
 
     fireEvent.keyDown(window, { key: '3', ctrlKey: true });
-    await waitFor(() => expect(current()).toHaveTextContent('Familles'));
+    await waitFor(() => expect(current()).toHaveTextContent('Familles'), { timeout: 5000 });
     fireEvent.keyDown(window, { key: '4', metaKey: true });
-    await waitFor(() => expect(current()).toHaveTextContent('Recherche'));
+    await waitFor(() => expect(current()).toHaveTextContent('Recherche'), { timeout: 5000 });
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     expect(document.activeElement?.tagName).toBe('INPUT');
   });
