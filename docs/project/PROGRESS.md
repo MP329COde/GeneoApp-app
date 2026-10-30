@@ -709,3 +709,18 @@ de sauvegarde, MIME par contenu, sauvegardes manuelle / automatique / avant impo
   seules les sauvegardes exportées le sont.
 - La purge définitive de la corbeille exige une session protégée, mais l'API ne demande pas de paramètre
   de confirmation explicite : la confirmation est faite par l'interface.
+
+## Clôture des issues atomiques #46 à #49 (2026-10-30)
+
+- **Fusion** de `fix/audit-2026-09` (PR #16) dans la branche de travail : sans conflit. Les autres branches
+  distantes sont des ancêtres de `main`.
+- **#47** (alertdialog partagé) et **#48** (zoom/pan de la carte) : déjà livrés par l'audit (`ConfirmDialog`,
+  `map-viewport.js`), vérifiés par les tests client et les e2e `confirm-dialog.spec.js` (bureau + mobile).
+- **#46** : audit i18n à 0 texte en dur, 1482 clés FR/EN ; tests FR/EN ajoutés pour quatre composants
+  (`views-i18n.test.jsx`) ; repli `eventsTimeline.noPlace` aligné.
+- **#49** : garde réseau `net-guard.js` (SSRF : hôtes privés, loopback, lien-local, redirections), 9 tests
+  (`indexing-ssrf.test.js`). Limite connue : pas d'épinglage d'IP (fenêtre de DNS rebinding), notée dans
+  `docs/INDEXATION.md`.
+- **Correctif** : décodage Windows-1252 par table (indépendant de l'ICU de Node).
+- **Vérification** : lint, format, `npm test` (smoke 7, db 106, server 90, api 244, electron 43, packaging 4,
+  cli 5, client 326) et e2e Playwright 33/33.
