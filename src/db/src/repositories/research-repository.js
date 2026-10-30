@@ -121,6 +121,65 @@ export class ResearchRepository {
     };
   }
 
+  /** Documents (médias) rattachés à une recherche. */
+  documents(id) {
+    return this.database
+      .prepare(
+        `SELECT m.id, m.original_filename, m.mime_type, m.external_url, m.description, ml.role
+         FROM media_links ml JOIN media m ON m.id = ml.media_id AND m.deleted_at IS NULL
+         WHERE ml.entity_type = 'RESEARCH' AND ml.entity_id = ? AND ml.deleted_at IS NULL
+         ORDER BY ml.id`,
+      )
+      .all(id);
+  }
+
+  /**
+   * Historique d'une recherche : toutes les écritures journalisées sur la
+   * recherche, ses hypothèses, ses preuves et ses tâches (y compris celles
+   * supprimées depuis), de la plus ancienne à la plus récente.
+   */
+  history(id) {
+    const ids = {
+      research_notebook: [id],
+      research_hypotheses: this.database
+        .prepare('SELECT id FROM research_hypotheses WHERE research_id = ?')
+        .all(id)
+        .map((row) => row.id),
+      research_tasks: this.database
+        .prepare('SELECT id FROM research_tasks WHERE research_id = ?')
+        .all(id)
+        .map((row) => row.id),
+    };
+    ids.research_evidence = this.database
+      .prepare(
+        `SELECT e.id FROM research_evidence e
+         JOIN research_hypotheses h ON h.id = e.hypothesis_id WHERE h.research_id = ?`,
+      )
+      .all(id)
+      .map((row) => row.id);
+    const entries = [];
+    const select = this.database.prepare(
+      `SELECT id, table_name, row_id, operation, changes, performed_by, performed_at
+       FROM audit_log WHERE table_name = ? AND row_id = ?`,
+    );
+    for (const [table, rowIds] of Object.entries(ids)) {
+      for (const rowId of rowIds) {
+        for (const row of select.all(table, rowId)) {
+          entries.push({
+            id: row.id,
+            table: row.table_name,
+            rowId: row.row_id,
+            operation: row.operation,
+            changes: row.changes ? JSON.parse(row.changes) : null,
+            performedBy: row.performed_by,
+            at: row.performed_at,
+          });
+        }
+      }
+    }
+    return entries.sort((a, b) => a.id - b.id);
+  }
+
   patchRow(table, fields, id, patch, performedBy, { touchUpdatedAt = true } = {}) {
     const entries = Object.entries(fields).filter(([key]) => patch[key] !== undefined);
     if (entries.length === 0) return;

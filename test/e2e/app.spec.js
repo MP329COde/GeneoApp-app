@@ -116,6 +116,13 @@ test('importe un GEDCOM réel après aperçu valide et recharge la liste des per
 
   await page.getByRole('button', { name: 'Aperçu' }).click();
   await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  // Des personnes du fichier existent déjà dans l'arbre de test : l'import exige
+  // alors une confirmation explicite (jamais d'ajout en double silencieux).
+  const confirmDuplicates = page.getByLabel('J’ai vérifié : importer quand même');
+  if (await confirmDuplicates.isVisible()) {
+    await expect(importButton).toBeDisabled();
+    await confirmDuplicates.check();
+  }
   await expect(importButton).toBeEnabled();
 
   await importButton.click();
@@ -306,6 +313,70 @@ test('place automatiquement un lieu contre le référentiel des communes frança
   await expect(unlocatedSection.getByText('Bordeaux', { exact: true })).toHaveCount(0);
 });
 
+test('zoome, déplace et recentre la carte locale hors ligne, sans requête réseau', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
+  await page.getByRole('button', { name: 'Événements', exact: true }).click();
+  await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Rennes');
+  await page.getByLabel('Latitude (optionnel)').fill('48.1173');
+  await page.getByLabel('Longitude (optionnel)').fill('-1.6778');
+  await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
+  await expect(page.locator('.search-results li', { hasText: 'Rennes' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  const canvas = page.locator('svg.local-map__canvas');
+  await expect(canvas).toBeVisible();
+  const viewport = page.locator('.local-map__viewport');
+
+  // Aucune tuile distante ne doit être demandée par la carte hors ligne.
+  const remoteRequests = [];
+  page.on('request', (request) => {
+    const url = request.url();
+    if (!url.startsWith('http://127.0.0.1') && !url.startsWith('data:')) {
+      remoteRequests.push(url);
+    }
+  });
+
+  // Bouton « Zoom + » : l'échelle du groupe transformé augmente.
+  await expect(viewport).toHaveAttribute('data-zoom', '1');
+  await page.getByRole('button', { name: 'Zoom +' }).click();
+  await expect(viewport).not.toHaveAttribute('data-zoom', '1');
+
+  // Molette : zoom centré sur le curseur, toujours hors ligne.
+  const box = await canvas.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, -240);
+  const zoomedIn = Number(await viewport.getAttribute('data-zoom'));
+  expect(zoomedIn).toBeGreaterThan(1);
+
+  // Glissement à la souris : le groupe est translaté.
+  const beforeDrag = await viewport.getAttribute('data-translate');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 80, { steps: 8 });
+  await page.mouse.up();
+  const afterDrag = await viewport.getAttribute('data-translate');
+  expect(afterDrag).not.toBe(beforeDrag);
+
+  // Clavier : les flèches déplacent la carte quand le SVG a le focus.
+  await canvas.focus();
+  const beforeKeys = await viewport.getAttribute('data-translate');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  expect(await viewport.getAttribute('data-translate')).not.toBe(beforeKeys);
+
+  // Recentrage : le zoom revient à 100 % et la translation à zéro.
+  await page.getByRole('button', { name: 'Recentrer' }).click();
+  await expect(viewport).toHaveAttribute('data-zoom', '1');
+  await expect(viewport).toHaveAttribute('data-translate', '0 0');
+
+  expect(remoteRequests, `requêtes distantes inattendues : ${remoteRequests.join(', ')}`).toEqual(
+    [],
+  );
+});
+
 test('navigue entre les personnes réelles avec les flèches du clavier', async ({ page }) => {
   await page.goto('/');
   const list = page.getByRole('navigation', { name: 'Personnes' });
@@ -327,9 +398,11 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
     await page.getByText('Modifier l’identité').click();
   }
 
-  await page.getByLabel('Surnom / alias').fill('Le petit Byron');
+  await page.getByLabel('Surnom', { exact: true }).fill('Le petit Byron');
+  await page.getByLabel('Alias (autre nom connu)').fill('Lord Byron');
   await page.getByLabel('Titre honorifique').fill('Lord');
   await page.getByLabel('Personne vivante').uncheck();
+  await page.getByLabel('Informations privées (à ne pas divulguer)').check();
   await page.getByRole('button', { name: 'Enregistrer' }).click();
 
   // Rechargement de la fiche : les valeurs persistées doivent revenir telles
@@ -340,9 +413,11 @@ test('modifie réellement l’identité étendue d’une personne (surnom, titre
   if ((await page.locator('details.inspector-edit[open]').count()) === 0) {
     await page.getByText('Modifier l’identité').click();
   }
-  await expect(page.getByLabel('Surnom / alias')).toHaveValue('Le petit Byron');
+  await expect(page.getByLabel('Surnom', { exact: true })).toHaveValue('Le petit Byron');
+  await expect(page.getByLabel('Alias (autre nom connu)')).toHaveValue('Lord Byron');
   await expect(page.getByLabel('Titre honorifique')).toHaveValue('Lord');
   await expect(page.getByLabel('Personne vivante')).not.toBeChecked();
+  await expect(page.getByLabel('Informations privées (à ne pas divulguer)')).toBeChecked();
 });
 
 test('corrige une faute dans le prénom/nom depuis l’identité, annule (Ctrl+Z) et rétablit (Ctrl+Maj+Z)', async ({
@@ -395,7 +470,7 @@ test('vérifie la cohérence réelle de l’arbre (aucun cycle, aucune erreur ce
   await expect(page.getByText('Aucun cycle détecté.')).toBeVisible();
   // Aucune erreur certaine ; seuls des signalements « à vérifier » sont admis
   // (ex. personne née en 1815 encore marquée vivante).
-  await expect(page.getByText('Incohérences de chronologie')).toBeVisible();
+  await expect(page.getByText('Situations inhabituelles à vérifier')).toBeVisible();
   await expect(page.getByText('Erreur certaine')).toHaveCount(0);
 });
 
@@ -509,7 +584,8 @@ test('mène une recherche complète : hypothèse étayée, tâche faite, persist
 
   await page.reload();
   await page.getByRole('button', { name: 'Carnet', exact: true }).click();
-  await expect(page.getByText('1 hypothèse(s) · 1/1 tâche(s)')).toBeVisible();
+  // Le texte suit les règles de pluriel de la langue (1 hypothèse, 1/1 tâche).
+  await expect(page.getByText('1 hypothèse · 1/1 tâche')).toBeVisible();
   await page.getByRole('button', { name: 'Naissance de Jean Dupont' }).click();
   await expect(page.getByText('Recensement 1836')).toBeVisible();
   await expect(page.getByLabel('Statut de l’hypothèse Né à Nantes')).toHaveValue('SUPPORTED');
@@ -647,6 +723,8 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   await page.getByLabel('Contenu GEDCOM').fill(largeGedcom);
   await page.getByRole('button', { name: 'Aperçu' }).click();
   await expect(page.getByText(/Aperçu valide/)).toBeVisible();
+  const confirmDuplicates = page.getByLabel('J’ai vérifié : importer quand même');
+  if (await confirmDuplicates.isVisible()) await confirmDuplicates.check();
   await page.getByRole('button', { name: 'Importer' }).click();
   await expect(page.getByText('Import réussi et transactionnel.')).toBeVisible({
     timeout: 30_000,
@@ -749,4 +827,12 @@ test.describe('navigation mobile (390×844)', () => {
     const tabbarBox = await tabbar.boundingBox();
     expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(tabbarBox.y);
   });
+});
+
+test('le tableau de bord se charge avec les données réelles (aucune erreur)', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+  await expect(page.getByText('Chargement…')).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });

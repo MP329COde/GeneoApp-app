@@ -89,6 +89,18 @@ export class ServiceUnavailableError extends Error {
   }
 }
 
+export class TooManyRequestsError extends Error {
+  constructor(message, retryAfterSeconds) {
+    super(message);
+    this.name = 'TooManyRequestsError';
+    this.status = 429;
+    this.code = 'TOO_MANY_ATTEMPTS';
+    this.translationKey = 'server.error.tooManyAttempts';
+    this.variables = { seconds: retryAfterSeconds };
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
 export function toHttpError(error) {
   if (error.status) {
     return error;

@@ -1,0 +1,16 @@
+.gds-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.gds-confirm__message {
+  margin: 0;
+}
+
+.gds-confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}

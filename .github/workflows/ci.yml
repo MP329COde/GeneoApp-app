@@ -35,6 +35,8 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+      - name: Build de Storybook (a11y des stories)
+        run: npm run build-storybook
 
   e2e:
     name: Tests E2E navigateur (Playwright)
@@ -79,6 +81,30 @@ jobs:
 
       - working-directory: site
         run: npm run build
+
+  package-linux:
+    name: Packaging Linux (vérification, sans publication)
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installation reproductible (lockfile figé)
+        run: npm ci
+
+      - run: npm run build
+      - name: Assemblage de l'application (dossier non empaqueté)
+        run: npx electron-builder --linux --dir
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Sommes de contrôle du binaire assemblé
+        run: sha256sum release/linux-unpacked/geneoapp* | tee release/linux-unpacked.sha256
 
   multi-os:
     name: Tests et build (${{ matrix.os }})

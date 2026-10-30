@@ -4,6 +4,7 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { useVerificationLabels } from '../hooks/useVerification.js';
 import { MERGE_REASSIGNMENT_KEYS } from './PersonListPanels.jsx';
+import { MergeIdentityNotes } from '../components/MergeIdentityNotes.jsx';
 
 export function VerificationSection({
   selected,
@@ -89,6 +90,19 @@ export function VerificationSection({
                       {personLabel(issue.other)}
                     </button>
                   </p>
+                  {issue.reasons?.length ? (
+                    <ul className="verification__reasons">
+                      {issue.reasons.map((reason) => (
+                        <li key={reason.code}>
+                          {t(
+                            `verification.reason.${reason.code}`,
+                            { points: `${reason.weight > 0 ? '+' : ''}${reason.weight}` },
+                            `${reason.code} ({points})`,
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <div className="verification__actions">
                     <Button
                       type="button"
@@ -140,6 +154,7 @@ export function VerificationSection({
               survivor: personLabel(pendingMerge.preview.survivor),
             })}
           </p>
+          <MergeIdentityNotes identity={pendingMerge.preview.identity} />
           <ul>
             {Object.entries(pendingMerge.preview.reassignments)
               .filter(([, count]) => count > 0)
@@ -220,37 +235,54 @@ export function ConsistencyPanel({ onNavigate, personLabelById }) {
             </ul>
           )}
 
-          <h3>{t('verification.timelineTitle')}</h3>
-          {timelineIssues.length === 0 ? (
-            <p className="notice">{t('verification.noTimelineIssue')}</p>
-          ) : (
-            <ul className="search-results">
-              {timelineIssues.map((issue, index) => (
-                <li
-                  key={index}
-                  className={`coherence-issue coherence-issue--${issue.severity.toLowerCase()}`}
-                >
-                  <span className="coherence-issue__severity">{severityLabel(issue.severity)}</span>{' '}
-                  <strong>{issueLabel(issue.code)}</strong> —{' '}
-                  {personLabelById(issue.personId ?? issue.childId)}
-                  {issue.parentId
-                    ? ` (${t('verification.parentOf', { name: personLabelById(issue.parentId) })})`
-                    : ''}
-                  {issue.message ? (
-                    <span className="coherence-issue__detail">{issue.message}</span>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onNavigate(issue.personId ?? issue.childId)}
-                  >
-                    {t('verification.viewRecord')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {[
+            ['CERTAIN', 'verification.certainTitle'],
+            ['POSSIBLE', 'verification.unusualTitle'],
+          ].map(([severity, titleKey]) => {
+            const list = timelineIssues.filter((issue) =>
+              severity === 'CERTAIN' ? issue.severity === 'CERTAIN' : issue.severity !== 'CERTAIN',
+            );
+            return (
+              <section key={severity} aria-labelledby={`consistency-${severity}`}>
+                <h3 id={`consistency-${severity}`}>
+                  {t(titleKey)}{' '}
+                  <Badge tone={severity === 'CERTAIN' ? 'danger' : 'warning'}>{list.length}</Badge>
+                </h3>
+                {list.length === 0 ? (
+                  <p className="notice">{t('verification.noTimelineIssue')}</p>
+                ) : (
+                  <ul className="search-results">
+                    {list.map((issue, index) => (
+                      <li
+                        key={index}
+                        className={`coherence-issue coherence-issue--${issue.severity.toLowerCase()}`}
+                      >
+                        <span className="coherence-issue__severity">
+                          {severityLabel(issue.severity)}
+                        </span>{' '}
+                        <strong>{issueLabel(issue.code)}</strong> —{' '}
+                        {personLabelById(issue.personId ?? issue.childId)}
+                        {issue.parentId
+                          ? ` (${t('verification.parentOf', { name: personLabelById(issue.parentId) })})`
+                          : ''}
+                        {issue.message ? (
+                          <span className="coherence-issue__detail">{issue.message}</span>
+                        ) : null}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onNavigate(issue.personId ?? issue.childId)}
+                        >
+                          {t('verification.viewRecord')}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
         </>
       ) : null}
     </div>

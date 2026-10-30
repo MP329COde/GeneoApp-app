@@ -4,13 +4,24 @@ import {
   DEFAULT_SITES,
   TEMPLATE_ERRORS,
   buildSearchUrl,
+  isIndexableSite,
   loadSites,
   saveSites,
   validateTemplate,
 } from '../genealogy/search-sites.js';
+import { SiteIndexOptIn } from '../genealogy/site-index-opt-in.jsx';
 
 // Recherche simultanée sur plusieurs sites : l'application compose les
 // adresses et les ouvre dans le navigateur, sans jamais contacter les sites.
+
+/**
+ * Nom traduit des sites par défaut, par identifiant. Un site renommé par
+ * l'utilisateur garde son nom : seule la valeur d'origine est traduite.
+ */
+const DEFAULT_SITE_NAME_KEYS = {
+  web: 'siteSearch.sites.default.web',
+};
+
 export function SiteSearch({ person, lifespan }) {
   const [sites, setSites] = useState(loadSites);
   const [enabled, setEnabled] = useState(() => new Set(loadSites().map((site) => site.id)));
@@ -28,6 +39,14 @@ export function SiteSearch({ person, lifespan }) {
   const update = (next) => {
     setSites(next);
     saveSites(next);
+  };
+
+  // Nom affiché d'un site : celui du catalogue par défaut est traduit, un nom
+  // saisi par l'utilisateur est laissé tel quel.
+  const siteName = (site) => {
+    const key = DEFAULT_SITE_NAME_KEYS[site.id];
+    const isDefault = DEFAULT_SITES.some((item) => item.id === site.id && item.name === site.name);
+    return key && isDefault ? t(key, 'Recherche web') : site.name;
   };
 
   // Le validateur renvoie un code d'erreur stable ; chaque langue en fait
@@ -112,20 +131,31 @@ export function SiteSearch({ person, lifespan }) {
                   setEnabled(next);
                 }}
               />
-              <span>{site.name}</span>
+              <span>{siteName(site)}</span>
             </label>
             <button
               type="button"
               className="link-button link-button--small"
               aria-label={t(
                 'siteSearch.sites.remove',
-                { name: site.name },
-                `Retirer le site ${site.name}`,
+                { name: siteName(site) },
+                `Retirer le site ${siteName(site)}`,
               )}
               onClick={() => update(sites.filter((item) => item.id !== site.id))}
             >
               {t('siteSearch.remove', 'Retirer')}
             </button>
+            {isIndexableSite(site) ? (
+              <SiteIndexOptIn
+                site={site}
+                values={{
+                  lastName: values.nom,
+                  firstName: values.prenom,
+                  year: values.annee,
+                  place: values.lieu,
+                }}
+              />
+            ) : null}
           </div>
         ))}
       </fieldset>

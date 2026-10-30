@@ -10,6 +10,8 @@ export function eventRoutes(services) {
   router.get('/:id', controller.get);
   router.get('/by-person/:personId', controller.listForPerson);
   router.post('/:id/participants', controller.addParticipant);
+  router.patch('/:id', controller.update);
+  router.delete('/:id/participants/:participantId', controller.removeParticipant);
   router.delete('/:id', controller.remove);
 
   return router;

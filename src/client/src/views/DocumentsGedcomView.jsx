@@ -5,6 +5,8 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { OldDocumentDecoder, PortraitPicker, WhoOwnsFile } from './DocumentTools.jsx';
 import { PhotoViewer } from './PhotoViewer.jsx';
+import { MediaPlayer } from '../components/MediaPlayer.jsx';
+import { decodeGedcomBuffer } from '../../../server/src/gedcom/encoding.js';
 
 const LOCALE_STORAGE_KEY = 'geneoapp.locale';
 
@@ -213,6 +215,9 @@ export function MediaPanel({ selected, persons = [], onPersonChanged }) {
             <li key={item.id}>
               <Badge tone="neutral">{item.ocr_status}</Badge> {item.original_filename}
               {item.taken_date ? <span className="data-id">{item.taken_date}</span> : null}
+              {item.mime_type?.startsWith('audio/') || item.mime_type?.startsWith('video/') ? (
+                <MediaPlayer item={item} />
+              ) : null}
               <Button
                 type="button"
                 size="sm"
@@ -324,6 +329,9 @@ export function GedcomPanel({ onImported, selected }) {
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
   const [report, setReport] = useState(null);
+  const [duplicatesConfirmed, setDuplicatesConfirmed] = useState(false);
+  const [excludePrivate, setExcludePrivate] = useState(false);
+  const [anonymizeLiving, setAnonymizeLiving] = useState(false);
   const [gedcomError, setGedcomError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [exportFormat, setExportFormat] = useState('7');
@@ -360,7 +368,9 @@ export function GedcomPanel({ onImported, selected }) {
       return;
     }
     setArchive(null);
-    setContent(await file.text());
+    // Lu en octets puis décodé selon l'encodage du fichier (ANSEL, ANSI, UTF-16…) :
+    // `file.text()` supposerait de l'UTF-8 et remplacerait les accents par « � ».
+    setContent(decodeGedcomBuffer(new Uint8Array(await file.arrayBuffer())).text);
     setPreview(null);
     setReport(null);
   };
@@ -371,6 +381,7 @@ export function GedcomPanel({ onImported, selected }) {
     try {
       setPreview(await client.gedcom.preview(content));
       setReport(null);
+      setDuplicatesConfirmed(false);
     } catch (previewError) {
       setGedcomError(previewError.message);
     } finally {
@@ -382,7 +393,9 @@ export function GedcomPanel({ onImported, selected }) {
     setGedcomError(null);
     setBusy(true);
     try {
-      const result = await client.gedcom.import(content);
+      const result = await client.gedcom.import(content, {
+        confirmDuplicates: duplicatesConfirmed,
+      });
       setReport(result);
       if (result.imported) await onImported();
     } catch (importError) {
@@ -436,6 +449,8 @@ export function GedcomPanel({ onImported, selected }) {
       const result = await client.gedcom.export({
         format: exportFormat,
         ...exportOptions(scope, selected?.id),
+        excludePrivate,
+        anonymizeLiving,
       });
       downloadText(
         scope === 'all'
@@ -541,7 +556,12 @@ export function GedcomPanel({ onImported, selected }) {
         >
           {t('gedcom.import.preview', 'Aperçu')}
         </Button>
-        <Button type="button" size="sm" onClick={handleImport} disabled={busy || !preview?.valid}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleImport}
+          disabled={busy || !preview?.valid || (preview.duplicateCount > 0 && !duplicatesConfirmed)}
+        >
           {t('gedcom.import.run', 'Importer')}
         </Button>
       </div>
@@ -581,6 +601,44 @@ export function GedcomPanel({ onImported, selected }) {
               )}
         </p>
       ) : null}
+      {preview?.valid && preview.duplicateCount > 0 ? (
+        <div className="notice" role="alert">
+          <p>
+            {t(
+              'gedcom.import.duplicates',
+              { count: preview.duplicateCount },
+              '{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.',
+            )}
+          </p>
+          <ul>
+            {preview.duplicates.slice(0, 5).map((duplicate) => (
+              <li key={`${duplicate.xref}-${duplicate.existingPersonId}`}>
+                {duplicate.name}
+                {duplicate.birthYear ? ` (${duplicate.birthYear})` : ''}
+              </li>
+            ))}
+          </ul>
+          <label>
+            <input
+              type="checkbox"
+              checked={duplicatesConfirmed}
+              onChange={(event) => setDuplicatesConfirmed(event.target.checked)}
+            />{' '}
+            <span>
+              {t('gedcom.import.confirmDuplicates', 'J’ai vérifié : importer quand même')}
+            </span>
+          </label>
+        </div>
+      ) : null}
+      {preview?.valid && preview.unmapped?.length > 0 ? (
+        <p className="notice" role="status">
+          {t(
+            'gedcom.import.unmapped',
+            { tags: preview.unmapped.map((item) => `${item.tag} ×${item.count}`).join(', ') },
+            'Balises conservées sans être affichées : {tags}.',
+          )}
+        </p>
+      ) : null}
       {report ? (
         <p className="notice" role="status">
           {report.imported
@@ -596,6 +654,22 @@ export function GedcomPanel({ onImported, selected }) {
             <option value="7">{t('gedcom.export.format7', 'GEDCOM 7')}</option>
             <option value="5.5.1">{t('gedcom.export.format551', 'GEDCOM 5.5.1')}</option>
           </select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={excludePrivate}
+            onChange={(event) => setExcludePrivate(event.target.checked)}
+          />{' '}
+          <span>{t('gedcom.export.excludePrivate', 'Exclure les fiches privées')}</span>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={anonymizeLiving}
+            onChange={(event) => setAnonymizeLiving(event.target.checked)}
+          />{' '}
+          <span>{t('gedcom.export.anonymizeLiving', 'Anonymiser les personnes vivantes')}</span>
         </label>
         <label>
           <span>{t('gedcom.export.scope', 'Périmètre')}</span>

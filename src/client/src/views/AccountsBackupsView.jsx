@@ -549,7 +549,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                           )
                         : (backup.label ?? t('accountsBackups.backups.manual', 'Manuelle'))}
                       {backup.sizeBytes
-                        ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} Ko`
+                        ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} ${t('units.kilobytes', 'Ko')}`
                         : ''}
                     </span>
                     {backup.createdAt ? (

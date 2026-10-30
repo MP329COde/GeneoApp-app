@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { AssertionsPanel } from './AssertionsPanel.jsx';
+import { AiAssistantPanel } from './AiAssistantPanel.jsx';
+import { CitationEditForm } from './CitationEditForm.jsx';
+import { MediaUrlForm } from './MediaLinksPanel.jsx';
+import { IdentifiersPanel } from './IdentifiersPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
@@ -58,6 +63,7 @@ export function SourceMediaTool({ sourceId }) {
         <span>{t('personTools.media.addDocument', 'Ajouter un document à cette source')}</span>
         <input type="file" onChange={handleUpload} disabled={busy} />
       </label>
+      <MediaUrlForm client={client} sourceId={sourceId} onAdded={loadMedia} />
       {items === null ? (
         <p role="status">{t('personTools.media.loading', 'Chargement…')}</p>
       ) : items.length === 0 ? (
@@ -68,15 +74,23 @@ export function SourceMediaTool({ sourceId }) {
         <ul className="search-results">
           {items.map((item) => (
             <li key={item.id}>
-              {item.original_filename}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => handleDownload(item.id)}
-              >
-                {t('personTools.media.download', 'Télécharger')}
-              </Button>
+              {item.external_url ? (
+                <a href={item.external_url} target="_blank" rel="noopener noreferrer">
+                  {item.original_filename}
+                </a>
+              ) : (
+                item.original_filename
+              )}
+              {item.external_url ? null : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleDownload(item.id)}
+                >
+                  {t('personTools.media.download', 'Télécharger')}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -95,10 +109,12 @@ export function IdentityTool({ selected, onUpdated }) {
   const [birthFamilyName, setBirthFamilyName] = useState(selected.birth_family_name ?? '');
   const [sex, setSex] = useState(selected.sex ?? 'U');
   const [nickname, setNickname] = useState(selected.nickname ?? '');
+  const [alias, setAlias] = useState(selected.alias ?? '');
   const [marriedName, setMarriedName] = useState(selected.married_name ?? '');
   const [title, setTitle] = useState(selected.title ?? '');
   const [suffix, setSuffix] = useState(selected.suffix ?? '');
   const [isLiving, setIsLiving] = useState(selected.is_living !== 0);
+  const [isPrivate, setIsPrivate] = useState(selected.is_private === 1);
   const [identityError, setIdentityError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -108,10 +124,12 @@ export function IdentityTool({ selected, onUpdated }) {
     setBirthFamilyName(selected.birth_family_name ?? '');
     setSex(selected.sex ?? 'U');
     setNickname(selected.nickname ?? '');
+    setAlias(selected.alias ?? '');
     setMarriedName(selected.married_name ?? '');
     setTitle(selected.title ?? '');
     setSuffix(selected.suffix ?? '');
     setIsLiving(selected.is_living !== 0);
+    setIsPrivate(selected.is_private === 1);
   }, [selected]);
 
   const handleSubmit = async (event) => {
@@ -135,10 +153,12 @@ export function IdentityTool({ selected, onUpdated }) {
         birthFamilyName: birthFamilyName.trim() || null,
         sex,
         nickname: nickname.trim() || null,
+        alias: alias.trim() || null,
         marriedName: marriedName.trim() || null,
         title: title.trim() || null,
         suffix: suffix.trim() || null,
         isLiving,
+        isPrivate,
       });
       await onUpdated();
     } catch (updateError) {
@@ -176,8 +196,12 @@ export function IdentityTool({ selected, onUpdated }) {
         </select>
       </label>
       <label>
-        <span>{t('personTools.identity.nickname', 'Surnom / alias')}</span>
+        <span>{t('personTools.identity.nickname', 'Surnom')}</span>
         <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
+      </label>
+      <label>
+        <span>{t('personTools.identity.alias', 'Alias (autre nom connu)')}</span>
+        <input value={alias} onChange={(event) => setAlias(event.target.value)} />
       </label>
       <label>
         <span>{t('personTools.identity.marriedName', 'Nom marital')}</span>
@@ -199,6 +223,16 @@ export function IdentityTool({ selected, onUpdated }) {
         />
         <span>{t('personTools.identity.living', 'Personne vivante')}</span>
       </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          onChange={(event) => setIsPrivate(event.target.checked)}
+        />
+        <span>
+          {t('personTools.identity.private', 'Informations privées (à ne pas divulguer)')}
+        </span>
+      </label>
       <Button type="submit" size="sm" disabled={busy}>
         {t('personTools.identity.save', 'Enregistrer')}
       </Button>
@@ -216,6 +250,7 @@ export function SourcesPanel({ selected }) {
   const [confidence, setConfidence] = useState('MEDIUM');
   const [sourcesError, setSourcesError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const loadCitations = useCallback(async () => {
     if (!selected) return;
@@ -247,6 +282,20 @@ export function SourcesPanel({ selected }) {
       </p>
     );
   }
+
+  const runCitation = async (action) => {
+    setBusy(true);
+    setSourcesError(null);
+    try {
+      await action();
+      setEditingId(null);
+      await loadCitations();
+    } catch (actionError) {
+      setSourcesError(actionError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -335,6 +384,39 @@ export function SourcesPanel({ selected }) {
                   )}
               </strong>
               {citation.page ? ` — ${citation.page}` : ''}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-expanded={editingId === citation.id}
+                onClick={() => setEditingId(editingId === citation.id ? null : citation.id)}
+                disabled={busy}
+              >
+                {t('personTools.sources.edit', 'Modifier')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => runCitation(() => client.sources.removeCitation(citation.id))}
+                disabled={busy}
+              >
+                {t('personTools.sources.removeCitation', 'Retirer la citation')}
+              </Button>
+              {editingId === citation.id ? (
+                <CitationEditForm
+                  citation={citation}
+                  source={sourcesById[citation.source_id]}
+                  busy={busy}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(data) =>
+                    runCitation(async () => {
+                      await client.sources.update(citation.source_id, data.source);
+                      await client.sources.updateCitation(citation.id, data.citation);
+                    })
+                  }
+                />
+              ) : null}
               <SourceMediaTool sourceId={citation.source_id} />
             </li>
           ))}
@@ -418,14 +500,27 @@ export function NotesPanel({ selected }) {
     );
   }
   return (
-    <AnnotationsPanel
-      key={selected.id}
-      client={client}
-      entityType="PERSON"
-      entityId={selected.id}
-      heading={t('personTools.notes.heading', { name: personLabel(selected) }, 'Notes sur {name}')}
-      emptyLabel={t('personTools.notes.empty', 'Aucune note pour cette personne.')}
-    />
+    <>
+      <AnnotationsPanel
+        key={selected.id}
+        client={client}
+        entityType="PERSON"
+        entityId={selected.id}
+        heading={t(
+          'personTools.notes.heading',
+          { name: personLabel(selected) },
+          'Notes sur {name}',
+        )}
+        emptyLabel={t('personTools.notes.empty', 'Aucune note pour cette personne.')}
+      />
+      <AssertionsPanel
+        key={`assertions-${selected.id}`}
+        client={client}
+        entityType="PERSON"
+        entityId={selected.id}
+      />
+      <IdentifiersPanel key={`identifiers-${selected.id}`} client={client} personId={selected.id} />
+    </>
   );
 }
 
@@ -524,6 +619,7 @@ export function AiPanel() {
           {result.response}
         </p>
       ) : null}
+      <AiAssistantPanel client={client} />
     </div>
   );
 }

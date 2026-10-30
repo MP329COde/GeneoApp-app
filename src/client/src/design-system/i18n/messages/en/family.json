@@ -24,5 +24,19 @@
   "family.create": "Create the union",
   "family.loading": "Loading…",
   "family.empty": "No union recorded for this person.",
-  "family.remove": "Dissolve / delete"
+  "family.remove": "Dissolve / delete",
+  "family.sheet.title": "Family sheet",
+  "family.sheet.partners": "Partners",
+  "family.sheet.start": "Start",
+  "family.sheet.end": "End",
+  "family.sheet.children": "Children",
+  "family.sheet.noChildren": "No child attached to this union.",
+  "family.sheet.show": "Family sheet",
+  "family.sheet.hide": "Hide sheet",
+  "family.sheet.link.BIOLOGICAL": "Biological",
+  "family.sheet.link.ADOPTIVE": "Adoptive",
+  "family.sheet.link.FOSTER": "Foster",
+  "family.sheet.link.STEP": "Step-parent",
+  "family.sheet.link.GUARDIAN": "Guardian",
+  "family.sheet.link.UNKNOWN": "Unknown"
 }

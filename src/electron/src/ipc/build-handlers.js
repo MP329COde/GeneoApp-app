@@ -122,8 +122,8 @@ function withNotification(services, channel, handler) {
   };
 }
 
-export function buildIpcHandlers(services, workspace = null, storage = null) {
-  const handlers = buildRawHandlers(services, workspace, storage);
+export function buildIpcHandlers(services, workspace = null, storage = null, apiProxy = null) {
+  const handlers = buildRawHandlers(services, workspace, storage, apiProxy);
   return Object.fromEntries(
     Object.entries(handlers).map(([channel, handler]) => [
       channel,
@@ -132,7 +132,7 @@ export function buildIpcHandlers(services, workspace = null, storage = null) {
   );
 }
 
-function buildRawHandlers(services, workspace, storage) {
+function buildRawHandlers(services, workspace, storage, apiProxy) {
   const {
     persons,
     places,
@@ -274,11 +274,24 @@ function buildRawHandlers(services, workspace, storage) {
     ),
 
     [IPC_CHANNELS.GEDCOM_PREVIEW]: wrap(({ gedcom: input }) => gedcom.preview(input)),
-    [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy }) =>
-      gedcom.importSafely(input, { performedBy: actorOf(performedBy) }),
+    [IPC_CHANNELS.GEDCOM_IMPORT]: wrap(({ gedcom: input, performedBy, confirmDuplicates }) =>
+      gedcom.importSafely(input, {
+        performedBy: actorOf(performedBy),
+        confirmDuplicates: confirmDuplicates === true,
+      }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT]: wrap(
-      ({ format, personIds, personOnly, ancestorsOf, descendantsOf, branchOf, side } = {}) =>
+      ({
+        format,
+        personIds,
+        personOnly,
+        ancestorsOf,
+        descendantsOf,
+        branchOf,
+        side,
+        excludePrivate,
+        anonymizeLiving,
+      } = {}) =>
         gedcom.export({
           format,
           personIds,
@@ -287,6 +300,8 @@ function buildRawHandlers(services, workspace, storage) {
           descendantsOf,
           branchOf,
           side,
+          excludePrivate: excludePrivate === true,
+          anonymizeLiving: anonymizeLiving === true,
         }),
     ),
     [IPC_CHANNELS.GEDCOM_EXPORT_ARCHIVE]: wrap(
@@ -491,6 +506,16 @@ function buildRawHandlers(services, workspace, storage) {
     [IPC_CHANNELS.INDEXING_RUN_SOURCE]: wrap(({ id }) => services.indexing.runSource(id)),
     [IPC_CHANNELS.INDEXING_CLEAR_SOURCE]: wrap(({ id }) => services.indexing.clearSource(id)),
     [IPC_CHANNELS.INDEXING_CANCEL]: wrap(() => services.indexing.cancel()),
+    [IPC_CHANNELS.INDEXING_CONNECTORS]: wrap(() => services.indexing.listConnectors()),
+    [IPC_CHANNELS.INDEXING_CONNECTOR_OPT_IN]: wrap(({ id, data }) =>
+      services.indexing.setConnectorOptIn(id, data ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_CONNECTOR_ESTIMATE]: wrap(({ id, values }) =>
+      services.indexing.estimateConnector(id, values ?? {}),
+    ),
+    [IPC_CHANNELS.INDEXING_CONNECTOR_INDEX]: wrap(({ id, values }) =>
+      services.indexing.indexConnector(id, values ?? {}),
+    ),
     [IPC_CHANNELS.GRAPH_NETWORK]: wrap(({ personId, depth }) =>
       services.graph.getNetwork(Number(personId), { depth: depth ? Number(depth) : 2 }),
     ),
@@ -502,6 +527,12 @@ function buildRawHandlers(services, workspace, storage) {
       ...services.history.status(),
       actions: services.history.list(Math.min(Math.max(Number(limit) || 50, 1), 200)),
     })),
+    // Passerelle vers l'API locale pour les routes sans canal dédié : la requête
+    // est validée par la liste blanche de api-proxy.js puis par l'API elle-même.
+    [IPC_CHANNELS.API_REQUEST]: wrap(({ method, path, body, sessionToken }) => {
+      if (!apiProxy) throw new ValidationError('API locale indisponible');
+      return apiProxy.request({ method, path, body, sessionToken, actor: 'local-user' });
+    }),
     [IPC_CHANNELS.HISTORY_UNDO]: wrap(() => services.history.undo()),
     [IPC_CHANNELS.HISTORY_REDO]: wrap(() => services.history.redo()),
 

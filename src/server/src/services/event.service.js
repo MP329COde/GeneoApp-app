@@ -1,5 +1,10 @@
 import { NotFoundError } from '../errors.js';
-import { assertId, validateEventCreate, validateParticipantAdd } from '../validation/schemas.js';
+import {
+  assertId,
+  validateEventCreate,
+  validateEventUpdate,
+  validateParticipantAdd,
+} from '../validation/schemas.js';
 
 export class EventService {
   constructor(repository) {
@@ -33,6 +38,26 @@ export class EventService {
     if (!existing) throw new NotFoundError(`Événement introuvable : ${eventId}`);
     const data = validateParticipantAdd(payload);
     return this.repository.addParticipant(eventId, data, options);
+  }
+
+  update(id, payload, options) {
+    this.get(id);
+    const patch = validateEventUpdate(payload);
+    if (patch.placeId !== undefined && patch.placeId !== null) {
+      const exists = this.repository.database
+        .prepare('SELECT 1 FROM places WHERE id = ? AND deleted_at IS NULL')
+        .get(patch.placeId);
+      if (!exists) throw new NotFoundError(`Lieu introuvable : ${patch.placeId}`);
+    }
+    return this.repository.update(id, patch, options);
+  }
+
+  removeParticipant(eventId, participantId, options) {
+    this.get(eventId);
+    assertId(participantId, 'participantId');
+    if (!this.repository.removeParticipant(eventId, participantId, options)) {
+      throw new NotFoundError(`Participant introuvable : ${participantId}`);
+    }
   }
 
   remove(id, options) {

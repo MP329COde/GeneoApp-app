@@ -1,0 +1,33 @@
+{
+  "siteSearch.index.optIn": "Autoriser l’indexation locale des pages de ce site",
+  "siteSearch.index.hint": "Les pages téléchargées sont stockées dans GeneoApp ; rien n’est renvoyé au site.",
+  "siteSearch.index.enabled": "Indexation locale autorisée pour ce site.",
+  "siteSearch.index.disabled": "Indexation locale désactivée pour ce site.",
+  "siteSearch.index.estimate": "Estimer le nombre de pages",
+  "siteSearch.index.run": "Indexer localement",
+  "siteSearch.index.estimateValue": {
+    "one": "Estimation : {count} page à indexer.",
+    "other": "Estimation : {count} pages à indexer."
+  },
+  "siteSearch.index.estimated": {
+    "one": "{count} page sera indexée localement.",
+    "other": "{count} pages seront indexées localement."
+  },
+  "siteSearch.index.done": {
+    "one": "{count} page indexée localement.",
+    "other": "{count} pages indexées localement."
+  },
+  "siteSearch.index.robotsDisallowed": "Ce site interdit l’indexation de cette page (robots.txt) : rien n’a été téléchargé.",
+  "siteSearch.index.unreachable": "Le site est injoignable : aucune page n’a pu être téléchargée.",
+  "siteSearch.index.tooLarge": "La page est trop volumineuse pour être indexée.",
+  "siteSearch.index.invalidAddress": "Ce site ne peut pas être indexé localement.",
+  "siteSearch.index.notOptedIn": "Autorisez d’abord l’indexation locale de ce site.",
+  "siteSearch.index.networkDisabled": "Accès internet désactivé dans les réglages.",
+  "siteSearch.index.stateError": "L’état de l’indexation locale n’a pas pu être lu.",
+  "server.indexing.connectorNotFound": "Connecteur introuvable",
+  "server.indexing.connectorNotOptedIn": "Connecteur non autorisé : activez son indexation locale avant de l’interroger",
+  "server.indexing.networkDisabled": "Accès internet désactivé dans les réglages",
+  "server.indexing.connectorSource": "Cette source appartient à un connecteur : passez par l’indexation du connecteur",
+  "indexing.runSummary.status.done": "terminée",
+  "indexing.runSummary.status.interrupted": "interrompue"
+}

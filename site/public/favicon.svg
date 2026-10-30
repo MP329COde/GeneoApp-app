@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="GeneoApp">
+  <rect width="32" height="32" rx="7" fill="#f7f3ea" />
+  <g stroke="#2f4a5f" stroke-width="1.8" stroke-linecap="round" fill="none">
+    <path d="M16 11.5V16" />
+    <path d="M8 21V16H24V21" />
+  </g>
+  <rect x="12.5" y="4.5" width="7" height="6" rx="1.8" fill="#2f4a5f" />
+  <rect x="4.5" y="21" width="7" height="6" rx="1.8" fill="#2f4a5f" />
+  <rect x="20.5" y="21" width="7" height="6" rx="1.8" fill="#2f4a5f" />
+</svg>

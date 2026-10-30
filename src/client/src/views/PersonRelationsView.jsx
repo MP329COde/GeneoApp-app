@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import { Badge, Button, ConfirmDialog, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { PARENT_ROLES, PARENT_ROLE_KEYS } from './PersonListPanels.jsx';
@@ -13,6 +13,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
   const [childId, setChildId] = useState('');
   const [parentageError, setParentageError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [linkToRemove, setLinkToRemove] = useState(null);
 
   const otherPersons = useMemo(
     () => persons.filter((person) => person.id !== selected?.id),
@@ -86,16 +87,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
   };
 
   const handleRemove = async (id) => {
-    if (
-      !window.confirm(
-        t(
-          'kin.removeConfirm',
-          'Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.',
-        ),
-      )
-    ) {
-      return;
-    }
+    if (!id) return;
     setBusy(true);
     setParentageError(null);
     try {
@@ -112,6 +104,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
       );
     } finally {
       setBusy(false);
+      setLinkToRemove(null);
     }
   };
 
@@ -168,7 +161,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
                 type="button"
                 size="sm"
                 variant="danger"
-                onClick={() => handleRemove(parentage.id)}
+                onClick={() => setLinkToRemove(parentage.id)}
                 disabled={busy}
               >
                 {t('kin.removeParent', 'Retirer')}
@@ -213,7 +206,7 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
                 type="button"
                 size="sm"
                 variant="danger"
-                onClick={() => handleRemove(parentage.id)}
+                onClick={() => setLinkToRemove(parentage.id)}
                 disabled={busy}
               >
                 {t('kin.removeChild', 'Retirer')}
@@ -222,6 +215,19 @@ export function ParentageSection({ persons, selected, onNavigate, onChange }) {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        isOpen={linkToRemove !== null}
+        title={t('confirmDialog.kinTitle', 'Retirer le lien de parenté')}
+        message={t(
+          'kin.removeConfirm',
+          'Retirer ce lien de parenté ? Cette action peut être refaite manuellement si besoin.',
+        )}
+        confirmLabel={t('confirmDialog.kinAction', 'Retirer le lien')}
+        isBusy={busy}
+        onConfirm={() => handleRemove(linkToRemove)}
+        onCancel={() => setLinkToRemove(null)}
+      />
     </section>
   );
 }

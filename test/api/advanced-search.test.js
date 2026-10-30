@@ -128,3 +128,132 @@ test('valide les filtres et ne renvoie rien sans critère', async () => {
     await server.close();
   }
 });
+
+test('profession, notes, identifiants externes, alias et tous les types d’événement', async () => {
+  const server = await startTestServer();
+  try {
+    const call = (path, body) => requestJson(server.baseUrl, path, { method: 'POST', body });
+    const person = async (body) =>
+      (await call('/api/persons', { familyName: 'Test', ...body })).body;
+    const forgeron = await person({
+      givenNames: 'Pierre',
+      alias: 'Le Forgeron',
+      notes: 'arrivé par bateau',
+    });
+    const meunier = await person({ givenNames: 'Paul' });
+    await call('/api/events', {
+      type: 'OCCUPATION',
+      value: 'Forgeron',
+      dateText: '1880',
+      participants: [{ personId: forgeron.id, role: 'PRINCIPAL' }],
+    });
+    await call('/api/events', {
+      type: 'OCCUPATION',
+      value: 'Meunier',
+      participants: [{ personId: meunier.id, role: 'PRINCIPAL' }],
+    });
+    await call('/api/events', {
+      type: 'SUCCESSION',
+      notes: 'héritage de la ferme',
+      participants: [{ personId: meunier.id, role: 'HEIR' }],
+    });
+    await call('/api/notes', {
+      entityType: 'PERSON',
+      entityId: meunier.id,
+      body: 'Moulin de la Vallée',
+    });
+    await call(`/api/persons/${forgeron.id}/identifiers`, { scheme: 'WIKIDATA', value: 'Q4242' });
+
+    const names = async (body) =>
+      (await search(server.baseUrl, body)).body.results.map((r) => r.person.given_names).sort();
+    assert.deepEqual(await names({ occupation: 'forge' }), ['Pierre']);
+    assert.deepEqual(await names({ occupation: 'meun' }), ['Paul']);
+    assert.deepEqual(await names({ eventType: 'OCCUPATION' }), ['Paul', 'Pierre']);
+    assert.deepEqual(await names({ eventType: 'SUCCESSION' }), ['Paul']);
+    assert.deepEqual(await names({ note: 'moulin' }), ['Paul'], 'note de la table notes');
+    assert.deepEqual(await names({ note: 'bateau' }), ['Pierre'], 'note de la fiche');
+    assert.deepEqual(await names({ note: 'ferme' }), ['Paul'], 'note d’événement');
+    assert.deepEqual(await names({ identifier: 'q4242' }), ['Pierre'], 'identifiant externe');
+    assert.deepEqual(await names({ givenNames: 'Forgeron' }), ['Pierre'], 'alias');
+    const bad = await search(server.baseUrl, { eventType: 'INVENTED' });
+    assert.equal(bad.status, 400);
+  } finally {
+    await server.close();
+  }
+});
+
+test('géographie : lieu englobant, nom historique, rectangle et rayon', async () => {
+  const server = await startTestServer();
+  try {
+    const call = (path, body) => requestJson(server.baseUrl, path, { method: 'POST', body });
+    const place = async (body) => (await call('/api/places', body)).body;
+    const yvelines = await place({ name: 'Yvelines', placeType: 'DEPARTMENT' });
+    const seine = await place({ name: 'Seine-et-Oise', placeType: 'DEPARTMENT' });
+    const versailles = await place({ name: 'Versailles', latitude: 48.8049, longitude: 2.1204 });
+    const lyon = await place({ name: 'Lyon', latitude: 45.764, longitude: 4.8357 });
+    await call(`/api/places/${versailles.id}/parents`, {
+      parentPlaceId: seine.id,
+      validToYear: 1967,
+    });
+    await call(`/api/places/${versailles.id}/parents`, {
+      parentPlaceId: yvelines.id,
+      validFromYear: 1968,
+    });
+    await call(`/api/places/${lyon.id}/names`, { name: 'Lugdunum', validToYear: 400 });
+
+    const person = async (givenNames) =>
+      (await call('/api/persons', { givenNames, familyName: 'Geo' })).body;
+    const ancien = await person('Ancien');
+    const moderne = await person('Moderne');
+    const lyonnais = await person('Lyonnais');
+    const birth = (personId, placeId, dateText) =>
+      call('/api/events', {
+        type: 'BIRTH',
+        dateText,
+        placeId,
+        participants: [{ personId, role: 'PRINCIPAL' }],
+      });
+    await birth(ancien.id, versailles.id, '1900');
+    await birth(moderne.id, versailles.id, '1990');
+    await birth(lyonnais.id, lyon.id, '1950');
+
+    const names = async (body) =>
+      (await search(server.baseUrl, body)).body.results.map((r) => r.person.given_names).sort();
+    // La hiérarchie est celle de l'année de l'événement.
+    assert.deepEqual(await names({ place: 'Seine-et-Oise' }), ['Ancien']);
+    assert.deepEqual(await names({ place: 'Yvelines' }), ['Moderne']);
+    assert.deepEqual(await names({ place: 'versailles' }), ['Ancien', 'Moderne']);
+    assert.deepEqual(await names({ place: 'Lugdunum' }), ['Lyonnais'], 'nom historique');
+
+    assert.deepEqual(await names({ bbox: { south: 48, north: 49.5, west: 1.5, east: 3 } }), [
+      'Ancien',
+      'Moderne',
+    ]);
+    assert.deepEqual(await names({ near: { latitude: 45.75, longitude: 4.85, radiusKm: 20 } }), [
+      'Lyonnais',
+    ]);
+    assert.deepEqual(await names({ near: { latitude: 48.85, longitude: 2.35, radiusKm: 30 } }), [
+      'Ancien',
+      'Moderne',
+    ]);
+    // Période + géographie se combinent.
+    assert.deepEqual(
+      await names({ bbox: { south: 48, north: 49.5, west: 1.5, east: 3 }, yearFrom: 1950 }),
+      ['Moderne'],
+    );
+    for (const body of [
+      { bbox: { south: 50, north: 40, west: 0, east: 1 } },
+      { bbox: { south: 1 } },
+      { near: { latitude: 200, longitude: 0, radiusKm: 5 } },
+      { near: { latitude: 1, longitude: 1, radiusKm: -5 } },
+      {
+        bbox: { south: 1, north: 2, west: 0, east: 1 },
+        near: { latitude: 1, longitude: 1, radiusKm: 5 },
+      },
+    ]) {
+      assert.equal((await search(server.baseUrl, body)).status, 400, JSON.stringify(body));
+    }
+  } finally {
+    await server.close();
+  }
+});

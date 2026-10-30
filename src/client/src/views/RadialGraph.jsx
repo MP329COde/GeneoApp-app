@@ -9,6 +9,7 @@ const EDGE_STYLES = {
   ADOPTIVE: { className: 'graph-edge graph-edge--adoptive', dash: '6 4' },
   FOSTER: { className: 'graph-edge graph-edge--adoptive', dash: '6 4' },
   STEP: { className: 'graph-edge graph-edge--unknown', dash: '10 3 2 3' },
+  GUARDIAN: { className: 'graph-edge graph-edge--adoptive', dash: '2 4 8 4' },
   UNKNOWN: { className: 'graph-edge graph-edge--unknown', dash: '2 3' },
 };
 // Clés de traduction du motif du lien ; le libellé affiché est traduit.
@@ -17,6 +18,7 @@ const LINK_LABEL_KEYS = {
   ADOPTIVE: 'radialGraph.link.adoptive',
   FOSTER: 'radialGraph.link.foster',
   STEP: 'radialGraph.link.step',
+  GUARDIAN: 'radialGraph.link.guardian',
   UNKNOWN: 'radialGraph.link.unknown',
 };
 

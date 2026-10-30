@@ -6,6 +6,7 @@ const RESOURCES = {
   unions: 'union',
   parentages: 'lien de parenté',
   sources: 'source',
+  assertions: 'affirmation',
   media: 'média',
   notes: 'note',
   notebook: 'carnet de recherche',

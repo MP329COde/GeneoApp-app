@@ -4,12 +4,21 @@ import {
   yearOf,
 } from '../../../db/src/dates/genealogy-date.js';
 
+// Repli français : sans fonction de traduction fournie, le libellé reste en
+// français. Les écrans passent leur propre `t` pour suivre la langue choisie.
+const FRENCH = (key, fallback) => fallback;
+
 // Année courte d'une date, avec son approximation (« vers 1760 », « av. 1790 »).
-export function shortYear(parsed) {
+export function shortYear(parsed, t = FRENCH) {
   if (!parsed?.valid) return null;
   const year = yearOf(parsed);
   const prefix =
-    { ABOUT: 'vers ', ESTIMATED: 'vers ', BEFORE: 'av. ', AFTER: 'ap. ' }[parsed.kind] ?? '';
+    {
+      ABOUT: t('dates.around', 'vers '),
+      ESTIMATED: t('dates.around', 'vers '),
+      BEFORE: t('dates.before', 'av. '),
+      AFTER: t('dates.after', 'ap. '),
+    }[parsed.kind] ?? '';
   const range = parsed.kind === 'BETWEEN' ? `${parsed.start.year}/${parsed.end.year}` : null;
   return `${prefix}${range ?? year}${parsed.uncertain ? ' ?' : ''}`;
 }
@@ -28,7 +37,7 @@ function earliestWithPlace(entries) {
  * deathYear, birthPlace }`. `birthPlace` sert à distinguer deux personnes
  * homonymes dans les listes.
  */
-export function buildLifespans(events) {
+export function buildLifespans(events, t = FRENCH) {
   const collected = new Map();
   for (const event of events ?? []) {
     if (!event?.date_text) continue;
@@ -51,10 +60,10 @@ export function buildLifespans(events) {
     if (!birth && !death) continue;
     const label =
       birth && death
-        ? `${shortYear(birth)} – ${shortYear(death)}`
+        ? `${shortYear(birth, t)} – ${shortYear(death, t)}`
         : birth
-          ? `° ${shortYear(birth)}`
-          : `† ${shortYear(death)}`;
+          ? `° ${shortYear(birth, t)}`
+          : `† ${shortYear(death, t)}`;
     lifespans.set(personId, {
       birth,
       death,

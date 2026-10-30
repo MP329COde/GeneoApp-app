@@ -115,6 +115,29 @@ export function RelationshipPanel({ client, persons, selected, onNavigate }) {
                     })}`
                   : ''}
               </p>
+              <p className="data-id">
+                {t('relations.bond', 'Nature du lien')} :{' '}
+                {t(`relations.bond.${result.relationship.bond}`, result.relationship.bond ?? '—')}
+              </p>
+              {result.relationship.consanguinity ? (
+                <p className="data-id">
+                  {t('relations.consanguinity', 'Lien de sang')} :{' '}
+                  {result.relationship.consanguinity.label}
+                </p>
+              ) : null}
+              {result.relationship.relationships?.length > 1 ? (
+                <>
+                  <h4>{t('relations.multiple', 'Relations multiples')}</h4>
+                  <ul className="search-results">
+                    {result.relationship.relationships.map((item) => (
+                      <li key={`${item.relationship}-${item.label}-${item.bond}`}>
+                        {item.label ?? t('relations.related')} (
+                        {t(`relations.bond.${item.bond}`, item.bond ?? '—')})
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
               <h4>{t('relations.path')}</h4>
               <ol className="relationship-path">
                 {result.relationship.path.map((step, index) => (

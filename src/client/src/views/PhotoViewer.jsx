@@ -1,3 +1,4 @@
+import { MediaLinksPanel } from './MediaLinksPanel.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, useTranslation } from '../design-system/index.js';
 
@@ -167,7 +168,7 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
         </Button>
         <h4 id="photo-title">{photo.original_filename}</h4>
         <p className="data-id">
-          {photo.mime_type} · {Math.round(photo.size_bytes / 1024)} Ko
+          {photo.mime_type} · {Math.round(photo.size_bytes / 1024)} {t('units.kilobytes', 'Ko')}
         </p>
       </header>
 
@@ -373,6 +374,8 @@ export function PhotoViewer({ client, mediaId, persons, onClose, onChanged }) {
               )}
             </section>
           ) : null}
+
+          <MediaLinksPanel client={client} mediaId={mediaId} persons={persons} />
 
           <form
             className="research-section photo-viewer__meta"

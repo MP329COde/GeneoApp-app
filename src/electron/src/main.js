@@ -1,7 +1,12 @@
-import { app, BrowserWindow, ipcMain, protocol, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron';
 import { isSafeExternalUrl } from './external-links.js';
 import { createLocalHttpGuard } from './security/local-http-guard.js';
 import { buildContentSecurityPolicy } from './security/content-security-policy.js';
+import {
+  blockWebviews,
+  hardenSession,
+  hardenedWebPreferences,
+} from './security/session-hardening.js';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -18,6 +23,7 @@ import {
   readStorageConfig,
 } from '../../server/src/storage/storage-config.js';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
+import { createApiProxy } from './ipc/api-proxy.js';
 
 const host = '127.0.0.1';
 const port = 0;
@@ -130,7 +136,13 @@ async function createWindow() {
   const storage = new StorageService({ configDir: userData, workspace });
   // Indexation nocturne planifiée tant que l'application est ouverte (ADR 0011).
   startIndexScheduler(() => workspace.services.indexing);
-  unregisterIpcHandlers = registerIpcHandlers(createLiveServices(workspace), workspace, storage);
+  const apiProxy = createApiProxy({ token: httpToken });
+  unregisterIpcHandlers = registerIpcHandlers(
+    createLiveServices(workspace),
+    workspace,
+    storage,
+    apiProxy,
+  );
   // Sauvegarde automatique au lancement (rétention limitée, jamais bloquante).
   workspace.services.backups.createAutomatic('lancement').catch((error) => {
     console.error('Sauvegarde de lancement impossible :', error.message);
@@ -145,17 +157,16 @@ async function createWindow() {
   guarded.use(createApp({ workspace, storage }));
   server = createServer(guarded).listen(port, host);
   await new Promise((resolve) => server.once('listening', resolve));
+  apiProxy.setBaseUrl(`http://${host}:${server.address().port}`);
 
+  hardenSession(session.defaultSession);
   const window = new BrowserWindow({
-    webPreferences: {
+    webPreferences: hardenedWebPreferences({
       preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
       // Seul canal de transmission du jeton local au renderer : jamais par
       // le réseau ni par une variable globale accessible à une page distante.
       additionalArguments: [`--geneoapp-http-token=${httpToken}`],
-    },
+    }),
   });
   mainWindow = window;
 
@@ -177,6 +188,7 @@ async function createWindow() {
   await window.loadURL('geneoapp://app/index.html');
 }
 
+blockWebviews(app);
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
