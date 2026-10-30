@@ -54,7 +54,7 @@ export function EventEditForm({
       <label>
         <span>{t('eventsTimeline.editPlace', 'Lieu')}</span>
         <select value={placeId} onChange={(inputEvent) => setPlaceId(inputEvent.target.value)}>
-          <option value="">{t('eventsTimeline.noPlace', '— Aucun lieu —')}</option>
+          <option value="">{t('eventsTimeline.noPlace', '— Aucun —')}</option>
           {places.map((place) => (
             <option key={place.id} value={place.id}>
               {place.name}
