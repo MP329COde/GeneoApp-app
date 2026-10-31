@@ -39,6 +39,11 @@ export const ICON_PATHS = {
   bell: 'M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
   'chevron-right': 'M9 5l7 7-7 7',
   'chevron-down': 'M5 9l7 7 7-7',
+  close: 'M6 6l12 12M18 6L6 18',
+  filter: 'M3 5h18l-7 8v6l-4 2v-8z',
+  lock: 'M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  sparkle: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
 };
 
 export function Icon({ name }) {

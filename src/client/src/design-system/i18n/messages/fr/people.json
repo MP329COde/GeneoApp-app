@@ -376,5 +376,18 @@
   "notebook.noHistory": "Aucune modification enregistrée.",
   "tree.toolbar.place": "Lieu",
   "tree.toolbar.placePlaceholder": "Ville, région…",
-  "tree.toolbar.placeTruncated": "Résultats limités aux 200 premières personnes"
+  "tree.toolbar.placeTruncated": "Résultats limités aux 200 premières personnes",
+  "advancedSearch.toggle": "Filtres",
+  "advancedSearch.toggleActive": {
+    "one": "Filtres ({count} actif)",
+    "other": "Filtres ({count} actifs)"
+  },
+  "advancedSearch.exact": "Orthographe exacte",
+  "advancedSearch.hint": "Affinez par nom, lieu, période, source ou profession. Les résultats viennent de votre arbre, hors ligne.",
+  "advancedSearch.activeFilters": "Filtres actifs",
+  "advancedSearch.removeFilter": "Retirer le filtre {name}",
+  "advancedSearch.group.identity": "Identité",
+  "advancedSearch.group.when": "Lieu et période",
+  "advancedSearch.group.records": "Sources et notes",
+  "advancedSearch.noMatchHint": "Retirez un filtre à l’aide des puces ci-dessus, ou élargissez la période."
 }

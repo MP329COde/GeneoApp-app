@@ -1,5 +1,5 @@
 {
-  "siteSearch.index.optIn": "Autoriser l’indexation locale des pages de ce site",
+  "siteSearch.index.optIn": "Indexation locale",
   "siteSearch.index.hint": "Les pages téléchargées sont stockées dans GeneoApp ; rien n’est renvoyé au site.",
   "siteSearch.index.enabled": "Indexation locale autorisée pour ce site.",
   "siteSearch.index.disabled": "Indexation locale désactivée pour ce site.",
@@ -29,5 +29,8 @@
   "server.indexing.networkDisabled": "Accès internet désactivé dans les réglages",
   "server.indexing.connectorSource": "Cette source appartient à un connecteur : passez par l’indexation du connecteur",
   "indexing.runSummary.status.done": "terminée",
-  "indexing.runSummary.status.interrupted": "interrompue"
+  "indexing.runSummary.status.interrupted": "interrompue",
+  "siteSearch.index.on": "Autorisée",
+  "siteSearch.index.off": "Désactivée",
+  "siteSearch.index.privacy": "Désactivée par défaut : tant que vous ne l’autorisez pas, GeneoApp ne contacte pas ce site."
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, useTranslation } from '../design-system/index.js';
+import { Icon } from '../components/shared.jsx';
 import {
   DEFAULT_SITES,
   TEMPLATE_ERRORS,
@@ -21,6 +22,15 @@ import { SiteIndexOptIn } from '../genealogy/site-index-opt-in.jsx';
 const DEFAULT_SITE_NAME_KEYS = {
   web: 'siteSearch.sites.default.web',
 };
+
+// Domaine affiché sous le nom du site, pour le reconnaître d'un coup d'œil.
+function siteHost(site) {
+  try {
+    return new URL(site.template.replace(/\{[a-z]+\}/g, 'x')).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
 
 export function SiteSearch({ person, lifespan }) {
   const [sites, setSites] = useState(loadSites);
@@ -94,11 +104,16 @@ export function SiteSearch({ person, lifespan }) {
   return (
     <section className="site-search" aria-labelledby="site-search-title">
       <h3 id="site-search-title">{t('siteSearch.title', 'Rechercher sur plusieurs sites')}</h3>
-      <p className="settings-hint">
-        {t(
-          'siteSearch.hint.noConnection',
-          'GeneoApp ne se connecte à aucun site : les recherches s’ouvrent dans votre navigateur.',
-        )}
+      <p className="site-search__privacy">
+        <span className="site-search__privacy-icon" aria-hidden="true">
+          <Icon name="lock" />
+        </span>
+        <span>
+          {t(
+            'siteSearch.hint.noConnection',
+            'GeneoApp ne se connecte à aucun site : les recherches s’ouvrent dans votre navigateur.',
+          )}
+        </span>
       </p>
       <div className="site-search__values">
         {[
@@ -119,35 +134,44 @@ export function SiteSearch({ person, lifespan }) {
       <fieldset className="site-search__sites">
         <legend>{t('siteSearch.sites.legend', 'Sites')}</legend>
         {sites.map((site) => (
-          <div key={site.id} className="site-search__site">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={enabled.has(site.id)}
-                onChange={(event) => {
-                  const next = new Set(enabled);
-                  if (event.target.checked) next.add(site.id);
-                  else next.delete(site.id);
-                  setEnabled(next);
-                }}
-              />
-              <span>{siteName(site)}</span>
-            </label>
-            <button
-              type="button"
-              className="link-button link-button--small"
-              aria-label={t(
-                'siteSearch.sites.remove',
-                { name: siteName(site) },
-                `Retirer le site ${siteName(site)}`,
-              )}
-              onClick={() => update(sites.filter((item) => item.id !== site.id))}
-            >
-              {t('siteSearch.remove', 'Retirer')}
-            </button>
+          <div key={site.id} className="site-card">
+            <div className="site-card__head">
+              <span className="site-card__icon" aria-hidden="true">
+                <Icon name="globe" />
+              </span>
+              <div className="site-card__identity">
+                <label className="site-card__choice">
+                  <input
+                    type="checkbox"
+                    checked={enabled.has(site.id)}
+                    onChange={(event) => {
+                      const next = new Set(enabled);
+                      if (event.target.checked) next.add(site.id);
+                      else next.delete(site.id);
+                      setEnabled(next);
+                    }}
+                  />
+                  <span className="site-card__name">{siteName(site)}</span>
+                </label>
+                {siteHost(site) ? <span className="site-card__host">{siteHost(site)}</span> : null}
+              </div>
+              <button
+                type="button"
+                className="link-button link-button--small site-card__remove"
+                aria-label={t(
+                  'siteSearch.sites.remove',
+                  { name: siteName(site) },
+                  `Retirer le site ${siteName(site)}`,
+                )}
+                onClick={() => update(sites.filter((item) => item.id !== site.id))}
+              >
+                {t('siteSearch.remove', 'Retirer')}
+              </button>
+            </div>
             {isIndexableSite(site) ? (
               <SiteIndexOptIn
                 site={site}
+                siteLabel={siteName(site)}
                 values={{
                   lastName: values.nom,
                   firstName: values.prenom,

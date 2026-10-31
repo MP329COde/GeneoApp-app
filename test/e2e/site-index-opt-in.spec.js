@@ -28,9 +28,7 @@ test.describe('opt-in d’indexation locale', () => {
     await addPerson(page, 'Ada', 'Lovelace');
     await page.getByRole('button', { name: 'Recherche', exact: true }).click();
 
-    const optIn = page
-      .getByRole('checkbox', { name: /Autoriser l’indexation locale des pages de ce site/ })
-      .first();
+    const optIn = page.getByRole('switch', { name: /Indexation locale/ }).first();
     await expect(optIn).toBeVisible();
     await expect(optIn).not.toBeChecked();
 

@@ -29,7 +29,7 @@ describe('SiteSearch : indexation locale des pages distantes', () => {
 
     // Geneanet, FamilySearch et Gallica sont indexables ; la « Recherche web »
     // ne l'est pas (aucun connecteur côté serveur).
-    expect(screen.getAllByRole('checkbox', { name: /indexation locale/ })).toHaveLength(3);
+    expect(screen.getAllByRole('switch', { name: /indexation locale/i })).toHaveLength(3);
   });
 
   it('n’accorde l’indexation qu’après un clic explicite', async () => {
@@ -38,7 +38,7 @@ describe('SiteSearch : indexation locale des pages distantes', () => {
 
     expect(setConnectorOptIn).not.toHaveBeenCalled();
 
-    await user.click(screen.getAllByRole('checkbox', { name: /indexation locale/ })[0]);
+    await user.click(screen.getAllByRole('switch', { name: /indexation locale/i })[0]);
 
     expect(setConnectorOptIn).toHaveBeenCalledWith('geneanet', { optedIn: true });
   });

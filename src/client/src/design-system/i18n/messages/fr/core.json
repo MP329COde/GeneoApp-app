@@ -219,5 +219,32 @@
   "shell.undoShortcut": "Annuler : {label} (Ctrl+Z)",
   "shell.redoShortcut": "Rétablir : {label} (Ctrl+Maj+Z)",
   "shell.undone": "Annulé : {label}",
-  "shell.redone": "Rétabli : {label}"
+  "shell.redone": "Rétabli : {label}",
+  "search.entityPlural.person": "Personnes",
+  "search.entityPlural.source": "Sources",
+  "search.entityPlural.media": "Médias",
+  "search.entityPlural.event": "Événements",
+  "search.entityPlural.place": "Lieux",
+  "search.entityPlural.union": "Unions",
+  "search.entityPlural.parentage": "Liens de parenté",
+  "searchPanel.hero.title": "Rechercher dans vos archives",
+  "searchPanel.hero.lead": "Personnes, lieux, sources, médias et notes : une seule barre, les orthographes proches sont retrouvées.",
+  "searchPanel.loading": "Recherche en cours…",
+  "searchPanel.empty.title": "Que cherchez-vous ?",
+  "searchPanel.empty.text": "Tapez un nom, un lieu ou un titre de source. Les premières lettres suffisent.",
+  "searchPanel.empty.noTree": "Votre arbre est encore vide",
+  "searchPanel.empty.noTreeText": "Ajoutez des personnes ou importez un fichier GEDCOM, puis revenez chercher ici.",
+  "searchPanel.empty.try": "Essayez :",
+  "searchPanel.didYouMean": "Vouliez-vous dire :",
+  "searchPanel.tip.spelling": "Vérifiez l’orthographe ou tapez moins de lettres.",
+  "searchPanel.tip.oneWord": "Essayez un seul mot : le nom ou le lieu.",
+  "searchPanel.tip.filters": "Les filtres avancés ci-dessous cherchent par période, source ou profession.",
+  "searchPanel.resultSummary": {
+    "one": "{count} résultat pour « {term} »",
+    "other": "{count} résultats pour « {term} »"
+  },
+  "searchPanel.filterByType": "Filtrer par type",
+  "searchPanel.allTypes": "Tout",
+  "quickSearch.noMatch": "Aucune personne ne correspond à « {term} ».",
+  "quickSearch.hint": "↑↓ parcourir · Entrée ouvrir · Échap fermer"
 }

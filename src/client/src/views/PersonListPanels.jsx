@@ -2,12 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
-import { AdvancedSearch } from './AdvancedSearch.jsx';
-import { SiteSearch } from './SiteSearch.jsx';
 import {
   MERGE_REASSIGNMENT_KEYS,
   PARENT_ROLE_KEYS as PARENT_ROLE_KEYS_EXPORT,
-  SEARCH_ENTITY_KEYS,
   UNION_TYPE_KEYS as UNION_TYPE_KEYS_EXPORT,
 } from './entity-labels.js';
 import { MergeIdentityNotes } from '../components/MergeIdentityNotes.jsx';
@@ -77,61 +74,6 @@ export function CreatePersonForm({ onCreate, creating }) {
         {t('personForm.submit')}
       </Button>
     </form>
-  );
-}
-
-export function SearchPanel({ onNavigate, selected, lifespan }) {
-  const { t } = useTranslation();
-  const [term, setTerm] = useState('');
-  const [results, setResults] = useState(null);
-  const [searchError, setSearchError] = useState(null);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!term.trim()) return;
-    setSearchError(null);
-    try {
-      const found = await client.search.query(term.trim());
-      setResults(found);
-    } catch (queryError) {
-      setSearchError(queryError.message);
-      setResults(null);
-    }
-  };
-
-  return (
-    <div className="search-panel">
-      <form onSubmit={handleSubmit} className="search-panel__form">
-        <label className="search-box">
-          <span>{t('searchPanel.label')}</span>
-          <input
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder={t('searchPanel.placeholder')}
-          />
-        </label>
-        <Button type="submit" size="sm">
-          {t('searchPanel.submit')}
-        </Button>
-      </form>
-      {searchError ? <ErrorNotice message={searchError} /> : null}
-      {results === null ? null : results.length === 0 ? (
-        <p className="notice">{t('searchPanel.noResult', { term })}</p>
-      ) : (
-        <ul className="search-results">
-          {results.map((result) => (
-            <li key={`${result.entity_type}:${result.entity_id}`}>
-              <Badge tone="neutral">
-                {t(SEARCH_ENTITY_KEYS[result.entity_type] ?? '', result.entity_type)}
-              </Badge>{' '}
-              {result.title}
-            </li>
-          ))}
-        </ul>
-      )}
-      <AdvancedSearch client={client} onNavigate={onNavigate} />
-      <SiteSearch key={selected?.id ?? 'none'} person={selected} lifespan={lifespan} />
-    </div>
   );
 }
 

@@ -1,5 +1,8 @@
 import { forwardRef, useState } from 'react';
 import { useTranslation } from '../design-system/index.js';
+import { Icon } from '../components/shared.jsx';
+import { Highlight } from '../components/SearchResultCard.jsx';
+import { highlightParts } from '../genealogy/search-text.js';
 
 const fold = (value) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -66,26 +69,57 @@ export const QuickSearch = forwardRef(function QuickSearch({ persons, lifespans,
         {SHORTCUT}
       </kbd>
       {open ? (
-        <ul id="quick-search-results" role="listbox" className="quick-search__results">
-          {matches.map((person, index) => (
-            <li
-              key={person.id}
-              id={`quick-search-${person.id}`}
-              role="option"
-              aria-selected={index === active}
-              className={index === active ? 'is-active' : ''}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                pick(person);
-              }}
-            >
-              <span className="person-name">
-                {person.given_names} {person.family_name}
-              </span>
-              <span className="data-id">{lifespans?.get(person.id)?.label ?? `#${person.id}`}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="quick-search__panel">
+          <ul id="quick-search-results" role="listbox" className="quick-search__results">
+            {matches.map((person, index) => {
+              const span = lifespans?.get(person.id);
+              return (
+                <li
+                  key={person.id}
+                  id={`quick-search-${person.id}`}
+                  role="option"
+                  aria-selected={index === active}
+                  className={index === active ? 'is-active' : ''}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    pick(person);
+                  }}
+                  onMouseMove={() => active !== index && setActive(index)}
+                >
+                  <span className="quick-search__avatar" aria-hidden="true">
+                    <Icon name="person" />
+                  </span>
+                  <span className="quick-search__text">
+                    <span className="person-name">
+                      <Highlight
+                        parts={highlightParts(
+                          `${person.given_names} ${person.family_name}`,
+                          query.trim(),
+                        )}
+                      />
+                    </span>
+                    <span className="quick-search__meta">
+                      {span?.label ? <span className="data-id">{span.label}</span> : null}
+                      {span?.birthPlace ? (
+                        <span className="quick-search__place">{span.birthPlace}</span>
+                      ) : null}
+                      {!span?.label ? <span className="data-id">#{person.id}</span> : null}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="quick-search__hint" aria-hidden="true">
+            {t('quickSearch.hint', '↑↓ parcourir · Entrée ouvrir · Échap fermer')}
+          </p>
+        </div>
+      ) : query.trim() ? (
+        <div className="quick-search__panel">
+          <p className="quick-search__empty" role="status">
+            {t('quickSearch.noMatch', { term: query.trim() }, 'Aucune personne ne correspond.')}
+          </p>
+        </div>
       ) : null}
     </div>
   );

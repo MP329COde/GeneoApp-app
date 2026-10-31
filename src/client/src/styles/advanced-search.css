@@ -1,14 +1,96 @@
 /* ---------- Recherche avancée ---------- */
 .advanced-search {
+  display: grid;
+  gap: var(--space-3);
   margin-top: var(--space-6);
   padding-top: var(--space-4);
   border-top: var(--border-hairline) solid var(--border);
 }
+.advanced-search__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.advanced-search h3 {
+  margin: 0;
+  font: var(--type-heading-lg);
+}
+.advanced-search .settings-hint {
+  margin-top: calc(var(--space-2) * -1);
+}
+.filters-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-lg);
+  max-width: 100%;
+  padding: 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--type-label);
+  cursor: pointer;
+}
+.filters-toggle:hover {
+  background: var(--surface-hover);
+}
+.filters-toggle[aria-expanded='true'] {
+  border-color: var(--action);
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+.filters-toggle__chevron {
+  display: grid;
+}
+.filters-toggle__chevron.is-open {
+  transform: rotate(180deg);
+}
 .search-panel form.advanced-search__form {
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.advanced-search__group {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.advanced-search__group legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.advanced-search__fuzzy,
+.advanced-search__actions {
+  grid-column: 1 / -1;
 }
 .advanced-search__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  grid-column: 1 / -1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .filters-toggle__chevron {
+    transition: transform var(--transition-fast);
+  }
+}
+
+.search-panel label.advanced-search__fuzzy:has(input[type='checkbox']) {
+  flex-direction: row;
+  align-items: center;
 }
