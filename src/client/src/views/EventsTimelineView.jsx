@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { EventEditForm } from './EventEditForm.jsx';
+import { LifelineChart } from './LifelineChart.jsx';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import {
   formatGenealogyDate,
@@ -324,10 +325,11 @@ export function EventsPanel({ selected }) {
   );
 }
 
-export function TimelinePanel({ onNavigate }) {
+export function TimelinePanel({ onNavigate, persons = [], selectedId = null, onSelect }) {
   const { t } = useTranslation();
   const [events, setEvents] = useState(null);
   const [timelineError, setTimelineError] = useState(null);
+  const [mode, setMode] = useState('list');
 
   useEffect(() => {
     let cancelled = false;
@@ -358,40 +360,84 @@ export function TimelinePanel({ onNavigate }) {
     );
   }
 
+  const toggle = (
+    <div
+      className="timeline-toggle"
+      role="group"
+      aria-label={t('eventsTimeline.mode.label', 'Affichage de la chronologie')}
+    >
+      <Button
+        type="button"
+        size="sm"
+        variant={mode === 'list' ? 'primary' : 'secondary'}
+        aria-pressed={mode === 'list'}
+        onClick={() => setMode('list')}
+      >
+        {t('eventsTimeline.mode.list', 'Liste')}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={mode === 'chart' ? 'primary' : 'secondary'}
+        aria-pressed={mode === 'chart'}
+        onClick={() => setMode('chart')}
+      >
+        {t('eventsTimeline.mode.chart', 'Frise')}
+      </Button>
+    </div>
+  );
+
+  if (mode === 'chart') {
+    return (
+      <div>
+        {toggle}
+        <LifelineChart
+          persons={persons}
+          events={events}
+          selectedId={selectedId}
+          onSelect={onSelect ?? onNavigate}
+        />
+      </div>
+    );
+  }
+
   return (
-    <ol className="search-results">
-      {events.map((event) => (
-        <li key={event.id}>
-          <Badge tone="neutral">{event.type}</Badge>{' '}
-          {event.value ? <strong>{event.value}</strong> : null}{' '}
-          {event.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
-          {event.place_name ? ` — ${event.place_name}` : ''}
-          {event.participants.length > 0 ? (
-            <span>
-              {' '}
-              (
-              {event.participants
-                .map(
-                  (participant) =>
-                    `${participant.personGivenNames} ${participant.personFamilyName}`,
+    <div>
+      {toggle}
+      <ol className="search-results">
+        {events.map((event) => (
+          <li key={event.id}>
+            <Badge tone="neutral">{event.type}</Badge>{' '}
+            {event.value ? <strong>{event.value}</strong> : null}{' '}
+            {event.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
+            {event.place_name ? ` — ${event.place_name}` : ''}
+            {event.participants.length > 0 ? (
+              <span>
+                {' '}
+                (
+                {event.participants
+                  .map(
+                    (participant) =>
+                      `${participant.personGivenNames} ${participant.personFamilyName}`,
+                  )
+                  .join(', ')}
                 )
-                .join(', ')}
-              )
-            </span>
-          ) : null}
-          {event.participants.map((participant) => (
-            <Button
-              key={participant.personId}
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => onNavigate(participant.personId)}
-            >
-              {t('eventsTimeline.view', { name: participant.personGivenNames }, 'Voir {name}')}
-            </Button>
-          ))}
-        </li>
-      ))}
-    </ol>
+              </span>
+            ) : null}
+            {event.participants.map((participant) => (
+              <Button
+                key={participant.personId}
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => onNavigate(participant.personId)}
+              >
+                {t('eventsTimeline.view', { name: participant.personGivenNames }, 'Voir {name}')}
+              </Button>
+            ))}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }

@@ -137,3 +137,39 @@ describe('raccourcis clavier documentés', () => {
     expect(document.activeElement?.tagName).toBe('INPUT');
   });
 });
+
+describe('frise chronologique', () => {
+  it('est accessible, bascule depuis la liste et sélectionne la personne au clic', async () => {
+    overrides['events.listAll'] = [
+      {
+        id: 1,
+        type: 'BIRTH',
+        date_text: 'vers 1850',
+        value: null,
+        place_name: null,
+        participants: [
+          { personId: 1, role: 'PRINCIPAL', personGivenNames: 'Jean', personFamilyName: 'Dupont' },
+        ],
+      },
+    ];
+    try {
+      const { container } = renderWithProviders(<App />);
+      await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
+      const nav = [...container.querySelectorAll('.sidenav__item')].find(
+        (item) => item.textContent.trim() === 'Chronologie',
+      );
+      fireEvent.click(nav);
+      fireEvent.click(await screen.findByRole('button', { name: 'Frise' }));
+      const marker = await screen.findByRole('button', {
+        name: /Naissance, Jean Dupont, vers 1850/,
+      });
+      expect(await axe(container)).toHaveNoViolations();
+      fireEvent.click(marker);
+      await waitFor(() => expect(marker).toHaveAttribute('aria-pressed', 'true'));
+      fireEvent.click(screen.getByRole('button', { name: 'Liste' }));
+      expect(screen.getByText(/BIRTH/)).toBeInTheDocument();
+    } finally {
+      delete overrides['events.listAll'];
+    }
+  }, 30000);
+});

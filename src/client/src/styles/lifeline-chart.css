@@ -1,0 +1,151 @@
+/* ---------- Frise chronologique (lignes de vie) ---------- */
+.timeline-toggle {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.lifeline {
+  display: grid;
+  gap: var(--space-2);
+}
+.lifeline__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.lifeline__zoom {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.lifeline__axis {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-bottom: var(--border-hairline) solid var(--border-strong);
+}
+.lifeline__tick {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.lifeline__tick-label {
+  fill: var(--text-secondary);
+  font-size: 15px;
+}
+.lifeline__scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.lifeline__canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+}
+.lifeline__canvas:focus-visible,
+.lifeline__marker:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+.lifeline__grid {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+.lifeline__grid--major {
+  stroke: var(--border);
+}
+.lifeline__row-bg {
+  fill: transparent;
+}
+.lifeline__row--selected .lifeline__row-bg {
+  fill: var(--surface-selected);
+}
+.lifeline__name {
+  fill: var(--text);
+  font-size: 15px;
+}
+.lifeline__life {
+  stroke: var(--text-secondary);
+  stroke-width: 3;
+  stroke-linecap: butt;
+}
+.lifeline__life--living {
+  stroke-dasharray: 8 4;
+}
+.lifeline__life--unknown {
+  stroke-dasharray: 2 4;
+}
+.lifeline__life--open-start {
+  stroke-opacity: 0.7;
+}
+.lifeline__arrow {
+  fill: var(--text-secondary);
+}
+.lifeline__hatch {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+.lifeline__range {
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+.lifeline__range--birth {
+  stroke: var(--success);
+}
+.lifeline__range--marriage {
+  stroke: var(--info);
+}
+.lifeline__range--death {
+  stroke: var(--danger);
+}
+.lifeline__range--other {
+  stroke: var(--warning);
+}
+.lifeline__hit {
+  fill: transparent;
+}
+.lifeline__marker {
+  cursor: pointer;
+}
+.lifeline__shape {
+  stroke: var(--surface-raised);
+  stroke-width: 1.5;
+}
+.lifeline__marker:hover .lifeline__shape,
+.lifeline__row--selected .lifeline__shape {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.lifeline__shape--birth {
+  fill: var(--success);
+}
+.lifeline__shape--marriage {
+  fill: var(--info);
+}
+.lifeline__shape--death {
+  fill: var(--danger);
+}
+.lifeline__shape--other {
+  fill: var(--warning);
+}
+.lifeline__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.lifeline__legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
