@@ -96,6 +96,7 @@ export const IPC_CHANNELS = Object.freeze({
   RESEARCH_REMOVE_TASK: 'geneoapp:research:removeTask',
 
   STATISTICS_TOTALS: 'geneoapp:statistics:totals',
+  STATISTICS_INSIGHTS: 'geneoapp:statistics:insights',
 
   AI_ANALYZE: 'geneoapp:ai:analyze',
 

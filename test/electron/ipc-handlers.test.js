@@ -482,6 +482,19 @@ test('STATISTICS_TOTALS renvoie des totaux réels calculés depuis la base', asy
   assert.ok(response.data.generatedAt);
 });
 
+test('STATISTICS_INSIGHTS renvoie les indicateurs de lecture réels', async () => {
+  const handlers = createHandlers();
+  await handlers[IPC_CHANNELS.PERSONS_CREATE]({
+    data: { givenNames: 'Ada', familyName: 'Lovelace', sex: 'F' },
+  });
+
+  const response = await handlers[IPC_CHANNELS.STATISTICS_INSIGHTS]();
+  assert.equal(response.ok, true);
+  assert.equal(response.data.insights.persons.total, 1);
+  assert.equal(response.data.insights.persons.bySex.F, 1);
+  assert.equal(response.data.insights.generations.count, 1);
+});
+
 test('AI_ANALYZE renvoie une erreur honnête (503) quand l’IA locale est désactivée', async () => {
   const handlers = createHandlers();
 

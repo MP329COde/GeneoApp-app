@@ -524,55 +524,6 @@ export function NotesPanel({ selected }) {
   );
 }
 
-export function StatisticsPanel() {
-  const { t } = useTranslation();
-  const [totals, setTotals] = useState(null);
-  const [statsFailed, setStatsFailed] = useState(false);
-
-  // Libellés des statistiques, indexés par nom technique : traduits via l'i18n.
-  const statisticsLabels = {
-    persons: t('personTools.stats.persons', 'Personnes'),
-    places: t('personTools.stats.places', 'Lieux'),
-    events: t('personTools.stats.events', 'Événements'),
-    unions: t('personTools.stats.unions', 'Unions'),
-    parentages: t('personTools.stats.parentages', 'Liens de parenté'),
-    sources: t('personTools.stats.sources', 'Sources'),
-    media: t('personTools.stats.media', 'Médias'),
-  };
-
-  useEffect(() => {
-    client.statistics
-      .totals()
-      .then(setTotals)
-      .catch(() => setStatsFailed(true));
-  }, []);
-
-  return (
-    <div className="search-panel">
-      <h3>{t('personTools.stats.title', 'Statistiques locales')}</h3>
-      {statsFailed ? (
-        <ErrorNotice
-          message={t(
-            'personTools.stats.error',
-            'Impossible de charger les statistiques pour le moment. Réessayez dans quelques instants.',
-          )}
-        />
-      ) : totals === null ? (
-        <p role="status">{t('personTools.stats.loading', 'Chargement…')}</p>
-      ) : (
-        <dl>
-          {Object.entries(totals.totals).map(([key, value]) => (
-            <div key={key}>
-              <dt>{statisticsLabels[key] ?? key}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
-  );
-}
-
 export function AiPanel() {
   const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');

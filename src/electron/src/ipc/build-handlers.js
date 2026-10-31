@@ -436,6 +436,8 @@ function buildRawHandlers(services, workspace, storage, apiProxy) {
       generatedAt: new Date().toISOString(),
     })),
 
+    [IPC_CHANNELS.STATISTICS_INSIGHTS]: wrap(() => ({ insights: statistics.insights() })),
+
     [IPC_CHANNELS.AI_ANALYZE]: wrap((data) => localAi.analyze(data)),
 
     [IPC_CHANNELS.NOTES_CREATE]: wrap(({ data, performedBy }) =>

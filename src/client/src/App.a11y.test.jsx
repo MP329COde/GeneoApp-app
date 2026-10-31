@@ -14,6 +14,26 @@ const overrides = vi.hoisted(() => ({
   'statistics.totals': {
     totals: { persons: 1, events: 0, sources: 0, places: 0, unions: 0, media: 0 },
   },
+  'statistics.insights': {
+    insights: {
+      persons: { total: 1, living: 1, bySex: { M: 1, F: 0, U: 0 } },
+      birthsByDecade: [],
+      birthsDated: 0,
+      birthSpan: null,
+      generations: { count: 1, perGeneration: [1] },
+      topPlaces: [],
+      topSurnames: [{ name: 'Dupont', count: 1 }],
+      topGivenNames: [{ name: 'Jean', count: 1 }],
+      completeness: {
+        birthDate: { have: 0, total: 1, percent: 0 },
+        birthPlace: { have: 0, total: 1, percent: 0 },
+        parents: { have: 0, total: 1, percent: 0 },
+        sourced: { have: 0, total: 1, percent: 0 },
+        score: 0,
+      },
+      evidence: { facts: 0, factsCited: 0, sources: 0, sourcesUsed: 0 },
+    },
+  },
   'indexing.status': {
     running: false,
     settings: { networkAllowed: true, scheduleEnabled: false, scheduleHour: 3 },

@@ -24,5 +24,27 @@
   "dashboard.openTree": "Open the tree",
   "dashboard.search": "Search",
   "dashboard.importExport": "Import / export",
-  "dashboard.backups": "Backups"
+  "dashboard.backups": "Backups",
+  "dashboard.welcome": "Here is the state of your tree and what deserves your attention today.",
+  "dashboard.healthTitle": "Data health",
+  "dashboard.healthScore": "{percent}%",
+  "dashboard.healthText": "Overall completeness of the tree",
+  "dashboard.healthLink": "See all statistics",
+  "dashboard.attentionHint": "Each card leads to the screen where you can deal with the item.",
+  "dashboard.itemsToReview": {
+    "one": "{count} item to handle",
+    "other": "{count} items to handle"
+  },
+  "dashboard.statistics": "Statistics",
+  "dashboard.openTreeHint": "Browse your ancestors",
+  "dashboard.searchHint": "Find a person, a place, a record",
+  "dashboard.importExportHint": "GEDCOM, book, archives",
+  "dashboard.backupsHint": "Protect your data",
+  "dashboard.statisticsHint": "Charts and completeness",
+  "dashboard.emptyTitle": "Start your tree",
+  "dashboard.emptyText": "Add a first person, or import an existing GEDCOM file to bring your data back.",
+  "dashboard.statusAlert": "Urgent",
+  "dashboard.statusReview": "To check",
+  "dashboard.statusOk": "All good",
+  "dashboard.statusInfo": "In progress"
 }

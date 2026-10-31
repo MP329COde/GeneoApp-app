@@ -5,5 +5,6 @@ export function statisticsRoutes(services) {
   const controller = createStatisticsController(services);
   const router = Router();
   router.get('/', controller.totals);
+  router.get('/insights', controller.insights);
   return router;
 }
