@@ -1,25 +1,291 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, ConfirmDialog, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ActionToast } from '../components/ActionToast.jsx';
+import { ChoiceChips } from '../components/ChoiceChips.jsx';
+import { KinSection } from '../components/KinSection.jsx';
+import { PersonAvatar } from '../components/PersonAvatar.jsx';
+import { PersonPicker } from '../components/PersonPicker.jsx';
+import { RowMenu } from '../components/RowMenu.jsx';
 import { UNION_TYPES, UNION_TYPE_KEYS } from './PersonListPanels.jsx';
-import { FamilySheet } from './FamilySheet.jsx';
-import { ParentageSection } from './PersonRelationsView.jsx';
+import { FamilySheet, useFamilyData } from './FamilySheet.jsx';
+import {
+  ChildrenSection,
+  KinRemoveDialog,
+  ParentsSection,
+  useParentage,
+} from './PersonRelationsView.jsx';
 
-export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
+function UnionCard({
+  union,
+  selected,
+  persons,
+  lifespans,
+  refreshKey,
+  busy,
+  menuRef,
+  onNavigate,
+  onAskRemove,
+}) {
   const { t } = useTranslation();
-  const [unions, setUnions] = useState(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { data, error } = useFamilyData(client, union.id, refreshKey);
+  const partnerIds = union.partnerIds.filter((id) => id !== selected.id);
+  const partners = partnerIds.map((id) => persons.find((p) => p.id === id) ?? { id });
+  const typeLabel = t(UNION_TYPE_KEYS[union.type] ?? '', union.type);
+  const names = partners.map((p) =>
+    p.given_names === undefined
+      ? t('kin.unknownPerson', { id: p.id }, 'Personne #{id}')
+      : personLabel(p),
+  );
+  const startText = data?.startEvent && (data.startEvent.date_text ?? data.startEvent.date_start);
+  const endText = data?.endEvent && (data.endEvent.date_text ?? data.endEvent.date_start);
+  const children = data?.children ?? [];
+
+  return (
+    <li className="union-card">
+      <div className="union-card__top">
+        <div className="union-card__avatars">
+          {partners.map((p) => (
+            <PersonAvatar key={p.id} person={p} size={48} />
+          ))}
+        </div>
+        <div className="union-card__who">
+          {partners.map((p, index) => {
+            const info = lifespans?.get(p.id);
+            const meta = [info?.label, info?.birthPlace].filter(Boolean).join(' · ');
+            return (
+              <div key={p.id} className="union-card__partner">
+                <button type="button" className="kin-row__name" onClick={() => onNavigate(p.id)}>
+                  {names[index]}
+                </button>
+                {meta ? <span className="kin-row__meta">{meta}</span> : null}
+              </div>
+            );
+          })}
+          <div className="union-card__facts">
+            <Badge tone="neutral">{typeLabel}</Badge>
+            {startText ? (
+              <span className="union-card__date">
+                {t('family.sheet.start', 'Début')} : {startText}
+              </span>
+            ) : null}
+            {endText ? (
+              <span className="union-card__date">
+                {t('family.sheet.end', 'Fin')} : {endText}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <RowMenu
+          ref={menuRef}
+          label={t(
+            'family.actionsFor',
+            { name: names.join(', ') },
+            'Actions pour l’union avec {name}',
+          )}
+          disabled={busy}
+          items={[
+            {
+              key: 'remove',
+              label: t('family.remove', 'Dissoudre / supprimer'),
+              danger: true,
+              onSelect: () => onAskRemove({ id: union.id, name: names.join(', ') }),
+            },
+          ]}
+        />
+      </div>
+
+      <div className="union-card__children">
+        <span className="union-card__children-label" id={`union-${union.id}-children`}>
+          {t('family.childrenLabel', { count: children.length }, 'Enfants ({count})')}
+        </span>
+        {children.length === 0 ? (
+          <span className="kin-row__meta">
+            {t('family.sheet.noChildren', 'Aucun enfant rattaché à cette union.')}
+          </span>
+        ) : (
+          <ul className="chip-list" aria-labelledby={`union-${union.id}-children`}>
+            {children.map((child) => (
+              <li key={child.id}>
+                <button type="button" className="person-chip" onClick={() => onNavigate(child.id)}>
+                  <PersonAvatar person={child} size={22} />
+                  <span>{personLabel(child)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="union-card__footer">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          aria-expanded={sheetOpen}
+          onClick={() => setSheetOpen((value) => !value)}
+        >
+          {sheetOpen
+            ? t('family.sheet.hide', 'Masquer la fiche')
+            : t('family.sheet.show', 'Fiche famille')}
+        </Button>
+      </div>
+      {sheetOpen ? (
+        <FamilySheet
+          client={client}
+          unionId={union.id}
+          onNavigate={onNavigate}
+          data={data}
+          error={error}
+        />
+      ) : null}
+    </li>
+  );
+}
+
+function UnionsSection({
+  unions,
+  selected,
+  persons,
+  lifespans,
+  kin,
+  onNavigate,
+  onCreated,
+  busy,
+  setBusy,
+  setError,
+  menuRefs,
+  addRef,
+  onAskRemove,
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   const [type, setType] = useState('MARRIAGE');
   const [partnerId, setPartnerId] = useState('');
+
+  const exclude = useMemo(
+    () => [selected.id, ...(unions ?? []).flatMap((union) => union.partnerIds)],
+    [selected, unions],
+  );
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!partnerId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await client.unions.create({ type, partnerIds: [selected.id, Number(partnerId)] });
+      const partner = persons.find((p) => p.id === Number(partnerId));
+      setPartnerId('');
+      setOpen(false);
+      await onCreated(
+        t(
+          'family.created',
+          { name: partner ? personLabel(partner) : partnerId },
+          'Union créée avec {name}.',
+        ),
+      );
+      addRef.current?.focus();
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <KinSection
+      title={t('family.unionsTitle', 'Unions')}
+      count={unions?.length ?? 0}
+      loading={unions === null}
+      addLabel={t('family.addUnion', 'Ajouter une union')}
+      formOpen={open}
+      onToggleForm={() => setOpen((value) => !value)}
+      addRef={addRef}
+      emptyText={t('family.empty', 'Aucune union enregistrée pour cette personne.')}
+      emptyHint={t(
+        'family.emptyHint',
+        'Ajoutez un mariage, un PACS ou une vie commune pour regrouper les enfants d’un couple.',
+      )}
+      form={
+        <form className="kin-form" onSubmit={submit}>
+          <PersonPicker
+            label={t('family.partner', 'Partenaire')}
+            persons={persons}
+            value={partnerId}
+            onChange={setPartnerId}
+            excludeIds={exclude}
+            lifespans={lifespans}
+          />
+          <ChoiceChips
+            legend={t('family.unionType', 'Type d’union')}
+            value={type}
+            onChange={setType}
+            options={UNION_TYPES.map((value) => ({
+              value,
+              label: t(UNION_TYPE_KEYS[value] ?? '', value),
+            }))}
+          />
+          <div className="kin-form__actions">
+            <Button type="submit" size="sm" disabled={busy || !partnerId}>
+              {t('family.create', 'Créer l’union')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setOpen(false);
+                addRef.current?.focus();
+              }}
+            >
+              {t('kin.cancel', 'Annuler')}
+            </Button>
+          </div>
+        </form>
+      }
+    >
+      <ul className="union-list">
+        {(unions ?? []).map((union) => (
+          <UnionCard
+            key={union.id}
+            union={union}
+            selected={selected}
+            persons={persons}
+            lifespans={lifespans}
+            refreshKey={kin.children?.length ?? 0}
+            busy={busy}
+            menuRef={(node) => {
+              if (node) menuRefs.current.set(`u${union.id}`, node);
+              else menuRefs.current.delete(`u${union.id}`);
+            }}
+            onNavigate={onNavigate}
+            onAskRemove={onAskRemove}
+          />
+        ))}
+      </ul>
+    </KinSection>
+  );
+}
+
+export function FamiliesPanel({ persons, selected, lifespans, onNavigate, onChange }) {
+  const { t } = useTranslation();
+  const [unions, setUnions] = useState(null);
   const [familiesError, setFamiliesError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [unionToRemove, setUnionToRemove] = useState(null);
-  const [sheetUnionId, setSheetUnionId] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const menuRefs = useRef(new Map());
+  const parentAdd = useRef(null);
+  const unionAdd = useRef(null);
+  const childAdd = useRef(null);
 
-  const otherPersons = useMemo(
-    () => persons.filter((person) => person.id !== selected?.id),
-    [persons, selected],
-  );
+  const announce = useCallback((text) => setFeedback({ id: Date.now(), text }), []);
+  const dismiss = useCallback(() => setFeedback(null), []);
+
+  const kin = useParentage({ persons, selected, onChange, onFeedback: announce });
 
   const loadUnions = useCallback(async () => {
     if (!selected) return;
@@ -43,34 +309,24 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
     );
   }
 
-  const handleCreate = async (event) => {
-    event.preventDefault();
-    if (!partnerId) return;
-    setBusy(true);
-    setFamiliesError(null);
-    try {
-      await client.unions.create({
-        type,
-        partnerIds: [selected.id, Number(partnerId)],
-      });
-      setPartnerId('');
-      await loadUnions();
-      await onChange?.();
-    } catch (createError) {
-      setFamiliesError(createError.message);
-    } finally {
-      setBusy(false);
-    }
+  const handleCreated = async (message) => {
+    await loadUnions();
+    await onChange?.();
+    announce(message);
   };
 
-  const handleRemove = async (unionId) => {
-    if (!unionId) return;
+  const handleRemove = async () => {
+    const target = unionToRemove;
+    if (!target) return;
     setBusy(true);
     setFamiliesError(null);
+    let done = false;
     try {
-      await client.unions.remove(unionId);
+      await client.unions.remove(target.id);
       await loadUnions();
       await onChange?.();
+      announce(t('family.removed', 'Union dissoute.'));
+      done = true;
     } catch (removeError) {
       console.error(t('family.removeError', "Échec de la suppression de l'union"), removeError);
       setFamiliesError(
@@ -83,102 +339,74 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
       setBusy(false);
       setUnionToRemove(null);
     }
+    (done ? unionAdd.current : menuRefs.current.get(`u${target.id}`))?.focus();
   };
 
-  const personLabelById = (id) => {
-    const person = persons.find((candidate) => candidate.id === id);
-    return person ? personLabel(person) : `Personne #${id}`;
-  };
+  const info = lifespans?.get(selected.id);
+  const meta = [info?.label, info?.birthPlace].filter(Boolean).join(' · ');
+  const error = familiesError ?? kin.error;
 
   return (
-    <div className="search-panel">
-      <h3>{t('family.title', { name: personLabel(selected) }, 'Familles de {name}')}</h3>
-      {familiesError ? <ErrorNotice message={familiesError} /> : null}
+    <div className="search-panel families-panel">
+      <header className="families-hero">
+        <PersonAvatar person={selected} size={56} />
+        <div>
+          <h3 className="families-hero__title">
+            {t('family.title', { name: personLabel(selected) }, 'Familles de {name}')}
+          </h3>
+          {meta ? <p className="families-hero__meta">{meta}</p> : null}
+        </div>
+      </header>
 
-      <form className="create-person-form" onSubmit={handleCreate}>
-        <label>
-          <span>{t('family.unionType', 'Type d’union')}</span>
-          <select value={type} onChange={(event) => setType(event.target.value)}>
-            {UNION_TYPES.map((unionType) => (
-              <option key={unionType} value={unionType}>
-                {t(UNION_TYPE_KEYS[unionType] ?? '', unionType)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>{t('family.partner', 'Partenaire')}</span>
-          <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-            <option value="">{t('family.choosePartner', '— Choisir une personne —')}</option>
-            {otherPersons.map((person) => (
-              <option key={person.id} value={person.id}>
-                {personLabel(person)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" size="sm" disabled={busy || !partnerId}>
-          {t('family.create', 'Créer l’union')}
-        </Button>
-      </form>
+      {error ? <ErrorNotice message={error} /> : null}
+      <ActionToast feedback={feedback} onDismiss={dismiss} />
 
-      {unions === null ? (
-        <p role="status">{t('family.loading', 'Chargement…')}</p>
-      ) : unions.length === 0 ? (
-        <p className="notice">
-          {t('family.empty', 'Aucune union enregistrée pour cette personne.')}
-        </p>
-      ) : (
-        <ul className="search-results">
-          {unions.map((union) => (
-            <li key={union.id}>
-              <Badge tone="neutral">{t(UNION_TYPE_KEYS[union.type] ?? '', union.type)}</Badge>{' '}
-              {union.partnerIds
-                .filter((id) => id !== selected.id)
-                .map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className="person-card"
-                    style={{ display: 'inline', padding: 0, border: 0 }}
-                    onClick={() => onNavigate(id)}
-                  >
-                    {personLabelById(id)}
-                  </button>
-                ))}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                aria-expanded={sheetUnionId === union.id}
-                onClick={() => setSheetUnionId(sheetUnionId === union.id ? null : union.id)}
-              >
-                {sheetUnionId === union.id
-                  ? t('family.sheet.hide', 'Masquer la fiche')
-                  : t('family.sheet.show', 'Fiche famille')}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={() => setUnionToRemove(union.id)}
-                disabled={busy}
-              >
-                {t('family.remove', 'Dissoudre / supprimer')}
-              </Button>
-              {sheetUnionId === union.id ? (
-                <FamilySheet client={client} unionId={union.id} onNavigate={onNavigate} />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <ParentageSection
+      <ParentsSection
+        kin={kin}
         persons={persons}
         selected={selected}
+        lifespans={lifespans}
         onNavigate={onNavigate}
-        onChange={onChange}
+        menuRefs={menuRefs}
+        addRef={parentAdd}
+      />
+
+      <UnionsSection
+        unions={unions}
+        selected={selected}
+        persons={persons}
+        lifespans={lifespans}
+        kin={kin}
+        onNavigate={onNavigate}
+        onCreated={handleCreated}
+        busy={busy}
+        setBusy={setBusy}
+        setError={setFamiliesError}
+        menuRefs={menuRefs}
+        addRef={unionAdd}
+        onAskRemove={setUnionToRemove}
+      />
+
+      <ChildrenSection
+        kin={kin}
+        persons={persons}
+        selected={selected}
+        lifespans={lifespans}
+        onNavigate={onNavigate}
+        menuRefs={menuRefs}
+        addRef={childAdd}
+      />
+
+      <KinRemoveDialog
+        kin={kin}
+        onClosed={(pending, done) => {
+          if (!pending) return;
+          if (done) {
+            (pending.kind === 'child' ? childAdd : parentAdd).current?.focus();
+          } else {
+            menuRefs.current.get(`p${pending.id}`)?.focus();
+          }
+        }}
       />
 
       <ConfirmDialog
@@ -190,8 +418,12 @@ export function FamiliesPanel({ persons, selected, onNavigate, onChange }) {
         )}
         confirmLabel={t('confirmDialog.unionAction', 'Dissoudre / supprimer')}
         isBusy={busy}
-        onConfirm={() => handleRemove(unionToRemove)}
-        onCancel={() => setUnionToRemove(null)}
+        onConfirm={handleRemove}
+        onCancel={() => {
+          const target = unionToRemove;
+          setUnionToRemove(null);
+          if (target) menuRefs.current.get(`u${target.id}`)?.focus();
+        }}
       />
     </div>
   );

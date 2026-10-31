@@ -85,7 +85,9 @@ test('ajoute un second membre de la famille et relie les deux personnes en paren
   // Sélectionne Ada, puis ajoute Byron comme enfant via l'onglet Familles.
   await page.getByRole('button', { name: 'Ada Lovelace' }).click();
   await page.getByRole('button', { name: 'Familles', exact: true }).click();
-  await page.getByLabel('Ajouter un enfant').selectOption({ label: 'Byron Lovelace' });
+  await page.getByRole('button', { name: 'Ajouter un enfant' }).click();
+  await page.getByRole('combobox', { name: 'Enfant' }).fill('byron');
+  await page.getByRole('option', { name: /Byron Lovelace/ }).click();
   await page.getByRole('button', { name: 'Ajouter l’enfant' }).click();
 
   await expect(page.getByRole('button', { name: 'Byron Lovelace' }).last()).toBeVisible();

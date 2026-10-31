@@ -65,6 +65,7 @@ import './styles/responsive.css';
 import './styles/view-forms.css';
 import './styles/tree-explorer.css';
 import './styles/relations.css';
+import './styles/family.css';
 import './styles/person-sheet.css';
 import './styles/preferences.css';
 import './styles/settings.css';
@@ -1120,6 +1121,7 @@ function AppContent() {
                   <FamiliesPanel
                     persons={persons}
                     selected={selected}
+                    lifespans={lifespans}
                     onNavigate={setSelectedId}
                     onChange={loadRelations}
                   />

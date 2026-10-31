@@ -11,39 +11,64 @@ const LINK_KEYS = {
   UNKNOWN: 'family.sheet.link.UNKNOWN',
 };
 
-// Fiche d'une famille : partenaires, enfants (avec la nature de chaque lien de
-// filiation) et événements de début et de fin de l'union.
-export function FamilySheet({ client, unionId, onNavigate }) {
-  const { t } = useTranslation();
-  const [sheet, setSheet] = useState(null);
-  const [error, setError] = useState(null);
-
+/**
+ * Charge la fiche d'une famille (partenaires, enfants, événements de début et
+ * de fin). Renvoie `null` tant que les données ne sont pas là, ou en cas
+ * d'échec (la carte reste alors affichable sans le détail).
+ */
+export function useFamilyData(client, unionId, refreshKey = 0) {
+  const [state, setState] = useState({ data: null, error: null });
   useEffect(() => {
     let active = true;
-    setSheet(null);
-    client.unions
-      .family(unionId)
-      .then((data) => active && setSheet(data))
-      .catch((loadError) => active && setError(loadError.message));
+    if (typeof client?.unions?.family !== 'function') return undefined;
+    Promise.resolve(client.unions.family(unionId))
+      .then((data) => active && setState({ data, error: null }))
+      .catch((loadError) => active && setState({ data: null, error: loadError.message }));
     return () => {
       active = false;
     };
-  }, [client, unionId]);
+  }, [client, unionId, refreshKey]);
+  return state;
+}
 
-  if (error) return <ErrorNotice message={error} />;
+// Fiche d'une famille : partenaires, enfants (avec la nature de chaque lien de
+// filiation) et événements de début et de fin de l'union.
+export function FamilySheet({ client, unionId, onNavigate, data = null, error = null }) {
+  const { t } = useTranslation();
+  const [own, setOwn] = useState({ data: null, error: null });
+
+  useEffect(() => {
+    if (data || error) return undefined;
+    let active = true;
+    Promise.resolve(client.unions.family(unionId))
+      .then((result) => active && setOwn({ data: result, error: null }))
+      .catch((loadError) => active && setOwn({ data: null, error: loadError.message }));
+    return () => {
+      active = false;
+    };
+  }, [client, unionId, data, error]);
+
+  const sheet = data ?? own.data;
+  const failure = error ?? own.error;
+
+  if (failure) return <ErrorNotice message={failure} />;
   if (!sheet) return <p role="status">{t('family.loading', 'Chargement…')}</p>;
 
-  const eventLine = (label, event) =>
-    event ? (
-      <p className="data-id">
-        {label} : {event.date_text ?? event.date_start ?? '—'}
-      </p>
-    ) : null;
+  const eventLine = (label, event) => (
+    <div className="family-sheet__fact">
+      <dt>{label}</dt>
+      <dd>{event ? (event.date_text ?? event.date_start ?? '—') : '—'}</dd>
+    </div>
+  );
 
   return (
     <section className="family-sheet" aria-label={t('family.sheet.title', 'Fiche famille')}>
-      <h4>{t('family.sheet.partners', 'Partenaires')}</h4>
-      <ul className="search-results">
+      <dl className="family-sheet__facts">
+        {eventLine(t('family.sheet.start', 'Début'), sheet.startEvent)}
+        {eventLine(t('family.sheet.end', 'Fin'), sheet.endEvent)}
+      </dl>
+      <h5 className="family-sheet__heading">{t('family.sheet.partners', 'Partenaires')}</h5>
+      <ul className="family-sheet__list">
         {sheet.partners.map((partner) => (
           <li key={partner.id}>
             <button type="button" className="link-button" onClick={() => onNavigate?.(partner.id)}>
@@ -52,15 +77,13 @@ export function FamilySheet({ client, unionId, onNavigate }) {
           </li>
         ))}
       </ul>
-      {eventLine(t('family.sheet.start', 'Début'), sheet.startEvent)}
-      {eventLine(t('family.sheet.end', 'Fin'), sheet.endEvent)}
-      <h4>{t('family.sheet.children', 'Enfants')}</h4>
+      <h5 className="family-sheet__heading">{t('family.sheet.children', 'Enfants')}</h5>
       {sheet.children.length === 0 ? (
-        <p className="notice">
+        <p className="kin-empty__hint">
           {t('family.sheet.noChildren', 'Aucun enfant rattaché à cette union.')}
         </p>
       ) : (
-        <ul className="search-results">
+        <ul className="family-sheet__list">
           {sheet.children.map((child) => (
             <li key={child.id}>
               <button type="button" className="link-button" onClick={() => onNavigate?.(child.id)}>

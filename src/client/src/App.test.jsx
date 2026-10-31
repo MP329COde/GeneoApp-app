@@ -873,7 +873,9 @@ describe('App', () => {
     await waitFor(() => expect(unions.listForPerson).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.getByText(/Aucune union enregistrée/)).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText('Partenaire'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une union' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Partenaire' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Marie Curie/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Créer l’union' }));
 
     await waitFor(() =>
@@ -1229,8 +1231,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Familles' }));
     await waitFor(() => expect(parentages.listParentsOf).toHaveBeenCalledWith(1));
 
-    fireEvent.change(screen.getByLabelText('Ajouter un parent'), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText('Rôle'), { target: { value: 'FATHER' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter un parent' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Louis Dupont/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Père' }));
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter le parent' }));
 
     await waitFor(() =>
