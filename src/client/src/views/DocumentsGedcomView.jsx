@@ -5,6 +5,7 @@ import { client } from '../api/app-client.js';
 import { ErrorNotice, personLabel } from '../components/shared.jsx';
 import { OldDocumentDecoder, PortraitPicker, WhoOwnsFile } from './DocumentTools.jsx';
 import { PhotoViewer } from './PhotoViewer.jsx';
+import { BookExportPanel } from './BookExportPanel.jsx';
 import { MediaPlayer } from '../components/MediaPlayer.jsx';
 import { decodeGedcomBuffer } from '../../../server/src/gedcom/encoding.js';
 
@@ -324,7 +325,7 @@ function exportOptions(scope, personId) {
   }
 }
 
-export function GedcomPanel({ onImported, selected }) {
+export function GedcomPanel({ onImported, selected, persons = [] }) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState(null);
@@ -729,6 +730,7 @@ export function GedcomPanel({ onImported, selected }) {
           </p>
         ) : null}
       </div>
+      <BookExportPanel selected={selected} persons={persons} />
     </div>
   );
 }

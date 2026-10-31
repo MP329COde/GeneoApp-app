@@ -36,6 +36,7 @@ test('chemins : seuls les préfixes d’API connus, sans traversée ni caractèr
     '/api/unions/5/family',
     '/api/graph/path?personA=1&personB=2',
     '/api/search?q=Dupont%20Jean',
+    '/api/reports/book',
   ]) {
     assert.equal(isAllowedApiPath(ok), true, ok);
   }
@@ -129,6 +130,17 @@ test('de bout en bout : IPC → passerelle → API gardée par jeton, avec annul
     const family = await call({ method: 'GET', path: `/api/persons/${id}/relations` });
     assert.equal(family.data.status, 200);
     assert.equal(family.data.body.person.given_names, 'Ada');
+
+    // Livre PDF : le fichier traverse l'IPC en base64 et reste un PDF valide.
+    const book = await call({
+      method: 'POST',
+      path: '/api/reports/book',
+      body: { rootPersonId: id, includeLiving: true, generations: 1 },
+    });
+    assert.equal(book.data.status, 200);
+    const pdf = Buffer.from(book.data.body.contentBase64, 'base64');
+    assert.equal(pdf.subarray(0, 5).toString('latin1'), '%PDF-');
+    assert.equal(book.data.body.summary.persons, 1);
 
     // Une erreur métier de l'API est relayée avec son code HTTP, sans exception.
     const missing = await call({ method: 'GET', path: '/api/persons/9999' });

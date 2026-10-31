@@ -26,6 +26,7 @@ describe('routes étendues du client', () => {
     await api.aiExtras.status();
     await api.aiExtras.updateConfig({ enabled: true });
     await api.aiExtras.suggest({ task: 'analyze-note', id: 3 });
+    await api.reports.book({ rootPersonId: 4, generations: 3, includeLiving: false });
 
     expect(request.mock.calls).toEqual([
       ['GET', '/api/assertions?entityType=PERSON&entityId=4'],
@@ -47,6 +48,7 @@ describe('routes étendues du client', () => {
       ['GET', '/api/ai/status'],
       ['PUT', '/api/ai/config', { enabled: true }],
       ['POST', '/api/ai/suggest', { task: 'analyze-note', id: 3 }],
+      ['POST', '/api/reports/book', { rootPersonId: 4, generations: 3, includeLiving: false }],
     ]);
   });
 
