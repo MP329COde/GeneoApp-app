@@ -1,4 +1,5 @@
 import { withTransaction, recordAudit } from './base-repository.js';
+import { foldText } from '../database.js';
 import { indexDocument, removeFromIndex } from './search-index.js';
 import { personDocument } from './search-reindex.js';
 
@@ -196,14 +197,14 @@ export class PersonRepository {
   buildWhereClause({ includeDeleted = false, q } = {}) {
     const conditions = [includeDeleted ? '' : 'deleted_at IS NULL'].filter(Boolean);
     if (q && q.trim()) {
-      conditions.push(`(given_names || ' ' || family_name) LIKE @q ESCAPE '\\'`);
+      conditions.push(`FOLD(given_names || ' ' || family_name) LIKE @q ESCAPE '\\'`);
     }
     return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   }
 
   buildFilterParams(q) {
     if (!q || !q.trim()) return {};
-    const escaped = q.trim().replace(/[\\%_]/g, (match) => `\\${match}`);
+    const escaped = foldText(q.trim()).replace(/[\\%_]/g, (match) => `\\${match}`);
     return { q: `%${escaped}%` };
   }
 
