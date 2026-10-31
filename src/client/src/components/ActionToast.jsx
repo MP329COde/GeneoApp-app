@@ -24,7 +24,7 @@ export function ActionToast({ feedback, onDismiss }) {
           <button
             type="button"
             className="action-toast__close"
-            aria-label={t('toast.dismiss', 'Fermer le message')}
+            aria-label={t('family.toast.dismiss', 'Fermer le message')}
             onClick={onDismiss}
           >
             <span aria-hidden="true">×</span>

@@ -64,5 +64,5 @@
   "picker.change": "Changer",
   "picker.placeholder": "Rechercher une personne…",
   "rowMenu.actions": "Autres actions",
-  "toast.dismiss": "Fermer le message"
+  "family.toast.dismiss": "Fermer le message"
 }
