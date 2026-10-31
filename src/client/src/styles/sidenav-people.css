@@ -1,10 +1,67 @@
-/* ---------- Menu latéral : personnes toujours visibles ---------- */
+/* ---------- Menu latéral : section « Personnes » repliable ---------- */
 .sidenav__people {
-  flex: 0 1 auto;
-  max-height: 40vh;
-  overflow-y: auto;
-  padding: var(--space-2) var(--space-2) var(--space-2);
-  border-bottom: var(--border-hairline) solid var(--border);
+  flex: 0 0 auto;
+  padding: 0 var(--space-2) var(--space-2);
+  border-top: var(--border-hairline) solid var(--border-subtle);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+  background: var(--surface);
+}
+.sidenav__people.is-collapsed {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.sidenav__people-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+}
+.sidenav__people-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.sidenav__people .new-person-button {
+  display: block;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.icon-button--primary {
+  border-color: transparent;
+  background: var(--action);
+  color: var(--on-action);
+}
+.icon-button--primary:hover {
+  background: var(--action-hover);
+}
+.sidenav__people .icon-button--primary:hover:not(:disabled) {
+  background: var(--action-hover);
+  color: var(--on-action);
+}
+.sidenav__people-body[hidden] {
+  display: none;
+}
+.sidenav__people-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1) var(--space-2);
+}
+.people-count {
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.sidenav__people .verification-rerun-button {
+  display: block;
+  margin: 0;
+}
+.icon-button--small {
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
 }
 .sidenav__people .create-person-form {
   grid-template-columns: 1fr 1fr;
@@ -13,24 +70,76 @@
 .sidenav__people .create-person-form .gds-button {
   grid-column: 1 / -1;
 }
+.person-filter {
+  display: block;
+  margin-bottom: var(--space-2);
+}
 .person-filter input {
-  width: calc(100% - var(--space-3));
+  width: 100%;
   min-height: 34px;
-  margin: 0 var(--space-2) var(--space-2);
-  padding: 0 var(--space-2);
-  border: var(--border-hairline) solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  padding: 0 var(--space-3);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+}
+.person-filter input:focus-visible {
   background: var(--surface-raised);
+  border-color: var(--action);
 }
 .person-filter__count {
   margin: 0 var(--space-2) var(--space-2);
-  font-size: var(--text-xs, 0.75rem);
-  color: var(--color-text-muted, currentColor);
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+/* Liste bornée : défile seule, sans entraîner la navigation en dessous. */
+.sidenav__people .person-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.sidenav__people .person-list > div {
+  overscroll-behavior: contain;
+}
+.sidenav__people .person-list .notice {
+  margin: var(--space-2);
+}
+.sidenav__people .person-list .notice {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.sidenav__people .person-card {
+  border-radius: 0;
+  border-color: transparent;
+}
+.sidenav__people .person-card--selected {
+  border-left: var(--border-accent) solid var(--action);
+  border-color: transparent;
+  border-left-color: var(--action);
+}
+/* Poignée de réglage de la hauteur de la liste. */
+.people-resizer {
+  display: grid;
+  place-items: center;
+  height: 14px;
+  margin-top: var(--space-1);
+  cursor: row-resize;
+  touch-action: none;
+  border-radius: var(--radius-sm);
+}
+.people-resizer span {
+  width: 32px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.people-resizer:hover span,
+.people-resizer:focus-visible span {
+  background: var(--action);
 }
 .sidenav__scroll .sidenav__group:first-child {
   margin-top: var(--space-1);
-}
-.sidenav__people.sidenav__persons {
-  padding-top: var(--space-2);
-  border-top: 0;
 }

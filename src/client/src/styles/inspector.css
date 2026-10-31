@@ -1,19 +1,40 @@
-/* ---------- Inspecteur ---------- */
+/* ---------- Inspecteur : en-tête puis cartes ---------- */
 .details-panel {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-4);
   border-left: var(--border-hairline) solid var(--border);
-  background: var(--surface);
+  background: var(--bg-app);
 }
 .details-panel__top {
   display: flex;
   gap: var(--space-3);
-  align-items: flex-start;
-  margin-bottom: var(--space-4);
+  align-items: center;
+  padding: var(--space-1) var(--space-1) var(--space-2);
+}
+.details-panel__identity {
+  min-width: 0;
+}
+.details-panel__top .eyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .details-panel__top h2 {
+  margin: 0;
   font: var(--type-person-name-lg);
+  overflow-wrap: anywhere;
+}
+.details-panel__top .data-id {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
 }
 .avatar {
   width: 48px;
@@ -22,18 +43,70 @@
   flex: 0 0 auto;
   place-items: center;
   border: var(--border-hairline) solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
   color: var(--text-secondary);
+  box-shadow: var(--shadow-1);
 }
 .avatar .icon {
   width: 24px;
   height: 24px;
 }
+
+/* Cartes de l'inspecteur */
 .detail-section {
   padding: var(--space-4) 0;
   border-top: var(--border-hairline) solid var(--border-subtle);
 }
+.inspector-card,
+.inspector-edit,
+.details-panel .detail-section {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+}
+.inspector-card__title,
+.details-panel .detail-section > h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font: var(--type-heading);
+  font-size: 15px;
+}
+.inspector-card__title .icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+.inspector-card--relations .inspector-card__title .icon {
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+.verification .inspector-card__title .icon {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+.verification--alert {
+  border-color: var(--coherence);
+  background: var(--coherence-subtle);
+}
+.verification--alert .inspector-card__title .icon {
+  background: var(--surface-raised);
+  color: var(--coherence);
+}
+.quality-card .inspector-card__title .icon {
+  background: var(--evidence-subtle);
+  color: var(--evidence);
+}
+
 dl {
   margin: 0;
   display: grid;

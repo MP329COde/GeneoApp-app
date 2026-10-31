@@ -557,7 +557,7 @@ test('crée un second arbre isolé, y travaille, puis revient au premier arbre i
   page,
 }) => {
   await page.goto('/');
-  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  const counter = page.locator('.sidenav__persons .people-count');
   await expect(counter).toHaveText(/\d+ personnes?/);
   const before = await counter.textContent();
 
@@ -580,7 +580,7 @@ test('Ctrl+Z annule réellement la création d’une personne, Ctrl+Maj+Z la ré
   page,
 }) => {
   await page.goto('/');
-  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  const counter = page.locator('.sidenav__persons .people-count');
   await expect(counter).toHaveText(/\d+ personnes?/);
   const before = Number((await counter.textContent()).split(' ')[0]);
   const personCountText = (count) => `${count} personne${count === 0 || count === 1 ? '' : 's'}`;
@@ -667,7 +667,7 @@ test('GEDZIP : exporte l’arbre avec ses médias puis le réimporte dans un nou
   await page.getByLabel('Nom de l’arbre').fill('Réimport GEDZIP');
   await page.getByRole('button', { name: 'Créer l’arbre' }).click();
   await page.getByRole('button', { name: 'Ouvrir Réimport GEDZIP' }).click();
-  const counter = page.locator('.sidenav__persons .sidenav__label span');
+  const counter = page.locator('.sidenav__persons .people-count');
   await expect(counter).toHaveText('0 personne');
 
   // L'arbre vide ouvre automatiquement l'assistant de départ ("Nouvelle
@@ -772,9 +772,12 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   const rows = page.locator('.person-list .person-card');
   await expect(rows.first()).toBeVisible();
 
-  // 10 lignes consécutives : aucune boîte englobante ne chevauche la suivante.
+  // Lignes consécutives rendues (la liste, de hauteur bornée, n'en monte que
+  // quelques-unes) : aucune boîte englobante ne chevauche la suivante.
+  const renderedRows = Math.min(10, await rows.count());
+  expect(renderedRows).toBeGreaterThanOrEqual(5);
   const boxes = [];
-  for (let index = 0; index < 10; index += 1) {
+  for (let index = 0; index < renderedRows; index += 1) {
     const box = await rows.nth(index).boundingBox();
     expect(box).not.toBeNull();
     boxes.push(box);
@@ -786,7 +789,7 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   }
 
   // Compteur : total réel de l'arbre, pas le nombre de lignes déjà chargées.
-  const counter = page.locator('.sidenav__persons h2');
+  const counter = page.locator('.sidenav__persons .people-count');
   await expect(counter).toContainText(/\d.*personnes/);
   const total = Number(((await counter.textContent()) ?? '').replace(/\D/g, ''));
   expect(total).toBeGreaterThanOrEqual(222);
@@ -860,6 +863,11 @@ test.describe('navigation mobile (390×844)', () => {
     // Sélectionne explicitement la personne qu'on vient de créer (le filtre
     // reste accessible même sur mobile), pour un test indépendant du volume
     // de données déjà accumulé par les tests précédents (serveur partagé).
+    // La section « Personnes » est repliée par défaut sur mobile : on la déplie.
+    const peopleToggle = page.locator('.sidenav__people .sidenav__label--toggle');
+    await expect(peopleToggle).toHaveAttribute('aria-expanded', 'false');
+    await peopleToggle.click();
+    await expect(peopleToggle).toHaveAttribute('aria-expanded', 'true');
     await page.getByPlaceholder('Filtrer les personnes…').fill('Ada Lovelace');
     await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
 

@@ -1,0 +1,42 @@
+.gds-skeleton {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--skeleton);
+}
+.gds-skeleton--circle {
+  border-radius: var(--radius-full);
+}
+.gds-skeleton--block {
+  border-radius: var(--radius-md);
+}
+.gds-skeleton-group {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+.gds-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.gds-skeleton-row__lines {
+  display: grid;
+  flex: 1;
+  gap: var(--space-2);
+  min-width: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gds-skeleton {
+    animation: gds-skeleton-pulse var(--duration-skeleton) var(--ease-standard) infinite;
+  }
+}
+@keyframes gds-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}

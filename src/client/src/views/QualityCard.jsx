@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../design-system/index.js';
 import { useEventLabels } from '../genealogy/event-labels.js';
+import { Icon } from '../components/shared.jsx';
 
 // La confiance d'un fait est une valeur d'énumération renvoyée par le
 // serveur : la table ci-dessous en donne la formulation dans chaque langue.
@@ -53,8 +54,11 @@ export function QualityCard({ client, personId, version, onOpenCoherence, onOpen
   const ratio = totals.facts ? totals.sourced / totals.facts : 0;
 
   return (
-    <section className="detail-section quality-card" aria-labelledby="quality-title">
-      <h3 id="quality-title">{t('quality.title')}</h3>
+    <section className="detail-section inspector-card quality-card" aria-labelledby="quality-title">
+      <h3 className="inspector-card__title" id="quality-title">
+        <Icon name="stats" />
+        {t('quality.title')}
+      </h3>
       <div className="quality-card__ratio">
         <span>{t('quality.sourcedFacts')}</span>
         <strong className="data-id">
