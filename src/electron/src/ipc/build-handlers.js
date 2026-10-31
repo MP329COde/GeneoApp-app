@@ -1,5 +1,6 @@
 import { isPlainObject } from '../../../server/src/validation/validators.js';
 import { ValidationError, toHttpError } from '../../../server/src/errors.js';
+import { parsePersonsListQuery } from '../../../server/src/services/person.service.js';
 import { IPC_CHANNELS } from './channels.js';
 
 function actorOf(performedBy) {
@@ -161,9 +162,30 @@ function buildRawHandlers(services, workspace, storage, apiProxy) {
       persons.create(data, { performedBy: actorOf(performedBy) }),
     ),
     [IPC_CHANNELS.PERSONS_GET]: wrap(({ id }) => persons.get(id)),
-    [IPC_CHANNELS.PERSONS_LIST]: wrap(({ includeDeleted } = {}) =>
-      persons.list({ includeDeleted }),
-    ),
+    // Même contrat que `GET /api/persons` : sans limit/offset/total, tableau
+    // historique ; avec, enveloppe { items, total, limit, offset } ou { total }.
+    [IPC_CHANNELS.PERSONS_LIST]: wrap((payload = {}) => {
+      const options = parsePersonsListQuery({
+        limit: payload.limit,
+        offset: payload.offset,
+        q: payload.q,
+        total: payload.total === true ? 'true' : undefined,
+        includeDeleted: payload.includeDeleted === true ? 'true' : undefined,
+      });
+      if (!options.paginated) {
+        return persons.list({ includeDeleted: options.includeDeleted, q: options.q });
+      }
+      if (options.totalOnly) {
+        return { total: persons.count({ includeDeleted: options.includeDeleted, q: options.q }) };
+      }
+      const { items, total } = persons.list({
+        includeDeleted: options.includeDeleted,
+        limit: options.limit,
+        offset: options.offset,
+        q: options.q,
+      });
+      return { items, total, limit: options.limit, offset: options.offset };
+    }),
     [IPC_CHANNELS.PERSONS_UPDATE]: wrap(({ id, data, performedBy }) =>
       persons.update(id, data, { performedBy: actorOf(performedBy) }),
     ),

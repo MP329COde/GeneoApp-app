@@ -227,6 +227,12 @@ const VIRTUALIZATION_THRESHOLD = 150;
 // 2 niveaux (nom complet + années/lieu) : 56px suffisent à afficher les deux
 // lignes sans les faire chevaucher (cf. PERSON_ROW_HEIGHT côté CSS).
 const PERSON_ROW_HEIGHT = 56;
+// Chargement progressif de la liste latérale : taille d'une page, délai de
+// frappe avant d'interroger le serveur, et nombre de lignes restantes sous la
+// zone visible qui déclenche la page suivante.
+const PERSONS_PAGE_SIZE = 100;
+const PERSON_FILTER_DEBOUNCE_MS = 250;
+const PERSONS_PREFETCH_MARGIN = 20;
 
 function PersonListRow({ index, style, persons, selectedId, onSelect }) {
   const person = persons[index];
@@ -317,6 +323,15 @@ function AppContent() {
   // Nombre total de personnes connu du serveur : c'est lui qui alimente la
   // virtualisation de la liste, pas la taille du tableau filtré.
   const [personsTotal, setPersonsTotal] = useState(null);
+  // Liste latérale paginée : lignes déjà chargées, total correspondant au
+  // filtre courant, et filtre effectivement envoyé au serveur (anti-rebond).
+  const [listItems, setListItems] = useState([]);
+  const [listTotal, setListTotal] = useState(0);
+  const [listLoadingMore, setListLoadingMore] = useState(false);
+  const [listQuery, setListQuery] = useState('');
+  const listQueryRef = useRef('');
+  const listRequestRef = useRef(0);
+  const listLoadingMoreRef = useRef(false);
   const [selectedId, setSelectedId] = useState(null);
   const [relations, setRelations] = useState(null);
   const { settings: initialSettings } = useSettings();
@@ -397,18 +412,94 @@ function AppContent() {
     }
   };
 
+  // Première page de la liste latérale pour le filtre donné. Une réponse
+  // périmée (le filtre a changé entre-temps) est ignorée.
+  const loadListFirstPage = useCallback(async (query) => {
+    const token = ++listRequestRef.current;
+    const result = await client.persons.list({
+      limit: PERSONS_PAGE_SIZE,
+      offset: 0,
+      q: query || undefined,
+    });
+    if (token !== listRequestRef.current) return null;
+    const items = result?.items ?? [];
+    setListItems(items);
+    setListTotal(result?.total ?? items.length);
+    return { items, total: result?.total ?? items.length };
+  }, []);
+
+  // Page suivante, déclenchée par le défilement de la liste virtualisée.
+  const loadMorePersons = useCallback(async () => {
+    if (listLoadingMoreRef.current || listItems.length >= listTotal) return;
+    listLoadingMoreRef.current = true;
+    setListLoadingMore(true);
+    const token = listRequestRef.current;
+    try {
+      const result = await client.persons.list({
+        limit: PERSONS_PAGE_SIZE,
+        offset: listItems.length,
+        q: listQueryRef.current || undefined,
+      });
+      if (token !== listRequestRef.current) return;
+      const incoming = result?.items ?? [];
+      setListItems((current) => {
+        const known = new Set(current.map((person) => person.id));
+        return [...current, ...incoming.filter((person) => !known.has(person.id))];
+      });
+      setListTotal(result?.total ?? listTotal);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      listLoadingMoreRef.current = false;
+      setListLoadingMore(false);
+    }
+  }, [listItems.length, listTotal]);
+
+  // `persons` (liste complète) alimente les sélecteurs, la vérification et les
+  // panneaux. L'écran s'affiche dès la première page ; la liste complète n'est
+  // chargée à part que si la base dépasse une page.
   const loadPersons = useCallback(async () => {
     try {
-      const result = await client.persons.list();
-      const items = result?.items ?? [];
-      const total = result?.total ?? items.length;
-      setPersons(items);
-      setPersonsTotal(total);
-      setSelectedId((current) => current ?? items[0]?.id ?? null);
+      const query = listQueryRef.current;
+      const first = await loadListFirstPage(query);
+      let everyone = null;
+      if (first && !query) {
+        if (first.total <= first.items.length)
+          everyone = { items: first.items, total: first.total };
+        else {
+          setPersons((current) => current ?? first.items);
+          setPersonsTotal(first.total);
+          setSelectedId((current) => current ?? first.items[0]?.id ?? null);
+        }
+      }
+      if (!everyone) {
+        const result = await client.persons.list();
+        const items = result?.items ?? [];
+        everyone = { items, total: result?.total ?? items.length };
+      }
+      setPersons(everyone.items);
+      setPersonsTotal(everyone.total);
+      setSelectedId((current) => current ?? everyone.items[0]?.id ?? null);
     } catch (loadError) {
       setError(loadError.message);
     }
-  }, []);
+  }, [loadListFirstPage]);
+
+  // Filtre de la liste latérale : recherche côté serveur (`q`), après un court
+  // délai de frappe. La liste complète n'est pas rechargée.
+  useEffect(() => {
+    const trimmed = personFilter.trim();
+    if (trimmed === listQueryRef.current) return undefined;
+    const timer = setTimeout(
+      () => {
+        listQueryRef.current = trimmed;
+        setListQuery(trimmed);
+        loadListFirstPage(trimmed).catch((filterError) => setError(filterError.message));
+      },
+      trimmed === '' ? 0 : PERSON_FILTER_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [personFilter, loadListFirstPage]);
 
   useEffect(() => {
     loadPersons();
@@ -464,18 +555,12 @@ function AppContent() {
         );
         // Les panneaux rechargent leurs données après un retour en arrière.
         setDataVersion((version) => version + 1);
-        const personsResult = await client.persons.list();
-        const items = personsResult?.items ?? [];
-        setPersons(items);
-        setPersonsTotal(items.length);
-        setSelectedId((current) =>
-          items.some((person) => person.id === current) ? current : (items[0]?.id ?? null),
-        );
+        await loadPersons();
       } catch (historyError) {
         setError(historyError.message);
       }
     },
-    [t],
+    [t, loadPersons],
   );
 
   // Ctrl/⌘+Z annule, Ctrl/⌘+Maj+Z ou Ctrl+Y rétablit ; dans un champ de
@@ -509,10 +594,7 @@ function AppContent() {
     setSelectedId(null);
     setRelations(null);
     setSession(null);
-    const result = await client.persons.list();
-    const items = result?.items ?? [];
-    setPersons(items);
-    setPersonsTotal(items.length);
+    await loadPersons();
     refreshHistory();
   };
 
@@ -665,15 +747,8 @@ function AppContent() {
       .sort((a, b) => orderOf(a.item.id, a.index) - orderOf(b.item.id, b.index))
       .map(({ item }) => item),
   })).filter((group) => group.items.length > 0);
-  // Filtre de la liste latérale (accents et casse ignorés).
-  const fold = (value) =>
-    value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-  const visiblePersons = personFilter.trim()
-    ? persons.filter((person) => fold(personLabel(person)).includes(fold(personFilter.trim())))
-    : persons;
+  const filterActive = listQuery !== '';
+  const virtualized = listTotal > VIRTUALIZATION_THRESHOLD;
 
   return (
     <LifespanContext.Provider value={lifespans}>
@@ -717,7 +792,7 @@ function AppContent() {
               >
                 <CreatePersonForm onCreate={handleCreate} creating={creating} />
               </Modal>
-              {persons.length > 5 ? (
+              {(personsTotal ?? persons.length) > 5 || personFilter !== '' ? (
                 <label className="person-filter">
                   <span className="gds-visually-hidden">
                     {t('shell.filterPersons', 'Filtrer les personnes')}
@@ -730,24 +805,36 @@ function AppContent() {
                   />
                 </label>
               ) : null}
+              {filterActive ? (
+                <p className="person-filter__count" role="status">
+                  {t('shell.filterResultCount', { count: listTotal })}
+                </p>
+              ) : null}
               <nav className="person-list" aria-label={t('shell.persons', 'Personnes')}>
-                {persons.length === 0 ? (
+                {(personsTotal ?? persons.length) === 0 ? (
                   <p className="notice">
                     {t(
                       'shell.noPersons',
                       'Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre arbre.',
                     )}
                   </p>
-                ) : visiblePersons.length > VIRTUALIZATION_THRESHOLD ? (
+                ) : listItems.length === 0 && filterActive ? (
+                  <p className="notice">{t('shell.noPersonMatch')}</p>
+                ) : virtualized ? (
                   <List
                     rowComponent={PersonListRow}
-                    rowCount={visiblePersons.length}
+                    rowCount={listItems.length}
                     rowHeight={PERSON_ROW_HEIGHT}
-                    rowProps={{ persons: visiblePersons, selectedId, onSelect: setSelectedId }}
-                    style={{ height: Math.min(visiblePersons.length * PERSON_ROW_HEIGHT, 480) }}
+                    rowProps={{ persons: listItems, selectedId, onSelect: setSelectedId }}
+                    onRowsRendered={({ stopIndex }) => {
+                      if (stopIndex >= listItems.length - PERSONS_PREFETCH_MARGIN) {
+                        loadMorePersons();
+                      }
+                    }}
+                    style={{ height: Math.min(listTotal * PERSON_ROW_HEIGHT, 480) }}
                   />
                 ) : (
-                  visiblePersons.map((person, index) => (
+                  listItems.map((person, index) => (
                     <PersonCard
                       key={person.id}
                       person={person}
@@ -757,9 +844,8 @@ function AppContent() {
                         if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
                         event.preventDefault();
                         const delta = event.key === 'ArrowDown' ? 1 : -1;
-                        const nextIndex =
-                          (index + delta + visiblePersons.length) % visiblePersons.length;
-                        setSelectedId(visiblePersons[nextIndex].id);
+                        const nextIndex = (index + delta + listItems.length) % listItems.length;
+                        setSelectedId(listItems[nextIndex].id);
                         const buttons =
                           event.currentTarget.parentElement.querySelectorAll('.person-card');
                         buttons[nextIndex]?.focus();
@@ -767,6 +853,11 @@ function AppContent() {
                     />
                   ))
                 )}
+                {listLoadingMore ? (
+                  <p className="notice" role="status">
+                    {t('shell.loadingMorePersons')}
+                  </p>
+                ) : null}
               </nav>
             </div>
             <div className="sidenav__scroll">

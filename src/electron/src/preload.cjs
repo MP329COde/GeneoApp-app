@@ -210,7 +210,14 @@ const api = {
   persons: {
     create: (data, performedBy) => invoke(IPC_CHANNELS.PERSONS_CREATE, { data, performedBy }),
     get: (id) => invoke(IPC_CHANNELS.PERSONS_GET, { id }),
-    list: (includeDeleted = false) => invoke(IPC_CHANNELS.PERSONS_LIST, { includeDeleted }),
+    // Booléen (ancien appel : includeDeleted) ou objet { limit, offset, q, total }.
+    list: (options = false) =>
+      invoke(
+        IPC_CHANNELS.PERSONS_LIST,
+        typeof options === 'object' && options !== null
+          ? options
+          : { includeDeleted: options === true },
+      ),
     update: (id, data, performedBy) =>
       invoke(IPC_CHANNELS.PERSONS_UPDATE, { id, data, performedBy }),
     remove: (id, performedBy) => invoke(IPC_CHANNELS.PERSONS_REMOVE, { id, performedBy }),

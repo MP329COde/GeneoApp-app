@@ -22,6 +22,11 @@
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
+.person-filter__count {
+  margin: 0 var(--space-2) var(--space-2);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, currentColor);
+}
 .sidenav__scroll .sidenav__group:first-child {
   margin-top: var(--space-1);
 }

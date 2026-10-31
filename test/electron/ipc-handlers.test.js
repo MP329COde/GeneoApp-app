@@ -698,3 +698,38 @@ test('seules les adresses https sans identifiants peuvent être ouvertes à l’
     assert.equal(isSafeExternalUrl(url), false, url);
   }
 });
+
+test('PERSONS_LIST pagine comme GET /api/persons : enveloppe, total, q et tableau historique', async () => {
+  const handlers = createHandlers();
+  for (const [givenNames, familyName] of [
+    ['Ada', 'Lovelace'],
+    ['Alan', 'Turing'],
+    ['Grace', 'Hopper'],
+  ]) {
+    await handlers[IPC_CHANNELS.PERSONS_CREATE]({ data: { givenNames, familyName } });
+  }
+
+  const legacy = await handlers[IPC_CHANNELS.PERSONS_LIST]({});
+  assert.equal(Array.isArray(legacy.data), true);
+  assert.equal(legacy.data.length, 3);
+
+  const page = await handlers[IPC_CHANNELS.PERSONS_LIST]({ limit: 2, offset: 0 });
+  assert.equal(page.data.items.length, 2);
+  assert.equal(page.data.total, 3);
+  assert.equal(page.data.limit, 2);
+  assert.equal(page.data.offset, 0);
+
+  const next = await handlers[IPC_CHANNELS.PERSONS_LIST]({ limit: 2, offset: 2 });
+  assert.equal(next.data.items.length, 1);
+
+  const filtered = await handlers[IPC_CHANNELS.PERSONS_LIST]({ limit: 10, q: 'turing' });
+  assert.equal(filtered.data.total, 1);
+  assert.equal(filtered.data.items[0].family_name, 'Turing');
+
+  const totalOnly = await handlers[IPC_CHANNELS.PERSONS_LIST]({ total: true, q: 'a' });
+  assert.deepEqual(Object.keys(totalOnly.data), ['total']);
+
+  const clamped = await handlers[IPC_CHANNELS.PERSONS_LIST]({ limit: 100000, offset: -4 });
+  assert.equal(clamped.data.limit, 200);
+  assert.equal(clamped.data.offset, 0);
+});
