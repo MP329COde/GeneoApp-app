@@ -20,6 +20,7 @@ import {
   toTransform,
   zoomAt,
 } from './map-viewport.js';
+import { LABEL_FONT_SIZE, MARKER_RADIUS, estimateLabelWidth, placeLabels } from './map-labels.js';
 
 export function MapPanel() {
   const { t } = useTranslation();
@@ -491,6 +492,28 @@ export function LocalMap({ places }) {
     }
   };
 
+  // Positions écran des repères (unités du viewBox, zoom et déplacement
+  // appliqués) puis placement des étiquettes sans collision : recalculé à
+  // chaque zoom ou déplacement.
+  const screenPositions = new Map(
+    places.map((place) => {
+      const { x, y } = project(place);
+      return [
+        place.id,
+        { x: viewport.scale * x + viewport.tx, y: viewport.scale * y + viewport.ty },
+      ];
+    }),
+  );
+  const labelLayout = placeLabels(
+    places.map((place) => ({
+      id: place.id,
+      ...screenPositions.get(place.id),
+      width: estimateLabelWidth(place.name),
+      height: LABEL_FONT_SIZE + 3,
+      pinned: selectedId === place.id,
+    })),
+    { width: size, height: size },
+  );
   const zoomPercent = Math.round(viewport.scale * 100);
 
   return (
@@ -554,12 +577,19 @@ export function LocalMap({ places }) {
               />
             ))}
           </g>
+        </g>
+        {/* Repères et étiquettes hors du groupe zoomé : leur taille reste
+            constante, seules leurs positions suivent le zoom ; c'est ce qui
+            permet aux étiquettes de se séparer quand on zoome. */}
+        <g className="local-map__markers">
           {places.map((place) => {
-            const { x, y } = project(place);
+            const { x, y } = screenPositions.get(place.id);
             const selected = selectedId === place.id;
+            const label = labelLayout.get(place.id);
             return (
               <g
                 key={place.id}
+                className={`local-map__place${label.visible ? '' : ' local-map__place--label-hidden'}`}
                 role="button"
                 tabIndex={0}
                 aria-label={`${place.name}${selected ? t('mapView.selected', ' (sélectionné)') : ''}`}
@@ -575,12 +605,20 @@ export function LocalMap({ places }) {
                 <circle
                   cx={x}
                   cy={y}
-                  r={selected ? 7 : 5}
+                  r={selected ? MARKER_RADIUS + 2 : MARKER_RADIUS}
                   fill="var(--action)"
                   stroke={selected ? 'var(--color-text)' : 'none'}
                   strokeWidth={selected ? 2 : 0}
                 />
-                <text x={x + 8} y={y + 4} fontSize="11" fill="var(--color-text)">
+                <text
+                  className="local-map__label"
+                  x={label.textX}
+                  y={label.textY}
+                  textAnchor={label.textAnchor}
+                  fontSize={LABEL_FONT_SIZE}
+                  fill="var(--color-text)"
+                  aria-hidden="true"
+                >
                   {place.name}
                 </text>
               </g>

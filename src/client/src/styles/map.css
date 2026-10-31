@@ -77,3 +77,30 @@
     transition: transform 120ms ease-out;
   }
 }
+
+/* ---------- Étiquettes des repères ---------- */
+.local-map__label {
+  /* Halo : l'étiquette reste lisible au-dessus du fond de carte. */
+  paint-order: stroke;
+  stroke: var(--color-surface-sunken);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+/* Étiquette masquée car en conflit avec une voisine : elle réapparaît au
+   survol et au focus clavier (une étiquette de lieu sélectionné n'est jamais
+   masquée). Le nom accessible est porté par le repère lui-même. */
+.local-map__place--label-hidden .local-map__label {
+  opacity: 0;
+}
+.local-map__place--label-hidden:hover .local-map__label,
+.local-map__place--label-hidden:focus .local-map__label {
+  opacity: 1;
+}
+.local-map__place:focus-visible {
+  outline: none;
+}
+.local-map__place:focus-visible circle {
+  stroke: var(--focus-ring);
+  stroke-width: 3px;
+}

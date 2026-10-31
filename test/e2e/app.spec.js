@@ -339,6 +339,13 @@ test('zoome, déplace et recentre la carte locale hors ligne, sans requête rés
     }
   });
 
+  // Le repère garde un nom accessible complet, étiquette visible ou non, et
+  // son étiquette reste lisible (au moins au survol) à tous les niveaux de zoom.
+  const rennes = page.getByRole('button', { name: 'Rennes' });
+  await expect(rennes).toBeVisible();
+  await rennes.locator('circle').hover();
+  await expect(rennes.locator('.local-map__label')).toHaveCSS('opacity', '1');
+
   // Bouton « Zoom + » : l'échelle du groupe transformé augmente.
   await expect(viewport).toHaveAttribute('data-zoom', '1');
   await page.getByRole('button', { name: 'Zoom +' }).click();
