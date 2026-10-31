@@ -51,6 +51,7 @@ const MIGRATED_VIEWS = [
   'EventsTimelineView.jsx',
   'FamiliesView.jsx',
   'IndexingPanel.jsx',
+  'LifelineChart.jsx',
   'MapView.jsx',
   'NotebookPanel.jsx',
   'PersonRelationsView.jsx',

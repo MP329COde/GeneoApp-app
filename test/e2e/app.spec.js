@@ -233,6 +233,35 @@ test('la chronologie affiche les événements réels importés par GEDCOM, trié
   await expect(page.getByText(/MARRIAGE/)).toBeVisible();
 });
 
+test('la frise graphique affiche les lignes de vie, zoome et sélectionne la personne au clic', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Chronologie', exact: true }).click();
+  await page.getByRole('button', { name: 'Frise', exact: true }).click();
+
+  const chart = page.getByRole('group', { name: 'Frise chronologique des lignes de vie' });
+  await expect(chart).toBeVisible();
+
+  // Zoom : la plage affichée se resserre.
+  const range = page.locator('.lifeline__zoom');
+  const before = await range.textContent();
+  await page.getByRole('button', { name: 'Zoom +', exact: true }).click();
+  await expect(range).not.toHaveText(before);
+
+  // Clic sur le marqueur de naissance d'Ada : la personne est sélectionnée.
+  await page.getByRole('button', { name: 'Tout afficher', exact: true }).click();
+  const birth = chart.getByRole('button', { name: /Naissance, Ada Lovelace/ }).first();
+  await birth.click();
+  await expect(birth).toHaveAttribute('aria-pressed', 'true');
+
+  // Clavier : focus sur le marqueur, flèches sans erreur ; retour à la liste.
+  await birth.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Liste', exact: true }).click();
+  await expect(page.getByText(/BIRTH.*London/)).toBeVisible();
+});
+
 test('place un lieu réel avec coordonnées sur la carte après création via un événement', async ({
   page,
 }) => {

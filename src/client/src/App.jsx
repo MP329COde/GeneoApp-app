@@ -79,6 +79,7 @@ import './styles/tree-filters.css';
 import './styles/minimap.css';
 import './styles/backups.css';
 import './styles/life-timeline.css';
+import './styles/lifeline-chart.css';
 import './styles/comparison.css';
 import './styles/advanced-search.css';
 import './styles/quality.css';
@@ -1146,6 +1147,9 @@ function AppContent() {
                   <EventsPanel selected={selected} />
                 ) : view === 'timeline' ? (
                   <TimelinePanel
+                    persons={persons ?? []}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
                     onNavigate={(id) => {
                       setSelectedId(id);
                       setView('tree');
