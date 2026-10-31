@@ -874,7 +874,7 @@ function AppContent() {
               </Modal>
               <div id="sidenav-people-body" className="sidenav__people-body" hidden={!peopleOpen}>
                 <div className="sidenav__people-tools">
-                  <span className="gds-visually-hidden" role="status">
+                  <span className="people-count gds-visually-hidden" role="status">
                     {t('shell.personCount', { count: personsTotal ?? persons.length })}
                   </span>
                   <div className="verification-rerun-button">
