@@ -733,3 +733,20 @@ de sauvegarde, MIME par contenu, sauvegardes manuelle / automatique / avant impo
 - **Correctif** : décodage Windows-1252 par table (indépendant de l'ICU de Node).
 - **Vérification** : lint, format, `npm test` (smoke 7, db 106, server 90, api 244, electron 43, packaging 4,
   cli 5, client 326) et e2e Playwright 33/33.
+
+## Fonctions ajoutées (2026-10-31)
+
+| Fonction | Contenu |
+|---|---|
+| Épinglage d'IP (indexation) | `pinned-fetch.js` : l'IP validée est celle utilisée, à chaque redirection ; fenêtre de DNS rebinding fermée |
+| Pagination des personnes | Liste latérale par pages de 100, filtre serveur (`q`, insensible aux accents et à la casse via la fonction SQLite `FOLD`), IPC aligné sur l'API HTTP |
+| Livre généalogique PDF | `POST /api/reports/book`, écrivain PDF interne sans dépendance, vivants masqués par défaut, panneau sous l'écran GEDCOM |
+| Mode web | `npm run start:web` (un port), jeton d'accès obligatoire hors loopback, `Dockerfile`, `docs/WEB.md` |
+
+Vérification : lint, format, i18n (1501 clés FR/EN, 0 texte en dur), `npm test` (db 109, server 101, api 249,
+electron 44, client 330), Playwright 34/34, `start:web` lancé pour de vrai (401 sans jeton, 200 avec,
+refus de démarrer sans jeton hors loopback).
+
+Limites : l'image Docker n'a pas été construite (pas de démon Docker dans l'environnement de développement) ;
+la liste complète des personnes reste chargée en arrière-plan pour les sélecteurs dès que l'arbre dépasse
+une page ; le test de performance du graphe (4 000 personnes) est sensible à la charge de la machine.
