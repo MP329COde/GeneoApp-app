@@ -764,3 +764,16 @@ une page ; le test de performance du graphe (4 000 personnes) est sensible à la
 - Limite : l'étendue de la frise va jusqu'à l'année en cours dès qu'une personne vivante existe ou n'a pas de
   date de décès connue.
 - Vérification : lint, format, i18n (1525 clés FR/EN), `npm test` (client 368), Playwright 35/35.
+
+## Refonte visuelle et ergonomique (2026-10-31)
+
+| Zone | Changements |
+|---|---|
+| Coque | Liste des personnes repliable à hauteur réglable (navigation toujours visible), en-têtes de section collants et alignés, inspecteur en cartes avec icônes, transitions entre vues (coupées par `prefers-reduced-motion`), `Toast`, `EmptyState`, `SkeletonGroup` partagés, barre d'onglets mobile avec cibles ≥ 44 px |
+| Statistiques / tableau de bord | 8 cartes KPI, 6 graphiques SVG sans dépendance (tableau masqué + texte alternatif), endpoint `GET /api/statistics/insights`, « À surveiller » en cartes cliquables |
+| Familles / parenté | Sections Parents / Unions / Enfants, sélecteur de personne avec recherche (combobox ARIA), actions destructives dans un menu « … » avec la confirmation partagée, toasts annoncés |
+| Recherche | Hero, résultats en cartes groupés par type avec extrait surligné, filtres repliables avec puces, multi-sites avec interrupteur d'indexation locale, palette ⌘K enrichie |
+
+Vérification : lint, format, i18n (1698 clés FR/EN, 0 texte en dur), `npm test` (client 397, api 251), Playwright 35/35,
+captures relues en clair, sombre et mobile par les agents. Restent à polir : le doublon « PERSONNES 11 » / « 11 personnes »
+en tête du menu latéral.

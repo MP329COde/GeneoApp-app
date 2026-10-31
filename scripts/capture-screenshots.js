@@ -406,7 +406,9 @@ async function main() {
     await createPerson('Byron', 'Lovelace');
     await page.getByRole('button', { name: 'Ada Lovelace' }).first().click();
     await page.getByRole('button', { name: 'Familles', exact: true }).click();
-    await page.getByLabel('Ajouter un enfant').selectOption({ label: 'Byron Lovelace' });
+    await page.getByRole('button', { name: 'Ajouter un enfant' }).click();
+    await page.getByRole('combobox', { name: 'Enfant' }).fill('byron');
+    await page.getByRole('option', { name: /Byron Lovelace/ }).click();
     await page.getByRole('button', { name: 'Ajouter l’enfant' }).click();
 
     // Base de démonstration : famille de trois générations, lieux
