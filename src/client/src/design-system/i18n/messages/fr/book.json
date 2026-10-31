@@ -1,0 +1,18 @@
+{
+  "book.title": "Livre généalogique (PDF)",
+  "book.hint": "Page de titre, table des matières, une fiche par personne, index des noms et liste des sources. Généré sur cet ordinateur.",
+  "book.root": "Personne racine",
+  "book.rootAll": "Tout l’arbre",
+  "book.direction": "Sens",
+  "book.direction.both": "Ascendants et descendants",
+  "book.direction.ancestors": "Ascendants",
+  "book.direction.descendants": "Descendants",
+  "book.generations": "Générations",
+  "book.includeLiving": "Inclure les personnes vivantes ou privées",
+  "book.livingIncluded": "Attention : le livre contiendra des informations sur des personnes vivantes.",
+  "book.livingHidden": "Par défaut, les personnes vivantes ou privées sont masquées.",
+  "book.generating": "Génération…",
+  "book.export": "Exporter un livre PDF",
+  "book.done": "Livre exporté : {persons} fiche(s), {sources} source(s), {hidden} personne(s) masquée(s).",
+  "server.reports.rootProtected": "La personne racine est vivante ou privée : activez « inclure les personnes vivantes » pour l’inclure."
+}

@@ -48,6 +48,7 @@ import { LocalAiService } from './local-ai.service.js';
 import { MergeService } from './merge.service.js';
 import { NotificationService } from './notification.service.js';
 import { DocumentService } from './document.service.js';
+import { ReportService } from './report.service.js';
 
 const DEFAULT_MEDIA_ROOT = process.env.GENEOAPP_MEDIA_DIR ?? path.join(tmpdir(), 'geneoapp-media');
 export const DEFAULT_BACKUP_DIR =
@@ -108,6 +109,7 @@ export function createServices(
     notes,
     research,
     statistics: new StatisticsService(database),
+    reports: new ReportService(database, { media: entityServices.media }),
     localAi,
     merge: new MergeService(database),
     history: new UndoHistory(database),

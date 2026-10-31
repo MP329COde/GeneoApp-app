@@ -97,6 +97,10 @@ export function createExtendedApi(request) {
     notebookExtras: {
       history: (id) => get(`/api/notebook/${id}/history`),
     },
+    // Livre généalogique PDF : { filename, mimeType, sizeBytes, contentBase64, summary }.
+    reports: {
+      book: (options) => post('/api/reports/book', options),
+    },
   };
 }
 

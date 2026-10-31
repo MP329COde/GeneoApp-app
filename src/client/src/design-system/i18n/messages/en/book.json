@@ -1,0 +1,18 @@
+{
+  "book.title": "Family history book (PDF)",
+  "book.hint": "Title page, table of contents, one sheet per person, name index and list of sources. Generated on this computer.",
+  "book.root": "Root person",
+  "book.rootAll": "Whole tree",
+  "book.direction": "Direction",
+  "book.direction.both": "Ancestors and descendants",
+  "book.direction.ancestors": "Ancestors",
+  "book.direction.descendants": "Descendants",
+  "book.generations": "Generations",
+  "book.includeLiving": "Include living or private people",
+  "book.livingIncluded": "Warning: the book will contain information about living people.",
+  "book.livingHidden": "By default, living or private people are hidden.",
+  "book.generating": "Generating…",
+  "book.export": "Export a PDF book",
+  "book.done": "Book exported: {persons} sheet(s), {sources} source(s), {hidden} hidden person(s).",
+  "server.reports.rootProtected": "The root person is living or private: enable “include living people” to include them."
+}

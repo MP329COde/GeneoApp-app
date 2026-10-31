@@ -998,7 +998,11 @@ function AppContent() {
                     }}
                   />
                 ) : view === 'gedcom' ? (
-                  <GedcomPanel onImported={handleImported} selected={selected} />
+                  <GedcomPanel
+                    onImported={handleImported}
+                    selected={selected}
+                    persons={persons ?? []}
+                  />
                 ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
                   <BackupsPanel
                     section={
