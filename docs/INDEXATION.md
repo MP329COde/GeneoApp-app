@@ -55,9 +55,10 @@ Garanties :
   fichiers et jeux de données) : sont refusés `localhost`, les adresses IPv4/IPv6 privées,
   loopback, lien-local (dont `169.254.169.254`), CGNAT, multicast et réservées, ainsi que tout
   nom de domaine qui se résout vers l'une d'elles. Le contrôle est refait **à chaque
-  redirection** (les redirections sont suivies manuellement, au plus 3). Limite connue : la
-  résolution est vérifiée juste avant la requête, sans épinglage de l'IP (fenêtre de
-  « DNS rebinding » résiduelle).
+  redirection** (les redirections sont suivies manuellement, au plus 3). **IP épinglée**
+  (`pinned-fetch.js`) : l'hôte est résolu une seule fois par saut et la connexion se fait à
+  l'IP validée (aucune seconde résolution), avec l'hôte, l'en-tête `Host` et le `servername`
+  TLS d'origine, y compris à chaque redirection : plus de fenêtre de « DNS rebinding ».
 - **Aucune donnée personnelle** : seuls `nom`, `prenom`, `annee`, `lieu` sont transmis au
   site choisi (c'est la recherche demandée) ; tout autre champ est ignoré. Requêtes `GET`
   sans cookie, `Authorization` ni `Referer`, `credentials: omit`.

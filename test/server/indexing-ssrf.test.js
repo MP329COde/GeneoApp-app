@@ -3,6 +3,8 @@ import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { openDatabase } from '../../src/db/src/database.js';
 import { runMigrations } from '../../src/db/src/migrate.js';
+import { fetchResource } from '../../src/server/src/indexing/fetcher.js';
+import { pinnedFetch } from '../../src/server/src/indexing/pinned-fetch.js';
 import { IndexService } from '../../src/server/src/indexing/index.service.js';
 import {
   BlockedHostError,
@@ -204,6 +206,72 @@ test('durée maximale : un site qui ne répond pas est abandonné', async () => 
     assert.ok(Date.now() - started < 5_000);
   } finally {
     clearInterval(keepAlive);
+  }
+});
+
+test('DNS rebinding : public puis privé, seule l’IP publique validée est utilisée', async () => {
+  let lookups = 0;
+  const lookup = async () => [
+    lookups++ === 0 ? { address: '93.184.216.34', family: 4 } : { address: '10.0.0.8', family: 4 },
+  ];
+  const pins = [];
+  const fetchImpl = async (_url, init) => {
+    pins.push(init.pinnedAddress);
+    return htmlResponse('<p>ok</p>');
+  };
+  const result = await fetchResource(new URL('https://exemple.org/'), {
+    fetchImpl,
+    limits: { ...LIMITS, lookup },
+  });
+  assert.ok(result.response);
+  assert.equal(lookups, 1, 'une seule résolution');
+  assert.deepEqual(pins, [{ address: '93.184.216.34', family: 4 }]);
+});
+
+test('IP épinglée : chaque redirection est revalidée puis épinglée', async () => {
+  const lookup = async (host) => [
+    host === 'cdn.example'
+      ? { address: '8.8.8.8', family: 4 }
+      : { address: '93.184.216.34', family: 4 },
+  ];
+  const pins = [];
+  const fetchImpl = async (url, init) => {
+    pins.push([new URL(url).host, init.pinnedAddress.address]);
+    if (pins.length === 1) {
+      return new Response(null, { status: 302, headers: { location: 'https://cdn.example/f' } });
+    }
+    return htmlResponse('<p>ok</p>');
+  };
+  await fetchResource(new URL('https://exemple.org/'), {
+    fetchImpl,
+    limits: { ...LIMITS, lookup },
+  });
+  assert.deepEqual(pins, [
+    ['exemple.org', '93.184.216.34'],
+    ['cdn.example', '8.8.8.8'],
+  ]);
+});
+
+test('pinnedFetch se connecte à l’IP épinglée avec le Host d’origine', async () => {
+  let hostHeader;
+  const server = createServer((request, response) => {
+    hostHeader = request.headers.host;
+    response.setHeader('content-type', 'text/plain');
+    response.end('épinglé');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const { port } = server.address();
+    // Le nom n'existe pas en DNS : seule l'IP épinglée permet de joindre le serveur.
+    const response = await pinnedFetch(`http://introuvable.invalid:${port}/x`, {
+      pinnedAddress: { address: '127.0.0.1', family: 4 },
+      headers: { accept: '*/*' },
+    });
+    assert.equal(await response.text(), 'épinglé');
+    assert.equal(hostHeader, `introuvable.invalid:${port}`);
+  } finally {
+    server.closeAllConnections?.();
+    await new Promise((resolve) => server.close(resolve));
   }
 });
 

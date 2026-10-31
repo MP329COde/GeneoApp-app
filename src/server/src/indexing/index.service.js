@@ -1,3 +1,4 @@
+import { pinnedFetch } from './pinned-fetch.js';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ConflictError, ForbiddenError, NotFoundError } from '../errors.js';
@@ -86,7 +87,7 @@ export class IndexService {
     {
       media = null,
       ocr = null,
-      fetchImpl = fetch,
+      fetchImpl = pinnedFetch,
       crawlLimits,
       datasetLimits,
       allowPrivateHosts = false,

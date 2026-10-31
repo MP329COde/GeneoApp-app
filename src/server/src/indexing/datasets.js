@@ -1,3 +1,4 @@
+import { pinnedFetch } from './pinned-fetch.js';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { readZip } from '../gedcom/zip.js';
@@ -265,7 +266,7 @@ export async function indexDataset(
     media,
     ocr,
     counts,
-    fetchImpl = fetch,
+    fetchImpl = pinnedFetch,
     limits = DATASET_LIMITS,
     signal,
     runId = null,

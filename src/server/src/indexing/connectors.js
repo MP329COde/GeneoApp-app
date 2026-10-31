@@ -1,3 +1,4 @@
+import { pinnedFetch } from './pinned-fetch.js';
 import { createHash } from 'node:crypto';
 import {
   CancelledError,
@@ -145,7 +146,7 @@ function candidateLinks(links, base, host, robots) {
  */
 export async function estimateConnectorPages(
   connector,
-  { values, fetchImpl = fetch, limits = CONNECTOR_LIMITS, signal } = {},
+  { values, fetchImpl = pinnedFetch, limits = CONNECTOR_LIMITS, signal } = {},
 ) {
   const url = buildConnectorUrl(connector, values);
   if (!url) return { pages: 0, capped: false, reason: 'INVALID_ADDRESS' };
@@ -189,7 +190,7 @@ export async function indexConnectorPages(
     repository,
     sourceId,
     counts = { indexed: 0, skipped: 0, errors: 0 },
-    fetchImpl = fetch,
+    fetchImpl = pinnedFetch,
     limits = CONNECTOR_LIMITS,
     signal,
     runId = null,

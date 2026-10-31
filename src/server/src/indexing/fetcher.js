@@ -100,6 +100,8 @@ function retryDelayMs(response, maxWaitMs) {
  * - `limits.allowPrivateHosts` : réservé aux tests (serveur factice local). Par défaut les
  *   hôtes privés, loopback ou résolus vers une IP non publique sont refusés (SSRF), à
  *   l'adresse de départ comme à chaque redirection (`limits.lookup` : résolveur injectable).
+ * - IP épinglée : l'hôte est résolu une seule fois par saut ; l'IP validée est transmise à
+ *   `fetchImpl` (`init.pinnedAddress`) qui s'y connecte exactement (voir pinned-fetch.js).
  * Retourne { response, url }, { notModified: true, url } ou { skipped: raison }.
  */
 export async function fetchResource(
@@ -110,9 +112,10 @@ export async function fetchResource(
   let retried = false;
   for (let hop = 0; hop <= limits.maxRedirects;) {
     throwIfCancelled(signal);
+    let pinnedAddress;
     if (!limits.allowPrivateHosts) {
       try {
-        await assertPublicUrl(current, { lookup: limits.lookup });
+        pinnedAddress = await assertPublicUrl(current, { lookup: limits.lookup });
       } catch (error) {
         if (!(error instanceof BlockedHostError)) throw error;
         return {
@@ -128,6 +131,7 @@ export async function fetchResource(
     try {
       response = await fetchImpl(current, {
         redirect: 'manual',
+        pinnedAddress,
         credentials: 'omit',
         headers,
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,

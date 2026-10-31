@@ -5,7 +5,8 @@ import net from 'node:net';
 // contactée que si son hôte est public. Sont refusés : localhost, adresses
 // IPv4/IPv6 privées, loopback, lien-local, CGNAT, multicast, réservées, et
 // tout nom de domaine qui se résout vers l'une d'elles. Appliqué à l'adresse
-// de départ ET à chaque redirection.
+// de départ ET à chaque redirection. L'IP validée est ensuite épinglée
+// (pinned-fetch.js) : la connexion se fait vers cette IP exacte.
 
 export class BlockedHostError extends Error {
   constructor(host) {
@@ -58,13 +59,17 @@ export function isBlockedAddress(address) {
 
 const defaultLookup = (host) => dnsLookup(host, { all: true, verbatim: true });
 
-/** Lève BlockedHostError si l'hôte de `url` est (ou se résout vers) une adresse non publique. */
+/**
+ * Lève BlockedHostError si l'hôte de `url` est (ou se résout vers) une adresse non publique.
+ * Retourne l'adresse validée { address, family } à laquelle il faut se connecter
+ * (épinglage : une seule résolution, jamais de seconde résolution à la connexion).
+ */
 export async function assertPublicUrl(url, { lookup = defaultLookup } = {}) {
   const host = url.hostname.replace(/^\[|\]$/g, '');
   if (/^localhost$|\.localhost$|\.local$|\.internal$/i.test(host)) throw new BlockedHostError(host);
   if (net.isIP(host)) {
     if (isBlockedAddress(host)) throw new BlockedHostError(host);
-    return;
+    return { address: host, family: net.isIP(host) };
   }
   let records;
   try {
@@ -76,4 +81,6 @@ export async function assertPublicUrl(url, { lookup = defaultLookup } = {}) {
   if (!list.length || list.some((record) => isBlockedAddress(record.address))) {
     throw new BlockedHostError(host);
   }
+  const { address, family } = list[0];
+  return { address, family: family || net.isIP(address) };
 }

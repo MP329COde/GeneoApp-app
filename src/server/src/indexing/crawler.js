@@ -1,3 +1,4 @@
+import { pinnedFetch } from './pinned-fetch.js';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import {
@@ -82,7 +83,7 @@ export async function crawlSite(
     media,
     ocr,
     counts,
-    fetchImpl = fetch,
+    fetchImpl = pinnedFetch,
     limits = CRAWL_LIMITS,
     signal,
     runId = null,
