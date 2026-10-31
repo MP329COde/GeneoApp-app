@@ -8,7 +8,17 @@ import {
   useState,
 } from 'react';
 import { List } from 'react-window';
-import { Badge, Button, Modal, useI18n } from './design-system/index.js';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Modal,
+  SkeletonGroup,
+  ToastProvider,
+  useI18n,
+  useToast,
+} from './design-system/index.js';
+import { usePersistentState } from './hooks/usePersistentState.js';
 import { client, writeListeners } from './api/app-client.js';
 import { VerificationContext, useVerification } from './hooks/useVerification.js';
 export { buildVerificationIssues, verificationNotifications } from './hooks/useVerification.js';
@@ -234,6 +244,11 @@ const PERSON_ROW_HEIGHT = 56;
 const PERSONS_PAGE_SIZE = 100;
 const PERSON_FILTER_DEBOUNCE_MS = 250;
 const PERSONS_PREFETCH_MARGIN = 20;
+// Hauteur bornée (et réglable) de la liste des personnes dans la barre
+// latérale : elle défile seule et ne chasse jamais la navigation.
+const PEOPLE_HEIGHT_MIN = 112;
+const PEOPLE_HEIGHT_MAX = 520;
+const PEOPLE_HEIGHT_DEFAULT = 224;
 
 function PersonListRow({ index, style, persons, selectedId, onSelect }) {
   const person = persons[index];
@@ -317,6 +332,53 @@ function InspectorResizer() {
   );
 }
 
+// Poignée verticale réglant la hauteur de la liste des personnes (souris,
+// tactile, clavier) : motif ARIA « window splitter ».
+function PeopleResizer({ height, onChange }) {
+  const { t } = useI18n();
+  const clamp = (value) =>
+    Math.min(PEOPLE_HEIGHT_MAX, Math.max(PEOPLE_HEIGHT_MIN, Math.round(value)));
+  return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <div
+      className="people-resizer"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={t('shell.peopleHeight', 'Hauteur de la liste des personnes')}
+      aria-valuemin={PEOPLE_HEIGHT_MIN}
+      aria-valuemax={PEOPLE_HEIGHT_MAX}
+      aria-valuenow={height}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 80 : 24;
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          onChange(clamp(height + step));
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          onChange(clamp(height - step));
+        }
+      }}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        const startY = event.clientY;
+        const startHeight = height;
+        const move = (moveEvent) => onChange(clamp(startHeight + moveEvent.clientY - startY));
+        const stop = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', stop);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop);
+      }}
+    >
+      <span aria-hidden="true" />
+    </div>
+  );
+}
+
 function AppContent() {
   const { settings, update: updateSettings } = useSettings();
   const { t } = useI18n();
@@ -343,7 +405,7 @@ function AppContent() {
   const [loginError, setLoginError] = useState(null);
   const [activeTree, setActiveTree] = useState(null);
   const [history, setHistory] = useState({ canUndo: false, canRedo: false });
-  const [historyMessage, setHistoryMessage] = useState('');
+  const toast = useToast();
   const [dataVersion, setDataVersion] = useState(0);
   const [lifespans, setLifespans] = useState(() => new Map());
   const [personFilter, setPersonFilter] = useState('');
@@ -373,6 +435,16 @@ function AppContent() {
       return next;
     });
   };
+  // Section « Personnes » de la barre latérale : repliable (repliée par défaut
+  // sur mobile) et de hauteur réglable, mémorisées d'une session à l'autre.
+  const [peopleOpen, setPeopleOpen] = usePersistentState(
+    'geneoapp:peopleOpen',
+    () => window.innerWidth > 720,
+  );
+  const [peopleHeight, setPeopleHeight] = usePersistentState(
+    'geneoapp:peopleHeight',
+    PEOPLE_HEIGHT_DEFAULT,
+  );
   // Feuille « Plus » de la barre d'onglets mobile (menu complet).
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const quickSearchRef = useRef(null);
@@ -549,7 +621,7 @@ function AppContent() {
         const label = direction === 'undo' ? result.undone : result.redone;
         setHistory(result);
         if (!label) return;
-        setHistoryMessage(
+        toast.show(
           direction === 'undo'
             ? t('shell.undone', { label }, `Annulé : ${label}`)
             : t('shell.redone', { label }, `Rétabli : ${label}`),
@@ -561,7 +633,7 @@ function AppContent() {
         setError(historyError.message);
       }
     },
-    [t, loadPersons],
+    [t, loadPersons, toast],
   );
 
   // Ctrl/⌘+Z annule, Ctrl/⌘+Maj+Z ou Ctrl+Y rétablit ; dans un champ de
@@ -760,31 +832,34 @@ function AppContent() {
               <img src={appIcon} alt="" width="32" height="32" />
               <h1 id="app-title">GeneoApp</h1>
             </div>
-            <div className="sidenav__people sidenav__persons">
-              <h2 className="sidenav__label">
-                {t('shell.persons')} ·{' '}
-                <span>{t('shell.personCount', { count: personsTotal ?? persons.length })}</span>
-              </h2>
-              <div className="new-person-button">
-                <Button size="sm" onClick={() => setCreatingOpen(true)}>
-                  {t('shell.newPerson', '+ Nouvelle personne')}
-                </Button>
-              </div>
-              <div className="verification-rerun-button">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={rerunVerification}
-                  disabled={verificationRunning}
-                  title={t(
-                    'verification.rerunHint',
-                    'Recherche à nouveau les doublons, cycles et incohérences de dates',
-                  )}
-                >
-                  {verificationRunning
-                    ? t('verification.running', 'Vérification en cours…')
-                    : t('verification.rerun', 'Relancer la vérification')}
-                </Button>
+            <div className={`sidenav__people sidenav__persons${peopleOpen ? '' : ' is-collapsed'}`}>
+              <div className="sidenav__people-head">
+                <h2 className="sidenav__people-title">
+                  <button
+                    type="button"
+                    className="sidenav__label sidenav__label--toggle"
+                    aria-expanded={peopleOpen}
+                    aria-controls="sidenav-people-body"
+                    onClick={() => setPeopleOpen((open) => !open)}
+                  >
+                    <Icon name={peopleOpen ? 'chevron-down' : 'chevron-right'} />
+                    <span className="sidenav__label-text">{t('shell.persons')}</span>
+                    <span className="sidenav__count" aria-hidden="true">
+                      {personsTotal ?? persons.length}
+                    </span>
+                  </button>
+                </h2>
+                <div className="new-person-button">
+                  <button
+                    type="button"
+                    className="icon-button icon-button--primary"
+                    aria-label={t('shell.newPerson', '+ Nouvelle personne')}
+                    title={t('shell.newPerson', '+ Nouvelle personne')}
+                    onClick={() => setCreatingOpen(true)}
+                  >
+                    <Icon name="plus" />
+                  </button>
+                </div>
               </div>
               <Modal
                 isOpen={creatingOpen}
@@ -793,73 +868,106 @@ function AppContent() {
               >
                 <CreatePersonForm onCreate={handleCreate} creating={creating} />
               </Modal>
-              {(personsTotal ?? persons.length) > 5 || personFilter !== '' ? (
-                <label className="person-filter">
-                  <span className="gds-visually-hidden">
-                    {t('shell.filterPersons', 'Filtrer les personnes')}
+              <div id="sidenav-people-body" className="sidenav__people-body" hidden={!peopleOpen}>
+                <div className="sidenav__people-tools">
+                  <span className="people-count">
+                    {t('shell.personCount', { count: personsTotal ?? persons.length })}
                   </span>
-                  <input
-                    type="search"
-                    placeholder={t('shell.filterPersonsPlaceholder', 'Filtrer les personnes…')}
-                    value={personFilter}
-                    onChange={(event) => setPersonFilter(event.target.value)}
-                  />
-                </label>
-              ) : null}
-              {filterActive ? (
-                <p className="person-filter__count" role="status">
-                  {t('shell.filterResultCount', { count: listTotal })}
-                </p>
-              ) : null}
-              <nav className="person-list" aria-label={t('shell.persons', 'Personnes')}>
-                {(personsTotal ?? persons.length) === 0 ? (
-                  <p className="notice">
-                    {t(
-                      'shell.noPersons',
-                      'Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre arbre.',
-                    )}
-                  </p>
-                ) : listItems.length === 0 && filterActive ? (
-                  <p className="notice">{t('shell.noPersonMatch')}</p>
-                ) : virtualized ? (
-                  <List
-                    rowComponent={PersonListRow}
-                    rowCount={listItems.length}
-                    rowHeight={PERSON_ROW_HEIGHT}
-                    rowProps={{ persons: listItems, selectedId, onSelect: setSelectedId }}
-                    onRowsRendered={({ stopIndex }) => {
-                      if (stopIndex >= listItems.length - PERSONS_PREFETCH_MARGIN) {
-                        loadMorePersons();
+                  <div className="verification-rerun-button">
+                    <button
+                      type="button"
+                      className="icon-button icon-button--small"
+                      onClick={rerunVerification}
+                      disabled={verificationRunning}
+                      aria-label={
+                        verificationRunning
+                          ? t('verification.running', 'Vérification en cours…')
+                          : t('verification.rerun', 'Relancer la vérification')
                       }
-                    }}
-                    style={{ height: Math.min(listTotal * PERSON_ROW_HEIGHT, 480) }}
-                  />
-                ) : (
-                  listItems.map((person, index) => (
-                    <PersonCard
-                      key={person.id}
-                      person={person}
-                      selected={person.id === selectedId}
-                      onSelect={setSelectedId}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-                        event.preventDefault();
-                        const delta = event.key === 'ArrowDown' ? 1 : -1;
-                        const nextIndex = (index + delta + listItems.length) % listItems.length;
-                        setSelectedId(listItems[nextIndex].id);
-                        const buttons =
-                          event.currentTarget.parentElement.querySelectorAll('.person-card');
-                        buttons[nextIndex]?.focus();
-                      }}
+                      title={t(
+                        'verification.rerunHint',
+                        'Recherche à nouveau les doublons, cycles et incohérences de dates',
+                      )}
+                    >
+                      <Icon name="refresh" />
+                    </button>
+                  </div>
+                </div>
+                {(personsTotal ?? persons.length) > 5 || personFilter !== '' ? (
+                  <label className="person-filter">
+                    <span className="gds-visually-hidden">
+                      {t('shell.filterPersons', 'Filtrer les personnes')}
+                    </span>
+                    <input
+                      type="search"
+                      placeholder={t('shell.filterPersonsPlaceholder', 'Filtrer les personnes…')}
+                      value={personFilter}
+                      onChange={(event) => setPersonFilter(event.target.value)}
                     />
-                  ))
-                )}
-                {listLoadingMore ? (
-                  <p className="notice" role="status">
-                    {t('shell.loadingMorePersons')}
+                  </label>
+                ) : null}
+                {filterActive ? (
+                  <p className="person-filter__count" role="status">
+                    {t('shell.filterResultCount', { count: listTotal })}
                   </p>
                 ) : null}
-              </nav>
+                <nav
+                  className="person-list"
+                  aria-label={t('shell.persons', 'Personnes')}
+                  style={virtualized ? undefined : { maxHeight: peopleHeight }}
+                >
+                  {(personsTotal ?? persons.length) === 0 ? (
+                    <p className="notice">
+                      {t(
+                        'shell.noPersons',
+                        'Aucune personne enregistrée. Utilisez « Nouvelle personne » pour démarrer votre arbre.',
+                      )}
+                    </p>
+                  ) : listItems.length === 0 && filterActive ? (
+                    <p className="notice">{t('shell.noPersonMatch')}</p>
+                  ) : virtualized ? (
+                    <List
+                      rowComponent={PersonListRow}
+                      rowCount={listItems.length}
+                      rowHeight={PERSON_ROW_HEIGHT}
+                      rowProps={{ persons: listItems, selectedId, onSelect: setSelectedId }}
+                      onRowsRendered={({ stopIndex }) => {
+                        if (stopIndex >= listItems.length - PERSONS_PREFETCH_MARGIN) {
+                          loadMorePersons();
+                        }
+                      }}
+                      style={{ height: Math.min(listTotal * PERSON_ROW_HEIGHT, peopleHeight) }}
+                    />
+                  ) : (
+                    listItems.map((person, index) => (
+                      <PersonCard
+                        key={person.id}
+                        person={person}
+                        selected={person.id === selectedId}
+                        onSelect={setSelectedId}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                          event.preventDefault();
+                          const delta = event.key === 'ArrowDown' ? 1 : -1;
+                          const nextIndex = (index + delta + listItems.length) % listItems.length;
+                          setSelectedId(listItems[nextIndex].id);
+                          const buttons =
+                            event.currentTarget.parentElement.querySelectorAll('.person-card');
+                          buttons[nextIndex]?.focus();
+                        }}
+                      />
+                    ))
+                  )}
+                  {listLoadingMore ? (
+                    <p className="notice" role="status">
+                      {t('shell.loadingMorePersons')}
+                    </p>
+                  ) : null}
+                </nav>
+                {(personsTotal ?? persons.length) > 3 ? (
+                  <PeopleResizer height={peopleHeight} onChange={setPeopleHeight} />
+                ) : null}
+              </div>
             </div>
             <div className="sidenav__scroll">
               <div className="view-switcher" role="group" aria-label={t('nav.views', 'Vues')}>
@@ -879,8 +987,10 @@ function AppContent() {
                         )}
                         onClick={() => toggleNavGroup(group.key)}
                       >
-                        <span aria-hidden="true">{t(group.labelKey)}</span>
                         <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} />
+                        <span className="sidenav__label-text" aria-hidden="true">
+                          {t(group.labelKey)}
+                        </span>
                       </button>
                       {isCollapsed
                         ? null
@@ -985,9 +1095,8 @@ function AppContent() {
               <strong>{currentView ? t(currentView.labelKey) : t('nav.tree')}</strong>
             </p>
             {selected ? (
-              <p className="topbar__context">
+              <p className="topbar__context" title={t('shell.context')}>
                 <Icon name="person" />
-                <span>{t('shell.context')}</span>
                 <strong className="person-name">{personLabel(selected)}</strong>
                 {lifespans.get(selected.id) ? (
                   <span className="data-id">{lifespans.get(selected.id).label}</span>
@@ -1044,9 +1153,6 @@ function AppContent() {
                   <Icon name="redo" />
                 </button>
               </div>
-              <p className="gds-visually-hidden" role="status" aria-live="polite">
-                {historyMessage}
-              </p>
               <Badge tone="success">{t('shell.offline')}</Badge>
               <NotificationCenter onOpenPerson={openPerson} />
               <button
@@ -1076,279 +1182,291 @@ function AppContent() {
             <section className="canvas-panel" aria-label={t('shell.treeView', 'Vue de l’arbre')}>
               {/* L'arbre se recharge lui-même (refreshKey) : le remonter à chaque
                 écriture perdait mode, zoom et replis, et faisait sauter l'écran. */}
-              <div
-                key={view === 'tree' ? 'tree' : `${view}-${dataVersion}`}
-                className={`genealogy-canvas genealogy-canvas--${view}`}
-              >
-                {view === 'search' ? (
-                  <SearchPanel
-                    selected={selected}
-                    lifespan={selected ? lifespans.get(selected.id) : null}
-                    onNavigate={(id) => {
-                      setSelectedId(id);
-                      setView('person');
-                    }}
-                  />
-                ) : view === 'gedcom' ? (
-                  <GedcomPanel
-                    onImported={handleImported}
-                    selected={selected}
-                    persons={persons ?? []}
-                  />
-                ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
-                  <BackupsPanel
-                    section={
-                      view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'
-                    }
-                    session={session}
-                    onLogin={handleLogin}
-                    loginError={loginError}
-                    onLogout={() => setSession(null)}
-                  />
-                ) : view === 'duplicates' ? (
-                  <DuplicatesPanel
-                    onSelect={(id) => {
-                      setSelectedId(id);
-                      setView('tree');
-                    }}
-                    onMerged={async () => {
-                      await loadPersons();
-                      await loadRelations();
-                    }}
-                  />
-                ) : view === 'families' ? (
-                  <FamiliesPanel
-                    persons={persons}
-                    selected={selected}
-                    onNavigate={setSelectedId}
-                    onChange={loadRelations}
-                  />
-                ) : view === 'indexing' ? (
-                  <IndexingPanel client={client} />
-                ) : view === 'annotations' ? (
-                  <AnnotationsHub client={client} />
-                ) : view === 'notes' ? (
-                  <NotesPanel selected={selected} />
-                ) : view === 'audit' ? (
-                  <AuditPanel selected={selected} />
-                ) : view === 'media' ? (
-                  <MediaPanel selected={selected} persons={persons} onPersonChanged={loadPersons} />
-                ) : view === 'documents' ? (
-                  <DocumentsHub
-                    onOpenPerson={(person) => {
-                      setSelectedId(person.id);
-                      setView('person');
-                    }}
-                    onChanged={loadPersons}
-                  />
-                ) : view === 'sources' ? (
-                  <SourcesPanel selected={selected} />
-                ) : view === 'events' ? (
-                  <EventsPanel selected={selected} />
-                ) : view === 'timeline' ? (
-                  <TimelinePanel
-                    persons={persons ?? []}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    onNavigate={(id) => {
-                      setSelectedId(id);
-                      setView('tree');
-                    }}
-                  />
-                ) : view === 'map' ? (
-                  <MapPanel />
-                ) : view === 'consistency' ? (
-                  <ConsistencyPanel
-                    personLabelById={personLabelById}
-                    onNavigate={(id) => {
-                      setSelectedId(id);
-                      setView('tree');
-                    }}
-                  />
-                ) : view === 'notebook' ? (
-                  <NotebookPanel
-                    client={client}
-                    persons={persons}
-                    onNavigate={(id) => {
-                      setSelectedId(id);
-                      setView('tree');
-                    }}
-                  />
-                ) : view === 'dashboard' ? (
-                  <DashboardView onNavigate={setView} />
-                ) : view === 'statistics' ? (
-                  <StatisticsPanel />
-                ) : view === 'ai' ? (
-                  <AiPanel />
-                ) : view === 'trees' ? (
-                  <TreesPanel client={client} onActivated={handleTreeActivated} session={session} />
-                ) : view === 'settings' ? (
-                  <SettingsPanel navGroups={NAV_GROUPS} />
-                ) : view === 'person' && selected ? (
-                  <PersonSheet
-                    selected={selected}
-                    relations={relations}
-                    onUpdated={loadPersons}
-                    persons={persons}
-                    onDeleted={async () => {
-                      await loadPersons();
-                      setSelectedId(null);
-                      setView('tree');
-                    }}
-                    verification={
-                      <VerificationSection
-                        selected={selected}
-                        issues={verificationIssues.get(selected.id) ?? []}
-                        onNavigate={setSelectedId}
-                        onCompare={openCompare}
-                        onMerged={handleVerificationMerged}
-                      />
-                    }
-                  />
-                ) : view === 'compare' ? (
-                  <ComparePanel
-                    client={client}
-                    persons={persons}
-                    selected={selected}
-                    initialRightId={compareTarget}
-                  />
-                ) : view === 'relations' ? (
-                  <RelationshipPanel
-                    client={client}
-                    persons={persons}
-                    selected={selected}
-                    onNavigate={setSelectedId}
-                  />
-                ) : !selected ? (
-                  <div className="empty-state">
-                    <img src={appIcon} alt="" width="56" height="56" />
-                    {persons.length === 0 ? (
-                      <>
-                        <div className="empty-state__eyebrow">
-                          {t('shell.startAssistant', 'Assistant de départ')}
+              <div className="view-stage" key={view}>
+                <div
+                  key={view === 'tree' ? 'tree' : `${view}-${dataVersion}`}
+                  className={`genealogy-canvas genealogy-canvas--${view}`}
+                >
+                  {view === 'search' ? (
+                    <SearchPanel
+                      selected={selected}
+                      lifespan={selected ? lifespans.get(selected.id) : null}
+                      onNavigate={(id) => {
+                        setSelectedId(id);
+                        setView('person');
+                      }}
+                    />
+                  ) : view === 'gedcom' ? (
+                    <GedcomPanel
+                      onImported={handleImported}
+                      selected={selected}
+                      persons={persons ?? []}
+                    />
+                  ) : view === 'backups' || view === 'trash' || view === 'profile' ? (
+                    <BackupsPanel
+                      section={
+                        view === 'trash' ? 'trash' : view === 'profile' ? 'profile' : 'backups'
+                      }
+                      session={session}
+                      onLogin={handleLogin}
+                      loginError={loginError}
+                      onLogout={() => setSession(null)}
+                    />
+                  ) : view === 'duplicates' ? (
+                    <DuplicatesPanel
+                      onSelect={(id) => {
+                        setSelectedId(id);
+                        setView('tree');
+                      }}
+                      onMerged={async () => {
+                        await loadPersons();
+                        await loadRelations();
+                      }}
+                    />
+                  ) : view === 'families' ? (
+                    <FamiliesPanel
+                      persons={persons}
+                      selected={selected}
+                      onNavigate={setSelectedId}
+                      onChange={loadRelations}
+                    />
+                  ) : view === 'indexing' ? (
+                    <IndexingPanel client={client} />
+                  ) : view === 'annotations' ? (
+                    <AnnotationsHub client={client} />
+                  ) : view === 'notes' ? (
+                    <NotesPanel selected={selected} />
+                  ) : view === 'audit' ? (
+                    <AuditPanel selected={selected} />
+                  ) : view === 'media' ? (
+                    <MediaPanel
+                      selected={selected}
+                      persons={persons}
+                      onPersonChanged={loadPersons}
+                    />
+                  ) : view === 'documents' ? (
+                    <DocumentsHub
+                      onOpenPerson={(person) => {
+                        setSelectedId(person.id);
+                        setView('person');
+                      }}
+                      onChanged={loadPersons}
+                    />
+                  ) : view === 'sources' ? (
+                    <SourcesPanel selected={selected} />
+                  ) : view === 'events' ? (
+                    <EventsPanel selected={selected} />
+                  ) : view === 'timeline' ? (
+                    <TimelinePanel
+                      persons={persons ?? []}
+                      selectedId={selectedId}
+                      onSelect={setSelectedId}
+                      onNavigate={(id) => {
+                        setSelectedId(id);
+                        setView('tree');
+                      }}
+                    />
+                  ) : view === 'map' ? (
+                    <MapPanel />
+                  ) : view === 'consistency' ? (
+                    <ConsistencyPanel
+                      personLabelById={personLabelById}
+                      onNavigate={(id) => {
+                        setSelectedId(id);
+                        setView('tree');
+                      }}
+                    />
+                  ) : view === 'notebook' ? (
+                    <NotebookPanel
+                      client={client}
+                      persons={persons}
+                      onNavigate={(id) => {
+                        setSelectedId(id);
+                        setView('tree');
+                      }}
+                    />
+                  ) : view === 'dashboard' ? (
+                    <DashboardView onNavigate={setView} />
+                  ) : view === 'statistics' ? (
+                    <StatisticsPanel />
+                  ) : view === 'ai' ? (
+                    <AiPanel />
+                  ) : view === 'trees' ? (
+                    <TreesPanel
+                      client={client}
+                      onActivated={handleTreeActivated}
+                      session={session}
+                    />
+                  ) : view === 'settings' ? (
+                    <SettingsPanel navGroups={NAV_GROUPS} />
+                  ) : view === 'person' && selected ? (
+                    <PersonSheet
+                      selected={selected}
+                      relations={relations}
+                      onUpdated={loadPersons}
+                      persons={persons}
+                      onDeleted={async () => {
+                        await loadPersons();
+                        setSelectedId(null);
+                        setView('tree');
+                      }}
+                      verification={
+                        <VerificationSection
+                          selected={selected}
+                          issues={verificationIssues.get(selected.id) ?? []}
+                          onNavigate={setSelectedId}
+                          onCompare={openCompare}
+                          onMerged={handleVerificationMerged}
+                        />
+                      }
+                    />
+                  ) : view === 'compare' ? (
+                    <ComparePanel
+                      client={client}
+                      persons={persons}
+                      selected={selected}
+                      initialRightId={compareTarget}
+                    />
+                  ) : view === 'relations' ? (
+                    <RelationshipPanel
+                      client={client}
+                      persons={persons}
+                      selected={selected}
+                      onNavigate={setSelectedId}
+                    />
+                  ) : !selected ? (
+                    <div className="empty-state">
+                      <img src={appIcon} alt="" width="56" height="56" />
+                      {persons.length === 0 ? (
+                        <>
+                          <div className="empty-state__eyebrow">
+                            {t('shell.startAssistant', 'Assistant de départ')}
+                          </div>
+                          <h2>{t('shell.readyProfile', 'Profil prêt, arbre vide')}</h2>
+                          <p>
+                            {t(
+                              'shell.startIntro',
+                              'Commencez par la personne centrale de votre arbre : vous-même, un parent ou un ancêtre connu. Ensuite, les liens, dates et vérifications s’assemblent automatiquement.',
+                            )}
+                          </p>
+                          <ol
+                            className="assistant-steps"
+                            aria-label={t('shell.startSteps', 'Étapes pour commencer')}
+                          >
+                            <li>
+                              <strong>{t('shell.step1', '1. Ajouter une personne')}</strong>
+                              <span>
+                                {t(
+                                  'shell.step1Hint',
+                                  'Commencez par la racine de votre histoire familiale.',
+                                )}
+                              </span>
+                            </li>
+                            <li>
+                              <strong>{t('shell.step2', '2. Compléter la fiche')}</strong>
+                              <span>
+                                {t(
+                                  'shell.step2Hint',
+                                  'Dates, lieux, événements et liens entre proches.',
+                                )}
+                              </span>
+                            </li>
+                            <li>
+                              <strong>{t('shell.step3', '3. Vérifier l’arbre')}</strong>
+                              <span>
+                                {t(
+                                  'shell.step3Hint',
+                                  'Les contrôles de cohérence vous guident ensuite.',
+                                )}
+                              </span>
+                            </li>
+                          </ol>
+                          <div className="empty-state__actions">
+                            <Button onClick={() => setCreatingOpen(true)}>
+                              {t('shell.addFirstPerson', 'Ajouter la première personne')}
+                            </Button>
+                            <Button variant="secondary" onClick={() => setView('gedcom')}>
+                              {t('shell.importGedcom', 'Importer un fichier GEDCOM')}
+                            </Button>
+                            <Button variant="secondary" onClick={() => setView('backups')}>
+                              {t('shell.restoreBackup', 'Restaurer une sauvegarde')}
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <h2>{t('shell.choosePerson', 'Choisissez une personne')}</h2>
+                          <p className="notice">
+                            {t(
+                              'shell.choosePersonHint',
+                              'Sélectionnez une personne dans la liste ou avec la recherche rapide (Ctrl+K) pour afficher son arbre.',
+                            )}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : !relations ? (
+                    <SkeletonGroup
+                      rows={4}
+                      avatar
+                      label={t('shell.loadingRelations', 'Chargement des relations…')}
+                    />
+                  ) : (
+                    <TreeExplorer
+                      client={client}
+                      refreshKey={dataVersion}
+                      issues={verificationIssues}
+                      lifespans={lifespans}
+                      defaultMode={settings.treeMode}
+                      defaultDepth={settings.treeDepth}
+                      showSosa={settings.showSosa}
+                      selected={selected}
+                      onSelect={setSelectedId}
+                      familyView={
+                        <div className="tree-layout">
+                          <div className="tree-row">
+                            {relations.parents.map((person) => (
+                              <PersonCard
+                                key={person.id}
+                                person={person}
+                                selected={false}
+                                onSelect={setSelectedId}
+                              />
+                            ))}
+                          </div>
+                          {relations.parents.length > 0 ? (
+                            <div className="tree-connector" aria-hidden="true" />
+                          ) : null}
+                          <div className="tree-row tree-row--focus">
+                            <PersonCard person={selected} selected onSelect={setSelectedId} />
+                            {relations.spouses.map((person) => (
+                              <PersonCard
+                                key={person.id}
+                                person={person}
+                                selected={false}
+                                onSelect={setSelectedId}
+                              />
+                            ))}
+                          </div>
+                          {relations.children.length > 0 ? (
+                            <div className="tree-connector" aria-hidden="true" />
+                          ) : null}
+                          <div className="tree-row">
+                            {relations.children.map((person) => (
+                              <PersonCard
+                                key={person.id}
+                                person={person}
+                                selected={false}
+                                onSelect={setSelectedId}
+                              />
+                            ))}
+                          </div>
+                          <TreeLegend />
                         </div>
-                        <h2>{t('shell.readyProfile', 'Profil prêt, arbre vide')}</h2>
-                        <p>
-                          {t(
-                            'shell.startIntro',
-                            'Commencez par la personne centrale de votre arbre : vous-même, un parent ou un ancêtre connu. Ensuite, les liens, dates et vérifications s’assemblent automatiquement.',
-                          )}
-                        </p>
-                        <ol
-                          className="assistant-steps"
-                          aria-label={t('shell.startSteps', 'Étapes pour commencer')}
-                        >
-                          <li>
-                            <strong>{t('shell.step1', '1. Ajouter une personne')}</strong>
-                            <span>
-                              {t(
-                                'shell.step1Hint',
-                                'Commencez par la racine de votre histoire familiale.',
-                              )}
-                            </span>
-                          </li>
-                          <li>
-                            <strong>{t('shell.step2', '2. Compléter la fiche')}</strong>
-                            <span>
-                              {t(
-                                'shell.step2Hint',
-                                'Dates, lieux, événements et liens entre proches.',
-                              )}
-                            </span>
-                          </li>
-                          <li>
-                            <strong>{t('shell.step3', '3. Vérifier l’arbre')}</strong>
-                            <span>
-                              {t(
-                                'shell.step3Hint',
-                                'Les contrôles de cohérence vous guident ensuite.',
-                              )}
-                            </span>
-                          </li>
-                        </ol>
-                        <div className="empty-state__actions">
-                          <Button onClick={() => setCreatingOpen(true)}>
-                            {t('shell.addFirstPerson', 'Ajouter la première personne')}
-                          </Button>
-                          <Button variant="secondary" onClick={() => setView('gedcom')}>
-                            {t('shell.importGedcom', 'Importer un fichier GEDCOM')}
-                          </Button>
-                          <Button variant="secondary" onClick={() => setView('backups')}>
-                            {t('shell.restoreBackup', 'Restaurer une sauvegarde')}
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <h2>{t('shell.choosePerson', 'Choisissez une personne')}</h2>
-                        <p className="notice">
-                          {t(
-                            'shell.choosePersonHint',
-                            'Sélectionnez une personne dans la liste ou avec la recherche rapide (Ctrl+K) pour afficher son arbre.',
-                          )}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                ) : !relations ? (
-                  <p role="status" className="loading-line">
-                    {t('shell.loadingRelations', 'Chargement des relations…')}
-                  </p>
-                ) : (
-                  <TreeExplorer
-                    client={client}
-                    refreshKey={dataVersion}
-                    issues={verificationIssues}
-                    lifespans={lifespans}
-                    defaultMode={settings.treeMode}
-                    defaultDepth={settings.treeDepth}
-                    showSosa={settings.showSosa}
-                    selected={selected}
-                    onSelect={setSelectedId}
-                    familyView={
-                      <div className="tree-layout">
-                        <div className="tree-row">
-                          {relations.parents.map((person) => (
-                            <PersonCard
-                              key={person.id}
-                              person={person}
-                              selected={false}
-                              onSelect={setSelectedId}
-                            />
-                          ))}
-                        </div>
-                        {relations.parents.length > 0 ? (
-                          <div className="tree-connector" aria-hidden="true" />
-                        ) : null}
-                        <div className="tree-row tree-row--focus">
-                          <PersonCard person={selected} selected onSelect={setSelectedId} />
-                          {relations.spouses.map((person) => (
-                            <PersonCard
-                              key={person.id}
-                              person={person}
-                              selected={false}
-                              onSelect={setSelectedId}
-                            />
-                          ))}
-                        </div>
-                        {relations.children.length > 0 ? (
-                          <div className="tree-connector" aria-hidden="true" />
-                        ) : null}
-                        <div className="tree-row">
-                          {relations.children.map((person) => (
-                            <PersonCard
-                              key={person.id}
-                              person={person}
-                              selected={false}
-                              onSelect={setSelectedId}
-                            />
-                          ))}
-                        </div>
-                        <TreeLegend />
-                      </div>
-                    }
-                  />
-                )}
+                      }
+                    />
+                  )}
+                </div>
               </div>
             </section>
 
@@ -1362,7 +1480,7 @@ function AppContent() {
                       <span className="avatar" aria-hidden="true">
                         <Icon name="person" />
                       </span>
-                      <div>
+                      <div className="details-panel__identity">
                         <p className="eyebrow">{t('shell.selectedPerson')}</p>
                         <h2 id="person-title">{personLabel(selected)}</h2>
                         <p className="data-id">
@@ -1382,8 +1500,11 @@ function AppContent() {
                       </div>
                     ) : null}
                     {relations && settings.inspectorSections.includes('relations') ? (
-                      <div className="detail-section">
-                        <h3>{t('shell.relations', 'Relations')}</h3>
+                      <section className="detail-section inspector-card inspector-card--relations">
+                        <h3 className="inspector-card__title">
+                          <Icon name="family" />
+                          {t('shell.relations', 'Relations')}
+                        </h3>
                         <dl className="inspector-relations">
                           {[
                             ['shell.parents', 'Parents', relations.parents],
@@ -1391,17 +1512,17 @@ function AppContent() {
                             ['shell.children', 'Enfants', relations.children],
                             ['shell.siblings', 'Fratrie', relations.siblings],
                           ].map(([key, label, list]) => (
-                            <div key={key}>
+                            <div key={key} className={list.length ? 'has-items' : undefined}>
                               <dt>{t(key, label)}</dt>
                               <dd>
-                                {list.length}
+                                <span className="inspector-relations__count">{list.length}</span>
                                 {list.length > 0 ? (
                                   <span className="inspector-relations__names">
                                     {list.map((relative) => (
                                       <button
                                         key={relative.id}
                                         type="button"
-                                        className="link-button link-button--small"
+                                        className="inspector-chip"
                                         onClick={() => setSelectedId(relative.id)}
                                       >
                                         {personLabel(relative)}
@@ -1413,7 +1534,7 @@ function AppContent() {
                             </div>
                           ))}
                         </dl>
-                      </div>
+                      </section>
                     ) : null}
                     <VerificationSection
                       anchorId="verification-section"
@@ -1444,9 +1565,15 @@ function AppContent() {
                     ) : null}
                   </>
                 ) : (
-                  <p className="notice">
-                    {t('shell.noPersonSelected', 'Aucune personne sélectionnée.')}
-                  </p>
+                  <EmptyState
+                    icon={<Icon name="person" />}
+                    title={t('shell.noPersonSelected', 'Aucune personne sélectionnée.')}
+                  >
+                    {t(
+                      'shell.inspectorEmptyHint',
+                      'Choisissez une personne dans la liste ou avec la recherche rapide : sa fiche résumée, ses relations et les points à vérifier s’afficheront ici.',
+                    )}
+                  </EmptyState>
                 )}
               </aside>
             ) : null}
@@ -1460,7 +1587,9 @@ function AppContent() {
 function App() {
   return (
     <SettingsProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </SettingsProvider>
   );
 }

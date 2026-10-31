@@ -4,11 +4,20 @@
     grid-template-columns: minmax(0, 1fr) var(--panel-min);
   }
 }
+
+/* Tablette : la barre latérale devient un rail d'icônes collé à la fenêtre,
+ * la barre du haut reste visible pendant le défilement de la page. */
 @media (max-width: 1024px) {
   .genealogy-app {
     height: auto;
     min-height: 100vh;
     grid-template-columns: var(--sidenav-collapsed) minmax(0, 1fr);
+  }
+  .sidenav {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: start;
   }
   .sidenav__brand h1,
   .sidenav__label,
@@ -18,13 +27,26 @@
   .sidenav__footer {
     display: none;
   }
-  .sidenav__brand,
+  .sidenav__brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sidenav__scroll {
+    padding-inline: var(--space-2);
+  }
   .sidenav__item {
     justify-content: center;
+    min-height: 44px;
+    padding: 0;
   }
   .sidenav__item .icon {
     width: 20px;
     height: 20px;
+  }
+  .sidenav__group + .sidenav__group {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: var(--border-hairline) solid var(--border-subtle);
   }
   .workspace {
     display: block;
@@ -34,13 +56,25 @@
     border-left: 0;
   }
   .topbar {
+    position: sticky;
+    top: 0;
     flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+  }
+  .topbar__context {
+    display: none;
+  }
+  .topbar .quick-search {
+    flex: 1 1 200px;
+    order: 3;
+  }
+  .topbar__actions {
+    order: 2;
   }
 }
-/* Hauteur de la barre d'onglets mobile fixe en bas d'écran : réutilisée pour
- * réserver l'espace correspondant en bas du contenu (sinon le dernier
- * élément, ex. la personne sélectionnée dans l'arbre, se retrouve masqué
- * derrière la barre). */
+
+/* Barre d'onglets mobile fixe en bas d'écran (64px) : l'espace correspondant
+ * est réservé en bas du contenu pour ne rien masquer derrière elle. */
 .mobile-tabbar {
   display: none;
 }
@@ -49,22 +83,27 @@
 }
 @media (max-width: 720px) {
   .genealogy-app {
-    display: block;
-    padding-bottom: 64px; /* hauteur de .mobile-tabbar, cf. ci-dessous */
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
   /* Réserve la hauteur de la barre fixe lors d'un scrollIntoView natif
-   * (ex. sélection d'une personne) : sans cela, l'élément défile jusqu'au
-   * bord réel de la fenêtre puis se retrouve masqué par la barre fixe. */
+   * (ex. sélection d'une personne). */
   html {
-    scroll-padding-bottom: 64px;
+    scroll-padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
   /* La navigation entre vues passe par .mobile-tabbar (4 onglets étiquetés +
-   * Plus) : le ruban d'icônes seules (.sidenav__scroll), qui défilait au
-   * doigt sans libellé visible, était illisible à 390px (contre-audit).
-   * La liste des personnes et le bouton de création (.sidenav__persons)
-   * restent en revanche accessibles : ce sont des fonctions, pas de la
-   * navigation entre vues. */
+   * Plus). La barre latérale se réduit à une ligne : marque + section
+   * « Personnes » repliable (liste, filtre et création restent accessibles). */
   .sidenav {
+    position: static;
+    height: auto;
+    align-self: stretch;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
     border-right: 0;
     border-bottom: var(--border-hairline) solid var(--border);
   }
@@ -72,17 +111,89 @@
   .sidenav__footer {
     display: none;
   }
-  /* Contrairement au rail d'icônes ≤1024px (tablette), le mobile n'a plus de
-   * ruban de navigation dans la sidenav : la liste des personnes retrouve
-   * donc sa place, pleinement dépliée (le style ≤1024px la masque). */
+  .sidenav__brand {
+    min-height: 52px;
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  }
+  .sidenav__brand h1 {
+    display: initial;
+    font-size: 19px;
+  }
   .sidenav__persons {
-    display: block;
+    display: contents;
   }
   .sidenav__persons .sidenav__label {
     display: block;
   }
-  .sidenav__brand h1 {
-    display: initial;
+  .sidenav__people-head {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0 var(--space-3) 0 0;
+  }
+  .sidenav__people-body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding: var(--space-1) var(--space-3) var(--space-3);
+    border-top: var(--border-hairline) solid var(--border-subtle);
+  }
+  .sidenav__people .sidenav__label--toggle {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .sidenav__people .icon-button,
+  .topbar .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .sidenav__people .icon-button--small {
+    width: 44px;
+    height: 44px;
+  }
+  .person-filter input {
+    min-height: 44px;
+  }
+  .person-card--compact {
+    min-height: 56px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    min-height: 52px;
+    padding: var(--space-1) var(--space-2) var(--space-2) var(--space-4);
+  }
+  .topbar__crumbs {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .topbar__crumbs strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar__tree {
+    min-height: 44px;
+  }
+  .topbar__actions {
+    margin-left: 0;
+    gap: 0;
+  }
+  .topbar__actions .history-controls,
+  .topbar__actions .gds-badge {
+    display: none;
+  }
+  .topbar .quick-search {
+    flex: 1 1 100%;
+    min-width: 0;
+    order: 3;
+    padding-right: var(--space-2);
+  }
+  .topbar .quick-search input {
+    min-height: 44px;
+  }
+  .workspace {
+    flex: 1 1 auto;
   }
   .search-panel,
   .gedcom-panel,
@@ -94,19 +205,26 @@
     flex-direction: column;
     align-items: stretch;
   }
+  .details-panel {
+    padding: var(--space-3);
+  }
 
+  /* Barre d'onglets : icône + libellé, onglet actif surligné. */
   .mobile-tabbar {
     display: flex;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 64px;
-    z-index: 30;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: var(--z-panel);
     background: var(--surface-raised);
     border-top: var(--border-hairline) solid var(--border);
+    box-shadow: var(--shadow-2);
   }
   .mobile-tabbar__item {
+    position: relative;
     flex: 1 1 0;
     min-width: 0;
     min-height: 44px;
@@ -118,27 +236,57 @@
     border: 0;
     background: transparent;
     color: var(--text-secondary);
-    font: var(--type-date);
+    font: var(--type-caption);
+    transition: color var(--duration-fast) var(--ease-standard);
   }
-  .mobile-tabbar__item.is-active {
+  .mobile-tabbar__item .icon {
+    width: 22px;
+    height: 22px;
+  }
+  .mobile-tabbar__item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-tabbar__item :focus-visible,
+  .mobile-tabbar__item:focus-visible {
+    outline-offset: -4px;
+  }
+  .mobile-tabbar__item.is-active,
+  .mobile-tabbar__item[aria-expanded='true'] {
     color: var(--action);
+  }
+  .mobile-tabbar__item.is-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: var(--border-accent);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    background: var(--action);
   }
   .mobile-menu-sheet {
     display: block;
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 64px;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     max-height: min(70vh, 560px);
     overflow-y: auto;
-    z-index: 31;
+    overscroll-behavior: contain;
+    z-index: calc(var(--z-panel) + 1);
+    padding-bottom: var(--space-3);
     background: var(--surface-raised);
     border-top: var(--border-hairline) solid var(--border);
-    box-shadow: var(--shadow-2, var(--shadow-1));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-3);
   }
   .mobile-menu-sheet__header {
     position: sticky;
     top: 0;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -149,22 +297,50 @@
   .mobile-menu-sheet__label {
     margin: var(--space-3) var(--space-4) var(--space-1);
     color: var(--text-secondary);
-    font: var(--type-date);
+    font: var(--type-caption);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
   .mobile-menu-sheet__item {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    width: 100%;
-    min-height: 44px;
-    padding: var(--space-2) var(--space-4);
+    gap: var(--space-3);
+    width: calc(100% - var(--space-4));
+    min-height: 48px;
+    margin: 0 var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 0;
+    border-radius: var(--radius-md);
     background: transparent;
     text-align: left;
   }
+  .mobile-menu-sheet__item .icon {
+    color: var(--text-secondary);
+  }
+  .mobile-menu-sheet__item:hover {
+    background: var(--surface-hover);
+  }
   .mobile-menu-sheet__item.is-active {
+    background: var(--surface-selected);
+    color: var(--action-subtle-text);
+    font-weight: 700;
+  }
+  .mobile-menu-sheet__item.is-active .icon {
     color: var(--action);
   }
-  /* Minicarte repliée par défaut sur mobile (voir JS : mapMinimapCollapsed
-   * par défaut à true en dessous de 720px). */
+  @media (prefers-reduced-motion: no-preference) {
+    .mobile-menu-sheet {
+      animation: sheet-up var(--duration-base) var(--ease-enter);
+    }
+  }
+}
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

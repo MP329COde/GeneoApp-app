@@ -10,6 +10,9 @@
     'nav main';
 }
 
+/* Barre latérale : marque fixe, section « Personnes » repliable à hauteur
+ * bornée, puis navigation principale qui garde toute la place restante et
+ * défile seule. */
 .sidenav {
   grid-area: nav;
   min-height: 0;
@@ -18,101 +21,153 @@
   border-right: var(--border-hairline) solid var(--border);
   background: var(--surface);
 }
+.sidenav :focus-visible {
+  outline-offset: -2px;
+}
 .sidenav__brand {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-3) var(--space-2);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  flex: 0 0 auto;
 }
 .sidenav__brand img {
   border-radius: var(--radius-md);
 }
 .sidenav__brand h1 {
   margin: 0;
-  font: var(--type-heading);
+  font: var(--type-heading-lg);
   font-family: var(--font-serif);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 .sidenav__scroll {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 var(--space-1) var(--space-3);
-}
-.sidenav__group {
-  margin-top: var(--space-3);
+  overscroll-behavior: contain;
+  padding: 0 var(--space-2) var(--space-3);
 }
 .sidenav__group + .sidenav__group {
-  margin-top: var(--space-4);
+  margin-top: var(--space-1);
 }
+
+/* En-têtes de section (navigation et personnes) : une seule ligne, alignés à
+ * gauche, repliables ; ceux de la navigation restent collés en haut du
+ * défilement pour garder le repère de section. */
 .sidenav__label {
-  margin: 0 0 var(--space-1);
+  margin: 0;
   padding: 0 var(--space-2);
   color: var(--text-secondary);
   font: var(--type-caption);
+  font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-weight: 700;
 }
 .sidenav__label--toggle {
   width: 100%;
-  min-height: var(--control-md);
+  min-height: 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  justify-content: flex-start;
+  gap: var(--space-1);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
+  text-align: left;
   cursor: pointer;
 }
 .sidenav__label--toggle:hover {
   background: var(--surface-hover);
+  color: var(--text);
 }
 .sidenav__label--toggle .icon {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
 }
+.sidenav__label-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidenav__scroll .sidenav__group > .sidenav__label--toggle {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.sidenav__scroll .sidenav__group > .sidenav__label--toggle:hover {
+  background: var(--surface-hover);
+}
+.sidenav__count {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font: var(--type-id);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: center;
+}
+
 .sidenav__item {
+  position: relative;
   width: 100%;
   min-height: 36px;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border: 0;
-  border-left: var(--border-accent) solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
   text-align: left;
   font-weight: 500;
   transition:
-    background var(--duration-instant) var(--ease-standard),
-    border-color var(--duration-instant) var(--ease-standard),
-    transform var(--duration-instant) var(--ease-standard);
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 .sidenav__item .icon {
   flex: 0 0 auto;
   color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 .sidenav__item:hover {
   background: var(--surface-hover);
 }
 .sidenav__item.is-active {
-  border-left-color: var(--action);
   background: var(--surface-selected);
   color: var(--action-subtle-text);
   font-weight: 700;
+}
+.sidenav__item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: var(--border-accent);
+  border-radius: var(--radius-full);
+  background: var(--action);
 }
 .sidenav__item.is-active .icon {
   color: var(--action);
 }
 .sidenav__text {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sidenav__kbd {
   padding: 0 var(--space-1);
@@ -121,12 +176,9 @@
   background: var(--surface-raised);
   color: var(--text-secondary);
 }
-.sidenav__persons {
-  padding-top: var(--space-2);
-  border-top: var(--border-hairline) solid var(--border-subtle);
-}
 .sidenav__footer {
-  padding: var(--space-2) var(--space-3);
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
   border-top: var(--border-hairline) solid var(--border-subtle);
   color: var(--text-secondary);
   font: var(--type-body-sm);
@@ -138,12 +190,15 @@
   margin: var(--space-1) 0;
 }
 
+/* ---------- Barre du haut ---------- */
 .topbar {
   grid-area: top;
-  min-height: 52px;
+  position: relative;
+  z-index: var(--z-sticky);
+  min-height: 56px;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
   border-bottom: var(--border-hairline) solid var(--border);
   background: var(--surface);
@@ -152,30 +207,97 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 0 0 auto;
   margin: 0;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 .topbar__crumbs strong {
   color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .topbar__context {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  flex: 0 1 auto;
   margin: 0;
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-full);
   background: var(--surface-sunken);
   color: var(--text-secondary);
 }
+.topbar__context .icon {
+  flex: 0 0 auto;
+}
 .topbar__context .person-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text);
+  font-family: var(--font-serif);
   white-space: nowrap;
+}
+.topbar__context .data-id {
+  flex: 0 0 auto;
 }
 .topbar__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-left: auto;
+}
+.topbar__actions .history-controls {
+  padding-right: var(--space-2);
+  border-right: var(--border-hairline) solid var(--border-subtle);
+}
+.topbar .icon-button {
+  width: 36px;
+  height: 36px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.topbar .icon-button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.topbar .icon-button[aria-pressed='true'] {
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+.topbar .icon-button:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-disabled);
+}
+.topbar .quick-search input {
+  min-height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.topbar .quick-search input:hover {
+  border-color: var(--border);
+}
+.topbar .quick-search input:focus-visible {
+  background: var(--surface-raised);
+  border-color: var(--action);
+}
+
+@media (max-width: 1280px) {
+  .topbar__context .data-id {
+    display: none;
+  }
 }

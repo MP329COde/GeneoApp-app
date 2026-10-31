@@ -19,6 +19,29 @@
 .genealogy-canvas {
   min-height: 100%;
 }
+/* Transition douce entre vues : fondu + glissement court (désactivée par
+ * prefers-reduced-motion et par le réglage « réduire les animations »). */
+.view-stage {
+  height: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view-stage {
+    animation: view-enter var(--duration-base) var(--ease-enter);
+  }
+}
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+:root[data-motion='reduce'] .view-stage {
+  animation: none;
+}
 .genealogy-canvas--tree,
 .genealogy-canvas--relations {
   padding: var(--space-8) var(--space-6);

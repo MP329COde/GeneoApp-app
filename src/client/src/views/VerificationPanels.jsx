@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Badge, Button, useTranslation } from '../design-system/index.js';
 import { client } from '../api/app-client.js';
-import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import { useVerificationLabels } from '../hooks/useVerification.js';
 import { MERGE_REASSIGNMENT_KEYS } from './PersonListPanels.jsx';
 import { MergeIdentityNotes } from '../components/MergeIdentityNotes.jsx';
@@ -56,9 +56,10 @@ export function VerificationSection({
   return (
     <div
       id={anchorId}
-      className={`detail-section verification${issues.length ? ' verification--alert' : ''}`}
+      className={`detail-section inspector-card verification${issues.length ? ' verification--alert' : ''}`}
     >
-      <h3>
+      <h3 className="inspector-card__title">
+        <Icon name={issues.length ? 'warning' : 'shield'} />
         {t('verification.sectionTitle', 'À vérifier')}{' '}
         {issues.length ? (
           <Badge tone="danger">{issues.length}</Badge>
