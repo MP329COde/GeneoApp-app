@@ -35,6 +35,8 @@
 .person-card__name {
   font: var(--type-person-name);
   display: flex;
+  /* Un conteneur flex ignore l'espace entre prénom et nom : on le restitue. */
+  gap: 0.3em;
   min-width: 0;
   overflow: hidden;
 }

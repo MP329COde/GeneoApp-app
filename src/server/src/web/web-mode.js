@@ -62,13 +62,30 @@ export const WEB_CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'none'",
 ].join('; ');
 
+// La page de saisie du jeton n'exécute aucun script : seul son style en ligne est autorisé.
+const LOGIN_CONTENT_SECURITY_POLICY = WEB_CONTENT_SECURITY_POLICY.replace(
+  /style-src [^;]*/,
+  "style-src 'unsafe-inline'",
+);
+
 function loginPage(message) {
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GeneoApp - accès</title>
-<style>body{font-family:system-ui,sans-serif;max-width:24rem;margin:4rem auto;padding:0 1rem}
-input,button{font:inherit;padding:.5rem;width:100%;box-sizing:border-box;margin-top:.5rem}
-.err{color:#b00020}</style></head><body>
+<style>
+:root{--bg:#faf9f6;--card:#fff;--text:#1f2328;--muted:#5b6470;--border:#cfc9bd;--action:#1a56a0;--err:#b00020}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1a17;--card:#25231f;--text:#f1ede4;--muted:#b6afa1;--border:#4a463e;--action:#6ea3e6}}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:"Nunito Sans",system-ui,sans-serif}
+main{width:min(24rem,calc(100% - 2rem));background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;margin:0 0 .5rem}
+p{color:var(--muted);margin:0 0 1rem}
+label{font-weight:600}
+input,button{font:inherit;padding:.6rem .75rem;width:100%;box-sizing:border-box;margin-top:.5rem;border-radius:8px}
+input{border:1px solid var(--border);background:var(--bg);color:var(--text)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+button{border:0;background:var(--action);color:#fff;font-weight:700;cursor:pointer;margin-top:1rem}
+.err{color:var(--err)}
+</style></head><body><main>
 <h1>GeneoApp</h1>
 <p>Ce serveur est protégé par un jeton d'accès.</p>
 ${message ? `<p class="err" role="alert">${message}</p>` : ''}
@@ -76,7 +93,7 @@ ${message ? `<p class="err" role="alert">${message}</p>` : ''}
 <label for="token">Jeton d'accès</label>
 <input id="token" name="token" type="password" autocomplete="current-password" required autofocus>
 <button type="submit">Entrer</button>
-</form></body></html>`;
+</form></main></body></html>`;
 }
 
 function sameOriginWrite(request) {
@@ -117,7 +134,7 @@ export function webAccessGate({ accessToken, trustProxy = false }) {
   router.get('/health', (_request, response) => response.json({ status: 'ok' }));
 
   router.get(LOGIN_PATH, (_request, response) => {
-    response.set('Content-Security-Policy', WEB_CONTENT_SECURITY_POLICY).type('html');
+    response.set('Content-Security-Policy', LOGIN_CONTENT_SECURITY_POLICY).type('html');
     response.set('Cache-Control', 'no-store').send(loginPage());
   });
 
@@ -127,7 +144,7 @@ export function webAccessGate({ accessToken, trustProxy = false }) {
     (request, response) => {
       const key = request.ip;
       const state = failures.get(key) ?? { count: 0, until: 0 };
-      response.set('Content-Security-Policy', WEB_CONTENT_SECURITY_POLICY).type('html');
+      response.set('Content-Security-Policy', LOGIN_CONTENT_SECURITY_POLICY).type('html');
       response.set('Cache-Control', 'no-store');
       if (state.until > Date.now()) {
         return response.status(429).send(loginPage('Trop de tentatives, patientez un instant.'));

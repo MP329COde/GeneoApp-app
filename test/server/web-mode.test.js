@@ -143,6 +143,12 @@ test('hors boucle locale avec jeton : accès protégé par cookie HttpOnly SameS
   });
   assert.equal(bearer.status, 200);
 
+  // La page de saisie du jeton garde son style sans autoriser de script.
+  const loginPage = await fetch(`${base}/__acces`);
+  const loginCsp = loginPage.headers.get('content-security-policy');
+  assert.match(loginCsp, /style-src 'unsafe-inline'/);
+  assert.match(loginCsp, /script-src 'self'/);
+
   // CSRF : une écriture inter-sites est refusée même avec le cookie.
   const csrf = await fetch(`${base}/api/persons`, {
     method: 'POST',
