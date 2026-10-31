@@ -373,9 +373,18 @@ liste affichée.
 Validations : `npm run test:api` (158 tests), `npm run test:db` (92 tests),
 `npm run test:client` (255 tests), `npm run lint`, `npm run format:check`.
 
-Limite assumée : l'écran des personnes charge encore la liste entière et
-filtre côté client ; la pagination est disponible pour l'API et l'IPC, mais
-la barre latérale n'en profite pas encore.
+Chargement progressif de la liste latérale : l'écran affiche la première page
+(100 personnes) puis charge la suivante quand le défilement de la liste
+virtualisée approche de la fin. Le filtre interroge le serveur (`q`, après
+250 ms de frappe) et affiche « n résultats » ; le compteur de la barre latérale
+reste le total de l'arbre. Côté Electron, le canal IPC `persons:list` accepte
+désormais `limit`, `offset`, `q` et `total` avec le même contrat que l'API HTTP
+(le client IPC ne découpe plus la liste côté renderer).
+
+Limites assumées : la recherche suit le `LIKE` de SQLite (casse ASCII
+uniquement, accents non repliés, contrairement à l'ancien filtre local) ; la
+liste complète reste chargée en arrière-plan, seulement si la base dépasse une
+page, pour les sélecteurs, la vérification et les panneaux qui en ont besoin.
 
 ### Remise au format Prettier du dépôt
 

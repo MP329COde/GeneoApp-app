@@ -118,24 +118,6 @@ function normalizePersonsPageOptions(options) {
   return { limit, offset, q: hasQuery ? options.q.trim() : undefined, totalOnly };
 }
 
-// Repli de casse ASCII uniquement (A-Z -> a-z), comme le `LIKE` de SQLite,
-// qui ne replie que l'ASCII : les accents ne sont PAS normalisés.
-function asciiLowerCase(value) {
-  return String(value).replace(/[A-Z]/g, (character) => character.toLowerCase());
-}
-
-// Même sémantique que le `LIKE` du serveur sur `given_names || ' ' ||
-// family_name` :
-// - repli de casse ASCII uniquement (les accents ne sont pas repliés, c'est
-//   une limite de SQLite, pas un oubli) ;
-// - si `given_names` est NULL, l'expression `given_names || ' ' ||
-//   family_name` vaut NULL : aucune correspondance.
-function personMatchesQuery(person, query) {
-  if (person?.given_names === null || person?.given_names === undefined) return false;
-  const haystack = asciiLowerCase(`${person.given_names} ${person.family_name ?? ''}`);
-  return haystack.includes(asciiLowerCase(query));
-}
-
 // Normalise la réponse d'une liste de personnes en enveloppe
 // `{ items, total, limit, offset }`, quelle que soit sa forme : un tableau
 // simple (serveur ancien ou implémentation non conforme) est converti, une
@@ -517,29 +499,23 @@ export function createIpcClient(rawBridge) {
   const bridge = withTranslatedErrors(rawBridge);
   return {
     persons: {
-      // Le canal IPC Electron ne connaît pas encore la pagination : on
-      // récupère la liste complète puis on découpe côté client, en renvoyant
-      // exactement la même enveloppe que le transport HTTP.
+      // Même contrat que le transport HTTP : le processus principal applique
+      // limit/offset/q/total (voir build-handlers.js).
       list: async (options) => {
         const page = normalizePersonsPageOptions(options);
-        const raw = await bridge.persons.list();
-        const all = Array.isArray(raw) ? raw : (raw?.items ?? []);
-        const filtered = page?.q ? all.filter((person) => personMatchesQuery(person, page.q)) : all;
-        if (page?.totalOnly) return { total: filtered.length };
-        if (!page) {
-          return {
-            items: filtered,
-            total: filtered.length,
-            limit: filtered.length,
-            offset: 0,
-          };
+        if (page?.totalOnly) {
+          return bridge.persons.list({ total: true, ...(page.q ? { q: page.q } : {}) });
         }
-        return {
-          items: filtered.slice(page.offset, page.offset + page.limit),
-          total: filtered.length,
-          limit: page.limit,
-          offset: page.offset,
-        };
+        if (page) {
+          return normalizePersonsListResponse(
+            await bridge.persons.list({
+              limit: page.limit,
+              offset: page.offset,
+              ...(page.q ? { q: page.q } : {}),
+            }),
+          );
+        }
+        return normalizePersonsListResponse(await bridge.persons.list());
       },
       get: (id) => bridge.persons.get(id),
       create: (data) => bridge.persons.create(data),

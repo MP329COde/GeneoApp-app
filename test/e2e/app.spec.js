@@ -747,16 +747,26 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
     expect(next.y).toBeGreaterThanOrEqual(current.y + current.height - 1);
   }
 
-  // Défilement jusqu'à la dernière personne de la liste virtualisée.
+  // Compteur : total réel de l'arbre, pas le nombre de lignes déjà chargées.
+  const counter = page.locator('.sidenav__persons h2');
+  await expect(counter).toContainText(/\d.*personnes/);
+  const total = Number(((await counter.textContent()) ?? '').replace(/\D/g, ''));
+  expect(total).toBeGreaterThanOrEqual(222);
+
+  // Chargement progressif : la liste démarre sur une page (100 lignes) et
+  // s'allonge au défilement, jusqu'à la dernière personne (toutes les lignes).
   const scrollContainer = page.locator('.person-list > div').first();
-  await scrollContainer.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
   await expect
-    .poll(() =>
-      scrollContainer.evaluate(
-        (element) => element.scrollTop + element.clientHeight >= element.scrollHeight - 1,
-      ),
+    .poll(
+      async () =>
+        scrollContainer.evaluate((element, expectedTotal) => {
+          element.scrollTop = element.scrollHeight;
+          return (
+            element.scrollTop + element.clientHeight >= element.scrollHeight - 1 &&
+            element.scrollHeight >= expectedTotal * 56 - 1
+          );
+        }, total),
+      { timeout: 15_000 },
     )
     .toBe(true);
   await expect(rows.last()).toBeVisible();

@@ -112,10 +112,28 @@ describe('client API — transport IPC (Electron)', () => {
     { id: 3, given_names: 'Paul', family_name: 'Dupont' },
   ];
 
+  // Le pont simule le processus principal : il applique limit/offset/q/total
+  // et renvoie le même contrat que `GET /api/persons`.
   function createBridge(list = people) {
     return {
       persons: {
-        list: vi.fn(async () => list),
+        list: vi.fn(async (options) => {
+          if (!options) return list;
+          const filtered = options.q
+            ? list.filter((person) =>
+                `${person.given_names} ${person.family_name}`
+                  .toLowerCase()
+                  .includes(options.q.toLowerCase()),
+              )
+            : list;
+          if (options.total) return { total: filtered.length };
+          return {
+            items: filtered.slice(options.offset, options.offset + options.limit),
+            total: filtered.length,
+            limit: options.limit,
+            offset: options.offset,
+          };
+        }),
       },
     };
   }
@@ -126,54 +144,51 @@ describe('client API — transport IPC (Electron)', () => {
 
     const result = await client.persons.list();
 
+    expect(bridge.persons.list).toHaveBeenCalledWith();
     expect(result).toEqual({ items: people, total: 3, limit: 3, offset: 0 });
   });
 
-  it('découpe une page décalée tout en conservant le total', async () => {
-    const client = createIpcClient(createBridge());
+  it('délègue la pagination au pont IPC et conserve le total', async () => {
+    const bridge = createBridge();
+    const client = createIpcClient(bridge);
 
     const result = await client.persons.list({ limit: 2, offset: 1 });
 
+    expect(bridge.persons.list).toHaveBeenCalledWith({ limit: 2, offset: 1 });
     expect(result.items).toEqual([people[1], people[2]]);
     expect(result.total).toBe(3);
     expect(result.limit).toBe(2);
     expect(result.offset).toBe(1);
   });
 
-  it('renvoie uniquement le total quand on le demande', async () => {
-    const client = createIpcClient(createBridge());
+  it('borne la taille de page avant l’appel IPC', async () => {
+    const bridge = createBridge();
+    const client = createIpcClient(bridge);
 
-    const result = await client.persons.list({ total: true });
+    await client.persons.list({ limit: 100000 });
 
-    expect(result).toEqual({ total: 3 });
+    expect(bridge.persons.list).toHaveBeenCalledWith({ limit: 200, offset: 0 });
   });
 
-  it('filtre par nom comme le serveur', async () => {
-    const client = createIpcClient(createBridge());
+  it('renvoie uniquement le total quand on le demande', async () => {
+    const bridge = createBridge();
+    const client = createIpcClient(bridge);
+
+    const result = await client.persons.list({ total: true, q: 'dupont' });
+
+    expect(bridge.persons.list).toHaveBeenCalledWith({ total: true, q: 'dupont' });
+    expect(result).toEqual({ total: 2 });
+  });
+
+  it('transmet le filtre de recherche', async () => {
+    const bridge = createBridge();
+    const client = createIpcClient(bridge);
 
     const result = await client.persons.list({ limit: 10, q: 'dupont' });
 
+    expect(bridge.persons.list).toHaveBeenCalledWith({ limit: 10, offset: 0, q: 'dupont' });
     expect(result.items).toEqual([people[0], people[2]]);
     expect(result.total).toBe(2);
-  });
-
-  it('aligne le filtrage sur la sémantique SQL du serveur', async () => {
-    const bridge = createBridge([
-      { id: 1, given_names: null, family_name: 'Dupont' },
-      { id: 2, given_names: 'Élodie', family_name: 'Durand' },
-    ]);
-    const client = createIpcClient(bridge);
-
-    // `given_names || ' ' || family_name` vaut NULL : aucune correspondance.
-    const byFamily = await client.persons.list({ q: 'dupont' });
-    expect(byFamily.items).toEqual([]);
-
-    // SQLite ne replie que l'ASCII : les accents ne sont pas normalisés.
-    const byAccent = await client.persons.list({ q: 'élodie' });
-    expect(byAccent.items).toEqual([]);
-
-    const exactAccent = await client.persons.list({ q: 'Élodie' });
-    expect(exactAccent.items).toHaveLength(1);
   });
 
   it('renvoie une liste vide', async () => {

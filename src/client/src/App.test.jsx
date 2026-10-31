@@ -322,6 +322,57 @@ describe('App', () => {
     await waitFor(() => expect(screen.getAllByText('Jean Dupont').length).toBeGreaterThan(0));
   });
 
+  it('charge la liste latérale par pages, filtre côté serveur et garde le total correct', async () => {
+    const everyone = Array.from({ length: 320 }, (_, index) => ({
+      id: index + 1,
+      given_names: index % 40 === 0 ? 'Zélie' : 'Paul',
+      family_name: `Nom${String(index + 1).padStart(3, '0')}`,
+    }));
+    // Simule le serveur : pagination, filtre `q` et enveloppe avec total.
+    persons.list.mockImplementation(async (options) => {
+      if (!options) return everyone;
+      const matching = options.q
+        ? everyone.filter((person) =>
+            `${person.given_names} ${person.family_name}`
+              .toLowerCase()
+              .includes(options.q.toLowerCase()),
+          )
+        : everyone;
+      return {
+        items: matching.slice(options.offset, options.offset + options.limit),
+        total: matching.length,
+        limit: options.limit,
+        offset: options.offset,
+      };
+    });
+    graph.relations.mockResolvedValue({
+      person: { id: 1 },
+      parents: [],
+      children: [],
+      siblings: [],
+      spouses: [],
+    });
+
+    renderWithProviders(<App />);
+
+    // Première page seulement dans la liste ; compteur = total réel.
+    await waitFor(() => expect(screen.getByText('320 personnes')).toBeInTheDocument());
+    expect(persons.list).toHaveBeenCalledWith({ limit: 100, offset: 0, q: undefined });
+
+    persons.list.mockClear();
+    fireEvent.change(screen.getByPlaceholderText('Filtrer les personnes…'), {
+      target: { value: 'zélie' },
+    });
+    await waitFor(() =>
+      expect(persons.list).toHaveBeenCalledWith({ limit: 100, offset: 0, q: 'zélie' }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('.person-filter__count')).toHaveTextContent('8 résultats'),
+    );
+    // Le compteur général reste celui de l'arbre entier.
+    expect(screen.getByText('320 personnes')).toBeInTheDocument();
+  });
+
   it('navigue entre les personnes au clavier avec les flèches haut/bas', async () => {
     persons.list.mockResolvedValue([
       { id: 1, given_names: 'Jean', family_name: 'Dupont' },

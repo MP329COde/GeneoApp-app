@@ -53,6 +53,12 @@
     "one": "{count} personne",
     "other": "{count} personnes"
   },
+  "shell.filterResultCount": {
+    "one": "{count} résultat",
+    "other": "{count} résultats"
+  },
+  "shell.noPersonMatch": "Aucune personne ne correspond à ce filtre.",
+  "shell.loadingMorePersons": "Chargement de la suite…",
   "shell.context": "Contexte :",
   "shell.offline": "Hors ligne",
   "shell.offlineLocal": "Hors ligne · 100 % local",
