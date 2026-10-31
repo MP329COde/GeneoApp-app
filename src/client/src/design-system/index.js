@@ -2,6 +2,7 @@ export { Button } from './components/Button/Button.jsx';
 export { TextField } from './components/TextField/TextField.jsx';
 export { Select } from './components/Select/Select.jsx';
 export { Checkbox } from './components/Checkbox/Checkbox.jsx';
+export { Switch } from './components/Switch/Switch.jsx';
 export { Modal } from './components/Modal/Modal.jsx';
 export { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog.jsx';
 export { Badge } from './components/Badge/Badge.jsx';

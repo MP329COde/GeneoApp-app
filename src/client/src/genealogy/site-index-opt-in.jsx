@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Checkbox, useTranslation } from '../design-system/index.js';
+import { Button, Switch, useTranslation } from '../design-system/index.js';
 import { client as defaultClient } from '../api/app-client.js';
 import {
   CONNECTOR_REASONS,
@@ -44,7 +44,7 @@ const REASON_MESSAGES = {
   ],
 };
 
-export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
+export function SiteIndexOptIn({ site, siteLabel, values = {}, client = defaultClient }) {
   const { t } = useTranslation();
   const [optedIn, setOptedIn] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -170,19 +170,32 @@ export function SiteIndexOptIn({ site, values = {}, client = defaultClient }) {
 
   return (
     <div className="site-search__index">
-      <Checkbox
+      <Switch
         id={`site-index-${site.id}`}
         checked={optedIn}
         disabled={!loaded || busy}
         onChange={(event) => toggle(event.target.checked)}
-        label={t('siteSearch.index.optIn', 'Autoriser l’indexation locale des pages de ce site')}
+        label={t('siteSearch.index.optIn', 'Indexation locale')}
+        aria-label={
+          siteLabel
+            ? `${t('siteSearch.index.optIn', 'Indexation locale')} : ${siteLabel}`
+            : undefined
+        }
+        stateLabel={
+          optedIn ? t('siteSearch.index.on', 'Autorisée') : t('siteSearch.index.off', 'Désactivée')
+        }
+        description={
+          optedIn
+            ? t(
+                'siteSearch.index.hint',
+                'Les pages téléchargées sont stockées dans GeneoApp ; rien n’est renvoyé au site.',
+              )
+            : t(
+                'siteSearch.index.privacy',
+                'Désactivée par défaut : tant que vous ne l’autorisez pas, GeneoApp ne contacte pas ce site.',
+              )
+        }
       />
-      <p className="settings-hint">
-        {t(
-          'siteSearch.index.hint',
-          'Les pages téléchargées sont stockées dans GeneoApp ; rien n’est renvoyé au site.',
-        )}
-      </p>
       {optedIn ? (
         <div className="gedcom-panel__actions">
           <Button variant="secondary" size="sm" disabled={busy} onClick={estimatePages}>

@@ -1,5 +1,5 @@
 {
-  "siteSearch.index.optIn": "Allow local indexing of this site’s pages",
+  "siteSearch.index.optIn": "Local indexing",
   "siteSearch.index.hint": "Downloaded pages are stored in GeneoApp; nothing is sent back to the site.",
   "siteSearch.index.enabled": "Local indexing allowed for this site.",
   "siteSearch.index.disabled": "Local indexing disabled for this site.",
@@ -29,5 +29,8 @@
   "server.indexing.networkDisabled": "Internet access is disabled in the settings",
   "server.indexing.connectorSource": "This source belongs to a connector: use the connector indexing instead",
   "indexing.runSummary.status.done": "done",
-  "indexing.runSummary.status.interrupted": "interrupted"
+  "indexing.runSummary.status.interrupted": "interrupted",
+  "siteSearch.index.on": "Allowed",
+  "siteSearch.index.off": "Off",
+  "siteSearch.index.privacy": "Off by default: until you allow it, GeneoApp does not contact this site."
 }

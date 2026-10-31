@@ -23,7 +23,7 @@ describe('opt-in d’indexation locale', () => {
     const client = makeClient();
     renderWithProviders(<SiteIndexOptIn site={{ id: 'geneanet' }} client={client} />);
 
-    const checkbox = await screen.findByRole('checkbox');
+    const checkbox = await screen.findByRole('switch', { name: /indexation locale/i });
     await waitFor(() => expect(checkbox).not.toBeDisabled());
     expect(checkbox).not.toBeChecked();
 

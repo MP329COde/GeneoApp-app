@@ -30,7 +30,8 @@ import appIcon from './assets/geneoapp-icon.png';
 import { Icon, ErrorNotice, personLabel } from './components/shared.jsx';
 import { TreeLegend } from './components/TreeLegend.jsx';
 import { NotificationCenter } from './components/NotificationCenter.jsx';
-import { CreatePersonForm, SearchPanel, DuplicatesPanel } from './views/PersonListPanels.jsx';
+import { CreatePersonForm, DuplicatesPanel } from './views/PersonListPanels.jsx';
+import { SearchPanel } from './views/SearchPanel.jsx';
 import { FamiliesPanel } from './views/FamiliesView.jsx';
 import { EventsPanel, TimelinePanel } from './views/EventsTimelineView.jsx';
 import { MapPanel } from './views/MapView.jsx';
@@ -81,6 +82,7 @@ import './styles/backups.css';
 import './styles/life-timeline.css';
 import './styles/lifeline-chart.css';
 import './styles/comparison.css';
+import './styles/search-results.css';
 import './styles/advanced-search.css';
 import './styles/quality.css';
 import './styles/site-search.css';
@@ -1083,6 +1085,9 @@ function AppContent() {
                 {view === 'search' ? (
                   <SearchPanel
                     selected={selected}
+                    persons={persons ?? []}
+                    lifespans={lifespans}
+                    onOpenView={setView}
                     lifespan={selected ? lifespans.get(selected.id) : null}
                     onNavigate={(id) => {
                       setSelectedId(id);

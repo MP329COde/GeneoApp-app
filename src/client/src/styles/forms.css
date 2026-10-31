@@ -17,7 +17,8 @@
 }
 .search-box input,
 .create-person-form input,
-.search-panel input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.search-panel
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not(.search-hero__input),
 .search-panel select,
 .search-panel textarea,
 .gedcom-panel input:not([type='checkbox']):not([type='radio']):not([type='file']),

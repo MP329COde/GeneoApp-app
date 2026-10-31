@@ -556,9 +556,11 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }));
 
     await waitFor(() => expect(search.query).toHaveBeenCalledWith('paroissial'));
-    await waitFor(() =>
-      expect(screen.getByText(/Registre paroissial de Sainte-Anne 1815/)).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole('button', { name: /Registre paroissial de Sainte-Anne 1815/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Sources/ })).toBeInTheDocument();
+    expect(screen.getAllByText('paroissial', { selector: 'mark' })).toHaveLength(1);
   });
 
   it('affiche l’aperçu GEDCOM et bloque l’import tant qu’il est invalide (pas de rollback silencieux)', async () => {
@@ -2178,7 +2180,12 @@ describe('App', () => {
     renderWithProviders(<App />);
     await waitFor(() => expect(screen.getByText('1 personne')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Recherche' }));
-    const form = screen.getByRole('heading', { name: 'Filtres avancés' }).parentElement;
+    const form = screen.getByRole('heading', { name: 'Filtres avancés' }).closest('section');
+    expect(within(form).getByRole('button', { name: 'Filtres' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    fireEvent.click(within(form).getByRole('button', { name: 'Filtres' }));
     fireEvent.change(within(form).getByLabelText('Nom'), { target: { value: 'Dupont' } });
     fireEvent.change(within(form).getByLabelText('Lieu'), { target: { value: 'Rouen' } });
     fireEvent.change(within(form).getByLabelText('Année de début'), { target: { value: '1840' } });
@@ -2193,8 +2200,11 @@ describe('App', () => {
       }),
     );
     expect(await within(form).findByText('proximité 83 %')).toBeInTheDocument();
+    // Le formulaire se replie ; les filtres en vigueur restent en puces.
+    expect(within(form).getByRole('button', { name: 'Filtres (3 actifs)' })).toBeInTheDocument();
+    expect(within(form).getByText('Lieu : Rouen')).toBeInTheDocument();
     expect(within(form).getByText('Naissance 3 mars 1850 · Rouen')).toBeInTheDocument();
-    fireEvent.click(within(form).getByRole('button', { name: 'Jeanne Dupond' }));
+    fireEvent.click(within(form).getByRole('button', { name: /Jeanne Dupond/ }));
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Identité' })).toBeInTheDocument());
   });
   it('affiche la qualité des données de la personne sélectionnée', async () => {

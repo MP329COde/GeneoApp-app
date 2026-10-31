@@ -219,5 +219,32 @@
   "shell.undoShortcut": "Undo: {label} (Ctrl+Z)",
   "shell.redoShortcut": "Redo: {label} (Ctrl+Shift+Z)",
   "shell.undone": "Undone: {label}",
-  "shell.redone": "Redone: {label}"
+  "shell.redone": "Redone: {label}",
+  "search.entityPlural.person": "People",
+  "search.entityPlural.source": "Sources",
+  "search.entityPlural.media": "Media",
+  "search.entityPlural.event": "Events",
+  "search.entityPlural.place": "Places",
+  "search.entityPlural.union": "Unions",
+  "search.entityPlural.parentage": "Parent links",
+  "searchPanel.hero.title": "Search your archives",
+  "searchPanel.hero.lead": "People, places, sources, media and notes: one search bar, close spellings are found too.",
+  "searchPanel.loading": "Searching…",
+  "searchPanel.empty.title": "What are you looking for?",
+  "searchPanel.empty.text": "Type a name, a place or a source title. The first letters are enough.",
+  "searchPanel.empty.noTree": "Your tree is still empty",
+  "searchPanel.empty.noTreeText": "Add people or import a GEDCOM file, then come back to search.",
+  "searchPanel.empty.try": "Try:",
+  "searchPanel.didYouMean": "Did you mean:",
+  "searchPanel.tip.spelling": "Check the spelling or type fewer letters.",
+  "searchPanel.tip.oneWord": "Try a single word: the name or the place.",
+  "searchPanel.tip.filters": "The advanced filters below search by period, source or occupation.",
+  "searchPanel.resultSummary": {
+    "one": "{count} result for “{term}”",
+    "other": "{count} results for “{term}”"
+  },
+  "searchPanel.filterByType": "Filter by type",
+  "searchPanel.allTypes": "All",
+  "quickSearch.noMatch": "No one matches “{term}”.",
+  "quickSearch.hint": "↑↓ browse · Enter open · Esc close"
 }

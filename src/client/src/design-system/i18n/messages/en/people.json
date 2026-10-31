@@ -376,5 +376,18 @@
   "notebook.noHistory": "No change recorded.",
   "tree.toolbar.place": "Place",
   "tree.toolbar.placePlaceholder": "Town, region…",
-  "tree.toolbar.placeTruncated": "Results limited to the first 200 people"
+  "tree.toolbar.placeTruncated": "Results limited to the first 200 people",
+  "advancedSearch.toggle": "Filters",
+  "advancedSearch.toggleActive": {
+    "one": "Filters ({count} active)",
+    "other": "Filters ({count} active)"
+  },
+  "advancedSearch.exact": "Exact spelling",
+  "advancedSearch.hint": "Narrow down by name, place, period, source or occupation. Results come from your tree, offline.",
+  "advancedSearch.activeFilters": "Active filters",
+  "advancedSearch.removeFilter": "Remove filter {name}",
+  "advancedSearch.group.identity": "Identity",
+  "advancedSearch.group.when": "Place and period",
+  "advancedSearch.group.records": "Sources and notes",
+  "advancedSearch.noMatchHint": "Remove a filter using the chips above, or widen the period."
 }

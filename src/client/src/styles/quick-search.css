@@ -1,4 +1,4 @@
-/* ---------- Recherche rapide ---------- */
+/* ---------- Recherche rapide (palette ⌘K) ---------- */
 .quick-search {
   position: relative;
   flex: 0 1 340px;
@@ -22,31 +22,77 @@
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
 }
-.quick-search__results {
+.quick-search__panel {
   position: absolute;
   top: calc(100% + var(--space-1));
-  left: 0;
   right: 0;
   z-index: var(--z-dropdown);
+  width: min(440px, calc(100vw - var(--space-8)));
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-3);
+}
+.quick-search__results {
   margin: 0;
   padding: var(--space-1);
   list-style: none;
-  border: var(--border-hairline) solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-2);
 }
 .quick-search__results li {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
-.quick-search__results li.is-active,
-.quick-search__results li:hover {
+.quick-search__results li.is-active {
   background: var(--surface-selected);
+  box-shadow: inset var(--border-accent) 0 0 var(--action);
+}
+.quick-search__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border-radius: var(--radius-full);
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+.quick-search__text {
+  display: grid;
+  flex: 1;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+.quick-search__text .person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quick-search__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.quick-search__hint,
+.quick-search__empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+}
+.quick-search__hint {
+  border-top: var(--border-hairline) solid var(--border-subtle);
+  background: var(--surface);
+}
+.quick-search__empty {
+  padding: var(--space-4);
+  font: var(--type-body-sm);
 }
 .empty-state__actions {
   display: grid;
