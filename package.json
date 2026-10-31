@@ -43,6 +43,7 @@
     "screenshots": "node scripts/capture-screenshots.js",
     "smoke": "node --test test/smoke/*.test.js",
     "storybook": "npm run storybook --workspace @geneoapp/client",
+    "start:web": "node scripts/start-web.js",
     "test": "npm run smoke && npm run test:db && npm run test:server && npm run test:api && npm run test:electron && npm run test:packaging && npm run test:cli && npm run test:client",
     "test:api": "node --test test/api/*.test.js",
     "test:cli": "node --test test/cli/*.test.js",
