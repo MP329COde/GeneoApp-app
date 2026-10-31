@@ -6,6 +6,7 @@ import { DashboardView } from './DashboardView.jsx';
 
 const mocks = vi.hoisted(() => ({
   totals: vi.fn(),
+  insights: vi.fn(),
   active: vi.fn(),
   consistency: vi.fn(),
   duplicates: vi.fn(),
@@ -15,7 +16,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../api/app-client.js', () => ({
   client: {
-    statistics: { totals: (...a) => mocks.totals(...a) },
+    statistics: {
+      totals: (...a) => mocks.totals(...a),
+      insights: (...a) => mocks.insights(...a),
+    },
     trees: { active: (...a) => mocks.active(...a) },
     graph: { consistency: (...a) => mocks.consistency(...a) },
     search: { duplicates: (...a) => mocks.duplicates(...a) },
@@ -28,6 +32,7 @@ beforeEach(() => {
   mocks.totals.mockResolvedValue({
     totals: { persons: 12, unions: 4, events: 30, places: 6, sources: 3, media: 2 },
   });
+  mocks.insights.mockResolvedValue({ insights: { completeness: { score: 62 } } });
   mocks.active.mockResolvedValue({ id: 'main', name: 'Famille Martin' });
   mocks.consistency.mockResolvedValue({ counts: { certain: 2, unusual: 5 } });
   mocks.duplicates.mockResolvedValue({ items: [], total: 3 });
@@ -67,6 +72,24 @@ describe('DashboardView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Importer / exporter' }));
     expect(onNavigate).toHaveBeenCalledWith('gedcom');
+  });
+
+  it('montre la santé des données et mène aux statistiques', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    renderWithProviders(<DashboardView onNavigate={onNavigate} />);
+    const health = await screen.findByRole('region', { name: 'Santé des données' });
+    expect(within(health).getByRole('img').getAttribute('aria-label')).toMatch(/62\s?%/);
+    await user.click(within(health).getByRole('button', { name: 'Voir toutes les statistiques' }));
+    expect(onNavigate).toHaveBeenCalledWith('statistics');
+    await user.click(screen.getByRole('button', { name: 'Statistiques' }));
+    expect(onNavigate).toHaveBeenCalledWith('statistics');
+  });
+
+  it('accueille un arbre vide avec des actions pour démarrer', async () => {
+    mocks.totals.mockResolvedValue({ totals: { persons: 0 } });
+    renderWithProviders(<DashboardView onNavigate={vi.fn()} />);
+    expect(await screen.findByRole('heading', { name: 'Commencez votre arbre' })).toBeVisible();
   });
 
   it('signale clairement qu’il n’y a rien à surveiller', async () => {

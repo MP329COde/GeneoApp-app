@@ -100,8 +100,11 @@ test('les statistiques reflètent les données réelles créées durant le parco
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Statistiques', exact: true }).click();
-  const personsRow = page.locator('dl div', { hasText: 'Personnes' });
-  await expect(personsRow.locator('dd')).toHaveText('2');
+  const personsCard = page.getByTestId('stats-kpis').locator('.stat-kpi', { hasText: 'Personnes' });
+  await expect(personsCard.locator('dd').first()).toHaveText('2');
+  // Les graphiques sont rendus avec leur équivalent textuel (tableau masqué).
+  await expect(page.getByTestId('stats-sex').getByRole('img')).toBeVisible();
+  await expect(page.getByTestId('stats-completeness')).toBeVisible();
 });
 
 test('importe un GEDCOM réel après aperçu valide et recharge la liste des personnes', async ({

@@ -24,5 +24,27 @@
   "dashboard.openTree": "Ouvrir l’arbre",
   "dashboard.search": "Rechercher",
   "dashboard.importExport": "Importer / exporter",
-  "dashboard.backups": "Sauvegardes"
+  "dashboard.backups": "Sauvegardes",
+  "dashboard.welcome": "Voici l’état de votre arbre et ce qui mérite votre attention aujourd’hui.",
+  "dashboard.healthTitle": "Santé des données",
+  "dashboard.healthScore": "{percent} %",
+  "dashboard.healthText": "Complétude globale de l’arbre",
+  "dashboard.healthLink": "Voir toutes les statistiques",
+  "dashboard.attentionHint": "Chaque carte mène à l’écran qui permet de traiter le point.",
+  "dashboard.itemsToReview": {
+    "one": "{count} point à traiter",
+    "other": "{count} points à traiter"
+  },
+  "dashboard.statistics": "Statistiques",
+  "dashboard.openTreeHint": "Parcourir vos ancêtres",
+  "dashboard.searchHint": "Trouver une personne, un lieu, un acte",
+  "dashboard.importExportHint": "GEDCOM, livre, archives",
+  "dashboard.backupsHint": "Protéger vos données",
+  "dashboard.statisticsHint": "Graphiques et complétude",
+  "dashboard.emptyTitle": "Commencez votre arbre",
+  "dashboard.emptyText": "Ajoutez une première personne, ou importez un fichier GEDCOM existant pour retrouver vos données.",
+  "dashboard.statusAlert": "Urgent",
+  "dashboard.statusReview": "À vérifier",
+  "dashboard.statusOk": "En ordre",
+  "dashboard.statusInfo": "En cours"
 }

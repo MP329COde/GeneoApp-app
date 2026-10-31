@@ -14,6 +14,7 @@ import { VerificationContext, useVerification } from './hooks/useVerification.js
 export { buildVerificationIssues, verificationNotifications } from './hooks/useVerification.js';
 import { TreeExplorer } from './views/TreeExplorer.jsx';
 import { DashboardView } from './views/DashboardView.jsx';
+import { StatisticsView } from './views/StatisticsView.jsx';
 import { RelationshipPanel } from './views/RelationshipPanel.jsx';
 import { buildLifespans } from './genealogy/lifespans.js';
 import { ComparePanel } from './views/ComparePanel.jsx';
@@ -40,7 +41,6 @@ import {
   SourcesPanel,
   AuditPanel,
   NotesPanel,
-  StatisticsPanel,
   AiPanel,
 } from './views/PersonDetailTools.jsx';
 import { DocumentsHub, MediaPanel, GedcomPanel } from './views/DocumentsGedcomView.jsx';
@@ -55,6 +55,7 @@ import './styles/typography.css';
 import './styles/persons.css';
 import './styles/tree.css';
 import './styles/dashboard.css';
+import './styles/statistics.css';
 import './styles/timeline.css';
 import './styles/inspector.css';
 import './styles/messages.css';
@@ -1177,7 +1178,7 @@ function AppContent() {
                 ) : view === 'dashboard' ? (
                   <DashboardView onNavigate={setView} />
                 ) : view === 'statistics' ? (
-                  <StatisticsPanel />
+                  <StatisticsView onNavigate={setView} />
                 ) : view === 'ai' ? (
                   <AiPanel />
                 ) : view === 'trees' ? (

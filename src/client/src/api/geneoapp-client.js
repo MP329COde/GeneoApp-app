@@ -338,6 +338,7 @@ function createHttpClient() {
     },
     statistics: {
       totals: () => fetchJson('/api/statistics'),
+      insights: () => fetchJson('/api/statistics/insights'),
     },
     ai: {
       analyze: (prompt) => fetchJson('/api/ai/analyze', { method: 'POST', body: { prompt } }),
@@ -632,6 +633,7 @@ export function createIpcClient(rawBridge) {
     },
     statistics: {
       totals: () => bridge.statistics.totals(),
+      insights: () => bridge.statistics.insights(),
     },
     ai: {
       analyze: (prompt) => bridge.ai.analyze(prompt),
