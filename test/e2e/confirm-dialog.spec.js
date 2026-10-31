@@ -64,6 +64,8 @@ test.describe('confirmation partagée', () => {
     test('affiche la confirmation de suppression dans la fenêtre mobile', async ({ page }) => {
       await page.goto('/');
       await addPerson(page, 'Katherine', 'Johnson');
+      // Sur mobile, la section « Personnes » est repliée par défaut : on la déplie.
+      await page.locator('.sidenav__people .sidenav__label--toggle').click();
 
       const { dialog } = await openConfirmDialog(page, 'Katherine Johnson');
       await expect(dialog).toBeVisible();

@@ -770,9 +770,12 @@ test('liste virtualisée de plus de 200 personnes : lignes non chevauchantes et 
   const rows = page.locator('.person-list .person-card');
   await expect(rows.first()).toBeVisible();
 
-  // 10 lignes consécutives : aucune boîte englobante ne chevauche la suivante.
+  // Lignes consécutives rendues (la liste, de hauteur bornée, n'en monte que
+  // quelques-unes) : aucune boîte englobante ne chevauche la suivante.
+  const renderedRows = Math.min(10, await rows.count());
+  expect(renderedRows).toBeGreaterThanOrEqual(5);
   const boxes = [];
-  for (let index = 0; index < 10; index += 1) {
+  for (let index = 0; index < renderedRows; index += 1) {
     const box = await rows.nth(index).boundingBox();
     expect(box).not.toBeNull();
     boxes.push(box);
