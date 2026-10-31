@@ -750,3 +750,17 @@ refus de démarrer sans jeton hors loopback).
 Limites : l'image Docker n'a pas été construite (pas de démon Docker dans l'environnement de développement) ;
 la liste complète des personnes reste chargée en arrière-plan pour les sélecteurs dès que l'arbre dépasse
 une page ; le test de performance du graphe (4 000 personnes) est sensible à la charge de la machine.
+
+## Carte et frise (2026-10-31)
+
+- **Carte** : `map-labels.js` place les étiquettes sans chevauchement (8 positions autour du repère, masquage en
+  cas de conflit, réapparition au zoom, lieu sélectionné toujours visible). Le nom accessible reste porté par le
+  repère. Repères et étiquettes sont hors du groupe zoomé : leur taille reste constante.
+- **Frise chronologique** : bascule Liste / Frise dans la vue Chronologie (`lifeline-chart.js`,
+  `LifelineChart.jsx`). Marqueurs différenciés par la forme (cercle, losange, carré, triangle), dates imprécises
+  en plage hachurée, personne vivante en ligne ouverte, zoom et déplacement (boutons, clavier, glisser,
+  Ctrl+molette).
+- **Correction du suivi** : `App.css` n'existe plus, le CSS est déjà réparti par vue dans `styles/`.
+- Limite : l'étendue de la frise va jusqu'à l'année en cours dès qu'une personne vivante existe ou n'a pas de
+  date de décès connue.
+- Vérification : lint, format, i18n (1525 clés FR/EN), `npm test` (client 368), Playwright 35/35.

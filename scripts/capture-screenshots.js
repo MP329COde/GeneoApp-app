@@ -515,6 +515,10 @@ async function main() {
     await page.waitForSelector('text=Chargement…', { state: 'hidden' });
     await shoot('14-chronologie.png');
 
+    await page.getByRole('button', { name: 'Frise', exact: true }).click();
+    await page.waitForSelector('text=Chargement…', { state: 'hidden' });
+    await shoot('14b-frise.png');
+
     await page.getByRole('button', { name: 'Carte', exact: true }).click();
     await page.waitForSelector('text=Chargement…', { state: 'hidden' });
     await shoot('15-carte.png');
