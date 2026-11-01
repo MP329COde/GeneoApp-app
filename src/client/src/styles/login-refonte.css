@@ -1,0 +1,67 @@
+/* ---------- Connexion au profil local ---------- */
+.login-card {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 28rem;
+  margin: var(--space-6) 0;
+  padding: var(--space-6);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-top: var(--border-accent) solid var(--action);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+.login-card__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+.login-card__icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.login-card__title {
+  margin: 0;
+  font: var(--type-heading);
+  font-family: var(--font-serif);
+}
+.login-card__lead {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.login-card__field {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  font: var(--type-label);
+}
+.login-card__field input {
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-body);
+}
+.login-card__field input:focus-visible {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    margin: var(--space-4) 0;
+    padding: var(--space-4);
+  }
+  .login-card .gds-button {
+    width: 100%;
+  }
+}

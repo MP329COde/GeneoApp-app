@@ -1634,6 +1634,9 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('light');
 
     fireEvent.click(screen.getByRole('button', { name: 'Rétablir les valeurs par défaut' }));
+    // Confirmation partagée : rien n'est réinitialisé avant de confirmer.
+    expect(document.documentElement.dataset.theme).toBe('light');
+    fireEvent.click(await screen.findByRole('button', { name: 'Rétablir' }));
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.dataset.textSize).toBeUndefined();
     localStorage.clear();
@@ -2073,6 +2076,8 @@ describe('App', () => {
 
     expect(await screen.findByText(/Automatique · lancement/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Restaurer' }));
+    expect(backups.restore).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmer la restauration' }));
     await waitFor(() =>
       expect(backups.restore).toHaveBeenCalledWith('geneoapp-sqlite-a.sqlite', 'sqlite', 'tok-9'),
     );

@@ -47,7 +47,6 @@
   "indexing.source.removed": "Source retirée.",
   "indexing.source.folderPath": "Dossier (chemin complet)",
   "indexing.source.folderPlaceholder": "/Users/moi/Généalogie/scans",
-
   "indexing.source.addFolder": "Ajouter le dossier",
   "indexing.source.folderAdded": "Dossier ajouté.",
   "indexing.source.onlineType": "Type de source en ligne",
@@ -279,5 +278,10 @@
   "notebook.taskProgress": {
     "one": "{done}/{count} tâche",
     "other": "{done}/{count} tâches"
-  }
+  },
+  "accountsBackups.login.title": "Accès réservé",
+  "accountsBackups.backups.restoreConfirmTitle": "Restaurer cette sauvegarde",
+  "accountsBackups.backups.restoreConfirmMessage": "Restaurer la sauvegarde du {date} remplacera les données actuelles. Pensez à créer une sauvegarde de l’état présent avant de continuer.",
+  "accountsBackups.backups.restoreConfirm": "Confirmer la restauration",
+  "accountsBackups.backups.restoreCancel": "Annuler"
 }

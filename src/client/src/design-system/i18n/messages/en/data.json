@@ -47,7 +47,6 @@
   "indexing.source.removed": "Source removed.",
   "indexing.source.folderPath": "Folder (full path)",
   "indexing.source.folderPlaceholder": "/Users/me/Genealogy/scans",
-
   "indexing.source.addFolder": "Add the folder",
   "indexing.source.folderAdded": "Folder added.",
   "indexing.source.onlineType": "Type of online source",
@@ -279,5 +278,10 @@
   "notebook.taskProgress": {
     "one": "{done}/{count} task",
     "other": "{done}/{count} tasks"
-  }
+  },
+  "accountsBackups.login.title": "Restricted access",
+  "accountsBackups.backups.restoreConfirmTitle": "Restore this backup",
+  "accountsBackups.backups.restoreConfirmMessage": "Restoring the backup from {date} will replace the current data. Consider creating a backup of the present state before continuing.",
+  "accountsBackups.backups.restoreConfirm": "Confirm restore",
+  "accountsBackups.backups.restoreCancel": "Cancel"
 }

@@ -124,5 +124,11 @@
   "aiAssistant.dismiss": "Dismiss",
   "aiAssistant.reasoningPrefix": "Local AI suggestion",
   "aiAssistant.toVerify": "to be checked",
-  "aiAssistant.ollama": "Ollama"
+  "aiAssistant.ollama": "Ollama",
+  "personTools.identity.lead": "Names and status as the documents report them: they help find this person everywhere in the tree.",
+  "personTools.identity.groupNames": "Names",
+  "personTools.identity.groupStatus": "Status",
+  "personTools.audit.selectionText": "Pick a person in the tree or the list to review the changes made to their record.",
+  "personTools.audit.lead": "Every change to the record is logged, from the most recent to the oldest.",
+  "personTools.notes.selectionText": "Pick a person in the tree or the list to see their notes, assertions and identifiers."
 }

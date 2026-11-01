@@ -124,5 +124,11 @@
   "aiAssistant.dismiss": "Ignorer",
   "aiAssistant.reasoningPrefix": "Suggestion de l’IA locale",
   "aiAssistant.toVerify": "à vérifier",
-  "aiAssistant.ollama": "Ollama"
+  "aiAssistant.ollama": "Ollama",
+  "personTools.identity.lead": "Les noms et statuts tels que les documents les rapportent : ils servent à retrouver cette personne partout dans l’arbre.",
+  "personTools.identity.groupNames": "Noms",
+  "personTools.identity.groupStatus": "Statut",
+  "personTools.audit.selectionText": "Choisissez une personne dans l’arbre ou la liste pour consulter les modifications de sa fiche.",
+  "personTools.audit.lead": "Chaque modification de la fiche est consignée, de la plus récente à la plus ancienne.",
+  "personTools.notes.selectionText": "Choisissez une personne dans l’arbre ou la liste pour consulter ses notes, affirmations et identifiants."
 }

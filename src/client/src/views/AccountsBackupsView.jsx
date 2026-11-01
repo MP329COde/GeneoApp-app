@@ -10,6 +10,7 @@ import {
 import { client } from '../api/app-client.js';
 import { ErrorNotice, Icon } from '../components/shared.jsx';
 import '../styles/admin-refonte.css';
+import '../styles/login-refonte.css';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
 // Libellés lisibles des tables de la corbeille, indexés par nom technique : le
@@ -36,20 +37,33 @@ export function LoginForm({ onLogin, loginError }) {
   };
 
   return (
-    <form className="create-person-form" onSubmit={handleSubmit}>
-      <p className="notice">
+    <form className="login-card" onSubmit={handleSubmit}>
+      <span className="login-card__icon" aria-hidden="true">
+        <Icon name="lock" />
+      </span>
+      <h3 className="login-card__title">{t('accountsBackups.login.title', 'Accès réservé')}</h3>
+      <p className="login-card__lead">
         {t(
           'accountsBackups.login.intro',
           'Les sauvegardes, la restauration, la corbeille et le profil sont des opérations sensibles : connectez-vous avec un profil local pour y accéder.',
         )}
       </p>
-      <label>
+      <label className="login-card__field">
         <span>{t('accountsBackups.login.profile', 'Profil local')}</span>
-        <input value={name} onChange={(event) => setName(event.target.value)} />
+        <input
+          value={name}
+          autoComplete="username"
+          onChange={(event) => setName(event.target.value)}
+        />
       </label>
-      <label>
+      <label className="login-card__field">
         <span>{t('accountsBackups.login.pin', 'Code PIN (optionnel)')}</span>
-        <input type="password" value={pin} onChange={(event) => setPin(event.target.value)} />
+        <input
+          type="password"
+          autoComplete="current-password"
+          value={pin}
+          onChange={(event) => setPin(event.target.value)}
+        />
       </label>
       {loginError ? <ErrorNotice message={loginError} /> : null}
       <Button type="submit" size="sm">
@@ -357,6 +371,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
     }
   };
 
+  const backupToRestore = backups?.find((item) => `restore:${item.filename}` === confirming);
   const trashToPurge = trashItems?.find((item) => `${item.table}:${item.id}` === confirming);
   const dateLabel = (backup) =>
     backup.createdAt ? new Date(backup.createdAt).toLocaleString(locale) : backup.filename;
@@ -567,7 +582,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                         type="button"
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleRestore(backup)}
+                        onClick={() => setConfirming(`restore:${backup.filename}`)}
                         disabled={busy}
                       >
                         {t('accountsBackups.backups.restore', 'Restaurer')}
@@ -695,6 +710,24 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
           </label>
         ) : null}
       </ConfirmDialog>
+
+      <ConfirmDialog
+        isOpen={Boolean(backupToRestore)}
+        title={t('accountsBackups.backups.restoreConfirmTitle', 'Restaurer cette sauvegarde')}
+        message={t(
+          'accountsBackups.backups.restoreConfirmMessage',
+          { date: backupToRestore ? dateLabel(backupToRestore) : '' },
+          'Restaurer la sauvegarde du {date} remplacera les données actuelles.',
+        )}
+        confirmLabel={t('accountsBackups.backups.restoreConfirm', 'Confirmer la restauration')}
+        cancelLabel={t('accountsBackups.backups.restoreCancel', 'Annuler')}
+        isBusy={busy}
+        onConfirm={() => {
+          setConfirming(null);
+          handleRestore(backupToRestore);
+        }}
+        onCancel={() => setConfirming(null)}
+      />
 
       <ConfirmDialog
         isOpen={Boolean(trashToPurge)}
