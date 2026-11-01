@@ -278,7 +278,7 @@ test('place un lieu réel avec coordonnées sur la carte après création via un
   await page.getByLabel('Latitude (optionnel)').fill('47.2184');
   await page.getByLabel('Longitude (optionnel)').fill('-1.5536');
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
-  await expect(page.locator('.search-results li', { hasText: 'Nantes' })).toBeVisible();
+  await expect(page.locator('.evnb-events li', { hasText: 'Nantes' })).toBeVisible();
 
   // Par défaut l'application est en mode carte locale (hors ligne, sans
   // requête réseau) : voir a9af2bd « sépare réellement le mode hors ligne du
@@ -320,7 +320,7 @@ test('place automatiquement un lieu contre le référentiel des communes frança
   // coordonnées » avec le bouton de placement automatique.
   await page.getByLabel('Ou nouveau lieu (optionnel)').fill('Bordeaux');
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
-  await expect(page.locator('.search-results li', { hasText: 'Bordeaux' })).toBeVisible();
+  await expect(page.locator('.evnb-events li', { hasText: 'Bordeaux' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
   await expect(page.getByText('Bordeaux', { exact: true })).toBeVisible();
@@ -357,7 +357,7 @@ test('zoome, déplace et recentre la carte locale hors ligne, sans requête rés
   await page.getByLabel('Latitude (optionnel)').fill('48.1173');
   await page.getByLabel('Longitude (optionnel)').fill('-1.6778');
   await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
-  await expect(page.locator('.search-results li', { hasText: 'Rennes' })).toBeVisible();
+  await expect(page.locator('.evnb-events li', { hasText: 'Rennes' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Carte', exact: true }).click();
   const canvas = page.locator('svg.local-map__canvas');

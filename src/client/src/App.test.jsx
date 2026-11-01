@@ -907,7 +907,7 @@ describe('App', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Carnet' }));
-    await waitFor(() => expect(screen.getByText(/Aucune piste de recherche/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Votre carnet est vierge/)).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Acte à vérifier' } });
     fireEvent.change(screen.getByLabelText('Note'), {
