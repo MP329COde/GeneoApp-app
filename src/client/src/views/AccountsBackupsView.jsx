@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
 import { client } from '../api/app-client.js';
-import { ErrorNotice } from '../components/shared.jsx';
+import { ErrorNotice, Icon } from '../components/shared.jsx';
+import '../styles/admin-refonte.css';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
 
 // Libellés lisibles des tables de la corbeille, indexés par nom technique : le
@@ -91,8 +99,8 @@ export function StorageSection({ token }) {
   };
 
   return (
-    <section className="storage-section" aria-labelledby="storage-title">
-      <h3 id="storage-title">
+    <section className="storage-section adm-card" aria-labelledby="storage-title">
+      <h3 id="storage-title" className="adm-card__title">
         {t('accountsBackups.storage.title', 'Clé USB et emplacement des données')}
       </h3>
       {storageError ? <ErrorNotice message={storageError} /> : null}
@@ -101,12 +109,12 @@ export function StorageSection({ token }) {
           {message}
         </p>
       ) : null}
-      <p className="data-id">
+      <p className="adm-card__note">
         {t('accountsBackups.storage.current', 'Données actuelles :')} {status.activeDataDir}
       </p>
 
       <form
-        className="storage-form"
+        className="storage-form adm-form adm-form--inline"
         onSubmit={(event) => {
           event.preventDefault();
           run(
@@ -121,7 +129,7 @@ export function StorageSection({ token }) {
           );
         }}
       >
-        <label>
+        <label className="adm-field">
           <span>
             {t(
               'accountsBackups.storage.mirrorLabel',
@@ -134,7 +142,7 @@ export function StorageSection({ token }) {
           {t('accountsBackups.storage.mirrorSubmit', 'Enregistrer le miroir')}
         </Button>
         {status.mirrorDir ? (
-          <p className="data-id">
+          <p className="adm-card__note">
             {status.mirrorAvailable
               ? t('accountsBackups.storage.mirrorAvailable', 'Miroir branché et accessible')
               : t('accountsBackups.storage.mirrorMissing', 'Miroir absent (clé débranchée ?)')}
@@ -143,7 +151,7 @@ export function StorageSection({ token }) {
       </form>
 
       <form
-        className="storage-form"
+        className="storage-form adm-form adm-form--inline"
         onSubmit={(event) => {
           event.preventDefault();
           run(
@@ -158,7 +166,7 @@ export function StorageSection({ token }) {
           );
         }}
       >
-        <label>
+        <label className="adm-field">
           <span>
             {t(
               'accountsBackups.storage.dataDirLabel',
@@ -171,7 +179,7 @@ export function StorageSection({ token }) {
           {t('accountsBackups.storage.dataDirSubmit', 'Utiliser ce dossier de travail')}
         </Button>
         {status.restartRequired ? (
-          <p className="data-id">
+          <p className="adm-card__note">
             {t(
               'accountsBackups.storage.restartRequired',
               'Changement en attente : effectif au prochain démarrage.',
@@ -349,15 +357,19 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
     }
   };
 
+  const trashToPurge = trashItems?.find((item) => `${item.table}:${item.id}` === confirming);
+  const dateLabel = (backup) =>
+    backup.createdAt ? new Date(backup.createdAt).toLocaleString(locale) : backup.filename;
+
   return (
-    <div className="backups-panel">
+    <div className="backups-panel adm">
       {actionError ? <ErrorNotice message={actionError} /> : null}
 
-      <section className="session-banner">
-        <h3>
+      <section className="adm-card adm-session">
+        <h3 className="adm-session__name">
           {t('accountsBackups.session.title', 'Profil connecté :')} {session.account.name}
         </h3>
-        <div className="gedcom-panel__actions">
+        <div className="adm-actions">
           <Button
             type="button"
             size="sm"
@@ -371,9 +383,12 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
       </section>
 
       {section === 'profile' ? (
-        <section>
-          <h3>{t('accountsBackups.profile.title', 'Profil local')}</h3>
-          <dl className="profile-details">
+        <section className="adm-card" aria-labelledby="profile-title">
+          <h3 id="profile-title" className="adm-card__title">
+            <Icon name="lock" />
+            {t('accountsBackups.profile.title', 'Profil local')}
+          </h3>
+          <dl className="adm-defs">
             <div>
               <dt>{t('accountsBackups.profile.name', 'Nom du profil')}</dt>
               <dd>{session.account.name}</dd>
@@ -396,47 +411,18 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               </dd>
             </div>
           </dl>
-          <div className="danger-zone">
-            <h4>{t('accountsBackups.profile.dangerZone', 'Zone sensible')}</h4>
-            <p className="settings-hint">
+          <div className="adm-card adm-card--danger">
+            <h4 className="adm-card__title">
+              <Icon name="warning" />
+              {t('accountsBackups.profile.dangerZone', 'Zone sensible')}
+            </h4>
+            <p className="adm-card__note adm-card__note--strong">
               {t(
                 'accountsBackups.profile.dangerHint',
                 'Supprimer le profil retire l’accès aux sauvegardes et à la corbeille pour ce nom. Les personnes de l’arbre ne sont pas supprimées.',
               )}
             </p>
-            {confirming === 'account' ? (
-              <div className="gedcom-panel__actions">
-                {session.account.hasPin ? (
-                  <input
-                    type="password"
-                    aria-label={t('accountsBackups.profile.pinLabel', 'Code PIN du profil')}
-                    placeholder={t('accountsBackups.profile.pinPlaceholder', 'Code PIN')}
-                    value={removePin}
-                    onChange={(event) => setRemovePin(event.target.value)}
-                  />
-                ) : null}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="danger"
-                  onClick={handleRemoveAccount}
-                  disabled={busy || (session.account.hasPin && !removePin)}
-                >
-                  {t('accountsBackups.profile.confirmRemove', 'Confirmer la suppression du profil')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setConfirming(null);
-                    setRemovePin('');
-                  }}
-                >
-                  {t('accountsBackups.profile.cancel', 'Annuler')}
-                </Button>
-              </div>
-            ) : (
+            <div className="adm-actions">
               <Button
                 type="button"
                 size="sm"
@@ -446,33 +432,62 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
               >
                 {t('accountsBackups.profile.remove', 'Supprimer ce profil')}
               </Button>
-            )}
+            </div>
           </div>
         </section>
       ) : null}
 
       {section === 'backups' ? (
-        <section>
-          <h3>{t('accountsBackups.backups.title', 'Sauvegardes')}</h3>
-          <p className="settings-hint">
-            {t(
-              'accountsBackups.backups.hint',
-              'Sauvegardes automatiques au lancement, avant chaque import GEDCOM et avant chaque mise à jour de la base (10 conservées par motif). Les sauvegardes manuelles ne sont jamais supprimées.',
-            )}
-          </p>
+        <>
+          <header className="adm__head">
+            <h3 className="adm__title">{t('accountsBackups.backups.title', 'Sauvegardes')}</h3>
+            <p className="adm__intro">
+              {t(
+                'accountsBackups.backups.hint',
+                'Sauvegardes automatiques au lancement, avant chaque import GEDCOM et avant chaque mise à jour de la base (10 conservées par motif). Les sauvegardes manuelles ne sont jamais supprimées.',
+              )}
+            </p>
+          </header>
           {backupStatus ? (
-            <p role="status" className="notice">
+            <p role="status" className="adm-status">
               {backupStatus}
             </p>
           ) : null}
-          <fieldset className="encrypted-backup">
-            <legend>
+
+          <section className="adm-card adm-card--accent" aria-labelledby="backup-create-title">
+            <h4 id="backup-create-title" className="adm-card__title">
+              <Icon name="plus" />
+              {t('admin.backups.createTitle', 'Nouvelle sauvegarde')}
+            </h4>
+            <p className="adm-card__note">
+              {t(
+                'admin.backups.createHint',
+                'Le JSON se relit partout ; le SQLite reproduit la base à l’identique.',
+              )}
+            </p>
+            <div className="adm-actions">
+              <Button type="button" onClick={() => handleCreateBackup('json')} disabled={busy}>
+                {t('accountsBackups.backups.createJson', 'Créer une sauvegarde (JSON)')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleCreateBackup('sqlite')}
+                disabled={busy}
+              >
+                {t('accountsBackups.backups.createSqlite', 'Créer une sauvegarde (SQLite)')}
+              </Button>
+            </div>
+          </section>
+
+          <fieldset className="encrypted-backup adm-card">
+            <legend className="adm-card__title">
               {t(
                 'accountsBackups.backups.encryptedLegend',
                 'Copie chiffrée (clé USB, disque externe)',
               )}
             </legend>
-            <label>
+            <label className="adm-field">
               <span>
                 {t('accountsBackups.backups.passphrase', 'Phrase secrète (12 caractères minimum)')}
               </span>
@@ -483,7 +498,7 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                 onChange={(event) => setPassphrase(event.target.value)}
               />
             </label>
-            <label className="gedcom-panel__file">
+            <label className="adm-field gedcom-panel__file">
               <span>
                 {t(
                   'accountsBackups.backups.importLabel',
@@ -497,155 +512,141 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                 disabled={busy || passphrase.length < 12}
               />
             </label>
-            <p className="settings-hint">
+            <p className="adm-card__note">
               {t(
                 'accountsBackups.backups.encryptionHint',
                 'Chiffrement AES-256-GCM. Sans la phrase secrète, la copie est illisible : elle ne peut pas être récupérée.',
               )}
             </p>
           </fieldset>
-          <div className="gedcom-panel__actions">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => handleCreateBackup('json')}
-              disabled={busy}
-            >
-              {t('accountsBackups.backups.createJson', 'Créer une sauvegarde (JSON)')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => handleCreateBackup('sqlite')}
-              disabled={busy}
-            >
-              {t('accountsBackups.backups.createSqlite', 'Créer une sauvegarde (SQLite)')}
-            </Button>
-          </div>
-          {backups === null ? (
-            <p role="status">{t('accountsBackups.backups.loading', 'Chargement…')}</p>
-          ) : backups.length === 0 ? (
-            <p className="notice">
-              {t('accountsBackups.backups.empty', 'Aucune sauvegarde pour l’instant.')}
-            </p>
-          ) : (
-            <ul className="search-results">
-              {backups.map((backup) => (
-                <li key={backup.filename}>
-                  <span className="backup-row__main">
-                    <strong>
-                      {backup.createdAt
-                        ? new Date(backup.createdAt).toLocaleString(locale)
-                        : backup.filename}
-                    </strong>
-                    <span className="data-id">
-                      {backup.kind === 'sqlite' ? 'SQLite' : 'JSON'} ·{' '}
-                      {backup.label?.startsWith('auto:')
-                        ? t(
-                            'accountsBackups.backups.autoLabel',
-                            { reason: backup.label.slice(5) },
-                            `Automatique · ${backup.label.slice(5)}`,
-                          )
-                        : (backup.label ?? t('accountsBackups.backups.manual', 'Manuelle'))}
-                      {backup.sizeBytes
-                        ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} ${t('units.kilobytes', 'Ko')}`
-                        : ''}
+
+          <section className="adm-card" aria-labelledby="backup-list-title">
+            <h4 id="backup-list-title" className="adm-card__title">
+              <Icon name="shield" />
+              {t('admin.backups.listTitle', 'Sauvegardes disponibles')}
+              {backups ? <Badge tone="neutral">{backups.length}</Badge> : null}
+            </h4>
+            {backups === null ? (
+              <SkeletonGroup label={t('accountsBackups.backups.loading', 'Chargement…')} rows={3} />
+            ) : backups.length === 0 ? (
+              <EmptyState
+                compact
+                icon={<Icon name="shield" />}
+                title={t('admin.backups.emptyTitle', 'Aucune sauvegarde pour l’instant')}
+              >
+                {t(
+                  'admin.backups.emptyBody',
+                  'Créez une première copie ci-dessus : elle permet de revenir en arrière en cas d’erreur.',
+                )}
+              </EmptyState>
+            ) : (
+              <ul className="adm-list">
+                {backups.map((backup) => (
+                  <li key={backup.filename} className="adm-row">
+                    <span className="adm-row__main">
+                      <strong className="adm-row__title">{dateLabel(backup)}</strong>
+                      <span className="adm-row__meta">
+                        {backup.kind === 'sqlite' ? 'SQLite' : 'JSON'} ·{' '}
+                        {backup.label?.startsWith('auto:')
+                          ? t(
+                              'accountsBackups.backups.autoLabel',
+                              { reason: backup.label.slice(5) },
+                              `Automatique · ${backup.label.slice(5)}`,
+                            )
+                          : (backup.label ?? t('accountsBackups.backups.manual', 'Manuelle'))}
+                        {backup.sizeBytes
+                          ? ` · ${Math.max(1, Math.round(backup.sizeBytes / 1024))} ${t('units.kilobytes', 'Ko')}`
+                          : ''}
+                      </span>
+                      {backup.createdAt ? (
+                        <span className="adm-row__meta backup-row__file">{backup.filename}</span>
+                      ) : null}
                     </span>
-                    {backup.createdAt ? (
-                      <span className="data-id backup-row__file">{backup.filename}</span>
-                    ) : null}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleRestore(backup)}
-                    disabled={busy}
-                  >
-                    {t('accountsBackups.backups.restore', 'Restaurer')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleExportEncrypted(backup)}
-                    disabled={busy || passphrase.length < 12}
-                    aria-label={t(
-                      'accountsBackups.backups.exportLabel',
-                      {
-                        date: backup.createdAt
-                          ? new Date(backup.createdAt).toLocaleString(locale)
-                          : backup.filename,
-                      },
-                      `Exporter chiffrée la sauvegarde du ${backup.createdAt ? new Date(backup.createdAt).toLocaleString(locale) : backup.filename}`,
-                    )}
-                  >
-                    {t('accountsBackups.backups.export', 'Exporter chiffrée')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-
-      {section === 'backups' ? <StorageSection token={session.token} /> : null}
-
-      {section === 'trash' ? (
-        <section>
-          <h3>{t('accountsBackups.trash.title', 'Corbeille')}</h3>
-          <p className="settings-hint">
-            {t(
-              'accountsBackups.trash.hint',
-              'Suppression logique : tout élément reste restaurable ici tant qu’il n’est pas purgé.',
-            )}
-          </p>
-          {trashItems === null ? (
-            <p role="status">{t('accountsBackups.trash.loading', 'Chargement…')}</p>
-          ) : trashItems.length === 0 ? (
-            <p className="notice">{t('accountsBackups.trash.empty', 'La corbeille est vide.')}</p>
-          ) : (
-            <ul className="search-results">
-              {trashItems.map((item) => (
-                <li key={`${item.table}:${item.id}`}>
-                  <Badge tone="neutral">
-                    {t(TRASH_TABLE_KEYS[item.table] ?? 'accountsBackups.trash.person', item.table)}
-                  </Badge>{' '}
-                  {item.label}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleTrashRestore(item.table, item.id)}
-                    disabled={busy}
-                  >
-                    {t('accountsBackups.trash.restore', 'Restaurer')}
-                  </Button>
-                  {confirming === `${item.table}:${item.id}` ? (
-                    <>
+                    <span className="adm-actions">
                       <Button
                         type="button"
                         size="sm"
-                        variant="danger"
-                        onClick={() => {
-                          setConfirming(null);
-                          handlePurge(item.table, item.id);
-                        }}
+                        variant="secondary"
+                        onClick={() => handleRestore(backup)}
                         disabled={busy}
                       >
-                        {t('accountsBackups.trash.confirmPurge', 'Confirmer la purge')}
+                        {t('accountsBackups.backups.restore', 'Restaurer')}
                       </Button>
                       <Button
                         type="button"
                         size="sm"
                         variant="secondary"
-                        onClick={() => setConfirming(null)}
+                        onClick={() => handleExportEncrypted(backup)}
+                        disabled={busy || passphrase.length < 12}
+                        aria-label={t(
+                          'accountsBackups.backups.exportLabel',
+                          { date: dateLabel(backup) },
+                          `Exporter chiffrée la sauvegarde du ${dateLabel(backup)}`,
+                        )}
                       >
-                        {t('accountsBackups.trash.cancel', 'Annuler')}
+                        {t('accountsBackups.backups.export', 'Exporter chiffrée')}
                       </Button>
-                    </>
-                  ) : (
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      ) : null}
+
+      {section === 'backups' ? <StorageSection token={session.token} /> : null}
+
+      {section === 'trash' ? (
+        <>
+          <header className="adm__head">
+            <h3 className="adm__title">{t('accountsBackups.trash.title', 'Corbeille')}</h3>
+            <p className="adm__intro">
+              {t(
+                'accountsBackups.trash.hint',
+                'Suppression logique : tout élément reste restaurable ici tant qu’il n’est pas purgé.',
+              )}
+            </p>
+          </header>
+          {trashItems === null ? (
+            <SkeletonGroup label={t('accountsBackups.trash.loading', 'Chargement…')} rows={3} />
+          ) : trashItems.length === 0 ? (
+            <section className="adm-card">
+              <EmptyState
+                icon={<Icon name="trash" />}
+                title={t('accountsBackups.trash.empty', 'La corbeille est vide.')}
+              >
+                {t(
+                  'admin.trash.emptyBody',
+                  'Les éléments supprimés apparaîtront ici et resteront restaurables.',
+                )}
+              </EmptyState>
+            </section>
+          ) : (
+            <ul className="adm-list">
+              {trashItems.map((item) => (
+                <li key={`${item.table}:${item.id}`} className="adm-row">
+                  <span className="adm-row__main">
+                    <span>
+                      <Badge tone="neutral">
+                        {t(
+                          TRASH_TABLE_KEYS[item.table] ?? 'accountsBackups.trash.person',
+                          item.table,
+                        )}
+                      </Badge>
+                    </span>
+                    <strong className="adm-row__title">{item.label}</strong>
+                  </span>
+                  <span className="adm-actions">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleTrashRestore(item.table, item.id)}
+                      disabled={busy}
+                    >
+                      {t('accountsBackups.trash.restore', 'Restaurer')}
+                    </Button>
                     <Button
                       type="button"
                       size="sm"
@@ -655,13 +656,63 @@ export function BackupsPanel({ session, onLogin, loginError, onLogout, section =
                     >
                       {t('accountsBackups.trash.purge', 'Purger définitivement')}
                     </Button>
-                  )}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </>
       ) : null}
+
+      <ConfirmDialog
+        isOpen={confirming === 'account'}
+        title={t('accountsBackups.profile.remove', 'Supprimer ce profil')}
+        message={t(
+          'accountsBackups.profile.dangerHint',
+          'Supprimer le profil retire l’accès aux sauvegardes et à la corbeille pour ce nom. Les personnes de l’arbre ne sont pas supprimées.',
+        )}
+        confirmLabel={t(
+          'accountsBackups.profile.confirmRemove',
+          'Confirmer la suppression du profil',
+        )}
+        cancelLabel={t('accountsBackups.profile.cancel', 'Annuler')}
+        isBusy={busy}
+        onConfirm={handleRemoveAccount}
+        onCancel={() => {
+          setConfirming(null);
+          setRemovePin('');
+        }}
+      >
+        {session.account.hasPin ? (
+          <label className="adm-field">
+            <span>{t('accountsBackups.profile.pinLabel', 'Code PIN du profil')}</span>
+            <input
+              type="password"
+              placeholder={t('accountsBackups.profile.pinPlaceholder', 'Code PIN')}
+              value={removePin}
+              onChange={(event) => setRemovePin(event.target.value)}
+            />
+          </label>
+        ) : null}
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        isOpen={Boolean(trashToPurge)}
+        title={t('accountsBackups.trash.purge', 'Purger définitivement')}
+        message={t(
+          'admin.trash.purgeMessage',
+          { label: trashToPurge?.label ?? '' },
+          `Purger « ${trashToPurge?.label ?? ''} » ? Cette action est irréversible.`,
+        )}
+        confirmLabel={t('accountsBackups.trash.confirmPurge', 'Confirmer la purge')}
+        cancelLabel={t('accountsBackups.trash.cancel', 'Annuler')}
+        isBusy={busy}
+        onConfirm={() => {
+          setConfirming(null);
+          handlePurge(trashToPurge.table, trashToPurge.id);
+        }}
+        onCancel={() => setConfirming(null)}
+      />
     </div>
   );
 }

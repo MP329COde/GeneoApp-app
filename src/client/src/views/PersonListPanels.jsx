@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
+import '../styles/admin-refonte.css';
 import { client } from '../api/app-client.js';
-import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import {
   MERGE_REASSIGNMENT_KEYS,
   PARENT_ROLE_KEYS as PARENT_ROLE_KEYS_EXPORT,
@@ -131,104 +139,144 @@ export function DuplicatesPanel({ onSelect, onMerged }) {
     }
   };
 
+  const reassignments = pendingMerge
+    ? Object.entries(pendingMerge.preview.reassignments).filter(([, count]) => count > 0)
+    : [];
+
   return (
-    <div className="search-panel">
-      <div className="gedcom-panel__actions">
-        <Button type="button" size="sm" onClick={handleScan} disabled={busy}>
+    <div className="adm">
+      <header className="adm__head">
+        <h3 className="adm__title">{t('admin.duplicates.title', 'Doublons possibles')}</h3>
+        <p className="adm__intro">
+          {t(
+            'admin.duplicates.intro',
+            'Repérez les fiches qui pourraient désigner la même personne. Rien n’est fusionné sans votre confirmation.',
+          )}
+        </p>
+      </header>
+      <div className="adm-actions">
+        <Button type="button" onClick={handleScan} disabled={busy} loading={busy && pairs === null}>
           {t('duplicates.scan')}
         </Button>
       </div>
       {duplicatesError ? <ErrorNotice message={duplicatesError} /> : null}
-      {pendingMerge ? (
-        <div className="notice" role="alertdialog" aria-label={t('duplicates.confirmLabel')}>
-          <p>
-            {t('duplicates.confirmIntro', {
-              duplicate: personLabel(pendingMerge.preview.duplicate),
-              survivor: personLabel(pendingMerge.preview.survivor),
+      {pairs === null ? (
+        busy ? (
+          <SkeletonGroup label={t('admin.duplicates.scanning', 'Analyse en cours…')} rows={3} />
+        ) : (
+          <section className="adm-card">
+            <EmptyState
+              icon={<Icon name="search" />}
+              title={t('admin.duplicates.idleTitle', 'Aucune analyse lancée')}
+            >
+              {t(
+                'admin.duplicates.idleBody',
+                'Lancez l’analyse : les paires les plus ressemblantes apparaîtront ici, avec leur score.',
+              )}
+            </EmptyState>
+          </section>
+        )
+      ) : pairs.items.length === 0 ? (
+        <section className="adm-card">
+          <EmptyState
+            icon={<Icon name="shield" />}
+            title={t('admin.duplicates.noneTitle', 'Votre arbre est propre')}
+          >
+            {t('duplicates.none')}
+          </EmptyState>
+        </section>
+      ) : (
+        <>
+          {pairs.total > pairs.items.length ? (
+            <p className="adm-card__note">
+              {t('duplicates.total', { count: pairs.total, shown: pairs.items.length })}
+            </p>
+          ) : null}
+          <ul className="adm-list">
+            {pairs.items.map((pair) => {
+              const [left, right] = pair.persons;
+              return (
+                <li key={`${left.id}:${right.id}`} className="adm-pair">
+                  <div className="adm-pair__people">
+                    <p className="adm-pair__person">{personLabel(left)}</p>
+                    <Badge tone="danger">{pair.score}%</Badge>
+                    <p className="adm-pair__person">{personLabel(right)}</p>
+                  </div>
+                  <div className="adm-actions">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSelect(left.id)}
+                    >
+                      {t('duplicates.viewA')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSelect(right.id)}
+                    >
+                      {t('duplicates.viewB')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handlePreviewMerge(left.id, right.id)}
+                      disabled={busy}
+                    >
+                      {t('duplicates.mergeKeepA')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handlePreviewMerge(right.id, left.id)}
+                      disabled={busy}
+                    >
+                      {t('duplicates.mergeKeepB')}
+                    </Button>
+                  </div>
+                </li>
+              );
             })}
-          </p>
-          <MergeIdentityNotes identity={pendingMerge.preview.identity} />
-          <ul>
-            {Object.entries(pendingMerge.preview.reassignments)
-              .filter(([, count]) => count > 0)
-              .map(([key, count]) => (
+          </ul>
+        </>
+      )}
+      <ConfirmDialog
+        isOpen={pendingMerge !== null}
+        title={t('duplicates.confirmLabel')}
+        message={
+          pendingMerge
+            ? t('duplicates.confirmIntro', {
+                duplicate: personLabel(pendingMerge.preview.duplicate),
+                survivor: personLabel(pendingMerge.preview.survivor),
+              })
+            : ''
+        }
+        confirmLabel={t('duplicates.confirm')}
+        cancelLabel={t('duplicates.cancel')}
+        confirmVariant="primary"
+        isBusy={busy}
+        onConfirm={handleConfirmMerge}
+        onCancel={() => setPendingMerge(null)}
+      >
+        {pendingMerge ? (
+          <div className="adm-merge">
+            <MergeIdentityNotes identity={pendingMerge.preview.identity} />
+            <ul>
+              {reassignments.map(([key, count]) => (
                 <li key={key}>{t(MERGE_REASSIGNMENT_KEYS[key] ?? '', { count, key })}</li>
               ))}
-            {Object.values(pendingMerge.preview.reassignments).every((count) => count === 0) ? (
-              <li>{t('duplicates.noReassignment')}</li>
-            ) : null}
-          </ul>
-          <p>
-            {t('duplicates.softDeleteHint', {
-              duplicate: personLabel(pendingMerge.preview.duplicate),
-            })}
-          </p>
-          <Button type="button" size="sm" onClick={handleConfirmMerge} disabled={busy}>
-            {t('duplicates.confirm')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setPendingMerge(null)}
-            disabled={busy}
-          >
-            {t('duplicates.cancel')}
-          </Button>
-        </div>
-      ) : null}
-      {pairs === null ? null : pairs.items.length === 0 ? (
-        <p className="notice">{t('duplicates.none')}</p>
-      ) : (
-        <ul className="search-results">
-          {pairs.total > pairs.items.length ? (
-            <li className="notice">
-              {t('duplicates.total', { count: pairs.total, shown: pairs.items.length })}
-            </li>
-          ) : null}
-          {pairs.items.map((pair) => {
-            const [left, right] = pair.persons;
-            return (
-              <li key={`${left.id}:${right.id}`}>
-                <Badge tone="danger">{pair.score}%</Badge> {personLabel(left)} —{' '}
-                {personLabel(right)}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onSelect(left.id)}
-                >
-                  {t('duplicates.viewA')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onSelect(right.id)}
-                >
-                  {t('duplicates.viewB')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => handlePreviewMerge(left.id, right.id)}
-                  disabled={busy}
-                >
-                  {t('duplicates.mergeKeepA')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => handlePreviewMerge(right.id, left.id)}
-                  disabled={busy}
-                >
-                  {t('duplicates.mergeKeepB')}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+              {reassignments.length === 0 ? <li>{t('duplicates.noReassignment')}</li> : null}
+            </ul>
+            <p>
+              {t('duplicates.softDeleteHint', {
+                duplicate: personLabel(pendingMerge.preview.duplicate),
+              })}
+            </p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
