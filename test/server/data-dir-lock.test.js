@@ -81,3 +81,15 @@ test('serveur réel : une 2e instance sur le même dossier de données refuse de
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('refuse un verrou récent posé par un autre hôte (conteneurs partageant un volume)', async () => {
+  const { mkdtempSync } = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'geneo-lock-'));
+  const first = acquireDataDirLock(dir, { pid: 1, hostname: 'conteneur-a' });
+  assert.throws(() => acquireDataDirLock(dir, { pid: 1, hostname: 'conteneur-b' }), {
+    code: 'DATA_DIR_LOCKED',
+  });
+  first.release();
+});

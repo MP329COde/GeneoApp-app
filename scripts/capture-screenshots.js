@@ -510,7 +510,7 @@ async function main() {
     await page.getByLabel('Latitude (optionnel)').fill('51.5072');
     await page.getByLabel('Longitude (optionnel)').fill('-0.1276');
     await page.getByRole('button', { name: 'Ajouter l’événement' }).click();
-    await page.waitForSelector('.search-results li:has-text("Londres")');
+    await page.waitForSelector('.evnb-events li:has-text("Londres")');
     await shoot('13-evenements.png');
 
     await page.getByRole('button', { name: 'Chronologie', exact: true }).click();

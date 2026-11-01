@@ -1,11 +1,8 @@
 # GeneoApp en mode web (sans Electron) : client buildé + API sur un seul port.
 # Voir docs/WEB.md. L'OCR est embarqué (tesseract.js + données fra via npm) : pas de tesseract-ocr système.
-FROM node:22-slim AS build
+# L'image complète contient déjà python3, make et g++ (compilation éventuelle de better-sqlite3).
+FROM node:22-bookworm AS build
 WORKDIR /app
-# Outils de compilation pour better-sqlite3 si aucun binaire précompilé n'existe.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY src/client/package.json src/client/
 COPY src/server/package.json src/server/

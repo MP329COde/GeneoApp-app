@@ -187,3 +187,11 @@ Limites : pas de notifications push, pas de synchronisation en arrière-plan, pa
 téléphone au-delà du sélecteur de fichiers du navigateur, et l'application Electron de bureau n'est pas concernée
 (le service worker n'y est jamais enregistré). Mise en page vérifiée à 390 px de large
 (`test/e2e/mobile-layout.spec.js`), sans débordement horizontal sur les écrans principaux.
+
+## Docker : vérifié
+
+Construction et exécution testées avec Docker 29 : `docker compose up -d --build` (ou `docker build -t geneoapp .`).
+Jeton exigé (401 sans, 200 avec), données conservées après `docker restart`, manifeste PWA servi, et un
+deuxième conteneur sur le même volume est refusé (verrou avec nom d'hôte et signal de vie).
+Derrière un proxy d'entreprise, passez `--build-arg HTTPS_PROXY=… --build-arg NODE_EXTRA_CA_CERTS=…`.
+L'étape de build part de `node:22-bookworm` (python3, make, g++ inclus) pour ne pas dépendre d'`apt`.
