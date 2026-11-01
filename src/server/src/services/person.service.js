@@ -1,4 +1,4 @@
-import { NotFoundError, ValidationError } from '../errors.js';
+import { ConflictError, NotFoundError, ValidationError } from '../errors.js';
 import {
   assertId,
   validatePersonCreate,
@@ -75,6 +75,20 @@ export function parsePersonsListQuery(query = {}) {
   };
 }
 
+/** ETag d'une personne : sa date de dernière modification, entre guillemets. */
+export function personEtag(person) {
+  return `"${person.updated_at}"`;
+}
+
+/** Extrait la version attendue d'un en-tête If-Match (« "v" », W/"v" ou v). */
+export function parseIfMatch(header) {
+  if (typeof header !== 'string' || header.trim() === '' || header.trim() === '*') return undefined;
+  return header
+    .trim()
+    .replace(/^W\//, '')
+    .replace(/^"(.*)"$/, '$1');
+}
+
 export class PersonService {
   constructor(repository) {
     this.repository = repository;
@@ -100,11 +114,23 @@ export class PersonService {
     return this.repository.count(options);
   }
 
-  update(id, payload, options) {
+  update(id, payload, { expectedVersion, ...options } = {}) {
     assertId(id);
     const patch = validatePersonUpdate(payload);
     const existing = this.repository.findById(id);
     if (!existing) throw new NotFoundError(`Personne introuvable : ${id}`);
+
+    // Concurrence optimiste : la lecture, cette vérification et l'écriture
+    // sont synchrones (better-sqlite3) donc atomiques dans ce processus ;
+    // le verrou du dossier de données garantit un seul processus serveur.
+    if (expectedVersion !== undefined && expectedVersion !== existing.updated_at) {
+      const conflict = new ConflictError(
+        'Cette personne a été modifiée par quelqu’un d’autre depuis que vous l’avez ouverte. Rechargez la fiche avant de la modifier à nouveau pour ne pas écraser ses changements.',
+      );
+      conflict.code = 'EDIT_CONFLICT';
+      conflict.variables = { currentVersion: existing.updated_at };
+      throw conflict;
+    }
 
     const nextGivenNames = 'givenNames' in patch ? patch.givenNames : existing.given_names;
     const nextFamilyName = 'familyName' in patch ? patch.familyName : existing.family_name;

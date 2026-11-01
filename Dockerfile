@@ -1,5 +1,5 @@
 # GeneoApp en mode web (sans Electron) : client buildé + API sur un seul port.
-# Voir docs/WEB.md.
+# Voir docs/WEB.md. L'OCR est embarqué (tesseract.js + données fra via npm) : pas de tesseract-ocr système.
 FROM node:22-slim AS build
 WORKDIR /app
 # Outils de compilation pour better-sqlite3 si aucun binaire précompilé n'existe.

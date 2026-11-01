@@ -12,6 +12,10 @@ export function openDatabase(filename = ':memory:') {
   const database = new Database(filename);
   database.pragma('foreign_keys = ON');
   database.pragma('journal_mode = WAL');
+  // Plusieurs processus/clients sur le même fichier : attendre le verrou
+  // d'écriture (jusqu'à 5 s) au lieu d'échouer aussitôt avec SQLITE_BUSY.
+  database.pragma('busy_timeout = 5000');
+  database.pragma('synchronous = NORMAL');
   // Exposée aux migrations SQL (ex. 0019) et requêtes ad hoc : lit une date
   // généalogique (français, anglais, GEDCOM…) et renvoie son année
   // représentative, ou NULL si non interprétable.

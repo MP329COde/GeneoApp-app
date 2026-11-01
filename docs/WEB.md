@@ -75,3 +75,65 @@ location / {
 ```
 
 Conserver l'en-tête `Host` d'origine (les contrôles d'origine comparent `Origin` et `Host`).
+
+## Installation serveur (systemd, Docker Compose, Caddy)
+
+Fichiers d'exemple fournis dans le dépôt :
+
+- `deploy/geneoapp.service` : unité systemd (utilisateur dédié `geneoapp`, code dans `/opt/geneoapp`,
+  données dans `/var/lib/geneoapp`, jeton dans `/etc/geneoapp.env`). Après `npm ci && npm run build` :
+  `sudo cp deploy/geneoapp.service /etc/systemd/system/ && sudo systemctl enable --now geneoapp`.
+- `docker-compose.yml` : `GENEOAPP_ACCESS_TOKEN=$(openssl rand -hex 24) docker compose up -d --build`
+  (volume nommé `geneoapp-data` monté sur `/data`, port publié sur `127.0.0.1:3000` seulement).
+- `deploy/Caddyfile` : reverse proxy HTTPS automatique devant `127.0.0.1:3000`
+  (avec `GENEOAPP_TRUST_PROXY=1`).
+
+## Accès simultanés (plusieurs postes)
+
+- **Un seul serveur par dossier de données.** Au démarrage, le serveur prend un verrou
+  (`.geneoapp-server.lock`, contenant le PID) dans le dossier de données. Une 2e instance sur le même dossier
+  s'arrête avec un message explicite (code de sortie 1). Un verrou laissé par un processus disparu
+  (crash, `kill -9`) est repris automatiquement ; un arrêt normal (SIGTERM/SIGINT) le supprime.
+- **Plusieurs clients sur le même serveur** : SQLite est ouvert en mode WAL (lecteurs jamais bloqués
+  par l'écrivain), avec `busy_timeout` de 5 s et `synchronous=NORMAL`. Les écritures sont sérialisées.
+- **Édition simultanée d'une même personne** : `GET /api/persons/:id` et `PATCH` renvoient un en-tête `ETag`.
+  Un client qui envoie `If-Match: <ETag>` avec son `PATCH` reçoit `409` (`error.code = "EDIT_CONFLICT"`,
+  message en français : la fiche a été modifiée par quelqu'un d'autre, rechargez-la) si la fiche a changé
+  depuis sa lecture ; rien n'est écrasé. Sans `If-Match` la mise à jour est acceptée (comportement historique,
+  « le dernier gagne »). La version est la date de dernière modification (précision de la milliseconde).
+  Limite : seule la fiche personne est protégée ; lieux, sources, unions, etc. ne le sont pas, et l'interface
+  n'envoie pas encore `If-Match` (travail côté client à faire).
+
+## OCR et recherche
+
+- **OCR** : embarqué (`tesseract.js`, WebAssembly) avec les données de langue **française** fournies par
+  `@tesseract.js-data/fra` (installées par `npm ci`). Aucun paquet système (`tesseract-ocr`) ni accès réseau
+  n'est nécessaire, donc rien à ajouter au Dockerfile. Prérequis : mémoire (~200 Mo par worker) et un
+  `/tmp` inscriptible (cache de langue). Formats : JPEG, PNG, TIFF, GIF, WebP ; PDF (texte intégré, sinon OCR
+  des pages JPEG scannées, 40 images max, 120 s). Seul le français est chargé (l'anglais n'est pas
+  reconnu spécifiquement). Si l'OCR échoue, le document est conservé avec le statut `FAILED` (texte absent) ;
+  type non éligible : `UNAVAILABLE`.
+- **Recherche** : index plein-texte FTS5 (`unicode61`, accents ignorés) pour sources/médias/personnes, recherche
+  floue/phonétique des personnes, filtre des listes insensible aux accents et à la casse (fonction SQL `FOLD`), et
+  index séparé des documents indexés (dossiers, sites, OCR). Les caractères FTS5 spéciaux sont neutralisés.
+
+## Sauvegarde et restauration du dossier de données
+
+Le dossier de données (`GENEOAPP_DATA_DIR` : bases `*.sqlite`, `trees.json`, médias, `backups/`) contient tout.
+
+```bash
+# Sauvegarde (serveur en marche possible : copie SQLite cohérente)
+node scripts/server-data.js backup /var/lib/geneoapp /srv/sauvegardes/geneoapp-$(date +%F).tar.gz
+
+# Restauration (serveur ARRÊTÉ : sinon refus). L'ancien dossier est conservé à côté
+# sous /var/lib/geneoapp.avant-restauration-<date>.
+sudo systemctl stop geneoapp
+node scripts/server-data.js restore /srv/sauvegardes/geneoapp-2026-11-01.tar.gz /var/lib/geneoapp
+sudo chown -R geneoapp: /var/lib/geneoapp && sudo systemctl start geneoapp
+```
+
+Avec Docker : `docker compose stop`, puis lancer le script sur le volume (`docker run --rm -v
+geneoapp-data:/data -v $PWD:/out geneoapp-web node scripts/server-data.js backup /data /out/save.tar.gz`).
+Le serveur crée aussi une sauvegarde automatique à chaque lancement dans `backups/` et l'écran Sauvegardes de
+l'application (ou `npm run cli -- backup create`) permet les sauvegardes logiques, chiffrées ou non.
+Cette copie hors machine reste à planifier (cron/timer systemd) : le script ne l'envoie nulle part.

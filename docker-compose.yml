@@ -1,0 +1,18 @@
+# GeneoApp en mode web : voir docs/WEB.md.
+# Usage : GENEOAPP_ACCESS_TOKEN=$(openssl rand -hex 24) docker compose up -d --build
+services:
+  geneoapp:
+    build: .
+    restart: unless-stopped
+    environment:
+      GENEOAPP_ACCESS_TOKEN: ${GENEOAPP_ACCESS_TOKEN:?définir GENEOAPP_ACCESS_TOKEN (12 caractères minimum)}
+      # À passer à 1 derrière un reverse proxy HTTPS (cookie Secure).
+      GENEOAPP_TRUST_PROXY: ${GENEOAPP_TRUST_PROXY:-0}
+    volumes:
+      - geneoapp-data:/data
+    # Exposé à la machine seulement : le reverse proxy HTTPS (Caddy) fait le reste.
+    ports:
+      - '127.0.0.1:3000:3000'
+
+volumes:
+  geneoapp-data:
