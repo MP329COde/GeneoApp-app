@@ -93,5 +93,9 @@
   "settings.tab.timeline": "Chronologie",
   "settings.tab.history": "Historique",
   "settings.preview.name": "Marie Duchamp",
-  "settings.preview.date": "03 MAR 1788"
+  "settings.preview.date": "03 MAR 1788",
+  "settings.resetConfirmTitle": "Rétablir les valeurs par défaut",
+  "settings.resetConfirmMessage": "Tous vos réglages d’apparence, d’accessibilité et d’arbre reviendront à leur valeur d’origine.",
+  "settings.resetConfirm": "Rétablir",
+  "settings.resetCancel": "Annuler"
 }

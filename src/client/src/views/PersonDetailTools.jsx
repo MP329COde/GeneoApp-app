@@ -15,6 +15,7 @@ import { MediaUrlForm } from './MediaLinksPanel.jsx';
 import { IdentifiersPanel } from './IdentifiersPanel.jsx';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 import { downloadBlob, readFileAsBase64 } from './DocumentsGedcomView.jsx';
+import '../styles/person-tools-refonte.css';
 
 export function SourceMediaTool({ sourceId }) {
   const { t } = useTranslation();
@@ -190,8 +191,16 @@ export function IdentityTool({ selected, onUpdated }) {
   };
 
   return (
-    <form className="detail-section create-person-form" onSubmit={handleSubmit}>
-      <h3>{t('personTools.identity.title', 'Identité')}</h3>
+    <form className="detail-section ptr-identity" onSubmit={handleSubmit}>
+      <header className="ptr-head">
+        <h3 className="ptr-title">{t('personTools.identity.title', 'Identité')}</h3>
+        <p className="ptr-lead">
+          {t(
+            'personTools.identity.lead',
+            'Les noms et statuts tels que les documents les rapportent : ils servent à retrouver cette personne partout dans l’arbre.',
+          )}
+        </p>
+      </header>
       {identityError ? <ErrorNotice message={identityError} /> : null}
       {editConflict ? (
         <div role="alert" className="notice notice--error">
@@ -206,70 +215,84 @@ export function IdentityTool({ selected, onUpdated }) {
           </button>
         </div>
       ) : null}
-      <label>
-        <span>{t('personTools.identity.givenNames', 'Prénom(s)')}</span>
-        <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.familyName', 'Nom')}</span>
-        <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.birthFamilyName', 'Nom de naissance')}</span>
-        <input
-          value={birthFamilyName}
-          onChange={(event) => setBirthFamilyName(event.target.value)}
-        />
-      </label>
-      <label>
-        <span>{t('personTools.identity.sex', 'Sexe')}</span>
-        <select value={sex} onChange={(event) => setSex(event.target.value)}>
-          <option value="U">{t('personTools.identity.sexUnknown', 'Inconnu')}</option>
-          <option value="M">{t('personTools.identity.sexMale', 'Masculin')}</option>
-          <option value="F">{t('personTools.identity.sexFemale', 'Féminin')}</option>
-        </select>
-      </label>
-      <label>
-        <span>{t('personTools.identity.nickname', 'Surnom')}</span>
-        <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.alias', 'Alias (autre nom connu)')}</span>
-        <input value={alias} onChange={(event) => setAlias(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.marriedName', 'Nom marital')}</span>
-        <input value={marriedName} onChange={(event) => setMarriedName(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.honorificTitle', 'Titre honorifique')}</span>
-        <input value={title} onChange={(event) => setTitle(event.target.value)} />
-      </label>
-      <label>
-        <span>{t('personTools.identity.suffix', 'Suffixe')}</span>
-        <input value={suffix} onChange={(event) => setSuffix(event.target.value)} />
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          checked={isLiving}
-          onChange={(event) => setIsLiving(event.target.checked)}
-        />
-        <span>{t('personTools.identity.living', 'Personne vivante')}</span>
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          checked={isPrivate}
-          onChange={(event) => setIsPrivate(event.target.checked)}
-        />
-        <span>
-          {t('personTools.identity.private', 'Informations privées (à ne pas divulguer)')}
-        </span>
-      </label>
-      <Button type="submit" size="sm" disabled={busy}>
-        {t('personTools.identity.save', 'Enregistrer')}
-      </Button>
+      <fieldset className="ptr-card">
+        <legend className="ptr-card__title">{t('personTools.identity.groupNames', 'Noms')}</legend>
+        <div className="ptr-grid">
+          <label className="ptr-field">
+            <span>{t('personTools.identity.givenNames', 'Prénom(s)')}</span>
+            <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.familyName', 'Nom')}</span>
+            <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.birthFamilyName', 'Nom de naissance')}</span>
+            <input
+              value={birthFamilyName}
+              onChange={(event) => setBirthFamilyName(event.target.value)}
+            />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.marriedName', 'Nom marital')}</span>
+            <input value={marriedName} onChange={(event) => setMarriedName(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.nickname', 'Surnom')}</span>
+            <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.alias', 'Alias (autre nom connu)')}</span>
+            <input value={alias} onChange={(event) => setAlias(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.honorificTitle', 'Titre honorifique')}</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>{t('personTools.identity.suffix', 'Suffixe')}</span>
+            <input value={suffix} onChange={(event) => setSuffix(event.target.value)} />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="ptr-card">
+        <legend className="ptr-card__title">
+          {t('personTools.identity.groupStatus', 'Statut')}
+        </legend>
+        <div className="ptr-grid">
+          <label className="ptr-field">
+            <span>{t('personTools.identity.sex', 'Sexe')}</span>
+            <select value={sex} onChange={(event) => setSex(event.target.value)}>
+              <option value="U">{t('personTools.identity.sexUnknown', 'Inconnu')}</option>
+              <option value="M">{t('personTools.identity.sexMale', 'Masculin')}</option>
+              <option value="F">{t('personTools.identity.sexFemale', 'Féminin')}</option>
+            </select>
+          </label>
+        </div>
+        <label className="ptr-check">
+          <input
+            type="checkbox"
+            checked={isLiving}
+            onChange={(event) => setIsLiving(event.target.checked)}
+          />
+          <span>{t('personTools.identity.living', 'Personne vivante')}</span>
+        </label>
+        <label className="ptr-check">
+          <input
+            type="checkbox"
+            checked={isPrivate}
+            onChange={(event) => setIsPrivate(event.target.checked)}
+          />
+          <span>
+            {t('personTools.identity.private', 'Informations privées (à ne pas divulguer)')}
+          </span>
+        </label>
+      </fieldset>
+      <div className="ptr-actions">
+        <Button type="submit" size="sm" disabled={busy}>
+          {t('personTools.identity.save', 'Enregistrer')}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -533,41 +556,61 @@ export function AuditPanel({ selected }) {
 
   if (!selected) {
     return (
-      <p className="notice">
-        {t(
-          'personTools.audit.emptySelection',
-          'Sélectionnez une personne pour voir son journal d’audit.',
-        )}
-      </p>
+      <div className="ptr-screen">
+        <EmptyState
+          icon={<Icon name="history" />}
+          title={t(
+            'personTools.audit.emptySelection',
+            'Sélectionnez une personne pour voir son journal d’audit.',
+          )}
+        >
+          {t(
+            'personTools.audit.selectionText',
+            'Choisissez une personne dans l’arbre ou la liste pour consulter les modifications de sa fiche.',
+          )}
+        </EmptyState>
+      </div>
     );
   }
 
   return (
-    <div className="search-panel">
-      <h3>
-        {t(
-          'personTools.audit.heading',
-          { name: personLabel(selected) },
-          'Journal d’audit de {name}',
-        )}
-      </h3>
+    <div className="search-panel ptr-screen">
+      <header className="ptr-head">
+        <h3 className="ptr-title">
+          {t(
+            'personTools.audit.heading',
+            { name: personLabel(selected) },
+            'Journal d’audit de {name}',
+          )}
+        </h3>
+        <p className="ptr-lead">
+          {t(
+            'personTools.audit.lead',
+            'Chaque modification de la fiche est consignée, de la plus récente à la plus ancienne.',
+          )}
+        </p>
+      </header>
       {auditError ? <ErrorNotice message={auditError} /> : null}
 
       {entries === null ? (
-        <p role="status">{t('personTools.audit.loading', 'Chargement…')}</p>
+        <SkeletonGroup label={t('personTools.audit.loading', 'Chargement…')} rows={3} />
       ) : entries.length === 0 ? (
-        <p className="notice">
-          {t('personTools.audit.empty', 'Aucune entrée d’audit pour cette fiche.')}
-        </p>
+        <EmptyState
+          icon={<Icon name="history" />}
+          title={t('personTools.audit.empty', 'Aucune entrée d’audit pour cette fiche.')}
+        />
       ) : (
-        <ul className="search-results">
+        <ol className="ptr-audit">
           {entries.map((entry) => (
-            <li key={entry.id}>
-              <Badge tone="neutral">{entry.operation}</Badge> {entry.performed_at}
-              {entry.performed_by ? ` — ${entry.performed_by}` : ''}
+            <li key={entry.id} className="ptr-audit__item">
+              <Badge tone="neutral">{entry.operation}</Badge>
+              <span className="ptr-audit__date">{entry.performed_at}</span>
+              {entry.performed_by ? (
+                <span className="ptr-audit__by">{entry.performed_by}</span>
+              ) : null}
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </div>
   );
@@ -577,16 +620,24 @@ export function NotesPanel({ selected }) {
   const { t } = useTranslation();
   if (!selected) {
     return (
-      <p className="notice">
-        {t(
-          'personTools.notes.emptySelection',
-          'Sélectionnez une personne pour voir et ajouter des notes.',
-        )}
-      </p>
+      <div className="ptr-screen">
+        <EmptyState
+          icon={<Icon name="note" />}
+          title={t(
+            'personTools.notes.emptySelection',
+            'Sélectionnez une personne pour voir et ajouter des notes.',
+          )}
+        >
+          {t(
+            'personTools.notes.selectionText',
+            'Choisissez une personne dans l’arbre ou la liste pour consulter ses notes, affirmations et identifiants.',
+          )}
+        </EmptyState>
+      </div>
     );
   }
   return (
-    <>
+    <div className="ptr-screen ptr-notes">
       <AnnotationsPanel
         key={selected.id}
         client={client}
@@ -606,7 +657,7 @@ export function NotesPanel({ selected }) {
         entityId={selected.id}
       />
       <IdentifiersPanel key={`identifiers-${selected.id}`} client={client} personId={selected.id} />
-    </>
+    </div>
   );
 }
 

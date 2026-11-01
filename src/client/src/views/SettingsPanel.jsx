@@ -1,4 +1,5 @@
-import { Button, LanguageSwitcher, useI18n } from '../design-system/index.js';
+import { useState } from 'react';
+import { Button, ConfirmDialog, LanguageSwitcher, useI18n } from '../design-system/index.js';
 import '../styles/admin-refonte.css';
 import {
   ALWAYS_VISIBLE_VIEWS,
@@ -180,6 +181,7 @@ function Toggle({ label, checked, onChange, hint }) {
 export function SettingsPanel({ navGroups = [] }) {
   const { settings, update, reset } = useSettings();
   const { t } = useI18n();
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   return (
     <div className="settings-panel adm adm--narrow adm-settings">
@@ -449,10 +451,23 @@ export function SettingsPanel({ navGroups = [] }) {
 
       <div className="adm-actions adm-settings__footer">
         <p className="adm-card__note">{t('settings.localOnly')}</p>
-        <Button variant="secondary" onClick={reset}>
+        <Button variant="secondary" onClick={() => setConfirmingReset(true)}>
           {t('settings.reset')}
         </Button>
       </div>
+      <ConfirmDialog
+        isOpen={confirmingReset}
+        title={t('settings.resetConfirmTitle')}
+        message={t('settings.resetConfirmMessage')}
+        confirmLabel={t('settings.resetConfirm')}
+        cancelLabel={t('settings.resetCancel')}
+        confirmVariant="primary"
+        onConfirm={() => {
+          reset();
+          setConfirmingReset(false);
+        }}
+        onCancel={() => setConfirmingReset(false)}
+      />
     </div>
   );
 }

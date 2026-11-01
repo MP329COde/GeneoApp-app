@@ -263,3 +263,79 @@
   background: var(--surface-sunken);
   font: var(--type-caption);
 }
+
+/* ---------- En-tête et barre d'outils : « cabinet d'archives lumineux » ---------- */
+.tree-explorer .tree-toolbar {
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+}
+.tree-explorer .segmented {
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-lg);
+}
+.tree-explorer .segmented button {
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.tree-explorer .segmented button + button {
+  border-left: 0;
+}
+.tree-explorer .segmented button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.tree-explorer .segmented button[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--action-subtle-text);
+  box-shadow: var(--shadow-1);
+}
+.tree-explorer .tree-toolbar__depth,
+.tree-explorer .tree-toolbar__period legend {
+  color: var(--text-secondary);
+}
+.tree-toolbar button:focus-visible,
+.tree-toolbar summary:focus-visible,
+.tree-toolbar input:focus-visible,
+.tree-toolbar select:focus-visible {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.tree-explorer .tree-toolbar__zoom button,
+.tree-explorer .tree-toolbar__plain,
+.tree-explorer .tree-toolbar__menu summary {
+  color: var(--text);
+}
+.tree-explorer .tree-toolbar__zoom button:hover,
+.tree-explorer .tree-toolbar__plain:hover,
+.tree-explorer .tree-toolbar__menu summary:hover {
+  background: var(--surface-hover);
+}
+.tree-explorer .tree-toolbar__zoom output {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 480px) {
+  .tree-explorer .tree-toolbar {
+    padding: var(--space-2) var(--space-3);
+  }
+  .tree-explorer .segmented {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .tree-explorer .tree-toolbar__depth,
+  .tree-explorer .tree-toolbar__period {
+    flex-wrap: wrap;
+  }
+  .tree-explorer .tree-toolbar__zoom {
+    margin-left: 0;
+  }
+  .tree-explorer .tree-toolbar__menu > .tree-toolbar__export {
+    right: auto;
+    left: 0;
+  }
+}

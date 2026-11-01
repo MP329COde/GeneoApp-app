@@ -1,0 +1,136 @@
+/* ---------- Identité, Notes, Audit : « cabinet d'archives lumineux » ---------- */
+.ptr-screen,
+.ptr-identity {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  max-width: 56rem;
+  min-width: 0;
+}
+
+.ptr-head {
+  display: grid;
+  gap: var(--space-2);
+}
+.ptr-title {
+  margin: 0;
+  font: var(--type-display);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.ptr-lead {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body);
+}
+
+/* --- Cartes de formulaire --- */
+.ptr-card {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+.ptr-card__title {
+  padding: 0 var(--space-2);
+  color: var(--text);
+  font: var(--type-heading);
+  font-family: var(--font-serif);
+}
+.ptr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+.ptr-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font: var(--type-label);
+}
+.ptr-field input,
+.ptr-field select {
+  min-height: var(--control-md);
+  width: 100%;
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-body);
+}
+.ptr-field input:focus-visible,
+.ptr-field select:focus-visible,
+.ptr-check input:focus-visible {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.ptr-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+  font: var(--type-body);
+}
+.ptr-check input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--action);
+}
+.ptr-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --- Journal d'audit --- */
+.ptr-audit {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ptr-audit__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-left: var(--border-accent) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+.ptr-audit__date {
+  font: var(--type-date);
+  overflow-wrap: anywhere;
+}
+.ptr-audit__by {
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+
+/* --- Notes : les trois panneaux s'empilent avec le même rythme --- */
+.ptr-notes > * {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .ptr-card {
+    padding: var(--space-4);
+  }
+  .ptr-actions {
+    justify-content: stretch;
+  }
+  .ptr-actions .gds-button {
+    width: 100%;
+  }
+}
