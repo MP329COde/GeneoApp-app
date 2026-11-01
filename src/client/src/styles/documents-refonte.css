@@ -1,0 +1,318 @@
+/* ---------- Médias, Sources, GEDCOM : « cabinet d'archives lumineux » ---------- */
+.doc-screen,
+.who-owns {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  max-width: 64rem;
+}
+
+.doc-screen__header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.doc-screen__title {
+  margin: 0;
+  font: var(--type-display);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-screen__lead {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body);
+}
+
+.doc-section-title {
+  margin: 0 0 var(--space-3);
+  font: var(--type-heading);
+  color: var(--text);
+}
+
+/* --- Cartes de section --- */
+.doc-card {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.doc-card__title {
+  margin: 0;
+  font: var(--type-heading);
+  color: var(--text);
+}
+
+.doc-card__lead {
+  margin: 0;
+  max-width: var(--measure);
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+
+.doc-card > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.doc-fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.doc-fieldset legend {
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  font: var(--type-label);
+}
+
+/* --- Zone de dépôt de fichier --- */
+.doc-upload {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.doc-upload__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-caption);
+}
+
+.doc-screen .doc-upload__zone,
+.doc-screen .who-owns__drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3.5rem;
+  padding: var(--space-4);
+  border: var(--border-hairline) dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-label);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.doc-screen .doc-upload__zone:hover,
+.doc-screen .who-owns__drop:hover,
+.doc-screen .who-owns__drop.is-dragging {
+  border-color: var(--action);
+  background: var(--action-subtle);
+}
+
+.doc-screen .doc-upload__zone:focus-within,
+.doc-screen .who-owns__drop:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* L'entrée de fichier couvre toute la zone, sans être visible. */
+.doc-upload__zone input[type='file'],
+.who-owns__drop input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.doc-upload__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--action-subtle);
+  color: var(--action-subtle-text);
+}
+
+.doc-upload__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Liste de cartes (documents, citations) --- */
+.doc-cards {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-item {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.doc-item--row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.doc-item__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.doc-item__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.doc-item__main {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.doc-item__name {
+  font: var(--type-person-name);
+  overflow-wrap: anywhere;
+}
+
+.doc-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.doc-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* --- Formulaire de citation --- */
+.doc-screen .doc-form {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.doc-form__submit {
+  grid-column: 1 / -1;
+}
+
+/* --- Import / export GEDCOM --- */
+.gedcom-panel.doc-screen {
+  padding: var(--space-6);
+}
+
+.gedcom-panel.doc-screen .gedcom-panel__export {
+  display: grid;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: var(--border-hairline) solid var(--border-subtle);
+}
+
+.gedcom-panel.doc-screen .gedcom-panel__actions {
+  flex-wrap: wrap;
+}
+
+.gedcom-panel.doc-screen .doc-card .notice {
+  margin: 0;
+}
+
+/* --- Déchiffrage et « à qui appartient ce fichier ? » --- */
+.who-owns .doc-suggestions,
+.doc-decoder .doc-suggestions {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.who-owns .doc-suggestions li,
+.doc-decoder .doc-suggestions li {
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.who-owns__result {
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.doc-decoder__steps {
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-7);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+/* --- Mobile et mouvement --- */
+@media (max-width: 640px) {
+  .doc-screen {
+    gap: var(--space-4);
+  }
+
+  .search-panel.doc-screen,
+  .gedcom-panel.doc-screen {
+    padding: var(--space-4);
+  }
+
+  .doc-card,
+  .doc-item,
+  .gedcom-panel.doc-screen .gedcom-panel__export {
+    padding: var(--space-4);
+  }
+
+  .doc-item--row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .doc-item--row .gds-button {
+    grid-column: 1 / -1;
+  }
+
+  .doc-item__actions .gds-button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-screen .doc-upload__zone,
+  .doc-screen .who-owns__drop {
+    transition: none;
+  }
+}
