@@ -76,3 +76,92 @@
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
+
+/* ---------- Refonte « cabinet d'archives lumineux » ---------- */
+.person-sheet__header {
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+}
+.person-sheet__identity-block {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.person-sheet__name {
+  margin: 0;
+  font-family: var(--font-serif);
+  overflow-wrap: anywhere;
+}
+.person-sheet__dates {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font: var(--type-date);
+}
+.person-sheet__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.person-sheet .avatar--lg,
+.person-sheet .portrait-picker img {
+  border: var(--border-hairline) solid var(--border);
+}
+.tabs {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+}
+.tabs [role='tab'] {
+  flex: none;
+  font-family: var(--font-serif);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.tabs [role='tab']:hover {
+  color: var(--text);
+}
+.tabs [role='tab']:focus-visible,
+.person-sheet__actions :is(button, a):focus-visible {
+  outline: var(--focus-ring-width, 2px) solid var(--color-focus-ring, var(--focus-ring));
+  outline-offset: 2px;
+}
+.person-card {
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+  align-self: start;
+}
+.person-sheet .person-sheet__form.person-card {
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border);
+  background: var(--surface-raised);
+}
+.person-card__title {
+  margin: 0 0 var(--space-3);
+  font: var(--type-person-name);
+  font-size: 20px;
+}
+.person-card__empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-hairline) dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .person-sheet {
+    padding: var(--space-4) var(--space-3);
+  }
+  .person-sheet__header {
+    flex-wrap: wrap;
+  }
+  .person-sheet__actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
+  }
+}

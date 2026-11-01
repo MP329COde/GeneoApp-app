@@ -260,6 +260,7 @@
   "personSheet.family.parents": "Parents",
   "personSheet.family.spouses": "Spouses",
   "personSheet.family.children": "Children",
+  "personSheet.family.empty": "No relatives recorded yet.",
   "personSheet.family.siblings": "Siblings",
   "eventsTimeline.selectPerson": "Select a person to view and add events.",
   "eventsTimeline.title": "Events of {name}",

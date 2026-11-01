@@ -260,6 +260,7 @@
   "personSheet.family.parents": "Parents",
   "personSheet.family.spouses": "Conjoints",
   "personSheet.family.children": "Enfants",
+  "personSheet.family.empty": "Aucun proche renseigné pour le moment.",
   "personSheet.family.siblings": "Fratrie",
   "eventsTimeline.selectPerson": "Sélectionnez une personne pour voir et ajouter des événements.",
   "eventsTimeline.title": "Événements de {name}",
