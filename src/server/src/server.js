@@ -7,6 +7,7 @@ import { startIndexScheduler } from './indexing/index.service.js';
 import { StorageService, configuredDataDir, readStorageConfig } from './storage/storage-config.js';
 import { stopOcr } from './indexing/content-extract.js';
 import { assertWebAccessConfig } from './web/web-mode.js';
+import { acquireDataDirLock } from './storage/data-dir-lock.js';
 
 const host = process.env.GENEOAPP_HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 3000);
@@ -47,6 +48,18 @@ const configDir =
 // Dossier de travail choisi par l'utilisateur (clé USB…), s'il est branché.
 const portableDir = configuredDataDir(configDir);
 
+// Une seule instance par dossier de données (hors mode mémoire).
+let dataLock;
+if (!memory) {
+  try {
+    dataLock = acquireDataDirLock(dataDirEnv ?? path.dirname(databaseFile));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  process.on('exit', () => dataLock.release());
+}
+
 const workspace = new TreeWorkspace({
   dataDir: portableDir ?? process.env.GENEOAPP_DATA_DIR ?? configDir,
   defaultDatabaseFile: databaseFile,
@@ -83,6 +96,7 @@ async function shutdown() {
   } catch (error) {
     console.error('Arrêt du worker OCR impossible :', error.message);
   } finally {
+    dataLock?.release();
     server.close(() => process.exit(0));
   }
 }

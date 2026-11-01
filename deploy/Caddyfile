@@ -1,0 +1,9 @@
+# Exemple Caddy (HTTPS automatique) : voir docs/WEB.md.
+# Avec GENEOAPP_TRUST_PROXY=1 côté GeneoApp.
+geneo.example.org {
+	encode gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy 127.0.0.1:3000
+}

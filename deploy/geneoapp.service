@@ -1,0 +1,36 @@
+# Exemple d'unité systemd : voir docs/WEB.md.
+# Installation : sudo cp deploy/geneoapp.service /etc/systemd/system/ puis
+#   sudo systemctl daemon-reload && sudo systemctl enable --now geneoapp
+# Le jeton d'accès est lu dans /etc/geneoapp.env (chmod 600) :
+#   GENEOAPP_ACCESS_TOKEN=<openssl rand -hex 24>
+[Unit]
+Description=GeneoApp (mode web)
+After=network.target
+
+[Service]
+Type=simple
+User=geneoapp
+Group=geneoapp
+WorkingDirectory=/opt/geneoapp
+EnvironmentFile=/etc/geneoapp.env
+Environment=NODE_ENV=production
+Environment=GENEOAPP_HOST=127.0.0.1
+Environment=PORT=3000
+Environment=GENEOAPP_DATA_DIR=/var/lib/geneoapp
+Environment=GENEOAPP_WEB_DIR=/opt/geneoapp/src/client/dist
+Environment=GENEOAPP_TRUST_PROXY=1
+ExecStart=/usr/bin/node src/server/src/server.js
+Restart=on-failure
+RestartSec=5
+# SIGTERM : arrêt propre (libère le verrou du dossier de données).
+KillSignal=SIGTERM
+TimeoutStopSec=20
+StateDirectory=geneoapp
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/geneoapp
+
+[Install]
+WantedBy=multi-user.target

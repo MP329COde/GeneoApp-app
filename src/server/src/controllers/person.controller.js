@@ -1,4 +1,4 @@
-import { parsePersonsListQuery } from '../services/person.service.js';
+import { parseIfMatch, parsePersonsListQuery, personEtag } from '../services/person.service.js';
 
 export function createPersonController(services) {
   const { persons } = services;
@@ -11,7 +11,7 @@ export function createPersonController(services) {
 
     get(request, response) {
       const person = persons.get(Number(request.params.id));
-      response.json(person);
+      response.set('ETag', personEtag(person)).json(person);
     },
 
     list(request, response) {
@@ -48,10 +48,12 @@ export function createPersonController(services) {
     },
 
     update(request, response) {
+      // If-Match facultatif : s'il est fourni et périmé → 409 EDIT_CONFLICT.
       const person = persons.update(Number(request.params.id), request.body, {
         performedBy: request.performedBy,
+        expectedVersion: parseIfMatch(request.get('if-match')),
       });
-      response.json(person);
+      response.set('ETag', personEtag(person)).json(person);
     },
 
     listIdentifiers(request, response) {
