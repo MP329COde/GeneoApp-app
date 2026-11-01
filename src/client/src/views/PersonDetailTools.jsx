@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
 import { client } from '../api/app-client.js';
-import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import { AssertionsPanel } from './AssertionsPanel.jsx';
 import { AiAssistantPanel } from './AiAssistantPanel.jsx';
 import { CitationEditForm } from './CitationEditForm.jsx';
@@ -274,14 +280,29 @@ export function SourcesPanel({ selected }) {
 
   if (!selected) {
     return (
-      <p className="notice">
-        {t(
-          'personTools.sources.emptySelection',
-          'Sélectionnez une personne pour voir et citer des sources.',
-        )}
-      </p>
+      <div className="search-panel doc-screen">
+        <EmptyState
+          icon={<Icon name="source" />}
+          title={t(
+            'personTools.sources.emptySelection',
+            'Sélectionnez une personne pour voir et citer des sources.',
+          )}
+        >
+          {t(
+            'sourcesScreen.selection.text',
+            'Choisissez une personne dans l’arbre ou la liste pour consulter ses sources.',
+          )}
+        </EmptyState>
+      </div>
     );
   }
+
+  const confidenceLabels = {
+    LOW: t('sourcesScreen.confidence.LOW', 'Confiance faible'),
+    MEDIUM: t('sourcesScreen.confidence.MEDIUM', 'Confiance moyenne'),
+    HIGH: t('sourcesScreen.confidence.HIGH', 'Confiance élevée'),
+  };
+  const confidenceLabel = (level) => confidenceLabels[level] ?? level;
 
   const runCitation = async (action) => {
     setBusy(true);
@@ -326,101 +347,138 @@ export function SourcesPanel({ selected }) {
   };
 
   return (
-    <div className="search-panel">
-      <h3>
-        {t(
-          'personTools.sources.heading',
-          { name: personLabel(selected) },
-          'Sources citées pour {name}',
-        )}
-      </h3>
+    <div className="search-panel doc-screen">
+      <header className="doc-screen__header">
+        <h3 className="doc-screen__title">
+          {t(
+            'personTools.sources.heading',
+            { name: personLabel(selected) },
+            'Sources citées pour {name}',
+          )}
+        </h3>
+        <p className="doc-screen__lead">
+          {t(
+            'sourcesScreen.lead',
+            'Chaque fait mérite sa preuve : citez le registre, l’acte ou l’ouvrage, et indiquez votre niveau de confiance.',
+          )}
+        </p>
+      </header>
       {sourcesError ? <ErrorNotice message={sourcesError} /> : null}
 
-      <form className="create-person-form" onSubmit={handleSubmit}>
-        <label>
-          <span>{t('personTools.sources.sourceTitle', 'Titre de la source')}</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('personTools.sources.author', 'Auteur (optionnel)')}</span>
-          <input value={author} onChange={(event) => setAuthor(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('personTools.sources.page', 'Page / référence (optionnel)')}</span>
-          <input value={page} onChange={(event) => setPage(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('personTools.sources.confidence', 'Niveau de confiance')}</span>
-          <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
-            {['LOW', 'MEDIUM', 'HIGH'].map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" size="sm" disabled={busy}>
-          {t('personTools.sources.add', 'Ajouter et citer la source')}
-        </Button>
-      </form>
+      <section className="doc-card" aria-labelledby="sources-form-heading">
+        <h4 id="sources-form-heading" className="doc-card__title">
+          {t('sourcesScreen.form.heading', 'Citer une nouvelle source')}
+        </h4>
+        <form className="create-person-form doc-form" onSubmit={handleSubmit}>
+          <label>
+            <span>{t('personTools.sources.sourceTitle', 'Titre de la source')}</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label>
+            <span>{t('personTools.sources.author', 'Auteur (optionnel)')}</span>
+            <input value={author} onChange={(event) => setAuthor(event.target.value)} />
+          </label>
+          <label>
+            <span>{t('personTools.sources.page', 'Page / référence (optionnel)')}</span>
+            <input value={page} onChange={(event) => setPage(event.target.value)} />
+          </label>
+          <label>
+            <span>{t('personTools.sources.confidence', 'Niveau de confiance')}</span>
+            <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
+              {['LOW', 'MEDIUM', 'HIGH'].map((level) => (
+                <option key={level} value={level}>
+                  {confidenceLabel(level)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="doc-form__submit">
+            <Button type="submit" size="sm" disabled={busy}>
+              {t('personTools.sources.add', 'Ajouter et citer la source')}
+            </Button>
+          </div>
+        </form>
+      </section>
 
       {citations === null ? (
-        <p role="status">{t('personTools.sources.loading', 'Chargement…')}</p>
+        <SkeletonGroup label={t('personTools.sources.loading', 'Chargement…')} rows={3} />
       ) : citations.length === 0 ? (
-        <p className="notice">
-          {t('personTools.sources.empty', 'Aucune source citée pour cette personne.')}
-        </p>
+        <EmptyState
+          icon={<Icon name="source" />}
+          title={t('personTools.sources.empty', 'Aucune source citée pour cette personne.')}
+        >
+          {t(
+            'sourcesScreen.empty.text',
+            'Citez un acte de naissance, un registre paroissial ou un livre pour appuyer les informations de cette personne.',
+          )}
+        </EmptyState>
       ) : (
-        <ul className="search-results">
-          {citations.map((citation) => (
-            <li key={citation.id}>
-              <Badge tone="neutral">{citation.confidence}</Badge>{' '}
-              <strong>
-                {sourcesById[citation.source_id]?.title ??
-                  t(
-                    'personTools.sources.fallbackTitle',
-                    { id: String(citation.source_id) },
-                    'Source #{id}',
-                  )}
-              </strong>
-              {citation.page ? ` — ${citation.page}` : ''}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                aria-expanded={editingId === citation.id}
-                onClick={() => setEditingId(editingId === citation.id ? null : citation.id)}
-                disabled={busy}
-              >
-                {t('personTools.sources.edit', 'Modifier')}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={() => runCitation(() => client.sources.removeCitation(citation.id))}
-                disabled={busy}
-              >
-                {t('personTools.sources.removeCitation', 'Retirer la citation')}
-              </Button>
-              {editingId === citation.id ? (
-                <CitationEditForm
-                  citation={citation}
-                  source={sourcesById[citation.source_id]}
-                  busy={busy}
-                  onCancel={() => setEditingId(null)}
-                  onSave={(data) =>
-                    runCitation(async () => {
-                      await client.sources.update(citation.source_id, data.source);
-                      await client.sources.updateCitation(citation.id, data.citation);
-                    })
-                  }
-                />
-              ) : null}
-              <SourceMediaTool sourceId={citation.source_id} />
-            </li>
-          ))}
-        </ul>
+        <section aria-labelledby="sources-list-heading">
+          <h4 id="sources-list-heading" className="doc-section-title">
+            {t('sourcesScreen.list.heading', 'Citations de la fiche')}
+          </h4>
+          <ul className="doc-cards">
+            {citations.map((citation) => (
+              <li key={citation.id} className="doc-item">
+                <div className="doc-item__head">
+                  <span className="doc-item__icon" aria-hidden="true">
+                    <Icon name="source" />
+                  </span>
+                  <div className="doc-item__main">
+                    <strong className="doc-item__name">
+                      {sourcesById[citation.source_id]?.title ??
+                        t(
+                          'personTools.sources.fallbackTitle',
+                          { id: String(citation.source_id) },
+                          'Source #{id}',
+                        )}
+                    </strong>
+                    <span className="doc-item__meta">
+                      <Badge tone="neutral">{confidenceLabel(citation.confidence)}</Badge>
+                      {citation.page ? <span className="data-id">{citation.page}</span> : null}
+                    </span>
+                  </div>
+                </div>
+                <div className="doc-item__actions">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    aria-expanded={editingId === citation.id}
+                    onClick={() => setEditingId(editingId === citation.id ? null : citation.id)}
+                    disabled={busy}
+                  >
+                    {t('personTools.sources.edit', 'Modifier')}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => runCitation(() => client.sources.removeCitation(citation.id))}
+                    disabled={busy}
+                  >
+                    {t('personTools.sources.removeCitation', 'Retirer la citation')}
+                  </Button>
+                </div>
+                {editingId === citation.id ? (
+                  <CitationEditForm
+                    citation={citation}
+                    source={sourcesById[citation.source_id]}
+                    busy={busy}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(data) =>
+                      runCitation(async () => {
+                        await client.sources.update(citation.source_id, data.source);
+                        await client.sources.updateCitation(citation.id, data.citation);
+                      })
+                    }
+                  />
+                ) : null}
+                <SourceMediaTool sourceId={citation.source_id} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

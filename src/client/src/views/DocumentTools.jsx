@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, useTranslation } from '../design-system/index.js';
+import { Button, SkeletonGroup, useTranslation } from '../design-system/index.js';
+import { Icon } from '../components/shared.jsx';
 
 // Outils « documents » simples d'usage : portrait d'une personne, déchiffrage
 // des écritures anciennes, et « à qui appartient ce fichier ? ».
@@ -604,8 +605,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
       className="who-owns"
       aria-label={t('documentTools.whoOwns.ariaLabel', 'À qui appartient ce fichier ?')}
     >
-      <h3>{t('documentTools.whoOwns.title', 'À qui appartient ce fichier ?')}</h3>
-      <p className="notice">
+      <h3 className="doc-screen__title">
+        {t('documentTools.whoOwns.title', 'À qui appartient ce fichier ?')}
+      </h3>
+      <p className="doc-screen__lead">
         {t(
           'documentTools.whoOwns.hint',
           'Déposez une photo, un scan ou un document : l’application retrouve la ou les personnes auxquelles il est relié, ou propose celles dont le nom apparaît dedans.',
@@ -624,7 +627,10 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
           analyse(event.dataTransfer.files?.[0]);
         }}
       >
-        <span>
+        <span className="doc-upload__icon" aria-hidden="true">
+          <Icon name="file" />
+        </span>
+        <span className="doc-upload__label">
           {file
             ? file.name
             : t('documentTools.whoOwns.drop', 'Glissez un fichier ici ou cliquez pour choisir')}
@@ -639,7 +645,11 @@ export function WhoOwnsFile({ client, onOpenPerson, onDecode }) {
         />
       </label>
       {busy ? (
-        <p role="status">{t('documentTools.whoOwns.analysing', 'Analyse du fichier…')}</p>
+        <SkeletonGroup
+          label={t('documentTools.whoOwns.analysing', 'Analyse du fichier…')}
+          rows={2}
+          avatar
+        />
       ) : null}
       {error ? (
         <p role="alert" className="notice notice--error">

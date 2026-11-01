@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
 import { translate } from '../design-system/i18n/I18nProvider.jsx';
 import { client } from '../api/app-client.js';
-import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
 import { OldDocumentDecoder, PortraitPicker, WhoOwnsFile } from './DocumentTools.jsx';
 import { PhotoViewer } from './PhotoViewer.jsx';
 import { BookExportPanel } from './BookExportPanel.jsx';
 import { MediaPlayer } from '../components/MediaPlayer.jsx';
 import { decodeGedcomBuffer } from '../../../server/src/gedcom/encoding.js';
+import '../styles/documents-refonte.css';
 
 const LOCALE_STORAGE_KEY = 'geneoapp.locale';
 
@@ -58,7 +65,7 @@ export function readFileAsBase64(file) {
 export function DocumentsHub({ onOpenPerson, onChanged }) {
   const [decodeId, setDecodeId] = useState(null);
   return (
-    <div className="search-panel documents-hub">
+    <div className="search-panel documents-hub doc-screen">
       {decodeId !== null ? (
         <OldDocumentDecoder
           client={client}
@@ -100,12 +107,20 @@ export function MediaPanel({ selected, persons = [], onPersonChanged }) {
 
   if (!selected) {
     return (
-      <p className="notice">
-        {t(
-          'gedcom.media.emptySelection',
-          'Sélectionnez une personne pour voir et ajouter des médias.',
-        )}
-      </p>
+      <div className="search-panel doc-screen">
+        <EmptyState
+          icon={<Icon name="media" />}
+          title={t(
+            'gedcom.media.emptySelection',
+            'Sélectionnez une personne pour voir et ajouter des médias.',
+          )}
+        >
+          {t(
+            'mediaScreen.selection.text',
+            'Choisissez une personne dans l’arbre ou la liste pour consulter ses documents.',
+          )}
+        </EmptyState>
+      </div>
     );
   }
 
@@ -195,114 +210,179 @@ export function MediaPanel({ selected, persons = [], onPersonChanged }) {
     );
   }
 
+  const mediaIcon = (item) => {
+    if (item.mime_type?.startsWith('image/')) return 'media';
+    if (item.mime_type?.startsWith('audio/') || item.mime_type?.startsWith('video/')) {
+      return 'event';
+    }
+    return 'file';
+  };
+  const openLabel = (item) =>
+    t('gedcom.media.open', { name: item.original_filename }, 'Ouvrir {name}');
+
   return (
-    <div className="search-panel">
-      <h3>{t('gedcom.media.title', { name: personLabel(selected) }, 'Médias de {name}')}</h3>
-      <PortraitPicker client={client} person={selected} onChange={() => onPersonChanged?.()} />
+    <div className="search-panel doc-screen">
+      <header className="doc-screen__header">
+        <h3 className="doc-screen__title">
+          {t('gedcom.media.title', { name: personLabel(selected) }, 'Médias de {name}')}
+        </h3>
+        <p className="doc-screen__lead">
+          {t(
+            'mediaScreen.lead',
+            'Photos, scans et enregistrements rattachés à cette fiche. Ouvrez un document pour l’annoter, ou déchiffrez une écriture ancienne.',
+          )}
+        </p>
+      </header>
       {mediaError ? <ErrorNotice message={mediaError} /> : null}
 
-      <label className="gedcom-panel__file">
-        <span>{t('gedcom.media.addFile', 'Ajouter un fichier')}</span>
-        <input type="file" onChange={handleUpload} disabled={busy} />
-      </label>
+      <section className="doc-card" aria-labelledby="media-portrait-heading">
+        <h4 id="media-portrait-heading" className="doc-card__title">
+          {t('mediaScreen.portrait.heading', 'Portrait')}
+        </h4>
+        <PortraitPicker client={client} person={selected} onChange={() => onPersonChanged?.()} />
+      </section>
+
+      <div className="doc-upload">
+        <label className="doc-upload__zone">
+          <span className="doc-upload__icon" aria-hidden="true">
+            <Icon name="plus" />
+          </span>
+          <span className="doc-upload__label">
+            {t('gedcom.media.addFile', 'Ajouter un fichier')}
+          </span>
+          <input type="file" onChange={handleUpload} disabled={busy} />
+        </label>
+        <p className="doc-upload__hint">
+          {t(
+            'mediaScreen.upload.hint',
+            'Images, PDF, audio ou vidéo : le fichier reste sur cet appareil.',
+          )}
+        </p>
+      </div>
 
       {items === null ? (
-        <p role="status">{t('gedcom.loading', 'Chargement…')}</p>
+        <SkeletonGroup label={t('mediaScreen.loading', 'Chargement des médias…')} rows={3} avatar />
       ) : items.length === 0 ? (
-        <p className="notice">{t('gedcom.media.none', 'Aucun média pour cette personne.')}</p>
+        <EmptyState
+          icon={<Icon name="media" />}
+          title={t('gedcom.media.none', 'Aucun média pour cette personne.')}
+        >
+          {t(
+            'mediaScreen.empty.text',
+            'Ajoutez une photo, un acte numérisé ou un enregistrement : il sera rattaché à cette personne.',
+          )}
+        </EmptyState>
       ) : (
-        <ul className="search-results">
-          {items.map((item) => (
-            <li key={item.id}>
-              <Badge tone="neutral">{item.ocr_status}</Badge> {item.original_filename}
-              {item.taken_date ? <span className="data-id">{item.taken_date}</span> : null}
-              {item.mime_type?.startsWith('audio/') || item.mime_type?.startsWith('video/') ? (
-                <MediaPlayer item={item} />
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setOpenMediaId(item.id)}
-                aria-label={t(
-                  'gedcom.media.open',
-                  { name: item.original_filename },
-                  'Ouvrir {name}',
-                )}
-              >
-                {t('gedcom.media.openLabel', 'Ouvrir')}
-              </Button>
-              {item.mime_type?.startsWith('image/') || item.mime_type === 'application/pdf' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setDecodeId(item.id)}
-                  aria-label={t(
-                    'gedcom.media.decode',
-                    { name: item.original_filename },
-                    'Déchiffrer {name}',
-                  )}
-                >
-                  {t('gedcom.media.decodeLabel', 'Déchiffrer')}
-                </Button>
-              ) : null}
-              {item.mime_type?.startsWith('image/') && selected.portrait_media_id !== item.id ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handlePortrait(item.id)}
-                >
-                  {t('gedcom.media.setPortrait', 'Photo de profil')}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => handleDownload(item.id)}
-              >
-                {t('gedcom.media.download', 'Télécharger')}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={() => handleRemove(item.id)}
-                disabled={busy}
-              >
-                {t('gedcom.media.remove', 'Supprimer')}
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <section aria-labelledby="media-list-heading">
+          <h4 id="media-list-heading" className="doc-section-title">
+            {t('mediaScreen.list.heading', 'Documents de la fiche')}
+          </h4>
+          <ul className="doc-cards">
+            {items.map((item) => (
+              <li key={item.id} className="doc-item">
+                <div className="doc-item__head">
+                  <span className="doc-item__icon" aria-hidden="true">
+                    <Icon name={mediaIcon(item)} />
+                  </span>
+                  <div className="doc-item__main">
+                    <strong className="doc-item__name">{item.original_filename}</strong>
+                    <span className="doc-item__meta">
+                      <Badge tone="neutral">{item.ocr_status}</Badge>
+                      {selected.portrait_media_id === item.id ? (
+                        <Badge tone="success">
+                          {t('mediaScreen.portraitCurrent', 'Portrait actuel')}
+                        </Badge>
+                      ) : null}
+                      {item.taken_date ? <span className="data-id">{item.taken_date}</span> : null}
+                    </span>
+                  </div>
+                </div>
+                {item.mime_type?.startsWith('audio/') || item.mime_type?.startsWith('video/') ? (
+                  <MediaPlayer item={item} />
+                ) : null}
+                <div className="doc-item__actions">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setOpenMediaId(item.id)}
+                    aria-label={openLabel(item)}
+                  >
+                    {t('gedcom.media.openLabel', 'Ouvrir')}
+                  </Button>
+                  {item.mime_type?.startsWith('image/') || item.mime_type === 'application/pdf' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setDecodeId(item.id)}
+                      aria-label={t(
+                        'gedcom.media.decode',
+                        { name: item.original_filename },
+                        'Déchiffrer {name}',
+                      )}
+                    >
+                      {t('gedcom.media.decodeLabel', 'Déchiffrer')}
+                    </Button>
+                  ) : null}
+                  {item.mime_type?.startsWith('image/') &&
+                  selected.portrait_media_id !== item.id ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handlePortrait(item.id)}
+                    >
+                      {t('gedcom.media.setPortrait', 'Photo de profil')}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleDownload(item.id)}
+                  >
+                    {t('gedcom.media.download', 'Télécharger')}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleRemove(item.id)}
+                    disabled={busy}
+                  >
+                    {t('gedcom.media.remove', 'Supprimer')}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {appearsIn.length > 0 ? (
-        <>
-          <h4 className="media-panel__subtitle">
+        <section aria-labelledby="media-appears-heading">
+          <h4 id="media-appears-heading" className="doc-section-title">
             {t('gedcom.media.appearsIn', 'Apparaît aussi sur')}
           </h4>
-          <ul className="search-results">
+          <ul className="doc-cards">
             {appearsIn.map((item) => (
-              <li key={item.id}>
-                {item.original_filename}
+              <li key={item.id} className="doc-item doc-item--row">
+                <span className="doc-item__icon" aria-hidden="true">
+                  <Icon name="media" />
+                </span>
+                <strong className="doc-item__name">{item.original_filename}</strong>
                 <Button
                   type="button"
                   size="sm"
                   variant="secondary"
                   onClick={() => setOpenMediaId(item.id)}
-                  aria-label={t(
-                    'gedcom.media.open',
-                    { name: item.original_filename },
-                    'Ouvrir {name}',
-                  )}
+                  aria-label={openLabel(item)}
                 >
                   {t('gedcom.media.openLabel', 'Ouvrir')}
                 </Button>
               </li>
             ))}
           </ul>
-        </>
+        </section>
       ) : null}
     </div>
   );
@@ -505,172 +585,204 @@ export function GedcomPanel({ onImported, selected, persons = [] }) {
   }
 
   return (
-    <div className="gedcom-panel">
-      <label className="gedcom-panel__file">
-        <span>
-          {t('gedcom.import.fileLabel', 'Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)')}
-        </span>
-        <input type="file" accept=".ged,.gdz,.zip" onChange={handleFile} />
-      </label>
-      {archive ? (
-        <div className="notice" role="status">
-          <p>
-            {t('gedcom.archive.readyLabel', 'Archive prête :')} <strong>{archive.name}</strong>
-            {t(
-              'gedcom.archive.readyDetails',
-              '. Les personnes, familles et événements sont importés en une transaction, puis les fichiers médias rattachés.',
-            )}
-          </p>
-          <Button type="button" size="sm" onClick={handleImportArchive} disabled={busy}>
-            {t('gedcom.archive.import', 'Importer l’archive GEDZIP')}
-          </Button>
-        </div>
-      ) : null}
-      {archiveReport ? (
-        <p className="notice" role="status">
-          {archiveReport.imported
-            ? t(
-                'gedcom.archive.imported',
-                { parts: archiveParts.join(', ') },
-                'Archive importée : {parts}.',
-              )
-            : t('gedcom.import.rejected', 'Import refusé : aucune donnée écrite (rollback).')}
-        </p>
-      ) : null}
-      <textarea
-        aria-label={t('gedcom.import.contentLabel', 'Contenu GEDCOM')}
-        value={content}
-        onChange={(event) => {
-          setContent(event.target.value);
-          setPreview(null);
-          setReport(null);
-        }}
-        rows={8}
-      />
-      <div className="gedcom-panel__actions">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          onClick={handlePreview}
-          disabled={busy || !content}
-        >
-          {t('gedcom.import.preview', 'Aperçu')}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleImport}
-          disabled={busy || !preview?.valid || (preview.duplicateCount > 0 && !duplicatesConfirmed)}
-        >
-          {t('gedcom.import.run', 'Importer')}
-        </Button>
-      </div>
-      {gedcomError ? <ErrorNotice message={gedcomError} /> : null}
-      {preview ? (
-        <p className="notice" role="status">
-          {preview.valid
-            ? t(
-                'gedcom.import.previewValid',
-                {
-                  persons: t(
-                    'gedcom.count.persons',
-                    { count: preview.mapping.persons },
-                    `${preview.mapping.persons} personnes`,
-                  ),
-                  unions: t(
-                    'gedcom.count.unions',
-                    { count: preview.mapping.unions },
-                    `${preview.mapping.unions} unions`,
-                  ),
-                  events: t(
-                    'gedcom.count.events',
-                    { count: preview.mapping.events },
-                    `${preview.mapping.events} événements`,
-                  ),
-                },
-                'Aperçu valide : {persons}, {unions}, {events}.',
-              )
-            : t(
-                'gedcom.import.previewInvalid',
-                {
-                  errors:
-                    preview.errors?.map((issue) => issue.message).join(', ') ||
-                    t('gedcom.import.seeReport', 'voir le rapport'),
-                },
-                'GEDCOM invalide : {errors}',
-              )}
-        </p>
-      ) : null}
-      {preview?.valid && preview.duplicateCount > 0 ? (
-        <div className="notice" role="alert">
-          <p>
-            {t(
-              'gedcom.import.duplicates',
-              { count: preview.duplicateCount },
-              '{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.',
-            )}
-          </p>
-          <ul>
-            {preview.duplicates.slice(0, 5).map((duplicate) => (
-              <li key={`${duplicate.xref}-${duplicate.existingPersonId}`}>
-                {duplicate.name}
-                {duplicate.birthYear ? ` (${duplicate.birthYear})` : ''}
-              </li>
-            ))}
-          </ul>
-          <label>
-            <input
-              type="checkbox"
-              checked={duplicatesConfirmed}
-              onChange={(event) => setDuplicatesConfirmed(event.target.checked)}
-            />{' '}
-            <span>
-              {t('gedcom.import.confirmDuplicates', 'J’ai vérifié : importer quand même')}
-            </span>
-          </label>
-        </div>
-      ) : null}
-      {preview?.valid && preview.unmapped?.length > 0 ? (
-        <p className="notice" role="status">
+    <div className="gedcom-panel doc-screen">
+      <header className="doc-screen__header">
+        <h3 className="doc-screen__title">
+          {t('gedcomScreen.title', 'Échanger avec d’autres logiciels')}
+        </h3>
+        <p className="doc-screen__lead">
           {t(
-            'gedcom.import.unmapped',
-            { tags: preview.unmapped.map((item) => `${item.tag} ×${item.count}`).join(', ') },
-            'Balises conservées sans être affichées : {tags}.',
+            'gedcomScreen.lead',
+            'Importez un arbre au format GEDCOM après un aperçu sans risque, ou exportez le vôtre pour le sauvegarder ou le partager.',
           )}
         </p>
-      ) : null}
-      {report ? (
-        <p className="notice" role="status">
-          {report.imported
-            ? t('gedcom.import.success', 'Import réussi et transactionnel.')
-            : t('gedcom.import.rejected', 'Import refusé : aucune donnée écrite (rollback).')}
+      </header>
+      <section className="doc-card" aria-labelledby="gedcom-import-heading">
+        <h4 id="gedcom-import-heading" className="doc-card__title">
+          {t('gedcomScreen.import.heading', 'Importer un arbre')}
+        </h4>
+        <p className="doc-card__lead">
+          {t(
+            'gedcomScreen.import.lead',
+            'Rien n’est écrit tant que vous n’avez pas validé l’aperçu. Un import refusé ne laisse aucune trace.',
+          )}
         </p>
-      ) : null}
+        <label className="gedcom-panel__file doc-upload__zone">
+          <span className="doc-upload__icon" aria-hidden="true">
+            <Icon name="file" />
+          </span>
+          <span className="doc-upload__label">
+            {t(
+              'gedcom.import.fileLabel',
+              'Fichier GEDCOM (.ged) ou GEDZIP avec médias (.gdz, .zip)',
+            )}
+          </span>
+          <input type="file" accept=".ged,.gdz,.zip" onChange={handleFile} />
+        </label>
+        {archive ? (
+          <div className="notice" role="status">
+            <p>
+              {t('gedcom.archive.readyLabel', 'Archive prête :')} <strong>{archive.name}</strong>
+              {t(
+                'gedcom.archive.readyDetails',
+                '. Les personnes, familles et événements sont importés en une transaction, puis les fichiers médias rattachés.',
+              )}
+            </p>
+            <Button type="button" size="sm" onClick={handleImportArchive} disabled={busy}>
+              {t('gedcom.archive.import', 'Importer l’archive GEDZIP')}
+            </Button>
+          </div>
+        ) : null}
+        {archiveReport ? (
+          <p className="notice" role="status">
+            {archiveReport.imported
+              ? t(
+                  'gedcom.archive.imported',
+                  { parts: archiveParts.join(', ') },
+                  'Archive importée : {parts}.',
+                )
+              : t('gedcom.import.rejected', 'Import refusé : aucune donnée écrite (rollback).')}
+          </p>
+        ) : null}
+        <textarea
+          aria-label={t('gedcom.import.contentLabel', 'Contenu GEDCOM')}
+          value={content}
+          onChange={(event) => {
+            setContent(event.target.value);
+            setPreview(null);
+            setReport(null);
+          }}
+          rows={8}
+        />
+        <p className="doc-upload__hint">
+          {t(
+            'gedcomScreen.import.pasteHint',
+            'Le contenu du fichier s’affiche ici ; vous pouvez aussi coller un texte GEDCOM.',
+          )}
+        </p>
+        <div className="gedcom-panel__actions">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handlePreview}
+            disabled={busy || !content}
+          >
+            {t('gedcom.import.preview', 'Aperçu')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleImport}
+            disabled={
+              busy || !preview?.valid || (preview.duplicateCount > 0 && !duplicatesConfirmed)
+            }
+          >
+            {t('gedcom.import.run', 'Importer')}
+          </Button>
+        </div>
+        {gedcomError ? <ErrorNotice message={gedcomError} /> : null}
+        {busy ? (
+          <SkeletonGroup label={t('gedcomScreen.busy', 'Analyse en cours…')} rows={2} />
+        ) : null}
+        {preview ? (
+          <p className="notice" role="status">
+            {preview.valid
+              ? t(
+                  'gedcom.import.previewValid',
+                  {
+                    persons: t(
+                      'gedcom.count.persons',
+                      { count: preview.mapping.persons },
+                      `${preview.mapping.persons} personnes`,
+                    ),
+                    unions: t(
+                      'gedcom.count.unions',
+                      { count: preview.mapping.unions },
+                      `${preview.mapping.unions} unions`,
+                    ),
+                    events: t(
+                      'gedcom.count.events',
+                      { count: preview.mapping.events },
+                      `${preview.mapping.events} événements`,
+                    ),
+                  },
+                  'Aperçu valide : {persons}, {unions}, {events}.',
+                )
+              : t(
+                  'gedcom.import.previewInvalid',
+                  {
+                    errors:
+                      preview.errors?.map((issue) => issue.message).join(', ') ||
+                      t('gedcom.import.seeReport', 'voir le rapport'),
+                  },
+                  'GEDCOM invalide : {errors}',
+                )}
+          </p>
+        ) : null}
+        {preview?.valid && preview.duplicateCount > 0 ? (
+          <div className="notice" role="alert">
+            <p>
+              {t(
+                'gedcom.import.duplicates',
+                { count: preview.duplicateCount },
+                '{count} personne(s) du fichier existent probablement déjà dans cet arbre. Rien n’est fusionné : elles seraient ajoutées en double.',
+              )}
+            </p>
+            <ul>
+              {preview.duplicates.slice(0, 5).map((duplicate) => (
+                <li key={`${duplicate.xref}-${duplicate.existingPersonId}`}>
+                  {duplicate.name}
+                  {duplicate.birthYear ? ` (${duplicate.birthYear})` : ''}
+                </li>
+              ))}
+            </ul>
+            <label>
+              <input
+                type="checkbox"
+                checked={duplicatesConfirmed}
+                onChange={(event) => setDuplicatesConfirmed(event.target.checked)}
+              />{' '}
+              <span>
+                {t('gedcom.import.confirmDuplicates', 'J’ai vérifié : importer quand même')}
+              </span>
+            </label>
+          </div>
+        ) : null}
+        {preview?.valid && preview.unmapped?.length > 0 ? (
+          <p className="notice" role="status">
+            {t(
+              'gedcom.import.unmapped',
+              { tags: preview.unmapped.map((item) => `${item.tag} ×${item.count}`).join(', ') },
+              'Balises conservées sans être affichées : {tags}.',
+            )}
+          </p>
+        ) : null}
+        {report ? (
+          <p className="notice" role="status">
+            {report.imported
+              ? t('gedcom.import.success', 'Import réussi et transactionnel.')
+              : t('gedcom.import.rejected', 'Import refusé : aucune donnée écrite (rollback).')}
+          </p>
+        ) : null}
+      </section>
 
-      <div className="gedcom-panel__export">
+      <section className="gedcom-panel__export doc-card" aria-labelledby="gedcom-export-heading">
+        <h4 id="gedcom-export-heading" className="doc-card__title">
+          {t('gedcomScreen.export.heading', 'Exporter l’arbre')}
+        </h4>
+        <p className="doc-card__lead">
+          {t(
+            'gedcomScreen.export.lead',
+            'Choisissez le format et le périmètre, puis protégez la vie privée de vos proches si nécessaire.',
+          )}
+        </p>
         <label>
           <span>{t('gedcom.export.format', 'Format d’export')}</span>
           <select value={exportFormat} onChange={(event) => setExportFormat(event.target.value)}>
             <option value="7">{t('gedcom.export.format7', 'GEDCOM 7')}</option>
             <option value="5.5.1">{t('gedcom.export.format551', 'GEDCOM 5.5.1')}</option>
           </select>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={excludePrivate}
-            onChange={(event) => setExcludePrivate(event.target.checked)}
-          />{' '}
-          <span>{t('gedcom.export.excludePrivate', 'Exclure les fiches privées')}</span>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={anonymizeLiving}
-            onChange={(event) => setAnonymizeLiving(event.target.checked)}
-          />{' '}
-          <span>{t('gedcom.export.anonymizeLiving', 'Anonymiser les personnes vivantes')}</span>
         </label>
         <label>
           <span>{t('gedcom.export.scope', 'Périmètre')}</span>
@@ -686,20 +798,41 @@ export function GedcomPanel({ onImported, selected, persons = [] }) {
             ))}
           </select>
         </label>
-        <Button type="button" size="sm" variant="secondary" onClick={handleExport} disabled={busy}>
-          {exportScope === 'all' || !selected
-            ? t('gedcom.export.all', 'Exporter l’arbre complet')
-            : t('gedcom.export.scopeAction', 'Exporter le périmètre')}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          onClick={handleExportArchive}
-          disabled={busy}
-        >
-          {t('gedcom.export.archive', 'Exporter en GEDZIP (avec médias)')}
-        </Button>
+        <fieldset className="doc-fieldset">
+          <legend>{t('gedcomScreen.export.privacy', 'Confidentialité')}</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={excludePrivate}
+              onChange={(event) => setExcludePrivate(event.target.checked)}
+            />{' '}
+            <span>{t('gedcom.export.excludePrivate', 'Exclure les fiches privées')}</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={anonymizeLiving}
+              onChange={(event) => setAnonymizeLiving(event.target.checked)}
+            />{' '}
+            <span>{t('gedcom.export.anonymizeLiving', 'Anonymiser les personnes vivantes')}</span>
+          </label>
+        </fieldset>
+        <div className="gedcom-panel__actions">
+          <Button type="button" size="sm" onClick={handleExport} disabled={busy}>
+            {exportScope === 'all' || !selected
+              ? t('gedcom.export.all', 'Exporter l’arbre complet')
+              : t('gedcom.export.scopeAction', 'Exporter le périmètre')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handleExportArchive}
+            disabled={busy}
+          >
+            {t('gedcom.export.archive', 'Exporter en GEDZIP (avec médias)')}
+          </Button>
+        </div>
         {selected && exportScope !== 'all' ? (
           <p className="settings-hint">
             {t(
@@ -729,7 +862,7 @@ export function GedcomPanel({ onImported, selected, persons = [] }) {
             )}
           </p>
         ) : null}
-      </div>
+      </section>
       <BookExportPanel selected={selected} persons={persons} />
     </div>
   );
