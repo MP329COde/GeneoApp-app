@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, protocol, safeStorage, session, shell } from 'electron';
 import { isSafeExternalUrl } from './external-links.js';
 import { createLocalHttpGuard } from './security/local-http-guard.js';
 import { buildContentSecurityPolicy } from './security/content-security-policy.js';
@@ -24,6 +24,13 @@ import {
 } from '../../server/src/storage/storage-config.js';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers.js';
 import { createApiProxy } from './ipc/api-proxy.js';
+import {
+  applyBearer,
+  createRemoteConfigStore,
+  describeCode,
+  normalizeServerUrl,
+  testConnection,
+} from './remote/remote-server.js';
 
 const host = '127.0.0.1';
 const port = 0;
@@ -100,7 +107,7 @@ let workspace;
 let unregisterIpcHandlers;
 let mainWindow;
 
-async function createWindow() {
+async function startLocal() {
   // La CSP (Content-Security-Policy) d'une page est fixée à la navigation
   // qui l'a chargée : changer `mapMode` ne modifie PAS la politique déjà
   // appliquée à la page en cours, seulement celle d'une future navigation.
@@ -188,8 +195,153 @@ async function createWindow() {
   await window.loadURL('geneoapp://app/index.html');
 }
 
+const connectDir = fileURLToPath(new URL('./remote/', import.meta.url));
+let remoteStore;
+let connectWindow;
+
+const locale = () => app.getLocale();
+const isEnglish = () => locale().toLowerCase().startsWith('en');
+
+function relaunchApp() {
+  app.relaunch();
+  app.quit();
+}
+
+// Fenêtre de choix « Local / Serveur distant » (menu Source des données).
+function openConnectWindow() {
+  if (connectWindow && !connectWindow.isDestroyed()) return connectWindow.focus();
+  connectWindow = new BrowserWindow({
+    width: 560,
+    height: 460,
+    parent: mainWindow ?? undefined,
+    webPreferences: hardenedWebPreferences({
+      preload: path.join(connectDir, 'connect-preload.cjs'),
+    }),
+  });
+  connectWindow.setMenu(null);
+  connectWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  connectWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  return connectWindow.loadFile(path.join(connectDir, 'connect.html'));
+}
+
+function registerRemoteIpc() {
+  const check = async ({ url, token }) => {
+    const saved = remoteStore.read();
+    const effective = token || (normalizeServerUrl(url).url === saved.url ? saved.token : '');
+    const result = await testConnection({ url, token: effective });
+    const lang = locale();
+    const message = describeCode(result.code, lang, result);
+    return result.ok && result.insecure
+      ? {
+          ...result,
+          warning: true,
+          message: `${message} ${describeCode('insecure', lang)}`,
+          token: effective,
+        }
+      : { ...result, message, token: effective };
+  };
+  ipcMain.handle('geneoapp:remote:state', () => {
+    const saved = remoteStore.read();
+    return {
+      url: saved.url,
+      tokenStored: saved.tokenStored,
+      canEncrypt: remoteStore.canEncrypt(),
+      locale: locale(),
+    };
+  });
+  // Le jeton ne repasse jamais vers le renderer : il est retiré des réponses.
+  ipcMain.handle('geneoapp:remote:test', async (_event, values) => {
+    const result = await check(values ?? {});
+    delete result.token;
+    return result;
+  });
+  ipcMain.handle('geneoapp:remote:connect', async (_event, values) => {
+    const { token, ...result } = await check(values ?? {});
+    if (!result.ok) return result;
+    remoteStore.write({ mode: 'remote', url: result.url, token });
+    setTimeout(relaunchApp, 600);
+    return result;
+  });
+  ipcMain.handle('geneoapp:remote:local', () => {
+    remoteStore.useLocal();
+    setTimeout(relaunchApp, 100);
+    return { ok: true };
+  });
+}
+
+function buildAppMenu(remote) {
+  const en = isEnglish();
+  const template = [
+    {
+      label: en ? 'Data source' : 'Source des données',
+      submenu: [
+        { label: en ? 'Remote server…' : 'Serveur distant…', click: openConnectWindow },
+        {
+          label: en ? 'Back to local data' : 'Revenir en local',
+          enabled: remote,
+          click: () => {
+            remoteStore.useLocal();
+            relaunchApp();
+          },
+        },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+// Mode serveur distant : la fenêtre charge le client servi par le serveur (même
+// origine que l'API). Session dédiée ; le jeton n'est envoyé qu'à cette origine.
+async function startRemote({ url, token }) {
+  const target = normalizeServerUrl(url);
+  const remoteSession = session.fromPartition('persist:geneoapp-remote');
+  hardenSession(remoteSession);
+  remoteSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({
+      requestHeaders: applyBearer(details.url, details.requestHeaders, {
+        origin: target.origin,
+        token,
+      }),
+    });
+  });
+  // Pas de preload : une page distante ne reçoit jamais le pont IPC de bureau.
+  mainWindow = new BrowserWindow({
+    webPreferences: { ...hardenedWebPreferences({}), session: remoteSession },
+  });
+  const contents = mainWindow.webContents;
+  contents.setWindowOpenHandler(({ url: opened }) => {
+    if (isSafeExternalUrl(opened)) shell.openExternal(opened);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, destination) => {
+    if (new URL(destination).origin !== target.origin) {
+      event.preventDefault();
+      if (isSafeExternalUrl(destination)) shell.openExternal(destination);
+    }
+  });
+  contents.on('did-fail-load', (_event, _code, _description, _url, isMainFrame) => {
+    if (isMainFrame) openConnectWindow();
+  });
+  await mainWindow.loadURL(target.url);
+}
+
+async function start() {
+  remoteStore = createRemoteConfigStore({ dir: app.getPath('userData'), safeStorage });
+  registerRemoteIpc();
+  const saved = remoteStore.read();
+  const remote = saved.mode === 'remote' && Boolean(saved.url);
+  buildAppMenu(remote);
+  if (remote) await startRemote(saved);
+  else await startLocal();
+}
+
 blockWebviews(app);
-app.whenReady().then(createWindow);
+app.whenReady().then(start);
 
 app.on('window-all-closed', () => {
   unregisterIpcHandlers?.();

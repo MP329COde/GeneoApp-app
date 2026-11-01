@@ -33,6 +33,23 @@ Ouvrir `http://127.0.0.1:3000`. Variables d'environnement :
 
 Générer un jeton : `openssl rand -hex 24`.
 
+## Application de bureau → serveur
+
+L'app Electron peut utiliser un serveur GeneoApp distant au lieu de ses données locales :
+menu **Source des données → Serveur distant…**, puis adresse du serveur et jeton (`GENEOAPP_ACCESS_TOKEN`).
+
+- **Test de connexion** : `GET /health` (public) puis `GET /api/trees` avec le jeton ; messages clairs FR/EN
+  (injoignable, délai, certificat HTTPS invalide, serveur non GeneoApp, jeton refusé, erreur serveur).
+- **HTTPS recommandé** : une adresse `http://` vers un hôte non local est acceptée mais affiche un avertissement
+  (jeton et données en clair). `localhost` / `127.0.0.1` / `::1` sont exemptés.
+- **Jeton** : chiffré avec `safeStorage` d'Electron (trousseau de l'OS) dans `remote-server.json` (dossier utilisateur).
+  Sans chiffrement disponible, il n'est pas enregistré et doit être ressaisi. Le dernier serveur est mémorisé.
+- **Chargement** : la fenêtre charge le client servi par le serveur (même origine que l'API, donc contrôle
+  `Origin` / CSRF respecté), dans une session dédiée, sans le pont IPC de bureau. Le jeton est envoyé en
+  `Authorization: Bearer` uniquement vers l'origine du serveur ; toute autre navigation s'ouvre dans le navigateur.
+- **Retour en local** : menu **Source des données → Revenir en local** (l'app redémarre ; le jeton est effacé).
+  Si le serveur est injoignable au lancement, la fenêtre de choix s'ouvre.
+
 ## LAN
 
 ```bash
