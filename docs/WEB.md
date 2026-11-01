@@ -75,3 +75,36 @@ location / {
 ```
 
 Conserver l'en-tête `Host` d'origine (les contrôles d'origine comparent `Origin` et `Host`).
+
+## Installer sur téléphone
+
+Il n'existe **pas d'application iOS ni Android native**. Le client web servi par ce mode est une PWA : le
+navigateur du téléphone peut en créer un raccourci plein écran sur l'écran d'accueil. C'est tout : l'application
+reste un site web qui parle à **votre** serveur.
+
+**Prérequis** : un serveur accessible depuis le téléphone (LAN ou VPN, voir ci-dessus) servi en **HTTPS** via un
+reverse proxy. L'installation et le service worker exigent HTTPS (ou `localhost`) ; en `http://192.168.x.x`, iOS et
+Android n'installent pas la PWA et le service worker n'est pas enregistré (le site reste utilisable dans le
+navigateur).
+
+- **iOS (Safari)** : ouvrir l'adresse, saisir le jeton, puis Partager > « Sur l'écran d'accueil ».
+- **Android (Chrome)** : ouvrir l'adresse, saisir le jeton, puis menu ⋮ > « Installer l'application » (ou
+  « Ajouter à l'écran d'accueil »).
+
+Ce que fait la PWA :
+
+- manifeste (nom, icônes 192/512 et « maskable » générées depuis l'icône de l'application, `display: standalone`,
+  `theme_color`) et meta `apple-touch-icon` ;
+- service worker minimal : met en cache uniquement le shell statique (page hors ligne, manifeste, icônes, fichiers
+  compilés `/assets/`). **Jamais** les réponses `/api`, ni les pages, ni aucune donnée généalogique ; les requêtes non
+  GET ou inter-origines ne sont pas interceptées ;
+- hors connexion : une page explicative s'affiche. Vos données restent sur le serveur, elles ne sont pas copiées
+  sur le téléphone, donc **pas de consultation ni de saisie hors ligne** ;
+- le manifeste, `sw.js`, `offline.html` et les icônes sont servis **sans jeton** (le navigateur les demande sans
+  cookie ; ils ne contiennent aucune donnée). Liste fermée (`PUBLIC_PWA_FILES`), tout le reste exige le jeton, et la
+  CSP stricte est conservée. Le service worker est revalidé à chaque chargement (`Cache-Control: no-cache`).
+
+Limites : pas de notifications push, pas de synchronisation en arrière-plan, pas d'accès aux fichiers du
+téléphone au-delà du sélecteur de fichiers du navigateur, et l'application Electron de bureau n'est pas concernée
+(le service worker n'y est jamais enregistré). Mise en page vérifiée à 390 px de large
+(`test/e2e/mobile-layout.spec.js`), sans débordement horizontal sur les écrans principaux.

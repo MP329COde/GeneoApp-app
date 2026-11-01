@@ -81,6 +81,45 @@ test('mode web en boucle locale : client HTML et API sur le même port', async (
   assert.equal(unknown.status, 404);
 });
 
+test('PWA : manifeste, service worker et icônes servis sans jeton, CSP conservée', async () => {
+  writeFileSync(path.join(webDir, 'manifest.webmanifest'), '{"name":"GeneoApp"}');
+  writeFileSync(path.join(webDir, 'sw.js'), '// sw');
+  writeFileSync(path.join(webDir, 'offline.html'), '<!doctype html><title>hors ligne</title>');
+  mkdirSync(path.join(webDir, 'icons'), { recursive: true });
+  writeFileSync(path.join(webDir, 'icons', 'icon-192.png'), 'png');
+  writeFileSync(path.join(webDir, 'secret.json'), '{"x":1}');
+  const port = await freePort();
+  const run = launch({
+    PORT: String(port),
+    GENEOAPP_HOST: '0.0.0.0',
+    GENEOAPP_ACCESS_TOKEN: 'jeton-de-test-solide',
+    GENEOAPP_DATA_DIR: path.join(workDir, 'data-pwa'),
+  });
+  assert.equal(await run.ready, true, run.output());
+  const base = `http://127.0.0.1:${port}`;
+
+  const manifest = await fetch(`${base}/manifest.webmanifest`);
+  assert.equal(manifest.status, 200);
+  assert.match(manifest.headers.get('content-type'), /manifest\+json|application\/json/);
+  assert.match(manifest.headers.get('content-security-policy'), /default-src 'self'/);
+
+  const worker = await fetch(`${base}/sw.js`);
+  assert.equal(worker.status, 200);
+  assert.match(worker.headers.get('cache-control'), /no-cache/);
+  assert.match(worker.headers.get('content-security-policy'), /script-src 'self'/);
+
+  const offline = await fetch(`${base}/offline.html`);
+  assert.equal(offline.status, 200);
+  assert.match(offline.headers.get('content-security-policy'), /script-src 'self'/);
+
+  assert.equal((await fetch(`${base}/icons/icon-192.png`)).status, 200);
+
+  // Tout le reste (API, autres fichiers, écritures) reste protégé par le jeton.
+  assert.equal((await fetch(`${base}/api/persons`)).status, 401);
+  assert.equal((await fetch(`${base}/secret.json`)).status, 401);
+  assert.equal((await fetch(`${base}/sw.js`, { method: 'POST' })).status, 401);
+});
+
 test('hors boucle locale sans jeton : refus de démarrer', async () => {
   const run = launch({
     PORT: String(await freePort()),

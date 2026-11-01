@@ -11,6 +11,7 @@ import '@fontsource/atkinson-hyperlegible-next/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import App from './App.jsx';
+import { registerServiceWorker } from './pwa.js';
 import './design-system/tokens/tokens.css';
 import './design-system/tokens/a11y.css';
 
@@ -21,3 +22,5 @@ createRoot(document.getElementById('root')).render(
     </I18nProvider>
   </StrictMode>,
 );
+
+if (import.meta.env.PROD) registerServiceWorker();

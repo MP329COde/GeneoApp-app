@@ -68,6 +68,19 @@ const LOGIN_CONTENT_SECURITY_POLICY = WEB_CONTENT_SECURITY_POLICY.replace(
   "style-src 'unsafe-inline'",
 );
 
+// Fichiers PWA publics : le navigateur récupère le manifeste et les icônes sans
+// cookie, et le service worker doit pouvoir s'installer avant toute saisie du
+// jeton. Liste fermée, aucune donnée généalogique dedans.
+export const PUBLIC_PWA_FILES = new Set([
+  '/manifest.webmanifest',
+  '/sw.js',
+  '/offline.html',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/apple-touch-icon.png',
+]);
+
 function loginPage(message) {
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,6 +146,14 @@ export function webAccessGate({ accessToken, trustProxy = false }) {
 
   router.get('/health', (_request, response) => response.json({ status: 'ok' }));
 
+  // Fichiers PWA : sortent de la garde (sans jeton), servis par le client statique.
+  router.use((request, _response, next) => {
+    if (['GET', 'HEAD'].includes(request.method) && PUBLIC_PWA_FILES.has(request.path)) {
+      return next('router');
+    }
+    next();
+  });
+
   router.get(LOGIN_PATH, (_request, response) => {
     response.set('Content-Security-Policy', LOGIN_CONTENT_SECURITY_POLICY).type('html');
     response.set('Cache-Control', 'no-store').send(loginPage());
@@ -194,6 +215,14 @@ export function staticClient(dir) {
     if (file.endsWith('index.html')) {
       response.set('Cache-Control', 'no-store');
       response.set('Content-Security-Policy', WEB_CONTENT_SECURITY_POLICY);
+    } else if (file.endsWith('sw.js') || file.endsWith('manifest.webmanifest')) {
+      // Toujours revalidés : une mise à jour du service worker doit être vue vite.
+      response.set('Cache-Control', 'no-cache');
+      response.set('Content-Security-Policy', WEB_CONTENT_SECURITY_POLICY);
+    } else if (file.endsWith('offline.html')) {
+      // Page statique sans script : seul son style en ligne est autorisé.
+      response.set('Cache-Control', 'no-cache');
+      response.set('Content-Security-Policy', LOGIN_CONTENT_SECURITY_POLICY);
     }
   };
   router.use(express.static(root, { setHeaders, index: 'index.html' }));
