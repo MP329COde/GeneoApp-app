@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1a56a0" />
+    <title>GeneoApp - hors ligne</title>
+    <style>
+      :root {
+        --bg: #faf9f6;
+        --text: #1f2328;
+        --muted: #5b6470;
+        --action: #1a56a0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1b1a17;
+          --text: #f1ede4;
+          --muted: #b6afa1;
+          --action: #6ea3e6;
+        }
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        width: min(26rem, calc(100% - 2rem));
+      }
+      h1 {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-weight: 600;
+        margin: 0 0 0.75rem;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.5;
+        margin: 0 0 1rem;
+      }
+      a {
+        display: inline-block;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        background: var(--action);
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Vous êtes hors ligne</h1>
+      <p>
+        GeneoApp lit vos données généalogiques sur votre serveur et ne les conserve jamais sur ce
+        téléphone. Sans connexion à ce serveur, l'application ne peut pas afficher votre arbre.
+      </p>
+      <p>Vérifiez le réseau (ou le VPN) qui vous relie au serveur, puis réessayez.</p>
+      <a href="./">Réessayer</a>
+    </main>
+  </body>
+</html>
