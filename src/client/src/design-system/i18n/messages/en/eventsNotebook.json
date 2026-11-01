@@ -1,0 +1,33 @@
+{
+  "evnb.eyebrow.events": "Life chronicle",
+  "evnb.eyebrow.timeline": "Overall timeline",
+  "evnb.eyebrow.notebook": "Archivist’s notebook",
+  "evnb.events.intro": "Births, unions, occupations, moves: each dated, sourced fact builds this person’s chronicle.",
+  "evnb.events.addTitle": "Record an event",
+  "evnb.events.groupWhen": "When",
+  "evnb.events.groupWhere": "Where",
+  "evnb.events.listTitle": "Recorded facts",
+  "evnb.events.emptyTitle": "No event recorded",
+  "evnb.events.emptyBody": "Add a birth, a marriage or an occupation with the form above to start the chronicle.",
+  "evnb.events.selectTitle": "No person selected",
+  "evnb.events.loadingLabel": "Loading events…",
+  "evnb.timeline.intro": "Every fact in the tree, as a list or a chart.",
+  "evnb.timeline.count": {
+    "one": "{count} event",
+    "other": "{count} events"
+  },
+  "evnb.timeline.emptyTitle": "The timeline is empty",
+  "evnb.timeline.emptyBody": "Events will appear here as soon as a person has one: add some from their sheet or import a GEDCOM file.",
+  "evnb.timeline.loadingLabel": "Loading the timeline…",
+  "evnb.notebook.intro": "Keep track of your leads: goals, hypotheses backed by evidence, tasks to carry out in the archives.",
+  "evnb.notebook.newTitle": "Open a new lead",
+  "evnb.notebook.listTitle": "Your research",
+  "evnb.notebook.emptyTitle": "Your notebook is blank",
+  "evnb.notebook.emptyBody": "Note a first lead above: a record to find, a doubt to settle, a register to consult.",
+  "evnb.notebook.emptyFilterTitle": "Nothing at this stage",
+  "evnb.notebook.emptyFilterBody": "No research has this status. Pick another filter to find your leads.",
+  "evnb.notebook.showAll": "Show all research",
+  "evnb.notebook.loadingLabel": "Loading the notebook…",
+  "evnb.notebook.progress": "Task progress",
+  "evnb.detail.loadingLabel": "Loading the research…"
+}

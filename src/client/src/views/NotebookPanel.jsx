@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
+import { Icon } from '../components/shared.jsx';
+import '../styles/events-notebook-refonte.css';
 import { AnnotationsPanel } from './AnnotationsPanel.jsx';
 
 // Libellés du carnet : indexés par code, traduits via l'i18n. Le repli
@@ -113,16 +121,14 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
         {error}
       </p>
     ) : (
-      <p role="status" className="loading-line">
-        {t('notebook.loading', 'Chargement de la recherche…')}
-      </p>
+      <SkeletonGroup label={t('evnb.detail.loadingLabel')} rows={4} />
     );
   }
 
   const person = persons.find((candidate) => candidate.id === research.person_id);
 
   return (
-    <article className="research-detail" aria-labelledby="research-title">
+    <article className="research-detail evnb-detail" aria-labelledby="research-title">
       <header className="research-detail__header">
         <Button variant="secondary" size="sm" onClick={onClose}>
           {t('notebook.backToList', '← Toutes les recherches')}
@@ -214,7 +220,11 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
       <section aria-labelledby="research-documents-title" className="research-section">
         <h4 id="research-documents-title">{t('notebook.documents', 'Documents liés')}</h4>
         {(research.documents ?? []).length === 0 ? (
-          <p className="notice">{t('notebook.noDocuments', 'Aucun document lié.')}</p>
+          <EmptyState
+            compact
+            icon={<Icon name="file" />}
+            title={t('notebook.noDocuments', 'Aucun document lié.')}
+          />
         ) : (
           <ul className="search-results">
             {research.documents.map((doc) => (
@@ -251,7 +261,11 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
             : t('notebook.showHistory', 'Afficher l’historique')}
         </Button>
         {history && history.length === 0 ? (
-          <p className="notice">{t('notebook.noHistory', 'Aucune modification enregistrée.')}</p>
+          <EmptyState
+            compact
+            icon={<Icon name="history" />}
+            title={t('notebook.noHistory', 'Aucune modification enregistrée.')}
+          />
         ) : null}
         {history && history.length > 0 ? (
           <ol className="search-results">
@@ -270,12 +284,14 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           {t('notebook.hypotheses', 'Hypothèses')} ({research.hypotheses.length})
         </h4>
         {research.hypotheses.length === 0 ? (
-          <p className="settings-hint">
-            {t(
+          <EmptyState
+            compact
+            icon={<Icon name="search" />}
+            title={t(
               'notebook.noHypothesis',
               'Aucune hypothèse. Formulez-en une pour y rattacher des preuves.',
             )}
-          </p>
+          />
         ) : (
           <ol className="hypotheses">
             {research.hypotheses.map((item, index) => (
@@ -432,7 +448,11 @@ function ResearchDetail({ client, researchId, persons, onNavigate, onClose, onCh
           {research.tasks.filter((item) => item.status === 'DONE').length}/{research.tasks.length})
         </h4>
         {research.tasks.length === 0 ? (
-          <p className="settings-hint">{t('notebook.noTask', 'Aucune tâche.')}</p>
+          <EmptyState
+            compact
+            icon={<Icon name="note" />}
+            title={t('notebook.noTask', 'Aucune tâche.')}
+          />
         ) : (
           <ul className="task-list">
             {research.tasks.map((item) => (
@@ -600,7 +620,7 @@ export function NotebookPanel({ client, persons, onNavigate }) {
 
   if (openId !== null) {
     return (
-      <div className="search-panel notebook">
+      <div className="search-panel notebook evnb">
         <ResearchDetail
           client={client}
           researchId={openId}
@@ -619,16 +639,24 @@ export function NotebookPanel({ client, persons, onNavigate }) {
   const visible = (entries ?? []).filter((entry) => filter === 'ALL' || entry.status === filter);
   const personById = (id) => persons.find((candidate) => candidate.id === id);
 
+  const countOf = (key) =>
+    key === 'ALL' ? (entries ?? []).length : (entries ?? []).filter((e) => e.status === key).length;
+
   return (
-    <div className="search-panel notebook">
-      <h3>{t('notebook.title', 'Carnet de recherche')}</h3>
+    <div className="search-panel notebook evnb">
+      <header className="evnb-head">
+        <p className="evnb-eyebrow">{t('evnb.eyebrow.notebook')}</p>
+        <h3>{t('notebook.title', 'Carnet de recherche')}</h3>
+        <p className="evnb-intro">{t('evnb.notebook.intro')}</p>
+      </header>
       {notebookError ? (
         <p role="alert" className="notice notice--error">
           {notebookError}
         </p>
       ) : null}
 
-      <form onSubmit={handleSubmit}>
+      <form className="evnb-form evnb-card" onSubmit={handleSubmit}>
+        <h4 className="evnb-card__title evnb-form__wide">{t('evnb.notebook.newTitle')}</h4>
         <label>
           <span>{t('notebook.fieldTitle', 'Titre')}</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -637,7 +665,7 @@ export function NotebookPanel({ client, persons, onNavigate }) {
           <span>{t('notebook.fieldNote', 'Note')}</span>
           <input value={content} onChange={(event) => setContent(event.target.value)} />
         </label>
-        <label>
+        <label className="evnb-form__wide">
           <span>{t('notebook.fieldObjective', 'Objectif (facultatif)')}</span>
           <input
             value={objective}
@@ -668,13 +696,16 @@ export function NotebookPanel({ client, persons, onNavigate }) {
             ))}
           </select>
         </label>
-        <Button type="submit" size="sm" disabled={busy}>
-          {t('notebook.addEntry', 'Ajouter une piste de recherche')}
-        </Button>
+        <div className="evnb-form__actions evnb-form__wide">
+          <Button type="submit" size="sm" disabled={busy}>
+            {t('notebook.addEntry', 'Ajouter une piste de recherche')}
+          </Button>
+        </div>
       </form>
 
+      <h4 className="evnb-section-title">{t('evnb.notebook.listTitle')}</h4>
       <div
-        className="segmented notebook__filter"
+        className="segmented notebook__filter evnb-filter"
         role="group"
         aria-label={t('notebook.filterByStatus', 'Filtrer par statut')}
       >
@@ -687,27 +718,41 @@ export function NotebookPanel({ client, persons, onNavigate }) {
               onClick={() => setFilter(key)}
             >
               {t(text, key)}
+              {entries ? <span className="evnb-filter__count">{countOf(key)}</span> : null}
             </button>
           ),
         )}
       </div>
 
       {entries === null ? (
-        <p role="status">{t('notebook.loadingShort', 'Chargement…')}</p>
+        <SkeletonGroup label={t('evnb.notebook.loadingLabel')} rows={3} />
       ) : entries.length === 0 ? (
-        <p className="notice">
-          {t('notebook.noEntry', 'Aucune piste de recherche pour l’instant.')}
-        </p>
+        <EmptyState icon={<Icon name="notebook" />} title={t('evnb.notebook.emptyTitle')}>
+          {t('evnb.notebook.emptyBody')}
+        </EmptyState>
       ) : visible.length === 0 ? (
-        <p className="notice">
-          {t('notebook.noEntryWithStatus', 'Aucune recherche avec ce statut.')}
-        </p>
+        <EmptyState
+          icon={<Icon name="filter" />}
+          title={t('evnb.notebook.emptyFilterTitle')}
+          actions={
+            <Button size="sm" variant="secondary" onClick={() => setFilter('ALL')}>
+              {t('evnb.notebook.showAll')}
+            </Button>
+          }
+        >
+          {t('evnb.notebook.emptyFilterBody')}
+        </EmptyState>
       ) : (
         <ul className="research-cards">
           {visible.map((entry) => {
             const person = entry.person_id ? personById(entry.person_id) : null;
+            const taskTotal = entry.task_count ?? 0;
+            const taskDone = entry.done_task_count ?? 0;
             return (
-              <li key={entry.id} className="research-card">
+              <li
+                key={entry.id}
+                className={`research-card research-card--${String(entry.status).toLowerCase()}`}
+              >
                 <div className="research-card__badges">
                   <Badge tone={entry.status === 'DONE' ? 'success' : 'neutral'}>
                     {t(RESEARCH_STATUS_KEYS[entry.status] ?? 'notebook.status.todo', entry.status)}
@@ -725,6 +770,18 @@ export function NotebookPanel({ client, persons, onNavigate }) {
                   {entry.title}
                 </button>
                 <p className="research-card__content">{entry.content}</p>
+                {taskTotal > 0 ? (
+                  <div
+                    className="evnb-progress"
+                    role="progressbar"
+                    aria-label={t('evnb.notebook.progress')}
+                    aria-valuemin={0}
+                    aria-valuemax={taskTotal}
+                    aria-valuenow={taskDone}
+                  >
+                    <span style={{ width: `${Math.round((taskDone / taskTotal) * 100)}%` }} />
+                  </div>
+                ) : null}
                 <p className="data-id">
                   {t('notebook.hypothesisCount', { count: entry.hypothesis_count ?? 0 })} ·{' '}
                   {t('notebook.taskProgress', {
