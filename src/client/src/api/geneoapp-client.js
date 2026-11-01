@@ -57,10 +57,14 @@ function buildError(payload, fallback, status) {
 
 // `acceptStatuses` : codes d'erreur dont le corps est un résultat métier à afficher
 // (rapport d'import invalide, doublons à confirmer) et non une panne.
-async function fetchJson(path, { method = 'GET', body, token, acceptStatuses = [] } = {}) {
+async function fetchJson(
+  path,
+  { method = 'GET', body, token, acceptStatuses = [], headers, onResponse } = {},
+) {
   const response = await fetch(path, {
     method,
     headers: {
+      ...headers,
       ...(body === undefined ? undefined : { 'content-type': 'application/json' }),
       ...(token ? { 'x-geneoapp-session': token } : undefined),
     },
@@ -68,6 +72,7 @@ async function fetchJson(path, { method = 'GET', body, token, acceptStatuses = [
   });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
+  if (response.ok) onResponse?.(response, data);
   if (!response.ok && !acceptStatuses.includes(response.status)) {
     throw buildError(
       data?.error,
@@ -150,32 +155,76 @@ function parseContentDispositionFilename(header) {
   return match ? decodeURIComponent(match[1]) : 'fichier';
 }
 
+// Concurrence optimiste (mode HTTP) : ETag de chaque personne chargée, renvoyé
+// en If-Match par persons.update. Le serveur répond 409 EDIT_CONFLICT si la
+// fiche a changé entre-temps. Sans ETag connu, la mise à jour reste permise.
+// Les lignes de liste n'ont pas d'en-tête : leur `updated_at` donne le même ETag.
+function createPersonEtagStore() {
+  const etags = new Map();
+  const fromPerson = (person) =>
+    person?.updated_at === undefined || person?.updated_at === null
+      ? undefined
+      : `"${person.updated_at}"`;
+  return {
+    remember(id, response, person) {
+      const etag = response?.headers?.get?.('etag') ?? fromPerson(person);
+      if (etag) etags.set(String(id), etag);
+    },
+    rememberList(items) {
+      for (const person of items ?? []) {
+        const etag = fromPerson(person);
+        if (etag && person.id !== undefined) etags.set(String(person.id), etag);
+      }
+    },
+    headersFor(id) {
+      const etag = etags.get(String(id));
+      return etag ? { 'if-match': etag } : undefined;
+    },
+  };
+}
+
 function createHttpClient() {
+  const personEtags = createPersonEtagStore();
+  const listPersons = async (options) => {
+    const page = normalizePersonsPageOptions(options);
+    if (page?.totalOnly) {
+      const params = new URLSearchParams({ total: 'true' });
+      if (page.q) params.set('q', page.q);
+      return fetchJson(`/api/persons?${params.toString()}`);
+    }
+    if (page) {
+      const params = new URLSearchParams({
+        limit: String(page.limit),
+        offset: String(page.offset),
+      });
+      if (page.q) params.set('q', page.q);
+      return fetchJson(`/api/persons?${params.toString()}`);
+    }
+    // Liste complète : une seule requête, sans pagination. Le serveur
+    // renvoie toute la liste ; on normalise la réponse au cas où elle
+    // ne serait pas conforme au contrat d'enveloppe.
+    return normalizePersonsListResponse(await fetchJson('/api/persons'));
+  };
+
   return {
     persons: {
       list: async (options) => {
-        const page = normalizePersonsPageOptions(options);
-        if (page?.totalOnly) {
-          const params = new URLSearchParams({ total: 'true' });
-          if (page.q) params.set('q', page.q);
-          return fetchJson(`/api/persons?${params.toString()}`);
-        }
-        if (page) {
-          const params = new URLSearchParams({
-            limit: String(page.limit),
-            offset: String(page.offset),
-          });
-          if (page.q) params.set('q', page.q);
-          return fetchJson(`/api/persons?${params.toString()}`);
-        }
-        // Liste complète : une seule requête, sans pagination. Le serveur
-        // renvoie toute la liste ; on normalise la réponse au cas où elle
-        // ne serait pas conforme au contrat d'enveloppe.
-        return normalizePersonsListResponse(await fetchJson('/api/persons'));
+        const result = await listPersons(options);
+        personEtags.rememberList(result?.items);
+        return result;
       },
-      get: (id) => fetchJson(`/api/persons/${id}`),
+      get: (id) =>
+        fetchJson(`/api/persons/${id}`, {
+          onResponse: (response, person) => personEtags.remember(id, response, person),
+        }),
       create: (data) => fetchJson('/api/persons', { method: 'POST', body: data }),
-      update: (id, data) => fetchJson(`/api/persons/${id}`, { method: 'PATCH', body: data }),
+      update: (id, data) =>
+        fetchJson(`/api/persons/${id}`, {
+          method: 'PATCH',
+          body: data,
+          headers: personEtags.headersFor(id),
+          onResponse: (response, person) => personEtags.remember(id, response, person),
+        }),
       remove: (id) => fetchJson(`/api/persons/${id}`, { method: 'DELETE' }),
       restore: (id) => fetchJson(`/api/persons/${id}/restore`, { method: 'POST' }),
     },

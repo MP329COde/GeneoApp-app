@@ -1,0 +1,4 @@
+{
+  "editConflict.message": "Cette fiche a été modifiée ailleurs depuis son ouverture. Votre saisie est conservée ; rechargez la fiche pour voir la dernière version, puis enregistrez à nouveau.",
+  "editConflict.reload": "Recharger la fiche"
+}

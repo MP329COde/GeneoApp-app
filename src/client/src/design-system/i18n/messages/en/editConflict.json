@@ -1,0 +1,4 @@
+{
+  "editConflict.message": "This record was changed elsewhere since you opened it. Your input is kept; reload the record to see the latest version, then save again.",
+  "editConflict.reload": "Reload record"
+}

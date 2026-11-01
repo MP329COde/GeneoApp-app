@@ -122,9 +122,11 @@ export function IdentityTool({ selected, onUpdated }) {
   const [isLiving, setIsLiving] = useState(selected.is_living !== 0);
   const [isPrivate, setIsPrivate] = useState(selected.is_private === 1);
   const [identityError, setIdentityError] = useState(null);
+  const [editConflict, setEditConflict] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    setEditConflict(false);
     setGivenNames(selected.given_names ?? '');
     setFamilyName(selected.family_name ?? '');
     setBirthFamilyName(selected.birth_family_name ?? '');
@@ -148,6 +150,7 @@ export function IdentityTool({ selected, onUpdated }) {
     }
     setBusy(true);
     setIdentityError(null);
+    setEditConflict(false);
     try {
       // Une seule écriture persons.update : l'historique (Ctrl+Z / Ctrl+Maj+Z
       // et l'onglet Historique) est déjà générique pour toute écriture sur
@@ -168,7 +171,19 @@ export function IdentityTool({ selected, onUpdated }) {
       });
       await onUpdated();
     } catch (updateError) {
-      setIdentityError(updateError.message);
+      // 409 EDIT_CONFLICT : la saisie reste dans le formulaire ; seul le
+      // bouton « Recharger la fiche » recharge la personne.
+      if (updateError.code === 'EDIT_CONFLICT') setEditConflict(true);
+      else setIdentityError(updateError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReload = async () => {
+    setBusy(true);
+    try {
+      await onUpdated();
     } finally {
       setBusy(false);
     }
@@ -178,6 +193,19 @@ export function IdentityTool({ selected, onUpdated }) {
     <form className="detail-section create-person-form" onSubmit={handleSubmit}>
       <h3>{t('personTools.identity.title', 'Identité')}</h3>
       {identityError ? <ErrorNotice message={identityError} /> : null}
+      {editConflict ? (
+        <div role="alert" className="notice notice--error">
+          <span>
+            {t(
+              'editConflict.message',
+              'Cette fiche a été modifiée ailleurs depuis son ouverture. Votre saisie est conservée ; rechargez la fiche pour voir la dernière version, puis enregistrez à nouveau.',
+            )}
+          </span>{' '}
+          <button type="button" disabled={busy} onClick={handleReload}>
+            {t('editConflict.reload', 'Recharger la fiche')}
+          </button>
+        </div>
+      ) : null}
       <label>
         <span>{t('personTools.identity.givenNames', 'Prénom(s)')}</span>
         <input value={givenNames} onChange={(event) => setGivenNames(event.target.value)} />
