@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'"
+    />
+    <title>GeneoApp</title>
+    <style>
+      body {
+        font:
+          14px system-ui,
+          sans-serif;
+        margin: 24px;
+        max-width: 480px;
+      }
+      label {
+        display: block;
+        margin: 12px 0 4px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        padding: 6px;
+        box-sizing: border-box;
+      }
+      button {
+        margin: 12px 8px 0 0;
+        padding: 6px 12px;
+      }
+      #msg {
+        margin-top: 12px;
+        min-height: 2.5em;
+      }
+      .error {
+        color: #b00020;
+      }
+      .warn {
+        color: #8a5a00;
+      }
+      .ok {
+        color: #1b6e2d;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="title"></h1>
+    <label for="url" id="lUrl"></label>
+    <input id="url" type="text" placeholder="https://geneo.exemple.fr" autocomplete="off" />
+    <label for="token" id="lToken"></label>
+    <input id="token" type="password" autocomplete="off" />
+    <div><small id="storage"></small></div>
+    <button id="test" type="button"></button>
+    <button id="connect" type="button"></button>
+    <button id="local" type="button"></button>
+    <div id="msg" role="status"></div>
+    <script src="connect.js"></script>
+  </body>
+</html>
