@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
+import { Icon } from '../components/shared.jsx';
+import '../styles/admin-refonte.css';
 
 // Gestion des arbres : chaque arbre est une base locale isolée. On choisit
 // d'abord l'arbre de travail, puis toute l'application travaille dessus.
@@ -10,6 +19,7 @@ export function TreesPanel({ client, onActivated, session }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [renaming, setRenaming] = useState(null);
+  const [toDelete, setToDelete] = useState(null);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
 
@@ -89,15 +99,22 @@ export function TreesPanel({ client, onActivated, session }) {
     }
   };
 
+  const noSession = t(
+    'settings.trees.deleteHint',
+    'Connectez-vous avec un profil local pour supprimer un arbre.',
+  );
+
   return (
-    <div className="search-panel trees-panel">
-      <h3>{t('settings.trees.title', 'Arbres')}</h3>
-      <p className="settings-hint">
-        {t(
-          'settings.trees.hint',
-          'Chaque arbre est une base locale séparée : ses personnes, sources, médias et sauvegardes ne se mélangent jamais avec les autres.',
-        )}
-      </p>
+    <div className="trees-panel adm">
+      <header className="adm__head">
+        <h3 className="adm__title">{t('settings.trees.title', 'Arbres')}</h3>
+        <p className="adm__intro">
+          {t(
+            'settings.trees.hint',
+            'Chaque arbre est une base locale séparée : ses personnes, sources, médias et sauvegardes ne se mélangent jamais avec les autres.',
+          )}
+        </p>
+      </header>
 
       {error ? (
         <p role="alert" className="notice notice--error">
@@ -105,22 +122,35 @@ export function TreesPanel({ client, onActivated, session }) {
         </p>
       ) : null}
       {status ? (
-        <p role="status" className="notice">
+        <p role="status" className="adm-status">
           {status}
         </p>
       ) : null}
 
       {trees === null ? (
-        <p role="status" className="loading-line">
-          {t('settings.trees.loading', 'Chargement des arbres…')}
-        </p>
+        <SkeletonGroup label={t('settings.trees.loading', 'Chargement des arbres…')} rows={2} />
+      ) : trees.length === 0 ? (
+        <section className="adm-card">
+          <EmptyState
+            icon={<Icon name="tree" />}
+            title={t('admin.trees.emptyTitle', 'Aucun arbre pour l’instant')}
+          >
+            {t('admin.trees.emptyBody', 'Créez votre premier arbre ci-dessous pour commencer.')}
+          </EmptyState>
+        </section>
       ) : (
-        <ul className="tree-cards" aria-label={t('settings.trees.available', 'Arbres disponibles')}>
+        <ul
+          className="adm-list tree-cards"
+          aria-label={t('settings.trees.available', 'Arbres disponibles')}
+        >
           {trees.map((tree) => (
-            <li key={tree.id} className={`tree-card${tree.active ? ' tree-card--active' : ''}`}>
+            <li
+              key={tree.id}
+              className={`adm-card tree-card${tree.active ? ' adm-card--active tree-card--active' : ''}`}
+            >
               {renaming?.id === tree.id ? (
-                <form onSubmit={handleRename} className="tree-card__rename">
-                  <label>
+                <form onSubmit={handleRename} className="adm-form adm-form--inline">
+                  <label className="adm-field">
                     <span>{t('settings.trees.newName', 'Nouveau nom')}</span>
                     <input
                       value={renaming.name}
@@ -128,24 +158,32 @@ export function TreesPanel({ client, onActivated, session }) {
                       onChange={(event) => setRenaming({ ...renaming, name: event.target.value })}
                     />
                   </label>
-                  <Button type="submit" size="sm">
-                    {t('settings.trees.saveName', 'Enregistrer le nom')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setRenaming(null)}
-                  >
-                    {t('settings.trees.cancel', 'Annuler')}
-                  </Button>
+                  <div className="adm-actions">
+                    <Button type="submit" size="sm">
+                      {t('settings.trees.saveName', 'Enregistrer le nom')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setRenaming(null)}
+                    >
+                      {t('settings.trees.cancel', 'Annuler')}
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
-                  <div>
-                    <p className="tree-card__name">{tree.name}</p>
-                    {tree.description ? <p className="settings-hint">{tree.description}</p> : null}
-                    <p className="data-id">
+                  <div className="adm-row__main">
+                    <p className="adm-card__title">
+                      <Icon name="tree" />
+                      {tree.name}
+                      {tree.active ? (
+                        <Badge tone="success">{t('settings.trees.active', 'Ouvert')}</Badge>
+                      ) : null}
+                    </p>
+                    {tree.description ? <p className="adm-card__note">{tree.description}</p> : null}
+                    <p className="adm-row__meta">
                       {t(
                         'settings.trees.createdOn',
                         { date: new Date(tree.createdAt).toLocaleDateString(locale) },
@@ -163,10 +201,8 @@ export function TreesPanel({ client, onActivated, session }) {
                       ) : null}
                     </p>
                   </div>
-                  <div className="tree-card__actions">
-                    {tree.active ? (
-                      <Badge tone="success">{t('settings.trees.active', 'Ouvert')}</Badge>
-                    ) : (
+                  <div className="adm-actions">
+                    {tree.active ? null : (
                       <Button size="sm" onClick={() => handleActivate(tree)}>
                         {t('settings.trees.open', { name: tree.name }, 'Ouvrir')}
                       </Button>
@@ -183,24 +219,8 @@ export function TreesPanel({ client, onActivated, session }) {
                         size="sm"
                         variant="secondary"
                         disabled={!session}
-                        title={
-                          session
-                            ? undefined
-                            : t(
-                                'settings.trees.deleteHint',
-                                'Connectez-vous avec un profil local pour supprimer un arbre.',
-                              )
-                        }
-                        onClick={() =>
-                          run(
-                            () => client.trees.remove(tree.id, session.token),
-                            t(
-                              'settings.trees.deleted',
-                              { name: tree.name },
-                              `Arbre « ${tree.name} » supprimé.`,
-                            ),
-                          )
-                        }
+                        title={session ? undefined : noSession}
+                        onClick={() => setToDelete(tree)}
                       >
                         {t('settings.trees.delete', { name: tree.name }, 'Supprimer')}
                       </Button>
@@ -213,38 +233,51 @@ export function TreesPanel({ client, onActivated, session }) {
         </ul>
       )}
 
-      <h4>{t('settings.trees.new', 'Nouvel arbre')}</h4>
-      <form onSubmit={handleCreate}>
-        <label>
-          <span>{t('settings.trees.name', 'Nom de l’arbre')}</span>
-          <input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('settings.trees.description', 'Description (facultatif)')}</span>
-          <input
-            value={description}
-            maxLength={500}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </label>
-        <Button type="submit" disabled={!name.trim()}>
-          {t('settings.trees.create', 'Créer l’arbre')}
-        </Button>
-      </form>
+      <section className="adm-card adm-card--accent" aria-labelledby="trees-new-title">
+        <h4 id="trees-new-title" className="adm-card__title">
+          <Icon name="plus" />
+          {t('settings.trees.new', 'Nouvel arbre')}
+        </h4>
+        <form onSubmit={handleCreate} className="adm-form">
+          <label className="adm-field">
+            <span>{t('settings.trees.name', 'Nom de l’arbre')}</span>
+            <input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label className="adm-field">
+            <span>{t('settings.trees.description', 'Description (facultatif)')}</span>
+            <input
+              value={description}
+              maxLength={500}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          <div className="adm-actions">
+            <Button type="submit" disabled={!name.trim()}>
+              {t('settings.trees.create', 'Créer l’arbre')}
+            </Button>
+          </div>
+        </form>
+      </section>
 
       {deleted.length > 0 ? (
-        <>
-          <h4>{t('settings.trees.deletedTitle', 'Arbres supprimés')}</h4>
-          <ul className="search-results">
+        <section className="adm-card" aria-labelledby="trees-deleted-title">
+          <h4 id="trees-deleted-title" className="adm-card__title">
+            <Icon name="trash" />
+            {t('settings.trees.deletedTitle', 'Arbres supprimés')}
+            <Badge tone="neutral">{deleted.length}</Badge>
+          </h4>
+          <ul className="adm-list">
             {deleted.map((tree) => (
-              <li key={tree.id}>
-                <span>{tree.name}</span>
-                <span className="data-id">
-                  {t(
-                    'settings.trees.deletedOn',
-                    { date: new Date(tree.deletedAt).toLocaleDateString(locale) },
-                    `supprimé le ${new Date(tree.deletedAt).toLocaleDateString(locale)}`,
-                  )}
+              <li key={tree.id} className="adm-row">
+                <span className="adm-row__main">
+                  <strong className="adm-row__title">{tree.name}</strong>
+                  <span className="adm-row__meta">
+                    {t(
+                      'settings.trees.deletedOn',
+                      { date: new Date(tree.deletedAt).toLocaleDateString(locale) },
+                      `supprimé le ${new Date(tree.deletedAt).toLocaleDateString(locale)}`,
+                    )}
+                  </span>
                 </span>
                 <Button
                   size="sm"
@@ -274,8 +307,33 @@ export function TreesPanel({ client, onActivated, session }) {
               </li>
             ))}
           </ul>
-        </>
+        </section>
       ) : null}
+
+      <ConfirmDialog
+        isOpen={toDelete !== null}
+        title={t('admin.trees.deleteTitle', 'Supprimer cet arbre')}
+        message={t(
+          'admin.trees.deleteMessage',
+          { name: toDelete?.name ?? '' },
+          `Supprimer l’arbre « ${toDelete?.name ?? ''} » ? Il passera dans les arbres supprimés et pourra être restauré.`,
+        )}
+        confirmLabel={t('admin.trees.deleteConfirm', 'Supprimer l’arbre')}
+        cancelLabel={t('settings.trees.cancel', 'Annuler')}
+        onConfirm={async () => {
+          const target = toDelete;
+          setToDelete(null);
+          await run(
+            () => client.trees.remove(target.id, session.token),
+            t(
+              'settings.trees.deleted',
+              { name: target.name },
+              `Arbre « ${target.name} » supprimé.`,
+            ),
+          );
+        }}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }

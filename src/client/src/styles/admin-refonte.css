@@ -1,0 +1,346 @@
+/* ---------- Administration : sauvegardes, doublons, cohérence, réglages, arbres ----------
+   Style « cabinet d'archives lumineux » : cartes sur papier, filets fins,
+   titres serif, jetons uniquement (clair, sombre et mobile viennent des jetons). */
+.adm {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  max-width: 62rem;
+  padding: var(--space-6);
+  container-type: inline-size;
+}
+.adm--narrow {
+  max-width: 48rem;
+}
+.adm__head {
+  display: grid;
+  gap: var(--space-1);
+}
+.adm__title {
+  margin: 0;
+  font: var(--type-display);
+  letter-spacing: 0;
+}
+.adm__intro {
+  margin: 0;
+  max-width: var(--measure);
+  color: var(--text-secondary);
+}
+
+/* --- Cartes --- */
+.adm-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+.adm-card--accent {
+  border-left: var(--border-accent) solid var(--action);
+}
+.adm-card--danger {
+  border-color: var(--danger);
+  background: var(--danger-subtle);
+}
+.adm-card--active {
+  border: var(--border-thick) solid var(--action);
+  background: var(--surface-selected);
+}
+.adm-card__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--type-heading);
+  font-family: var(--font-serif);
+}
+.adm-card__title .icon {
+  color: var(--text-secondary);
+}
+.adm-card__note {
+  margin: 0;
+  max-width: var(--measure);
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.adm-card__note--strong {
+  color: var(--text);
+}
+
+/* --- Actions et champs --- */
+.adm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.adm-field {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 26rem;
+  font: var(--type-label);
+}
+.adm-field input:not([type='file']):not([type='checkbox']):not([type='radio']),
+.adm-field select {
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-body);
+}
+.adm-field input:focus-visible,
+.adm-field select:focus-visible {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.adm-form {
+  display: grid;
+  gap: var(--space-3);
+  align-items: end;
+}
+@container (min-width: 36rem) {
+  .adm-form--inline {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* --- Liste de lignes --- */
+.adm-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.adm-row__main {
+  display: grid;
+  flex: 1 1 14rem;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.adm-row__title {
+  margin: 0;
+  font: var(--type-person-name);
+  overflow-wrap: anywhere;
+}
+.adm-row__meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+  overflow-wrap: anywhere;
+}
+.adm-row--certain {
+  border-left: var(--border-accent) solid var(--danger);
+}
+.adm-row--possible {
+  border-left: var(--border-accent) solid var(--warning);
+}
+
+/* --- Bandeau d'état --- */
+.adm-status {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hairline) solid var(--success);
+  border-radius: var(--radius-md);
+  background: var(--success-subtle);
+  color: var(--text);
+}
+.adm-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.adm-session__name {
+  margin: 0;
+  font: var(--type-heading);
+  font-family: var(--font-serif);
+}
+
+/* --- Définitions du profil --- */
+.adm-defs {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.adm-defs dt {
+  color: var(--text-secondary);
+  font: var(--type-label);
+}
+.adm-defs dd {
+  margin: 0;
+}
+@container (min-width: 36rem) {
+  .adm-defs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* --- Fusion : récapitulatif dans la confirmation --- */
+.adm-merge {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  text-align: left;
+}
+.adm-merge ul {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+/* --- Doublons : paire de fiches --- */
+.adm-pair {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+.adm-pair__people {
+  display: grid;
+  gap: var(--space-2);
+}
+@container (min-width: 36rem) {
+  .adm-pair__people {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+  }
+}
+.adm-pair__person {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  font: var(--type-person-name);
+  overflow-wrap: anywhere;
+}
+.adm-pair__sep {
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* --- Réglages --- */
+.adm-settings {
+  display: grid;
+  gap: var(--space-4);
+}
+.settings-panel.adm-settings section.adm-card {
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+}
+.settings-panel.adm-settings h4.adm-card__title {
+  font: var(--type-heading);
+  font-family: var(--font-serif);
+}
+.adm-settings .settings-choice,
+.adm-settings .menu-customizer {
+  padding: 0;
+  border: 0;
+}
+.adm-settings .menu-customizer {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.adm-settings .menu-customizer ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-settings .menu-customizer li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.adm-settings .menu-customizer button {
+  min-width: var(--control-md);
+  min-height: var(--control-md);
+  border: var(--border-hairline) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+}
+.adm-settings .menu-customizer button:focus-visible,
+.adm-settings .settings-toggle:has(input:focus-visible) {
+  outline: var(--border-thick) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.adm-settings .menu-customizer button:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+.adm-form > .adm-card__note {
+  grid-column: 1 / -1;
+}
+.adm-row__main > .coherence-issue__severity {
+  justify-self: start;
+}
+.adm-card.tree-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.adm-card.tree-card > form {
+  flex: 1 1 100%;
+}
+.adm-list.tree-cards {
+  margin: 0;
+}
+.adm-settings__footer {
+  justify-content: space-between;
+}
+p.adm-card__title {
+  margin: 0;
+}
+
+/* --- Arbres --- */
+.adm-tree__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- Mobile --- */
+@media (max-width: 720px) {
+  .adm {
+    padding: var(--space-4) var(--space-3);
+  }
+  .adm-row {
+    padding: var(--space-3);
+  }
+  .adm-actions .gds-button {
+    flex: 1 1 auto;
+  }
+}

@@ -1,4 +1,5 @@
 import { Button, LanguageSwitcher, useI18n } from '../design-system/index.js';
+import '../styles/admin-refonte.css';
 import {
   ALWAYS_VISIBLE_VIEWS,
   INSPECTOR_SECTIONS,
@@ -181,17 +182,21 @@ export function SettingsPanel({ navGroups = [] }) {
   const { t } = useI18n();
 
   return (
-    <div className="search-panel settings-panel">
-      <h3>{t('settings.title')}</h3>
-      <p className="settings-hint">
-        {t(
-          'settings.intro',
-          'Configurez rapidement l’apparence et le comportement de votre espace de travail.',
-        )}
-      </p>
+    <div className="settings-panel adm adm--narrow adm-settings">
+      <header className="adm__head">
+        <h3 className="adm__title">{t('settings.title')}</h3>
+        <p className="adm__intro">
+          {t(
+            'settings.intro',
+            'Configurez rapidement l’apparence et le comportement de votre espace de travail.',
+          )}
+        </p>
+      </header>
 
-      <section aria-labelledby="settings-appearance">
-        <h4 id="settings-appearance">{t('settings.appearance')}</h4>
+      <section className="adm-card" aria-labelledby="settings-appearance">
+        <h4 id="settings-appearance" className="adm-card__title">
+          {t('settings.appearance')}
+        </h4>
         <Choice
           legend={t('settings.theme')}
           name="theme"
@@ -229,8 +234,10 @@ export function SettingsPanel({ navGroups = [] }) {
         </div>
       </section>
 
-      <section aria-labelledby="settings-accent">
-        <h4 id="settings-accent">{t('settings.accent.title', 'Couleur d’accent')}</h4>
+      <section className="adm-card" aria-labelledby="settings-accent">
+        <h4 id="settings-accent" className="adm-card__title">
+          {t('settings.accent.title', 'Couleur d’accent')}
+        </h4>
         <fieldset className="settings-choice">
           <legend>{t('settings.accent.legend', 'Couleur des actions et de la sélection')}</legend>
           <div className="settings-choice__options">
@@ -251,8 +258,10 @@ export function SettingsPanel({ navGroups = [] }) {
         </fieldset>
       </section>
 
-      <section aria-labelledby="settings-panels">
-        <h4 id="settings-panels">{t('settings.panels', 'Panneaux')}</h4>
+      <section className="adm-card" aria-labelledby="settings-panels">
+        <h4 id="settings-panels" className="adm-card__title">
+          {t('settings.panels', 'Panneaux')}
+        </h4>
         <label className="settings-toggle">
           <input
             type="checkbox"
@@ -299,13 +308,17 @@ export function SettingsPanel({ navGroups = [] }) {
         </label>
       </section>
 
-      <section aria-labelledby="settings-menu">
-        <h4 id="settings-menu">{t('settings.menu.title', 'Menu')}</h4>
+      <section className="adm-card" aria-labelledby="settings-menu">
+        <h4 id="settings-menu" className="adm-card__title">
+          {t('settings.menu.title', 'Menu')}
+        </h4>
         <MenuCustomizer navGroups={navGroups} settings={settings} update={update} t={t} />
       </section>
 
-      <section aria-labelledby="settings-sheet">
-        <h4 id="settings-sheet">{t('settings.personSheet', 'Fiche personne')}</h4>
+      <section className="adm-card" aria-labelledby="settings-sheet">
+        <h4 id="settings-sheet" className="adm-card__title">
+          {t('settings.personSheet', 'Fiche personne')}
+        </h4>
         <fieldset className="settings-choice">
           <legend>
             {t('settings.personSheet.sections', 'Sections du panneau de la personne')}
@@ -351,8 +364,10 @@ export function SettingsPanel({ navGroups = [] }) {
         </fieldset>
       </section>
 
-      <section aria-labelledby="settings-a11y">
-        <h4 id="settings-a11y">{t('settings.a11y')}</h4>
+      <section className="adm-card" aria-labelledby="settings-a11y">
+        <h4 id="settings-a11y" className="adm-card__title">
+          {t('settings.a11y')}
+        </h4>
         <Choice
           legend={t('settings.textSize')}
           name="textSize"
@@ -382,8 +397,10 @@ export function SettingsPanel({ navGroups = [] }) {
         />
       </section>
 
-      <section aria-labelledby="settings-tree">
-        <h4 id="settings-tree">{t('settings.tree')}</h4>
+      <section className="adm-card" aria-labelledby="settings-tree">
+        <h4 id="settings-tree" className="adm-card__title">
+          {t('settings.tree')}
+        </h4>
         <Choice
           legend={t('settings.treeMode')}
           name="treeMode"
@@ -413,8 +430,10 @@ export function SettingsPanel({ navGroups = [] }) {
         />
       </section>
 
-      <section aria-labelledby="settings-map">
-        <h4 id="settings-map">{t('settings.map')}</h4>
+      <section className="adm-card" aria-labelledby="settings-map">
+        <h4 id="settings-map" className="adm-card__title">
+          {t('settings.map')}
+        </h4>
         <Choice
           legend={t('settings.mapMode')}
           name="mapMode"
@@ -425,13 +444,15 @@ export function SettingsPanel({ navGroups = [] }) {
             { value: 'online', label: t('settings.mapMode.online') },
           ]}
         />
-        <p className="notice">{t('settings.mapMode.hint')}</p>
+        <p className="adm-card__note">{t('settings.mapMode.hint')}</p>
       </section>
 
-      <p className="settings-hint">{t('settings.localOnly')}</p>
-      <Button variant="secondary" onClick={reset}>
-        {t('settings.reset')}
-      </Button>
+      <div className="adm-actions adm-settings__footer">
+        <p className="adm-card__note">{t('settings.localOnly')}</p>
+        <Button variant="secondary" onClick={reset}>
+          {t('settings.reset')}
+        </Button>
+      </div>
     </div>
   );
 }
