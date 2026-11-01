@@ -1,0 +1,33 @@
+{
+  "evnb.eyebrow.events": "Chronique de vie",
+  "evnb.eyebrow.timeline": "Chronologie générale",
+  "evnb.eyebrow.notebook": "Carnet de l’archiviste",
+  "evnb.events.intro": "Naissances, unions, métiers, déplacements : chaque fait daté et sourcé compose la chronique de cette personne.",
+  "evnb.events.addTitle": "Consigner un événement",
+  "evnb.events.groupWhen": "Quand",
+  "evnb.events.groupWhere": "Où",
+  "evnb.events.listTitle": "Faits enregistrés",
+  "evnb.events.emptyTitle": "Aucun événement consigné",
+  "evnb.events.emptyBody": "Ajoutez une naissance, un mariage ou un métier avec le formulaire ci-dessus pour commencer la chronique.",
+  "evnb.events.selectTitle": "Aucune personne sélectionnée",
+  "evnb.events.loadingLabel": "Chargement des événements…",
+  "evnb.timeline.intro": "Tous les faits de l’arbre, en liste ou en frise.",
+  "evnb.timeline.count": {
+    "one": "{count} événement",
+    "other": "{count} événements"
+  },
+  "evnb.timeline.emptyTitle": "La chronologie est vide",
+  "evnb.timeline.emptyBody": "Les événements apparaîtront ici dès qu’une personne en aura un : saisissez-en depuis sa fiche ou importez un fichier GEDCOM.",
+  "evnb.timeline.loadingLabel": "Chargement de la chronologie…",
+  "evnb.notebook.intro": "Gardez la trace de vos pistes : objectifs, hypothèses étayées par des preuves, tâches à mener dans les archives.",
+  "evnb.notebook.newTitle": "Ouvrir une nouvelle piste",
+  "evnb.notebook.listTitle": "Vos recherches",
+  "evnb.notebook.emptyTitle": "Votre carnet est vierge",
+  "evnb.notebook.emptyBody": "Notez une première piste ci-dessus : un acte à retrouver, un doute à lever, un registre à consulter.",
+  "evnb.notebook.emptyFilterTitle": "Rien à ce stade",
+  "evnb.notebook.emptyFilterBody": "Aucune recherche ne porte ce statut. Choisissez un autre filtre pour retrouver vos pistes.",
+  "evnb.notebook.showAll": "Afficher toutes les recherches",
+  "evnb.notebook.loadingLabel": "Chargement du carnet…",
+  "evnb.notebook.progress": "Avancement des tâches",
+  "evnb.detail.loadingLabel": "Chargement de la recherche…"
+}

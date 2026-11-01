@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, useTranslation } from '../design-system/index.js';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SkeletonGroup,
+  useTranslation,
+} from '../design-system/index.js';
 import { client } from '../api/app-client.js';
 import { EventEditForm } from './EventEditForm.jsx';
 import { LifelineChart } from './LifelineChart.jsx';
-import { ErrorNotice, personLabel } from '../components/shared.jsx';
+import { ErrorNotice, Icon, personLabel } from '../components/shared.jsx';
+import '../styles/events-notebook-refonte.css';
 import {
   formatGenealogyDate,
   parseGenealogyDate,
@@ -100,12 +107,14 @@ export function EventsPanel({ selected }) {
 
   if (!selected) {
     return (
-      <p className="notice">
-        {t(
-          'eventsTimeline.selectPerson',
-          'Sélectionnez une personne pour voir et ajouter des événements.',
-        )}
-      </p>
+      <div className="search-panel evnb">
+        <EmptyState icon={<Icon name="event" />} title={t('evnb.events.selectTitle')}>
+          {t(
+            'eventsTimeline.selectPerson',
+            'Sélectionnez une personne pour voir et ajouter des événements.',
+          )}
+        </EmptyState>
+      </div>
     );
   }
 
@@ -174,11 +183,18 @@ export function EventsPanel({ selected }) {
   };
 
   return (
-    <div className="search-panel">
-      <h3>{t('eventsTimeline.title', { name: personLabel(selected) }, 'Événements de {name}')}</h3>
+    <div className="search-panel evnb">
+      <header className="evnb-head">
+        <p className="evnb-eyebrow">{t('evnb.eyebrow.events')}</p>
+        <h3>
+          {t('eventsTimeline.title', { name: personLabel(selected) }, 'Événements de {name}')}
+        </h3>
+        <p className="evnb-intro">{t('evnb.events.intro')}</p>
+      </header>
       {eventsError ? <ErrorNotice message={eventsError} /> : null}
 
-      <form className="create-person-form" onSubmit={handleSubmit}>
+      <form className="evnb-form evnb-card" onSubmit={handleSubmit}>
+        <h4 className="evnb-card__title evnb-form__wide">{t('evnb.events.addTitle')}</h4>
         <label>
           <span>{t('eventsTimeline.field.type', 'Type')}</span>
           <select value={type} onChange={(event) => setType(event.target.value)}>
@@ -198,6 +214,7 @@ export function EventsPanel({ selected }) {
           </span>
           <input value={value} onChange={(event) => setValue(event.target.value)} />
         </label>
+        <h5 className="evnb-form__group evnb-form__wide">{t('evnb.events.groupWhen')}</h5>
         <label>
           <span>{t('eventsTimeline.field.date', 'Date (texte libre)')}</span>
           <input
@@ -210,7 +227,7 @@ export function EventsPanel({ selected }) {
             }}
           />
         </label>
-        <small id="event-date-reading" className="date-reading" aria-live="polite">
+        <small id="event-date-reading" className="date-reading evnb-form__wide" aria-live="polite">
           {dateText.trim()
             ? parseGenealogyDate(dateText).valid
               ? t(
@@ -237,6 +254,7 @@ export function EventsPanel({ selected }) {
             ))}
           </select>
         </label>
+        <h5 className="evnb-form__group evnb-form__wide">{t('evnb.events.groupWhere')}</h5>
         <label>
           <span>{t('eventsTimeline.field.existingPlace', 'Lieu existant (optionnel)')}</span>
           <select value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
@@ -268,54 +286,67 @@ export function EventsPanel({ selected }) {
             inputMode="decimal"
           />
         </label>
-        <Button type="submit" size="sm" disabled={busy}>
-          {t('eventsTimeline.submit', 'Ajouter l’événement')}
-        </Button>
+        <div className="evnb-form__actions evnb-form__wide">
+          <Button type="submit" size="sm" disabled={busy}>
+            {t('eventsTimeline.submit', 'Ajouter l’événement')}
+          </Button>
+        </div>
       </form>
 
+      <h4 className="evnb-section-title">{t('evnb.events.listTitle')}</h4>
       {events === null ? (
-        <p role="status">{t('eventsTimeline.loading', 'Chargement…')}</p>
+        <SkeletonGroup label={t('evnb.events.loadingLabel')} rows={3} />
       ) : events.length === 0 ? (
-        <p className="notice">
-          {t('eventsTimeline.empty', 'Aucun événement pour cette personne.')}
-        </p>
+        <EmptyState icon={<Icon name="event" />} title={t('evnb.events.emptyTitle')}>
+          {t('evnb.events.emptyBody')}
+        </EmptyState>
       ) : (
-        <ul className="search-results">
+        <ul className="evnb-events">
           {events.map((item) => (
-            <li key={item.id}>
-              <Badge tone="neutral">{item.type}</Badge>{' '}
-              {item.value ? <strong>{item.value}</strong> : null}{' '}
-              {item.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
-              {item.place_id ? ` — ${placeLabelById(item.place_id)}` : ''}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setEditingId(editingId === item.id ? null : item.id)}
-                aria-expanded={editingId === item.id}
-                disabled={busy}
-              >
-                {t('eventsTimeline.edit', 'Modifier')}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={() => handleRemove(item.id)}
-                disabled={busy}
-              >
-                {t('eventsTimeline.remove', 'Supprimer')}
-              </Button>
+            <li key={item.id} className="evnb-event">
+              <div className="evnb-event__main">
+                <Badge tone="neutral">{item.type}</Badge>
+                {item.value ? <strong className="evnb-event__value">{item.value}</strong> : null}
+                <span className="evnb-event__date">
+                  {item.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
+                </span>
+                {item.place_id ? (
+                  <span className="evnb-event__place">— {placeLabelById(item.place_id)}</span>
+                ) : null}
+              </div>
+              <div className="evnb-event__actions">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setEditingId(editingId === item.id ? null : item.id)}
+                  aria-expanded={editingId === item.id}
+                  disabled={busy}
+                >
+                  {t('eventsTimeline.edit', 'Modifier')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  onClick={() => handleRemove(item.id)}
+                  disabled={busy}
+                >
+                  {t('eventsTimeline.remove', 'Supprimer')}
+                </Button>
+              </div>
               {editingId === item.id ? (
-                <EventEditForm
-                  event={item}
-                  places={places}
-                  precisions={DATE_PRECISIONS}
-                  precisionKeys={DATE_PRECISION_KEYS}
-                  busy={busy}
-                  onSave={(data) => handleSave(item.id, data)}
-                  onCancel={() => setEditingId(null)}
-                />
+                <div className="evnb-event__edit">
+                  <EventEditForm
+                    event={item}
+                    places={places}
+                    precisions={DATE_PRECISIONS}
+                    precisionKeys={DATE_PRECISION_KEYS}
+                    busy={busy}
+                    onSave={(data) => handleSave(item.id, data)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                </div>
               ) : null}
             </li>
           ))}
@@ -346,23 +377,46 @@ export function TimelinePanel({ onNavigate, persons = [], selectedId = null, onS
     };
   }, []);
 
+  const head = (
+    <header className="evnb-head">
+      <p className="evnb-eyebrow">{t('evnb.eyebrow.timeline')}</p>
+      <h3>{t('nav.timeline', 'Chronologie')}</h3>
+      <p className="evnb-intro">{t('evnb.timeline.intro')}</p>
+    </header>
+  );
+
   if (timelineError) {
-    return <ErrorNotice message={timelineError} />;
+    return (
+      <div className="evnb">
+        {head}
+        <ErrorNotice message={timelineError} />
+      </div>
+    );
   }
 
   if (events === null) {
-    return <p role="status">{t('eventsTimeline.loading', 'Chargement…')}</p>;
+    return (
+      <div className="evnb">
+        {head}
+        <SkeletonGroup label={t('evnb.timeline.loadingLabel')} rows={4} />
+      </div>
+    );
   }
 
   if (events.length === 0) {
     return (
-      <p className="notice">{t('eventsTimeline.emptyGlobal', 'Aucun événement enregistré.')}</p>
+      <div className="evnb">
+        {head}
+        <EmptyState icon={<Icon name="timeline" />} title={t('evnb.timeline.emptyTitle')}>
+          {t('evnb.timeline.emptyBody')}
+        </EmptyState>
+      </div>
     );
   }
 
   const toggle = (
     <div
-      className="timeline-toggle"
+      className="timeline-toggle evnb-toolbar"
       role="group"
       aria-label={t('eventsTimeline.mode.label', 'Affichage de la chronologie')}
     >
@@ -389,7 +443,8 @@ export function TimelinePanel({ onNavigate, persons = [], selectedId = null, onS
 
   if (mode === 'chart') {
     return (
-      <div>
+      <div className="evnb">
+        {head}
         {toggle}
         <LifelineChart
           persons={persons}
@@ -402,39 +457,54 @@ export function TimelinePanel({ onNavigate, persons = [], selectedId = null, onS
   }
 
   return (
-    <div>
+    <div className="evnb">
+      {head}
       {toggle}
-      <ol className="search-results">
+      <p className="evnb-count">{t('evnb.timeline.count', { count: events.length })}</p>
+      <ol className="evnb-events evnb-events--rail">
         {events.map((event) => (
-          <li key={event.id}>
-            <Badge tone="neutral">{event.type}</Badge>{' '}
-            {event.value ? <strong>{event.value}</strong> : null}{' '}
-            {event.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
-            {event.place_name ? ` — ${event.place_name}` : ''}
-            {event.participants.length > 0 ? (
-              <span>
-                {' '}
-                (
-                {event.participants
-                  .map(
-                    (participant) =>
-                      `${participant.personGivenNames} ${participant.personFamilyName}`,
-                  )
-                  .join(', ')}
-                )
+          <li key={event.id} className="evnb-event">
+            <div className="evnb-event__main">
+              <Badge tone="neutral">{event.type}</Badge>
+              {event.value ? <strong className="evnb-event__value">{event.value}</strong> : null}
+              <span className="evnb-event__date">
+                {event.date_text ?? t('eventsTimeline.unknownDate', '(date inconnue)')}
               </span>
+              {event.place_name ? (
+                <span className="evnb-event__place">— {event.place_name}</span>
+              ) : null}
+              {event.participants.length > 0 ? (
+                <span className="evnb-event__who">
+                  (
+                  {event.participants
+                    .map(
+                      (participant) =>
+                        `${participant.personGivenNames} ${participant.personFamilyName}`,
+                    )
+                    .join(', ')}
+                  )
+                </span>
+              ) : null}
+            </div>
+            {event.participants.length > 0 ? (
+              <div className="evnb-event__actions">
+                {event.participants.map((participant) => (
+                  <Button
+                    key={participant.personId}
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onNavigate(participant.personId)}
+                  >
+                    {t(
+                      'eventsTimeline.view',
+                      { name: participant.personGivenNames },
+                      'Voir {name}',
+                    )}
+                  </Button>
+                ))}
+              </div>
             ) : null}
-            {event.participants.map((participant) => (
-              <Button
-                key={participant.personId}
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => onNavigate(participant.personId)}
-              >
-                {t('eventsTimeline.view', { name: participant.personGivenNames }, 'Voir {name}')}
-              </Button>
-            ))}
           </li>
         ))}
       </ol>

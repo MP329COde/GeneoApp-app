@@ -1,0 +1,262 @@
+/* ---------- Refonte « cabinet d'archives lumineux » : Événements, Chronologie, Carnet ---------- */
+.evnb {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  max-width: 76rem;
+  padding: var(--space-6);
+  container-type: inline-size;
+}
+
+/* En-tête de page */
+.evnb-head {
+  display: grid;
+  gap: var(--space-1);
+}
+.evnb-eyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.evnb-head h3 {
+  margin: 0;
+  font: var(--type-display);
+  font-size: clamp(24px, 5vw, 34px);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.evnb-intro {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--text-secondary);
+}
+.evnb-section-title {
+  margin: var(--space-2) 0 0;
+  font: var(--type-heading);
+}
+.evnb-count {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-label);
+}
+
+/* Cartes */
+.evnb-card {
+  padding: var(--space-5);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+}
+.evnb-card__title {
+  margin: 0;
+  font: var(--type-heading-lg);
+}
+
+/* Formulaires en grille, regroupés par intention */
+.search-panel form.evnb-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3) var(--space-4);
+  max-width: none;
+  margin: 0;
+}
+.search-panel form.evnb-form > .evnb-form__wide,
+.evnb-form__wide {
+  grid-column: 1 / -1;
+}
+.evnb-form__group {
+  margin: var(--space-2) 0 0;
+  padding-bottom: var(--space-1);
+  border-bottom: var(--border-hairline) solid var(--border-subtle);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.evnb-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.evnb-form .date-reading {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--text-secondary);
+}
+
+/* Liste d'événements : cartes, avec filet vertical dans la chronologie */
+.evnb-events {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.evnb-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-left: var(--border-accent) solid var(--action);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+}
+.evnb-event__main {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.evnb-event__value {
+  font: var(--type-person-name);
+}
+.evnb-event__date {
+  font: var(--type-date);
+}
+.evnb-event__place,
+.evnb-event__who {
+  color: var(--text-secondary);
+}
+.evnb-event__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.evnb-event__edit {
+  flex-basis: 100%;
+  padding-top: var(--space-3);
+  border-top: var(--border-hairline) solid var(--border-subtle);
+}
+.evnb-events--rail {
+  position: relative;
+  padding-left: var(--space-4);
+}
+.evnb-events--rail::before {
+  content: '';
+  position: absolute;
+  inset: var(--space-2) auto var(--space-2) 3px;
+  width: 2px;
+  background: var(--border-strong);
+}
+.evnb-events--rail > .evnb-event {
+  position: relative;
+}
+.evnb-events--rail > .evnb-event::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--space-4) * -1 - 1px);
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--action);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  transform: translateY(-50%);
+}
+
+/* Barre d'outils de la chronologie */
+.evnb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Filtres du carnet */
+.evnb-filter {
+  flex-wrap: wrap;
+  margin: 0;
+}
+.evnb-filter__count {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font: var(--type-id);
+}
+
+/* Cartes de recherche */
+.evnb .research-cards {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+.evnb .research-card {
+  border-radius: var(--radius-lg);
+  border-top: var(--border-accent) solid var(--border-strong);
+  box-shadow: var(--shadow-1);
+}
+.evnb .research-card--in_progress {
+  border-top-color: var(--action);
+}
+.evnb .research-card--done {
+  border-top-color: var(--success);
+}
+.evnb .research-card--abandoned {
+  border-top-color: var(--text-disabled);
+}
+.evnb .research-card__title {
+  font: var(--type-person-name);
+  overflow-wrap: anywhere;
+}
+.evnb-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+}
+.evnb-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+}
+
+/* Détail d'une recherche : sections en cartes */
+.evnb-detail .research-section {
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-1);
+}
+.evnb-detail .research-detail__form {
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.evnb-detail .research-detail__header h4 {
+  font: var(--type-display);
+  font-size: clamp(22px, 4.5vw, 30px);
+  overflow-wrap: anywhere;
+}
+
+/* Focus visible cohérent */
+.evnb .research-card__title:focus-visible,
+.evnb .link-button:focus-visible,
+.evnb-filter button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (max-width: 480px) {
+  .evnb {
+    padding: var(--space-4);
+  }
+  .evnb-card {
+    padding: var(--space-4);
+  }
+  .evnb-event__actions,
+  .evnb-event__actions > * {
+    flex: 1 1 auto;
+  }
+  .evnb-form__actions .gds-button {
+    width: 100%;
+  }
+}
